@@ -13,3 +13,28 @@ import { createCoaction } from 'coaction';
 
 const coaction = createCoaction();
 ```
+
+### Supported Libraries and Frameworks
+
+- React
+- Angular
+- Vue
+- Svelte
+- Solid
+
+### State Management
+
+- Redux
+- MobX
+- Jotai
+- Zustand
+- Recoil
+- XState
+- Vuex
+- Pinia
+
+## Runner
+
+- Web Workers
+- Service Workers
+- Shared Workers
