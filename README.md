@@ -13,9 +13,12 @@ npm install coaction
 ```ts
 import { create } from "coaction";
 
-const useCounterStore = create({
+const counterStore = create({
   name: "counter",
   count: 0,
+  get countSquared() {
+    return this.count ** 2;
+  },
   increment() {
     this.count += 1;
   },
@@ -26,8 +29,12 @@ const useCounterStore = create({
 ```
 
 ```tsx
+import { useStore } from '@coaction/react';
+
+const worker = new Worker(new URL('./worker.js', import.meta.url))
+
 const CounterComponent = () => {
-  const { count, increment, decrement } = useCounterStore();
+  const { count, increment, decrement } = useStore(counterStore, worker);
 
   return (
     <div>
