@@ -29,9 +29,9 @@ const counterStore = create({
 ```
 
 ```tsx
-import { useStore } from '@coaction/react';
+import { useStore } from "@coaction/react";
 
-const worker = new Worker(new URL('./worker.js', import.meta.url))
+const worker = new Worker(new URL("./worker.js", import.meta.url));
 
 const CounterComponent = () => {
   const { count, increment, decrement } = useStore(counterStore, worker);
