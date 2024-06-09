@@ -14,14 +14,19 @@ npm install coaction
 import { create } from "coaction";
 
 const counterStore = create({
+  // store name
   name: "counter",
+  // state
   count: 0,
+  // derived state
   get countSquared() {
     return this.count ** 2;
   },
+  // actions
   increment() {
     this.count += 1;
   },
+  // actions
   decrement() {
     this.count -= 1;
   },
