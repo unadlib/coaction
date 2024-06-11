@@ -61,17 +61,15 @@ const CounterComponent = () => {
 
 ### State Management
 
-- Redux
+- Redux Toolkit
+- Zustand
 - MobX
 - Jotai
-- Zustand
 - Recoil
 - XState
-- Vuex
 - Pinia
 
 ## Runner
 
 - Web Workers
-- Service Workers
 - Shared Workers
