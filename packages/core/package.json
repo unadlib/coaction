@@ -2,10 +2,45 @@
   "name": "coaction",
   "version": "0.0.1",
   "description": "A sleek JavaScript library designed for high-performance and multiprocessing web apps.",
-  "main": "index.js",
-  "scripts": {
-    "test": "echo \"Error: no test specified\" && exit 1"
+  "keywords": [
+    "coaction"
+  ],
+  "authors": [
+    "Michael Lin <unadlib@gmail.com> (https://github.com/unadlib)"
+  ],
+  "homepage": "https://github.com/unadlib/coaction/tree/main/packages/core#readme",
+  "license": "MIT",
+  "main": "dist/coaction.cjs.js",
+  "module": "dist/coaction.esm.js",
+  "exports": {
+    ".": {
+      "types": {
+        "import": "./dist/coaction.cjs.mjs",
+        "default": "./dist/coaction.cjs.js"
+      },
+      "module": "./dist/coaction.esm.js",
+      "import": "./dist/coaction.cjs.mjs",
+      "default": "./dist/coaction.cjs.js"
+    },
+    "./package.json": "./package.json"
   },
-  "author": "unadlib",
-  "license": "MIT"
+  "sideEffects": false,
+  "files": [
+    "dist"
+  ],
+  "repository": {
+    "type": "git",
+    "url": "git+ssh://git@github.com/unadlib/coaction.git"
+  },
+  "scripts": {},
+  "bugs": {
+    "url": "https://github.com/unadlib/coaction/issues"
+  },
+  "devDependencies": {},
+  "preconstruct": {
+    "umdName": "Coaction",
+    "entrypoints": [
+      "./index.ts"
+    ]
+  }
 }
