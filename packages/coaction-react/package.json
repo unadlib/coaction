@@ -2,10 +2,65 @@
   "name": "@coaction/react",
   "version": "0.0.1",
   "description": "Coaction tools for React",
-  "main": "index.js",
-  "scripts": {
-    "test": "echo \"Error: no test specified\" && exit 1"
+  "keywords": [
+    "state",
+    "coaction",
+    "react",
+    "hook"
+  ],
+  "author": "David Khourshid <davidkpiano@gmail.com>",
+  "homepage": "https://github.com/unadlib/coaction/tree/main/packages/coaction-react#readme",
+  "license": "MIT",
+  "main": "dist/coaction-react.cjs.js",
+  "module": "dist/coaction-react.esm.js",
+  "exports": {
+    ".": {
+      "types": {
+        "import": "./dist/coaction-react.cjs.mjs",
+        "default": "./dist/coaction-react.cjs.js"
+      },
+      "module": "./dist/coaction-react.esm.js",
+      "import": "./dist/coaction-react.cjs.mjs",
+      "default": "./dist/coaction-react.cjs.js"
+    },
+    "./package.json": "./package.json"
   },
-  "author": "unadlib",
-  "license": "MIT"
+  "types": "dist/coaction-react.cjs.d.ts",
+  "sideEffects": false,
+  "files": [
+    "dist"
+  ],
+  "repository": {
+    "type": "git",
+    "url": "git+ssh://git@github.com/unadlib/coaction.git"
+  },
+  "scripts": {},
+  "bugs": {
+    "url": "https://github.com/unadlib/coaction/issues"
+  },
+  "peerDependencies": {
+    "coaction": "^0.0.1",
+    "react": "^16.8.0 || ^17.0.0 || ^18.0.0"
+  },
+  "peerDependenciesMeta": {
+    "coaction": {
+      "optional": true
+    }
+  },
+  "dependencies": {
+    "use-isomorphic-layout-effect": "^1.1.2",
+    "use-sync-external-store": "^1.2.0"
+  },
+  "devDependencies": {
+    "@testing-library/react": "^14.2.1",
+    "@types/jsdom": "^12.2.3",
+    "@types/react": "^17.0.43",
+    "@types/react-dom": "^17.0.14",
+    "@types/use-sync-external-store": "^0.0.3",
+    "coaction": "^0.0.1",
+    "jsdom": "^14.0.0",
+    "jsdom-global": "^3.0.2",
+    "react": "^18.0.0",
+    "react-dom": "^18.0.0"
+  }
 }

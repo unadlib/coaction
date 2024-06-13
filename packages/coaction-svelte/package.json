@@ -2,10 +2,61 @@
   "name": "@coaction/svelte",
   "version": "0.0.1",
   "description": "Coaction tools for Svelte",
-  "main": "index.js",
-  "scripts": {
-    "test": "echo \"Error: no test specified\" && exit 1"
+  "keywords": [
+    "state",
+    "coaction",
+    "svelte"
+  ],
+  "authors": [
+    "Michael Lin <unadlib@gmail.com> (https://github.com/unadlib)"
+  ],
+  "homepage": "https://github.com/unadlib/coaction/tree/main/packages/coaction-svelte#readme",
+  "license": "MIT",
+  "main": "dist/coaction-svelte.cjs.js",
+  "module": "dist/coaction-svelte.esm.js",
+  "exports": {
+    ".": {
+      "types": {
+        "import": "./dist/coaction-svelte.cjs.mjs",
+        "default": "./dist/coaction-svelte.cjs.js"
+      },
+      "module": "./dist/coaction-svelte.esm.js",
+      "import": "./dist/coaction-svelte.cjs.mjs",
+      "default": "./dist/coaction-svelte.cjs.js"
+    },
+    "./package.json": "./package.json"
   },
-  "author": "unadlib",
-  "license": "MIT"
+  "sideEffects": false,
+  "files": [
+    "dist"
+  ],
+  "repository": {
+    "type": "git",
+    "url": "git+ssh://git@github.com/unadlib/coaction.git"
+  },
+  "scripts": {
+    "svelte-check": "svelte-check --workspace test"
+  },
+  "bugs": {
+    "url": "https://github.com/unadlib/coaction/issues"
+  },
+  "peerDependencies": {
+    "coaction": "^0.0.1",
+    "svelte": "^3.24.1 || ^4"
+  },
+  "peerDependenciesMeta": {
+    "coaction": {
+      "optional": true
+    }
+  },
+  "devDependencies": {
+    "@testing-library/svelte": "^3.2.2",
+    "@tsconfig/svelte": "^5.0.2",
+    "@types/jest": "^29.5.10",
+    "coaction": "^0.0.1",
+    "svelte": "^3.55.1",
+    "svelte-check": "^3.2.0",
+    "svelte-jester": "^2.3.2",
+    "svelte-preprocess": "^5.0.0"
+  }
 }

@@ -2,10 +2,62 @@
   "name": "@coaction/vue",
   "version": "0.0.1",
   "description": "Coaction tools for Vue",
-  "main": "index.js",
-  "scripts": {
-    "test": "echo \"Error: no test specified\" && exit 1"
+  "keywords": [
+    "state",
+    "coaction",
+    "vue"
+  ],
+  "authors": [
+    "Michael Lin <unadlib@gmail.com> (https://github.com/unadlib)"
+  ],
+  "homepage": "https://github.com/unadlib/coaction/tree/main/packages/coaction-vue#readme",
+  "license": "MIT",
+  "main": "dist/coaction-vue.cjs.js",
+  "module": "dist/coaction-vue.esm.js",
+  "exports": {
+    ".": {
+      "types": {
+        "import": "./dist/coaction-vue.cjs.mjs",
+        "default": "./dist/coaction-vue.cjs.js"
+      },
+      "module": "./dist/coaction-vue.esm.js",
+      "import": "./dist/coaction-vue.cjs.mjs",
+      "default": "./dist/coaction-vue.cjs.js"
+    },
+    "./package.json": "./package.json"
   },
-  "author": "unadlib",
-  "license": "MIT"
+  "sideEffects": false,
+  "files": [
+    "dist"
+  ],
+  "repository": {
+    "type": "git",
+    "url": "git+ssh://git@github.com/unadlib/coaction.git"
+  },
+  "scripts": {},
+  "bugs": {
+    "url": "https://github.com/unadlib/coaction/issues"
+  },
+  "peerDependencies": {
+    "coaction": "^0.0.1",
+    "vue": "^3.0.0"
+  },
+  "peerDependenciesMeta": {
+    "coaction": {
+      "optional": true
+    }
+  },
+  "devDependencies": {
+    "@testing-library/jest-dom": "^6.1.4",
+    "@testing-library/vue": "^6.6.1",
+    "@vue/compiler-sfc": "^3.0.11",
+    "coaction": "^0.0.1",
+    "vue": "^3.0.11"
+  },
+  "preconstruct": {
+    "umdName": "CoactionVue",
+    "entrypoints": [
+      "./index.ts"
+    ]
+  }
 }
