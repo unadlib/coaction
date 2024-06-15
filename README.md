@@ -11,11 +11,9 @@ npm install coaction
 ## Usage
 
 ```ts
-import { create } from "coaction";
+import { createSlice } from 'coaction';
 
-const counterStore = create({
-  // store name
-  name: "counter",
+export const counterSlice = createSlice((store, set) => ({
   // state
   count: 0,
   // derived state
@@ -24,41 +22,32 @@ const counterStore = create({
   },
   // actions
   increment() {
-    this.count += 1;
+    set({ count: this.count + 1 });
   },
   // actions
   decrement() {
-    this.count -= 1;
-  },
+    set(() => (this.count -= 1));
+  }
+}));
+```
+
+```ts
+import { createStore } from '@coaction/react';
+
+export const useStore = useStore({
+  counter: counterSlice
 });
 ```
 
 ```tsx
-import { useStore } from "@coaction/react";
+import { useStore } from './store';
 
-const worker = new Worker(new URL("./worker.js", import.meta.url));
-
-const CounterComponent = () => {
-  const { count, increment, decrement } = useStore(counterStore, worker);
-
-  return (
-    <div>
-      <p>Count: {count}</p>
-      <button onClick={increment}>Increment</button>
-      <button onClick={decrement}>Decrement</button>
-    </div>
-  );
-};
-```
-
-```tsx
-import { createHook } from "@coaction/react";
-
-const worker = new Worker(new URL("./worker.js", import.meta.url));
-const useStore = createHook(worker);
+const worker = new Worker(new URL('./store.js', import.meta.url));
 
 const CounterComponent = () => {
-  const { count, increment, decrement } = useStore(counterStore);
+  const {
+    counter: { count, increment, decrement }
+  } = useStore(worker);
 
   return (
     <div>
