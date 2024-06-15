@@ -11,31 +11,43 @@ npm install coaction
 ## Usage
 
 ```ts
-import { createSlice } from 'coaction';
+import { create } from 'coaction';
 
-export const counterSlice = createSlice((store, set) => ({
-  // state
+export const useStore = create({
   count: 0,
-  // derived state
   get countSquared() {
     return this.count ** 2;
   },
-  // actions
   increment() {
-    set({ count: this.count + 1 });
+    this.count += 1;
   },
-  // actions
-  decrement() {
-    set(() => (this.count -= 1));
-  }
-}));
-```
-
-```ts
-import { createStore } from '@coaction/react';
-
-export const useStore = useStore({
-  counter: counterSlice
+  todo: create({
+    items: [],
+    add(item) {
+      this.items.push(item);
+    }
+  }),
+  bear: create((set, root) => ({
+    bears: 0,
+    addBear() {
+      set(() => {
+        this.bears++;
+      });
+    },
+    increment() {
+      set(() => {
+        root.count++;
+      });
+    },
+    get bearCount() {
+      return this.bears;
+    },
+    async fetch(id: string) {
+      const response = await fetch(id);
+      const bears = (await response.json()) as number;
+      set({ bears });
+    }
+  }))
 });
 ```
 
@@ -43,17 +55,21 @@ export const useStore = useStore({
 import { useStore } from './store';
 
 const worker = new Worker(new URL('./store.js', import.meta.url));
+const useWorkerStore = useStore(worker);
 
 const CounterComponent = () => {
-  const {
-    counter: { count, increment, decrement }
-  } = useStore(worker);
+  const store = useStore();
+  const workerStore = useWorkerStore();
 
   return (
     <div>
-      <p>Count: {count}</p>
-      <button onClick={increment}>Increment</button>
-      <button onClick={decrement}>Decrement</button>
+      <p>Count: {store.count}</p>
+      <button onClick={store.increment}>Increment</button>
+      <button onClick={store.decrement}>Decrement</button>
+
+      <p>Count in Worker: {workerStore.count}</p>
+      <button onClick={workerStore.increment}>Increment</button>
+      <button onClick={workerStore.decrement}>Decrement</button>
     </div>
   );
 };
