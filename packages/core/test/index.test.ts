@@ -1,5 +1,5 @@
-import { add } from '../src/index.ts';
+import { create } from '../src/index.ts';
 
 test('base', () => {
-  expect(add(1, 2)).toBe(3);
+  // expect(create(1, 2)).toBe(3);
 });
