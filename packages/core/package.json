@@ -42,5 +42,9 @@
     "entrypoints": [
       "./index.ts"
     ]
+  },
+  "dependencies": {
+    "data-transport": "^4.3.6",
+    "mutative": "^1.0.5"
   }
 }
