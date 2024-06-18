@@ -14,7 +14,10 @@ const { increment, decrement } = useWorkerStore;
 document.getElementById('increment').addEventListener('click', increment);
 document.getElementById('decrement').addEventListener('click', decrement);
 
-subscribe(useWorkerStore, () => {
-  document.getElementById('count').innerText = useWorkerStore.count;
-});
+useWorkerStore.subscribe(
+  () => useWorkerStore.count,
+  () => {
+    document.getElementById('count').innerText = useWorkerStore.count;
+  }
+);
 ```
