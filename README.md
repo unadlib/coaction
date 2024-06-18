@@ -61,6 +61,11 @@ const CounterComponent = () => {
   const store = useStore();
   const workerStore = useWorkerStore();
 
+  useEffect(
+    () => useWorkerStore.subscribe(() => useWorkerStore.count, console.log),
+    []
+  );
+
   return (
     <div>
       <p>Count: {store.count}</p>
