@@ -3,17 +3,18 @@
 # Usage
 
 ```ts
-import { useStore, subscribe } from 'coaction';
-import counterStore from './counterStore';
+import { subscribe } from 'coaction';
+import useStore from './counterStore';
 
-const worker = new Worker(new URL("./worker.js", import.meta.url));
+const worker = new Worker(new URL('./worker.js', import.meta.url));
 
-const { increment, decrement } = useStore(counterStore, worker);
+const useWorkerStore = useStore(worker);
+const { increment, decrement } = useWorkerStore;
 
 document.getElementById('increment').addEventListener('click', increment);
 document.getElementById('decrement').addEventListener('click', decrement);
 
-subscribe(counterStore, ({ count }) => {
-  document.getElementById('count').innerText = count;
+subscribe(useWorkerStore, () => {
+  document.getElementById('count').innerText = useWorkerStore.count;
 });
 ```
