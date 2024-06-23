@@ -13,41 +13,15 @@ npm install coaction
 ```ts
 import { create } from 'coaction';
 
-export const useStore = create({
+const useStore = create({
+  name: 'Counter',
   count: 0,
   get countSquared() {
     return this.count ** 2;
   },
   increment() {
     this.count += 1;
-  },
-  todo: create({
-    items: [],
-    add(item) {
-      this.items.push(item);
-    }
-  }),
-  bear: create((set, root) => ({
-    bears: 0,
-    addBear() {
-      set(() => {
-        this.bears++;
-      });
-    },
-    increment() {
-      set(() => {
-        root.count++;
-      });
-    },
-    get bearCount() {
-      return this.bears;
-    },
-    async fetch(id: string) {
-      const response = await fetch(id);
-      const bears = (await response.json()) as number;
-      set({ bears });
-    }
-  }))
+  }
 });
 ```
 
@@ -55,7 +29,10 @@ export const useStore = create({
 import { useStore } from './store';
 
 const worker = new Worker(new URL('./store.js', import.meta.url));
-const useWorkerStore = useStore(worker);
+const useWorkerStore = useStore({
+  name: 'WorkerCounter',
+  worker
+});
 
 const CounterComponent = () => {
   const store = useStore();
