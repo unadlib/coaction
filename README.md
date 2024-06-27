@@ -11,7 +11,7 @@ npm install coaction
 ### Coaction Features
 
 - Cross-Framework Compatibility: Seamlessly works with React, Vue, Solid.js, Angular, and other modern web frameworks
-- Multi-threaded State Management: Effortlessly manage state across main thread and Web Workers
+- Multiprocessing State Management: Effortlessly manage state across main thread and Workers
 - Intuitive API Design: Simple and expressive API inspired by popular state management libraries
 - Flexible Store Creation: Create multiple stores with unique names for better organization
 - Worker Integration: Easy integration with Web Workers and Shared Worker for offloading computations
@@ -30,7 +30,7 @@ npm install coaction
 - Immutable Updates: Ensures predictable state changes with immutable update patterns
 - Developer Tools Integration: Easy debugging with integrated developer tools
 - Persistence: Built-in support for state persistence
-- Scalable Architecture: Designed to scale from simple apps to complex, multi-threaded applications
+- Scalable Architecture: Designed to scale from simple apps to complex, multiprocessing applications
 
 ## Usage
 
