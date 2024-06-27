@@ -13,7 +13,8 @@ npm install coaction
 ```ts
 import { create } from 'coaction';
 
-const useStore = create('counter', () => {
+const useStore = create({
+  name: 'counter',
   count: 0,
   get countSquared() {
     return this.count ** 2;
