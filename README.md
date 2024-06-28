@@ -39,16 +39,16 @@ npm install coaction
 ```ts
 import { create } from 'coaction';
 
-const useStore = create({
+const useStore = create((set) => ({
   name: 'counter',
   count: 0,
   get countSquared() {
     return this.count ** 2;
   },
   increment() {
-    this.count += 1;
+    set(() => (this.count += 1));
   }
-});
+}));
 ```
 
 ```tsx
@@ -88,34 +88,32 @@ const CounterComponent = () => {
 ```ts
 import { create, combineSlices } from 'coaction';
 
-const counterSlices = {
+const counterSlices = (set) => ({
   name: 'counter',
   count: 0,
   get countSquared() {
     return this.count ** 2;
   },
   increment() {
-    this.count += 1;
+    set(() => (this.count += 1));
   }
-};
+});
 
-const counter1Slices = {
+const counter1Slices = (set) => ({
   name: 'counter1',
   count: 0,
   get countSquared() {
     return this.count ** 2;
   },
   increment() {
-    this.count += 1;
+    set(() => (this.count += 1));
   }
-};
+});
 
-const useStore = create(
-  combineSlices({
-    counter: counterSlices,
-    counter1: counter1Slices
-  })
-);
+const useStore = create({
+  counter: counterSlices,
+  counter1: counter1Slices
+});
 ```
 
 ```tsx
