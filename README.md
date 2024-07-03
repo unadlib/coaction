@@ -16,7 +16,7 @@ npm install coaction
 - Flexible Store Creation: Create multiple stores with unique names for better organization
 - Worker Integration: Easy integration with Web Workers and Shared Worker for offloading computations
 - Computed Properties: Support for derived state through getter functions
-- Slices Pattern: Easily combine multiple slices into a single store using `combineSlices()`
+- Slices Pattern: Easily combine multiple slices into a single store
 - Namespace Support: Avoid key conflicts with namespaced slices
 - Performance Optimized: Efficient state updates and retrieval, even with deeply nested structures
 - Type-Safe: Full TypeScript support for enhanced developer experience
@@ -86,7 +86,7 @@ const CounterComponent = () => {
 ### Slices Pattern
 
 ```ts
-import { create, combineSlices } from 'coaction';
+import { create } from 'coaction';
 
 const counterSlices = (set) => ({
   name: 'counter',
