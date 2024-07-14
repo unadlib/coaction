@@ -20,7 +20,7 @@ npm install coaction
 - Namespace Support: Avoid key conflicts with namespaced slices
 - Performance Optimized: Efficient state updates and retrieval, even with deeply nested structures
 - Type-Safe: Full TypeScript support for enhanced developer experience
-- Middleware Support: Supports state subscriptions and middleware for side effects and enhanced state handling
+- Middleware Support: Supports state subscriptions and middleware for side effects and enhanced state handling, also supports Zustand middlewares and Redux middlewares
 - Cross-Store Access: Read states and call functions across different stores while preventing unintended modifications
 - Multi-Store Workers: Run multiple stores within a single Web Worker
 - Shared Stores Across Workers: Use the same store definition across multiple Workers
