@@ -1,3 +1,1 @@
-export const create = (...args: any): any => {
-  //
-};
+export * from './create';
