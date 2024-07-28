@@ -19,7 +19,6 @@ interface Store<T extends Slices> {
 }
 
 type Option = {
-  name: string;
   worker?: Worker | SharedWorker;
   transport?: Transport;
 };
@@ -51,9 +50,7 @@ export const create = <T extends Slices>(
       result = createWithMutative(state, (draft) => next(draft), {
         enablePatches: !!workerType
       });
-      if (workerType) {
-        nextState = result[0];
-      }
+      nextState = workerType ? result[0] : result;
     } else {
       nextState = next;
     }
@@ -82,7 +79,7 @@ export const create = <T extends Slices>(
             ? 'SharedWorkerClient'
             : 'WorkerMain',
           {
-            prefix: option.name,
+            prefix: state.name,
             worker: option.worker as SharedWorker
           }
         )
