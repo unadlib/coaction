@@ -6,11 +6,11 @@ import {
 } from 'mutative';
 import { createTransport, type Transport } from 'data-transport';
 
-type Slices = { name: string } & Record<string, any>;
+export type Slices = { name: string } & Record<string, any>;
 
 type Listener<T> = (state: T, previousState: T) => void;
 
-interface Store<T extends Slices> {
+export interface Store<T extends Slices> {
   setState(next: T | ((draft: Draft<T>) => void)): void;
   getState(): T;
   getInitialState(): T;
