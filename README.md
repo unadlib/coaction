@@ -170,3 +170,7 @@ const CounterComponent = () => {
 
 - Web Workers
 - Shared Workers
+
+## License
+
+coaction is [MIT licensed](./LICENSE).
