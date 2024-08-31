@@ -11,10 +11,25 @@ export type Slices = { name: string } & Record<string, any>;
 type Listener<T> = (state: T, previousState: T) => void;
 
 export interface Store<T extends Slices> {
+  /**
+   * Set the next state.
+   */
   setState(next: T | ((draft: Draft<T>) => void)): void;
+  /**
+   * Get the current state.
+   */
   getState(): T;
+  /**
+   * Get the initial state.
+   */
   getInitialState(): T;
+  /**
+   * Subscribe to the state changes.
+   */
   subscribe(listener: Listener<T>): () => void;
+  /**
+   * Unsubscribe all listeners.
+   */
   destroy(): void;
 }
 
