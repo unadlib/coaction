@@ -42,6 +42,7 @@ type Internal = {
   update(options: { name: string; patches: Patches }): Promise<void>;
 };
 
+// TODO: fix this
 // @ts-ignore
 const workerType = globalThis.WorkerGlobalScope
   ? 'WorkerInternal'
@@ -51,44 +52,51 @@ const workerType = globalThis.WorkerGlobalScope
     : null;
 
 export const create = <T extends Slices>(
-  createState: (store: Store<T>) => T
+  createState: (set: Store<T>['setState'], store: Store<T>) => T
 ) => {
+  // in worker, the transport is the worker itself
   const transport: Transport<{ emit: Internal }> | null = workerType
     ? createTransport(workerType, {})
     : null;
   let state: T;
-  const listeners = new Set<Listener<T>>();
-  const setState: Store<T>['setState'] = (next) => {
-    let nextState: T | null = null;
-    let result: T | [T, Patches<true>, Patches<true>] | null = null;
-    if (typeof next === 'function') {
-      result = createWithMutative(state, (draft) => next(draft), {
-        enablePatches: !!workerType
-      });
-      nextState = workerType ? result[0] : result;
-    } else {
-      nextState = next;
-    }
-    if (!Object.is(nextState, state)) {
-      const previousState = state;
-      state = nextState!;
-      listeners.forEach((listener) => listener(state, previousState));
-    }
-    transport?.emit('update', { patches: result![1], name: state.name });
+  const createApi = () => {
+    const listeners = new Set<Listener<T>>();
+    const setState: Store<T>['setState'] = (next) => {
+      let nextState: T | null = null;
+      let result: T | [T, Patches<true>, Patches<true>] | null = null;
+      if (typeof next === 'function') {
+        result = createWithMutative(state, (draft) => next(draft), {
+          enablePatches: !!workerType
+        });
+        nextState = workerType ? result[0] : result;
+      } else {
+        nextState = next;
+      }
+      if (!Object.is(nextState, state)) {
+        const previousState = state;
+        state = nextState!;
+        listeners.forEach((listener) => listener(state, previousState));
+      }
+      transport?.emit('update', { patches: result![1], name: state.name });
+    };
+    const getState = () => state;
+    const getInitialState = () => initialState;
+    const subscribe: Store<T>['subscribe'] = (listener) => {
+      listeners.add(listener);
+      return () => listeners.delete(listener);
+    };
+    const destroy = () => {
+      listeners.clear();
+      transport?.dispose();
+    };
+    const api = { setState, getState, getInitialState, subscribe, destroy };
+    const initialState = (state = createState(api.setState, api));
+    return api;
   };
-  const getState = () => state;
-  const getInitialState = () => initialState;
-  const subscribe: Store<T>['subscribe'] = (listener) => {
-    listeners.add(listener);
-    return () => listeners.delete(listener);
-  };
-  const destroy = () => {
-    listeners.clear();
-  };
-  const api = { setState, getState, getInitialState, subscribe, destroy };
-  const initialState = (state = createState(api));
+  const api = createApi();
   return Object.assign((option: Option) => {
-    const transport: Transport<{ listen: Internal }> = option.worker
+    if (!option) return api.getState();
+    const transport: Transport<{ listen: Internal }> | undefined = option.worker
       ? createTransport(
           option.worker instanceof SharedWorker
             ? 'SharedWorkerClient'
@@ -98,11 +106,16 @@ export const create = <T extends Slices>(
             worker: option.worker as SharedWorker
           }
         )
-      : option.transport!;
-    transport!.listen('update', async ({ patches, name }) => {
+      : option.transport;
+    if (!transport) {
+      throw new Error('transport is required');
+    }
+    const _api = createApi();
+    transport.listen('update', async ({ patches, name }) => {
       if (name !== state.name) return;
-      const next = apply(api.getState(), patches);
-      setState(next);
+      const next = apply(_api.getState(), patches);
+      _api.setState(next);
     });
+    return Object.assign(() => _api.getState(), _api);
   }, api);
 };
