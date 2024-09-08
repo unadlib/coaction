@@ -52,12 +52,20 @@ const workerType = globalThis.WorkerGlobalScope
     : null;
 
 export const create = <T extends Slices>(
-  createState: (set: Store<T>['setState'], store: Store<T>) => T
+  createState: (
+    set: Store<T>['setState'],
+    get: Store<T>['getState'],
+    store: Store<T>
+  ) => T,
+  options?: {
+    name: string;
+    transport?: Transport;
+    middlewares: any[];
+  }
 ) => {
   // in worker, the transport is the worker itself
-  const transport: Transport<{ emit: Internal }> | null = workerType
-    ? createTransport(workerType, {})
-    : null;
+  const transport: Transport<{ emit: Internal }> | null =
+    options?.transport ?? (workerType ? createTransport(workerType, {}) : null);
   let state: T;
   const createApi = () => {
     const listeners = new Set<Listener<T>>();
@@ -90,7 +98,7 @@ export const create = <T extends Slices>(
       transport?.dispose();
     };
     const api = { setState, getState, getInitialState, subscribe, destroy };
-    const initialState = (state = createState(api.setState, api));
+    const initialState = (state = createState(api.setState, api.getState, api));
     return api;
   };
   const api = createApi();
