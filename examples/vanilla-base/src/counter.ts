@@ -2,12 +2,15 @@ import { create } from 'coaction';
 import { useStore } from './store';
 
 // @ts-ignore
-const { increment } = useStore();
+// const { increment } = useStore();
 
-// const worker = new Worker(new URL('./store.ts', import.meta.url), { type: 'module' });
+const worker = new Worker(new URL('./store.ts', import.meta.url), {
+  type: 'module'
+});
 
-// const useWorkerStore = useStore(worker);
-// const { increment } = useWorkerStore();
+const useWorkerStore = useStore({
+  worker
+});
 
 // document.getElementById('increment').addEventListener('click', increment);
 // document.getElementById('decrement').addEventListener('click', decrement);
@@ -22,6 +25,7 @@ const { increment } = useStore();
 console.log('create');
 
 export function setupCounter(element: HTMLButtonElement) {
+  const useStore = useWorkerStore;
   console.log('useStore.getState().counter', useStore.getState().count);
   useStore.subscribe(() => {
     element.innerHTML = `count is ${useStore.getState().count}`;
