@@ -174,7 +174,6 @@ export const create = <T extends Slices>(
     transport.listen('update', async ({ patches, name, sequence }) => {
       console.log('update', { patches, name, sequence });
       if (name !== state.name) return;
-      if (sequence === 3) return;
       if (typeof sequence === 'number' && sequence === _sequence + 1) {
         _sequence = sequence;
         const next = apply(_api.getState(), patches);
