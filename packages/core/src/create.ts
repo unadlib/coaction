@@ -128,6 +128,7 @@ export const create = <T extends Slices>(
       };
     });
     const destroy = () => {
+      // TODO: implement more robust destroy method
       listeners.clear();
       transport?.dispose();
     };
@@ -171,6 +172,17 @@ export const create = <T extends Slices>(
       }
     }
     let _sequence: number;
+    const fullSync = async () => {
+      console.log('fullSync');
+      const latest = await transport.emit('fullSync');
+      console.log('fullSync', latest);
+      _api.setState(JSON.parse(latest.state) as T);
+      _sequence = latest.sequence;
+    };
+    // @ts-ignore
+    transport.onConnect?.(async () => {
+      await fullSync();
+    });
     transport.listen('update', async ({ patches, name, sequence }) => {
       console.log('update', { patches, name, sequence });
       if (name !== state.name) return;
@@ -179,9 +191,7 @@ export const create = <T extends Slices>(
         const next = apply(_api.getState(), patches);
         _api.setState(next);
       } else {
-        const latest = await transport.emit('fullSync');
-        _api.setState(JSON.parse(latest.state) as T);
-        _sequence = latest.sequence;
+        await fullSync();
       }
     });
     return Object.assign(() => _api.getState(), _api);
