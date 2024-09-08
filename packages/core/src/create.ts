@@ -72,16 +72,10 @@ export const create = <T extends Slices>(
     middlewares: any[];
   }
 ) => {
-  // in worker, the transport is the worker itself
-  const transport: Transport<{ emit: Internal; listen: External }> | null =
-    options?.transport ??
-    (workerType
-      ? createTransport(workerType, {
-          // prefix: state!.name
-        })
-      : null);
   let state: T;
   const createApi = () => {
+    let transport: Transport<{ emit: Internal; listen: External }> | null =
+      null;
     let sequence = 0;
     const listeners = new Set<Listener<T>>();
     const setState: Store<T>['setState'] = (next) => {
@@ -116,6 +110,21 @@ export const create = <T extends Slices>(
       listeners.add(listener);
       return () => listeners.delete(listener);
     };
+    const destroy = () => {
+      // TODO: implement more robust destroy method
+      listeners.clear();
+      transport?.dispose();
+    };
+    const api = { setState, getState, getInitialState, subscribe, destroy };
+    const initialState = (state = createState(api.setState, api.getState, api));
+    // in worker, the transport is the worker itself
+    transport =
+      options?.transport ??
+      (workerType
+        ? createTransport(workerType, {
+            prefix: state!.name
+          })
+        : null);
     transport?.listen('execute', async (key, args) => {
       console.log('execute', { key, args });
       return api.getState()[key](...args);
@@ -127,13 +136,6 @@ export const create = <T extends Slices>(
         sequence
       };
     });
-    const destroy = () => {
-      // TODO: implement more robust destroy method
-      listeners.clear();
-      transport?.dispose();
-    };
-    const api = { setState, getState, getInitialState, subscribe, destroy };
-    const initialState = (state = createState(api.setState, api.getState, api));
     return api;
   };
   const api = createApi();
@@ -150,8 +152,7 @@ export const create = <T extends Slices>(
             ? 'SharedWorkerClient'
             : 'WorkerMain',
           {
-            // TODO: support prefix
-            // prefix: state.name,
+            prefix: state.name,
             worker: option.worker as SharedWorker
           }
         )
