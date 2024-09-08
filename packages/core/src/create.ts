@@ -48,11 +48,11 @@ type External = {
 
 // TODO: fix this
 // @ts-ignore
-const workerType = globalThis.WorkerGlobalScope
-  ? 'WorkerInternal'
+const workerType = globalThis.SharedWorkerGlobalScope
+  ? 'SharedWorkerInternal'
   : // @ts-ignore
-    globalThis.SharedWorkerGlobalScope
-    ? 'SharedWorkerInternal'
+    globalThis.WorkerGlobalScope
+    ? 'WorkerInternal'
     : null;
 
 export const create = <T extends Slices>(
