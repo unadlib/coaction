@@ -39,11 +39,16 @@ type Option = {
 };
 
 type Internal = {
-  update(options: { name: string; patches: Patches }): Promise<void>;
+  update(options: {
+    name: string;
+    patches: Patches;
+    sequence: number;
+  }): Promise<void>;
 };
 
 type External = {
   execute(key: string, args: any[]): Promise<any>;
+  fullSync(): Promise<{ state: string; sequence: number }>;
 };
 
 // TODO: fix this
@@ -77,6 +82,7 @@ export const create = <T extends Slices>(
       : null);
   let state: T;
   const createApi = () => {
+    let sequence = 0;
     const listeners = new Set<Listener<T>>();
     const setState: Store<T>['setState'] = (next) => {
       let nextState: T | null = null;
@@ -87,14 +93,22 @@ export const create = <T extends Slices>(
         });
         nextState = workerType ? result[0] : result;
       } else {
-        nextState = next;
+        // TODO: deep merge and fix performance issue
+        nextState = Object.assign({}, state, next);
       }
       if (!Object.is(nextState, state)) {
         const previousState = state;
         state = nextState!;
         listeners.forEach((listener) => listener(state, previousState));
       }
-      transport?.emit('update', { patches: result![1], name: state.name });
+      if (transport) {
+        sequence += 1;
+        transport.emit('update', {
+          patches: result![1],
+          name: state.name,
+          sequence
+        });
+      }
     };
     const getState = () => state;
     const getInitialState = () => initialState;
@@ -105,6 +119,13 @@ export const create = <T extends Slices>(
     transport?.listen('execute', async (key, args) => {
       console.log('execute', { key, args });
       return api.getState()[key](...args);
+    });
+    transport?.listen('fullSync', async () => {
+      console.log('fullSync');
+      return {
+        state: JSON.stringify(state),
+        sequence
+      };
     });
     const destroy = () => {
       listeners.clear();
@@ -128,6 +149,7 @@ export const create = <T extends Slices>(
             ? 'SharedWorkerClient'
             : 'WorkerMain',
           {
+            // TODO: support prefix
             // prefix: state.name,
             worker: option.worker as SharedWorker
           }
@@ -148,11 +170,20 @@ export const create = <T extends Slices>(
         };
       }
     }
-    transport.listen('update', async ({ patches, name }) => {
-      console.log('update', { patches, name });
+    let _sequence: number;
+    transport.listen('update', async ({ patches, name, sequence }) => {
+      console.log('update', { patches, name, sequence });
       if (name !== state.name) return;
-      const next = apply(_api.getState(), patches);
-      _api.setState(next);
+      if (sequence === 3) return;
+      if (typeof sequence === 'number' && sequence === _sequence + 1) {
+        _sequence = sequence;
+        const next = apply(_api.getState(), patches);
+        _api.setState(next);
+      } else {
+        const latest = await transport.emit('fullSync');
+        _api.setState(JSON.parse(latest.state) as T);
+        _sequence = latest.sequence;
+      }
     });
     return Object.assign(() => _api.getState(), _api);
   }, api);
