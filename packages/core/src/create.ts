@@ -6,11 +6,14 @@ import {
 } from 'mutative';
 import { createTransport, type Transport } from 'data-transport';
 
-export type Slices = { name: string } & Record<string, any>;
+// TODO: check the name
+// export type ISlices = { name: string } & Record<string, any>;
+
+type ISlices = object;
 
 type Listener<T> = (state: T, previousState: T) => void;
 
-export interface Store<T extends Slices> {
+export interface Store<T extends ISlices> {
   /**
    * Set the next state.
    */
@@ -60,12 +63,14 @@ const workerType = globalThis.SharedWorkerGlobalScope
     ? 'WorkerInternal'
     : null;
 
-export const create = <T extends Slices>(
-  createState: (
-    set: Store<T>['setState'],
-    get: Store<T>['getState'],
-    store: Store<T>
-  ) => T,
+type Slices<T extends ISlices> = (
+  set: Store<T>['setState'],
+  get: Store<T>['getState'],
+  store: Store<T>
+) => T;
+
+export const create = <T extends ISlices>(
+  createState: Slices<T> | Record<string, Slices<T>>,
   options?: {
     name: string;
     transport?: Transport;
@@ -85,6 +90,7 @@ export const create = <T extends Slices>(
         result = createWithMutative(state, (draft) => next(draft), {
           enablePatches: !!workerType
         });
+        // @ts-ignore
         nextState = workerType ? result[0] : result;
       } else {
         // TODO: deep merge and fix performance issue
@@ -98,7 +104,9 @@ export const create = <T extends Slices>(
       if (transport) {
         sequence += 1;
         transport.emit('update', {
+          // @ts-ignore
           patches: result![1],
+          // @ts-ignore
           name: state.name,
           sequence
         });
@@ -116,17 +124,28 @@ export const create = <T extends Slices>(
       transport?.dispose();
     };
     const api = { setState, getState, getInitialState, subscribe, destroy };
-    const initialState = (state = createState(api.setState, api.getState, api));
+    const initialState = (state =
+      typeof createState === 'object'
+        ? Object.entries(createState).reduce(
+            (stateTree, [key, _createState]) => {
+              stateTree[key] = _createState(setState, getState, api);
+              return stateTree;
+            },
+            {} as any
+          )
+        : createState(api.setState, api.getState, api)) as any;
     // in worker, the transport is the worker itself
     transport =
       options?.transport ??
       (workerType
         ? createTransport(workerType, {
+            // @ts-ignore
             prefix: state!.name
           })
         : null);
     transport?.listen('execute', async (key, args) => {
       console.log('execute', { key, args });
+      // @ts-ignore
       return api.getState()[key](...args);
     });
     transport?.listen('fullSync', async () => {
@@ -162,6 +181,7 @@ export const create = <T extends Slices>(
             ? 'SharedWorkerClient'
             : 'WorkerMain',
           {
+            // @ts-ignore
             prefix: state.name,
             worker: option.worker as SharedWorker
           }
@@ -197,6 +217,7 @@ export const create = <T extends Slices>(
     });
     transport.listen('update', async ({ patches, name, sequence }) => {
       console.log('update', { patches, name, sequence });
+      // @ts-ignore
       if (name !== state.name) return;
       if (typeof sequence === 'number' && sequence === _sequence + 1) {
         _sequence = sequence;

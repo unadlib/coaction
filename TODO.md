@@ -1,6 +1,6 @@
 # TODO
 
-- [ ] Slices Pattern: Easily combine multiple slices into a single store
+- [x] Slices Pattern: Easily combine multiple slices into a single store
 - [ ] Middleware Support: Supports state subscriptions and middleware for side effects and enhanced state handling, also supports Zustand middlewares and Redux middlewares
 - [ ] Cross-Framework Compatibility: Seamlessly works with React, Vue, Solid.js, Angular, and other modern web frameworks
 - [ ] Cross-Store Access: Read states and call functions across different stores while preventing unintended modifications
