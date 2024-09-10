@@ -136,14 +136,24 @@ export const create = <T extends Slices>(
         sequence
       };
     });
+    if (workerType) {
+      initialState.name = workerType
+        ? // @ts-ignore
+          globalThis.name
+          ? // @ts-ignore
+            globalThis.name
+          : workerType
+        : '';
+    }
     return api;
   };
   const api = createApi();
   return Object.assign((option: Option) => {
     if (!option) return api.getState();
     // the transport is in the worker or shared worker, and the client is in the main thread.
-    // This store can't be directly executed by any of the store's methods, its methods are proxied to the worker or share worker for execution.
-    //and the executed patch is sent to the store to be applied to synchronize the state.
+    // This store can't be directly executed by any of the store's methods
+    // its methods are proxied to the worker or share worker for execution.
+    // and the executed patch is sent to the store to be applied to synchronize the state.
     const transport:
       | Transport<{ listen: Internal; emit: External }>
       | undefined = option.worker
@@ -180,6 +190,7 @@ export const create = <T extends Slices>(
       _api.setState(JSON.parse(latest.state) as T);
       _sequence = latest.sequence;
     };
+    // TODO: implement to handle the case for the custom transport connects
     // @ts-ignore
     transport.onConnect?.(async () => {
       await fullSync();
