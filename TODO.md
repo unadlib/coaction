@@ -1,4 +1,35 @@
 # TODO
 
-- [ ] implement core
+- [ ] Slices Pattern: Easily combine multiple slices into a single store
+- [ ] Middleware Support: Supports state subscriptions and middleware for side effects and enhanced state handling, also supports Zustand middlewares and Redux middlewares
+- [ ] Cross-Framework Compatibility: Seamlessly works with React, Vue, Solid.js, Angular, and other modern web frameworks
+- [ ] Cross-Store Access: Read states and call functions across different stores while preventing unintended modifications
+- [ ] Multi-Store Workers: Run multiple stores within a single Web Worker
+- [ ] Shared Stores Across Workers: Use the same store definition across multiple Workers
+- [x] Multiprocessing State Management: Effortlessly manage state across main thread and Workers
+- [x] Intuitive API Design: Simple and expressive API inspired by popular state management libraries
+- [ ] Flexible Store Creation: Create multiple stores with unique names for better organization
+- [x] Worker Integration: Easy integration with Web Workers and Shared Worker for offloading computations
+- [ ] Computed Properties: Support for derived state through getter functions
+- [ ] Namespace Support: Avoid key conflicts with namespaced slices
+- [ ] Performance Optimized: Efficient state updates and retrieval, even with deeply nested structures
+- [ ] Type-Safe: Full TypeScript support for enhanced developer experience
+- [ ] Reactive: Built-in subscription mechanism for efficient UI updates
+- [ ] Async Action Support: Easily handle asynchronous state updates
+- [ ] Multi-Transport Support: Use generic transports for state synchronization
+- [ ] Immutable Updates: Ensures predictable state changes with immutable update patterns
+- [ ] Developer Tools Integration: Easy debugging with integrated developer tools
+- [ ] Persistence: Built-in support for state persistence
+- [ ] Scalable Architecture: Designed to scale from simple apps to complex, multiprocessing applications
 - [ ] implement coaction-react
+- [ ] implement coaction-vue
+- [ ] implement coaction-angular
+- [ ] implement coaction-svelte
+- [ ] implement coaction-Solid
+- [ ] implement coaction for Redux Toolkit
+- [ ] implement coaction for Zustand
+- [ ] implement coaction for MobX
+- [ ] implement coaction for Jotai
+- [ ] implement coaction for Recoil
+- [ ] implement coaction for XState
+- [ ] implement coaction for Pinia
