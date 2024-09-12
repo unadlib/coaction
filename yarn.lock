@@ -8311,6 +8311,11 @@ multimatch@5.0.0:
     arrify "^2.0.1"
     minimatch "^3.0.4"
 
+mutability@^1.1.0:
+  version "1.1.0"
+  resolved "https://registry.yarnpkg.com/mutability/-/mutability-1.1.0.tgz#9ca337525298dac5bdba11061afe5e529083b51b"
+  integrity sha512-qMj5GyFwH28RDZBATofnSqqa32AppLqfmypnftfV/68q/RLXFTu91OL5TSsiCRaAChCBHMROXbUBQooQnZ3rpA==
+
 mutative@^1.0.8:
   version "1.0.8"
   resolved "https://registry.yarnpkg.com/mutative/-/mutative-1.0.8.tgz#5dfc7a74bdda8acc5b3c1d91aba47d95f2b2dd3a"
@@ -10897,7 +10902,12 @@ tsconfig@^7.0.0:
     strip-bom "^3.0.0"
     strip-json-comments "^2.0.0"
 
-tslib@^1.13.0, tslib@^1.8.1, tslib@^1.9.0, tslib@^2.1.0, tslib@^2.3.0, tslib@^2.3.1, tslib@^2.4.0, tslib@^2.7.0:
+tslib@^1.13.0, tslib@^1.8.1, tslib@^1.9.0:
+  version "1.14.1"
+  resolved "https://registry.yarnpkg.com/tslib/-/tslib-1.14.1.tgz#cf2d38bdc34a134bcaf1091c41f6619e2f672d00"
+  integrity sha512-Xni35NKzjgMrwevysHTCArtLDpPvye8zV/0E4EyYn43P7/7qvQwPh9BGkHewbMulVntbigmcT7rdX3BNo9wRJg==
+
+tslib@^2.1.0, tslib@^2.3.0, tslib@^2.4.0, tslib@^2.7.0:
   version "2.7.0"
   resolved "https://registry.yarnpkg.com/tslib/-/tslib-2.7.0.tgz#d9b40c5c40ab59e8738f297df3087bf1a2690c01"
   integrity sha512-gLXCKdN1/j47AiHiOkJN69hJmcbGTHI0ImLmbYLHykhgeN0jVGola9yVjFgzCUklsZQMW55o+dW7IXv3RCXDzA==
