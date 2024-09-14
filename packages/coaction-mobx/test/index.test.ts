@@ -31,6 +31,7 @@ test.only('base', () => {
   autorun(() => {
     console.log(store.count);
   });
+  // TODO: implement multi-store
   const useStore = create(mobx(store));
   // TODO: fix this
   // @ts-ignore
