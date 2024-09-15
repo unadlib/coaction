@@ -1,6 +1,5 @@
-import { create } from 'coaction';
 import { makeAutoObservable, autorun } from 'mobx';
-import { mobx } from '../src';
+import { createWithMobx } from '../src';
 
 test('base', () => {
   const store = makeAutoObservable({
@@ -21,18 +20,15 @@ test('base', () => {
 });
 
 test.only('base', () => {
-  const store = makeAutoObservable({
-    name: 'test',
-    count: 0,
-    increment() {
-      this.count += 1;
-    }
-  });
-  autorun(() => {
-    console.log(store.count);
-  });
-  // TODO: implement multi-store
-  const useStore = create(mobx(store));
+  const useStore = createWithMobx(() =>
+    makeAutoObservable({
+      name: 'test',
+      count: 0,
+      increment() {
+        this.count += 1;
+      }
+    })
+  );
   // TODO: fix this
   // @ts-ignore
   const { count, increment, name } = useStore();
@@ -47,22 +43,27 @@ test.only('base', () => {
   }
   `);
   const fn = jest.fn();
-  useStore.subscribe(fn);
-  // @ts-ignore
+  useStore.subscribe(() => {
+    fn(useStore.getState().count);
+  });
+  // // @ts-ignore
   useStore.getState().increment();
   expect(useStore.getState()).toMatchInlineSnapshot(`
-  {
-    "count": 1,
-    "increment": [Function],
-    "name": "test",
-  }
-  `);
-  increment();
+{
+  "count": 1,
+  "increment": [Function],
+  "name": "test",
+}
+`);
+  expect(fn).toHaveBeenCalledTimes(2);
+  // useStore.getState().increment();
+  increment.call(useStore.getState());
   expect(useStore.getState()).toMatchInlineSnapshot(`
-  {
-    "count": 2,
-    "increment": [Function],
-    "name": "test",
-  }
-  `);
+{
+  "count": 2,
+  "increment": [Function],
+  "name": "test",
+}
+`);
+  expect(fn).toHaveBeenCalledTimes(3);
 });

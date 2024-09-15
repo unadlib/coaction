@@ -34,6 +34,14 @@ export interface Store<T extends ISlices> {
    * Unsubscribe all listeners.
    */
   destroy(): void;
+  /**
+   * The store is shared in the worker or shared worker.
+   */
+  share?: 'main' | 'client' | void;
+  /**
+   * The transport is used to communicate between the main thread and the worker or shared worker.
+   */
+  transport?: Transport;
 }
 
 type Option = {
@@ -78,14 +86,16 @@ export const create = <T extends ISlices>(
   }
 ) => {
   let state: T;
-  const createApi = () => {
+  const createApi = ({ share }: { share?: 'client' | 'main' } = {}) => {
     let transport: Transport<{ emit: Internal; listen: External }> | null =
       null;
     let sequence = 0;
     const listeners = new Set<Listener<T>>();
-    const setState: Store<T>['setState'] = (next) => {
+    const setState: Store<T>['setState'] = (
+      next,
+      result?: T | [T, Patches<true>, Patches<true>]
+    ) => {
       let nextState: T | null = null;
-      let result: T | [T, Patches<true>, Patches<true>] | null = null;
       if (typeof next === 'function') {
         result = createWithMutative(state, (draft) => next(draft), {
           enablePatches: !!workerType
@@ -96,7 +106,7 @@ export const create = <T extends ISlices>(
         // TODO: deep merge and fix performance issue
         nextState = Object.assign({}, state, next);
       }
-      if (!Object.is(nextState, state)) {
+      if (api.subscribe === subscribe && !Object.is(nextState, state)) {
         const previousState = state;
         state = nextState!;
         listeners.forEach((listener) => listener(state, previousState));
@@ -123,24 +133,21 @@ export const create = <T extends ISlices>(
       listeners.clear();
       transport?.dispose();
     };
-    const api = { setState, getState, getInitialState, subscribe, destroy };
-    const initialState = (state =
-      typeof createState === 'object'
-        ? Object.entries(createState).reduce(
-            (stateTree, [key, _createState]) => {
-              stateTree[key] = _createState(setState, getState, api);
-              return stateTree;
-            },
-            {} as any
-          )
-        : createState(api.setState, api.getState, api)) as any;
+    const api: Store<any> = {
+      setState,
+      getState,
+      getInitialState,
+      subscribe,
+      destroy
+    };
     // in worker, the transport is the worker itself
     transport =
       options?.transport ??
       (workerType
         ? createTransport(workerType, {
+            // TODO: fix prefix
             // @ts-ignore
-            prefix: state!.name
+            // prefix: state!.name
           })
         : null);
     transport?.listen('execute', async (key, args) => {
@@ -155,6 +162,20 @@ export const create = <T extends ISlices>(
         sequence
       };
     });
+    api.share = transport ? 'main' : share;
+    const initialState = (state =
+      typeof createState === 'object'
+        ? Object.entries(createState).reduce(
+            (stateTree, [key, _createState]) => {
+              // !!! createState is a function
+              stateTree[key] = _createState(setState, getState, api);
+              return stateTree;
+            },
+            {} as any
+          )
+        : // !!! createState is a function
+          createState(api.setState, api.getState, api)) as any;
+
     if (workerType) {
       initialState.name = workerType
         ? // @ts-ignore
@@ -163,6 +184,10 @@ export const create = <T extends ISlices>(
             globalThis.name
           : workerType
         : '';
+    }
+    if (transport) {
+      // @ts-ignore
+      api.transport = transport;
     }
     return api;
   };
@@ -181,8 +206,9 @@ export const create = <T extends ISlices>(
             ? 'SharedWorkerClient'
             : 'WorkerMain',
           {
+            // TODO: fix prefix
             // @ts-ignore
-            prefix: state.name,
+            // prefix: state.name,
             worker: option.worker as SharedWorker
           }
         )
@@ -190,7 +216,8 @@ export const create = <T extends ISlices>(
     if (!transport) {
       throw new Error('transport is required');
     }
-    const _api = createApi();
+    const _api = createApi({ share: 'client' });
+    _api.transport = transport;
     const _state = _api.getState();
     for (const key in _state) {
       const value = _state[key];
@@ -217,12 +244,18 @@ export const create = <T extends ISlices>(
     });
     transport.listen('update', async ({ patches, name, sequence }) => {
       console.log('update', { patches, name, sequence });
+      // TODO: fix this
       // @ts-ignore
-      if (name !== state.name) return;
+      // if (name !== state.name) return;
       if (typeof sequence === 'number' && sequence === _sequence + 1) {
         _sequence = sequence;
-        const next = apply(_api.getState(), patches);
-        _api.setState(next);
+        if (_api.apply) {
+          _api.apply(_api.getState(), patches);
+        } else {
+          // @ts-ignore
+          const next = apply(_api.getState(), patches);
+          _api.setState(next ?? _api.getState());
+        }
       } else {
         await fullSync();
       }
