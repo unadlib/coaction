@@ -35,6 +35,10 @@ export interface Store<T extends ISlices> {
    */
   destroy(): void;
   /**
+   * apply the patches to the state.
+   */
+  apply(state: T, patches: Patches): void;
+  /**
    * The store is shared in the worker or shared worker.
    */
   share?: 'main' | 'client' | void;
@@ -138,7 +142,11 @@ export const create = <T extends ISlices>(
       getState,
       getInitialState,
       subscribe,
-      destroy
+      destroy,
+      apply: (state, patches) => {
+        const next = apply(state, patches);
+        api.setState(next);
+      }
     };
     // in worker, the transport is the worker itself
     transport =
@@ -249,13 +257,7 @@ export const create = <T extends ISlices>(
       // if (name !== state.name) return;
       if (typeof sequence === 'number' && sequence === _sequence + 1) {
         _sequence = sequence;
-        if (_api.apply) {
-          _api.apply(_api.getState(), patches);
-        } else {
-          // @ts-ignore
-          const next = apply(_api.getState(), patches);
-          _api.setState(next ?? _api.getState());
-        }
+        _api.apply(_api.getState(), patches);
       } else {
         await fullSync();
       }
