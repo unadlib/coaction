@@ -3,7 +3,7 @@ import { useStore } from './store';
 // @ts-ignore
 // const { increment } = useStore();
 
-const worker = new Worker(new URL('./store.ts', import.meta.url), {
+const worker = new SharedWorker(new URL('./store.ts', import.meta.url), {
   type: 'module'
 });
 
@@ -13,12 +13,15 @@ const useWorkerStore = useStore({
 
 console.log('create');
 
+globalThis.useWorkerStore = useWorkerStore;
+
 export function setupCounter(element: HTMLButtonElement) {
   const useStore = useWorkerStore;
-  console.log('useStore.getState().counter', useStore.getState().count);
   useStore.subscribe(() => {
-    element.innerHTML = `count is ${useStore.getState().count}`;
+    element.innerHTML = `count is ${useStore.getState().counter.count}`;
   });
-  element.addEventListener('click', () => useStore.getState().increment());
-  element.innerHTML = `count is ${useStore.getState().count}`;
+  element.addEventListener('click', () =>
+    useStore.getState().counter.increment()
+  );
+  element.innerHTML = `count is ${useStore.getState().counter.count}`;
 }
