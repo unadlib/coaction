@@ -5,7 +5,9 @@ import { autorun, runInAction } from 'mobx';
 export const createWithMobx = (getMobxStore: () => any) => {
   return create((get, set, api) => {
     const mobxStore = getMobxStore();
-    api.subscribe = autorun;
+    Object.assign(api, {
+      subscribe: autorun
+    });
     if (!api.share) {
       return mobxStore;
     }
@@ -16,13 +18,17 @@ export const createWithMobx = (getMobxStore: () => any) => {
         });
       };
     }
+    if (process.env.NODE_ENV === 'development') {
+      // TODO: check with observe for unexpected changes
+    }
+    // TODO: implement slices Pattern
     return new Proxy(mobxStore, {
       get(target, key, receiver) {
         const value = Reflect.get(target, key, receiver);
         if (typeof value === 'function') {
           return (...args: any) => {
             if (api.share === 'client') {
-              return api.transport.emit('execute', key, args);
+              return api.transport?.emit('execute', key, args);
             }
             let result: any;
             const { patches, inversePatches } = mutate(target, (draft: any) => {
