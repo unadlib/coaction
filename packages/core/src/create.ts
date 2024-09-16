@@ -207,7 +207,12 @@ export const create = <T extends ISlices>(
     // its methods are proxied to the worker or share worker for execution.
     // and the executed patch is sent to the store to be applied to synchronize the state.
     const transport:
-      | Transport<{ listen: Internal; emit: External }>
+      | (Transport<{ listen: Internal; emit: External }> & {
+          /**
+           * onConnect is called when the transport is connected.
+           */
+          onConnect?: (fn: () => void) => void;
+        })
       | undefined = option.worker
       ? createTransport(
           option.worker instanceof SharedWorker
@@ -246,7 +251,9 @@ export const create = <T extends ISlices>(
       _sequence = latest.sequence;
     };
     // TODO: implement to handle the case for the custom transport connects
-    // @ts-ignore
+    if (typeof transport.onConnect !== 'function') {
+      throw new Error('transport.onConnect is required');
+    }
     transport.onConnect?.(async () => {
       await fullSync();
     });
