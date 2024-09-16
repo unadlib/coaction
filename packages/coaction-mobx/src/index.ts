@@ -18,20 +18,21 @@ export const createWithMobx = (getMobxStore: () => any) => {
     }
     return new Proxy(mobxStore, {
       get(target, key, receiver) {
-        if (typeof target[key] === 'function') {
+        const value = Reflect.get(target, key, receiver);
+        if (typeof value === 'function') {
           return (...args: any) => {
             if (api.share === 'client') {
               return api.transport.emit('execute', key, args);
             }
             let result: any;
             const { patches, inversePatches } = mutate(target, (draft: any) => {
-              result = target[key].apply(draft, args);
+              result = value.apply(draft, args);
             });
-            api.setState({}, [target, patches, inversePatches]);
+            api.setState(null, [target, patches, inversePatches]);
             return result;
           };
         }
-        return Reflect.get(target, key, receiver);
+        return value;
       }
     });
   });

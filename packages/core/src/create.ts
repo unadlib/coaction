@@ -106,7 +106,7 @@ export const create = <T extends ISlices>(
         });
         // @ts-ignore
         nextState = workerType ? result[0] : result;
-      } else {
+      } else if (api.subscribe === subscribe) {
         // TODO: deep merge and fix performance issue
         nextState = Object.assign({}, state, next);
       }
