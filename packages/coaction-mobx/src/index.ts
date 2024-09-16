@@ -6,14 +6,13 @@ export const createWithMobx = (getMobxStore: () => any) => {
   return create((get: any, set: any, api: any) => {
     const mobxStore = getMobxStore();
     api.subscribe = autorun;
-    console.log('api.share', api.share);
     if (!api.share) {
       return mobxStore;
     }
     if (api.share === 'client') {
-      api.apply = (...args: any[]) => {
+      api.apply = (state, patches) => {
         runInAction(() => {
-          apply(...args);
+          apply(state, patches);
         });
       };
     }
@@ -28,7 +27,6 @@ export const createWithMobx = (getMobxStore: () => any) => {
             const { patches, inversePatches } = mutate(target, (draft: any) => {
               result = target[key].apply(draft, args);
             });
-            console.log('proxy set!!!');
             api.setState({}, [target, patches, inversePatches]);
             return result;
           };
