@@ -17,27 +17,30 @@ export interface Store<T extends ISlices> {
   /**
    * Set the next state.
    */
-  setState(next: T | ((draft: Draft<T>) => void)): void;
+  setState: (
+    next: T | ((draft: Draft<T>) => void) | null,
+    result?: T | [T, Patches<true>, Patches<true>]
+  ) => void;
   /**
    * Get the current state.
    */
-  getState(): T;
+  getState: () => T;
   /**
    * Get the initial state.
    */
-  getInitialState(): T;
+  getInitialState: () => T;
   /**
    * Subscribe to the state changes.
    */
-  subscribe(listener: Listener<T>): () => void;
+  subscribe: (listener: Listener<T>) => () => void;
   /**
    * Unsubscribe all listeners.
    */
-  destroy(): void;
+  destroy: () => void;
   /**
    * apply the patches to the state.
    */
-  apply(state: T, patches: Patches): void;
+  apply: (state: T, patches: Patches) => void;
   /**
    * The store is shared in the worker or shared worker.
    */

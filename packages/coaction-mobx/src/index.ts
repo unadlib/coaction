@@ -3,7 +3,7 @@ import { create } from 'coaction';
 import { autorun, runInAction } from 'mobx';
 
 export const createWithMobx = (getMobxStore: () => any) => {
-  return create((get: any, set: any, api: any) => {
+  return create((get, set, api) => {
     const mobxStore = getMobxStore();
     api.subscribe = autorun;
     if (!api.share) {
