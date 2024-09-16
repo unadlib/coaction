@@ -65,7 +65,7 @@ type Internal = {
 };
 
 type External = {
-  execute(key: string, args: any[]): Promise<any>;
+  execute(keys: string[], args: any[]): Promise<any>;
   fullSync(): Promise<{ state: string; sequence: number }>;
 };
 
@@ -111,7 +111,17 @@ export const create = <T extends ISlices>(
         nextState = workerType ? result[0] : result;
       } else if (api.subscribe === subscribe) {
         // TODO: deep merge and fix performance issue
-        nextState = Object.assign({}, state, next);
+        if (typeof createState === 'object') {
+          nextState = Object.entries(state).reduce((acc, [key, value]) => {
+            Object.assign(acc, {
+              // @ts-ignore
+              [key]: Object.assign({}, value, next[key])
+            });
+            return acc;
+          }, {} as T);
+        } else {
+          nextState = Object.assign({}, state, next);
+        }
       }
       if (api.subscribe === subscribe && !Object.is(nextState, state)) {
         const previousState = state;
@@ -161,10 +171,18 @@ export const create = <T extends ISlices>(
             // prefix: state!.name
           })
         : null);
-    transport?.listen('execute', async (key, args) => {
-      console.log('execute', { key, args });
-      // @ts-ignore
-      return api.getState()[key](...args);
+    transport?.listen('execute', async (keys, args) => {
+      console.log('execute', { keys, args });
+      let base = api.getState();
+      let obj = base;
+      for (const key of keys) {
+        base = base[key];
+        if (typeof base === 'function') {
+          base = base.bind(obj);
+        }
+        obj = base;
+      }
+      return base(...args);
     });
     transport?.listen('fullSync', async () => {
       console.log('fullSync');
@@ -235,14 +253,30 @@ export const create = <T extends ISlices>(
     const _api = createApi({ share: 'client' });
     _api.transport = transport;
     const _state = _api.getState();
-    for (const key in _state) {
-      const value = _state[key];
-      if (typeof value === 'function') {
-        // @ts-ignore
-        _state[key] = (...args: any[]) => {
-          console.log('execute', { key, args });
-          return transport.emit('execute', key, args);
-        };
+    if (typeof createState === 'object') {
+      for (const key in _state) {
+        const value = _state[key];
+        for (const _key in value) {
+          const _value = value[_key];
+          if (typeof _value === 'function') {
+            // @ts-ignore
+            value[_key] = (...args: any[]) => {
+              console.log('execute', { key, args });
+              return transport.emit('execute', [key, _key], args);
+            };
+          }
+        }
+      }
+    } else {
+      for (const key in _state) {
+        const value = _state[key];
+        if (typeof value === 'function') {
+          // @ts-ignore
+          _state[key] = (...args: any[]) => {
+            console.log('execute', { key, args });
+            return transport.emit('execute', [key], args);
+          };
+        }
       }
     }
     let _sequence: number;
