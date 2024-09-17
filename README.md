@@ -162,7 +162,7 @@ const CounterComponent = () => {
 - Zustand
 - MobX
 - Jotai
-- Recoil
+- Valtio
 - XState
 - Pinia
 
