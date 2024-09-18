@@ -45,6 +45,6 @@
   },
   "dependencies": {
     "data-transport": "^4.4.0",
-    "mutative": "^1.0.8"
+    "mutative": "^1.0.10"
   }
 }
