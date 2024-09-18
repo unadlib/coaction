@@ -63,6 +63,6 @@
     "react-dom": "^18.0.0"
   },
   "dependencies": {
-    "mutability": "^1.1.0"
+    "mutability": "^1.1.1"
   }
 }
