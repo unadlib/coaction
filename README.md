@@ -150,26 +150,26 @@ const CounterComponent = () => {
 
 ### Supported Libraries and Frameworks
 
-- React
-- Angular
-- Vue
-- Svelte
-- Solid
+- [ ] React
+- [ ] Angular
+- [ ] Vue
+- [ ] Svelte
+- [ ] Solid
 
 ### State Management
 
-- Redux Toolkit
-- Zustand
-- MobX
-- Jotai
-- Valtio
-- XState
-- Pinia
+- [ ] Redux Toolkit
+- [ ] Zustand
+- [x] MobX
+- [ ] Jotai
+- [ ] Valtio
+- [ ] XState
+- [ ] Pinia
 
 ## Runner
 
-- Web Workers
-- Shared Workers
+- [x] Web Workers
+- [x] Shared Workers
 
 ## License
 
