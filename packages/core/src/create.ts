@@ -284,6 +284,7 @@ export const create = <T extends ISlices>(
       console.log('fullSync');
       const latest = await transport.emit('fullSync');
       console.log('fullSync', latest);
+      // TODO: fix this for mutable state
       _api.setState(JSON.parse(latest.state) as T);
       _sequence = latest.sequence;
     };
@@ -292,6 +293,7 @@ export const create = <T extends ISlices>(
       throw new Error('transport.onConnect is required');
     }
     transport.onConnect?.(async () => {
+      console.log('onConnect');
       await fullSync();
     });
     transport.listen('update', async ({ patches, name, sequence }) => {
