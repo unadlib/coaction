@@ -19,7 +19,7 @@ export interface Store<T extends ISlices> {
    */
   setState: (
     next: T | ((draft: Draft<T>) => void) | null,
-    result?: T | [T, Patches<true>, Patches<true>]
+    updater?: () => void
   ) => void;
   /**
    * Get the current state.
@@ -98,25 +98,30 @@ export const create = <T extends ISlices>(
       null;
     let sequence = 0;
     const listeners = new Set<Listener<T>>();
-    const setState: Store<T>['setState'] = (next) => {
-      // TODO: implement mutable type state
-      let nextState: T | null = null;
-      let result: T | [T, Patches<true>, Patches<true>] | null = null;
-      if (typeof next === 'function') {
-        result = createWithMutative(state, (draft) => next(draft), {
-          enablePatches: !!workerType
-        });
-        // @ts-ignore
-        nextState = workerType ? result[0] : result;
-      } else {
-        // TODO: deep merge and fix performance issue
-        nextState = Object.assign({}, state, next);
+    const setState: Store<T>['setState'] = (
+      next,
+      updater = () => {
+        // TODO: implement mutable type state
+        let nextState: T | null = null;
+        let result: T | [T, Patches<true>, Patches<true>] | null = null;
+        if (typeof next === 'function') {
+          result = createWithMutative(state, (draft) => next(draft), {
+            enablePatches: !!workerType
+          });
+          // @ts-ignore
+          nextState = workerType ? result[0] : result;
+        } else {
+          // TODO: deep merge and fix performance issue
+          nextState = Object.assign({}, state, next);
+        }
+        if (!Object.is(nextState, state)) {
+          const previousState = state;
+          state = nextState!;
+          listeners.forEach((listener) => listener(state, previousState));
+        }
       }
-      if (!Object.is(nextState, state)) {
-        const previousState = state;
-        state = nextState!;
-        listeners.forEach((listener) => listener(state, previousState));
-      }
+    ) => {
+      updater();
       if (transport) {
         sequence += 1;
         transport.emit('update', {
