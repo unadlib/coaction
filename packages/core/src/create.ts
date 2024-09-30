@@ -11,7 +11,7 @@ import { createTransport, type Transport } from 'data-transport';
 
 type ISlices = object;
 
-type Listener<T> = (state: T, previousState: T) => void;
+type Listener = () => void;
 
 export interface Store<T extends ISlices> {
   /**
@@ -32,7 +32,7 @@ export interface Store<T extends ISlices> {
   /**
    * Subscribe to the state changes.
    */
-  subscribe: (listener: Listener<T>) => () => void;
+  subscribe: (listener: Listener) => () => void;
   /**
    * Unsubscribe all listeners.
    */
@@ -101,7 +101,7 @@ export const create = <T extends ISlices>(
     let transport: Transport<{ emit: Internal; listen: External }> | null =
       null;
     let sequence = 0;
-    const listeners = new Set<Listener<T>>();
+    const listeners = new Set<Listener>();
     const setState: Store<T>['setState'] = (
       next,
       updater = () => {
@@ -109,6 +109,7 @@ export const create = <T extends ISlices>(
         let nextState: T | null = null;
         let result: T | [T, Patches<true>, Patches<true>] | null = null;
         if (typeof next === 'function') {
+          // @ts-ignore
           result = createWithMutative(state, (draft) => next(draft), {
             enablePatches: !!workerType
           });
@@ -119,9 +120,8 @@ export const create = <T extends ISlices>(
           nextState = Object.assign({}, state, next);
         }
         if (!Object.is(nextState, state)) {
-          const previousState = state;
           state = nextState!;
-          listeners.forEach((listener) => listener(state, previousState));
+          listeners.forEach((listener) => listener());
         }
         return result;
       }
@@ -158,7 +158,8 @@ export const create = <T extends ISlices>(
       apply: (state, patches) => {
         const next = apply(state, patches);
         api.setState(next);
-      }
+      },
+      isSlices: typeof createState === 'object'
     };
     // in worker, the transport is the worker itself
     transport =
@@ -191,15 +192,14 @@ export const create = <T extends ISlices>(
       };
     });
     api.share = transport ? 'main' : share;
-    const isSlices = typeof createState === 'object';
-    api.isSlices = isSlices;
-    const initialState = (state = isSlices
+    const initialState = (state = api.isSlices
       ? Object.entries(createState).reduce((stateTree, [key, _createState]) => {
           // !!! createState is a function
           stateTree[key] = _createState(setState, getState, api);
           return stateTree;
         }, {} as any)
       : // !!! createState is a function
+        // @ts-ignore
         createState(api.setState, api.getState, api)) as any;
 
     if (workerType) {
