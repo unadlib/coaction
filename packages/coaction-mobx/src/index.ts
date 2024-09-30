@@ -16,6 +16,25 @@ const handleStore = (
         apply(state, patches);
       });
     };
+    api.setState = (next) => {
+      if (api.isSlices) {
+        if (typeof next === 'object' && next !== null) {
+          runInAction(() => {
+            for (const key in next) {
+              // @ts-ignore
+              if (typeof next[key] === 'object' && next[key] !== null) {
+                // @ts-ignore
+                Object.assign(api.getState()[key], next[key]);
+              }
+            }
+          });
+        }
+      } else {
+        runInAction(() => {
+          Object.assign(api.getState(), next);
+        });
+      }
+    };
   }
   const mobxState = createMobxState();
   if (!api.share) {
@@ -48,7 +67,7 @@ const handleStore = (
               patch.path = [stateKey, ...patch.path];
             });
           }
-          api.setState(null, [target, patches, inversePatches]);
+          api.setState(null, () => [target, patches, inversePatches]);
           return result;
         };
       }
