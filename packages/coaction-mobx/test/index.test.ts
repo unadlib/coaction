@@ -19,7 +19,7 @@ test('base', () => {
   expect(store.count).toBe(1);
 });
 
-test.only('base', () => {
+test('base', () => {
   const useStore = createWithMobx(() =>
     makeAutoObservable({
       name: 'test',

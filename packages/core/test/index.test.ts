@@ -1,3 +1,4 @@
+import { createTransport, mockPorts } from 'data-transport';
 import { create } from '../src';
 
 test('base', () => {
@@ -41,6 +42,100 @@ test('base', () => {
     "name": "test",
   }
   `);
+});
+
+test('worker', async () => {
+  const ports = mockPorts();
+  const serverTransport = createTransport('WorkerInternal', ports.main);
+  const clientTransport = createTransport('WorkerMain', ports.create());
+
+  const counter = (set) => ({
+    name: 'test',
+    count: 0,
+    increment() {
+      set((draft) => {
+        draft.count += 1;
+      });
+    }
+  });
+  const useServerStore = create(counter, {
+    transport: serverTransport,
+    workerType: 'WorkerInternal'
+  });
+  // TODO: fix this
+  // @ts-ignore
+  const { count, increment, name } = useServerStore();
+  expect(count).toBe(0);
+  expect(increment).toBeInstanceOf(Function);
+  expect(name).toBe('WorkerInternal');
+  expect(useServerStore.getState()).toMatchInlineSnapshot(`
+{
+  "count": 0,
+  "increment": [Function],
+  "name": "WorkerInternal",
+}
+`);
+  const fn = jest.fn();
+  useServerStore.subscribe(fn);
+  useServerStore.getState().increment();
+  expect(useServerStore.getState()).toMatchInlineSnapshot(`
+{
+  "count": 1,
+  "increment": [Function],
+  "name": "WorkerInternal",
+}
+`);
+  increment();
+  expect(useServerStore.getState()).toMatchInlineSnapshot(`
+{
+  "count": 2,
+  "increment": [Function],
+  "name": "WorkerInternal",
+}
+`);
+  {
+    const useClientStore = create(counter)({
+      transport: clientTransport,
+      workerType: 'WorkerMain'
+    });
+
+    await new Promise((resolve) => {
+      clientTransport.onConnect(() => {
+        setTimeout(resolve);
+      });
+    });
+
+    // @ts-ignore
+    const { count, increment, name } = useClientStore();
+    expect(count).toBe(2);
+    expect(increment).toBeInstanceOf(Function);
+    expect(name).toBe('WorkerInternal');
+    expect(useClientStore.getState()).toMatchInlineSnapshot(`
+{
+  "count": 2,
+  "increment": [Function],
+  "name": "WorkerInternal",
+}
+`);
+    const fn = jest.fn();
+    useClientStore.subscribe(fn);
+    useClientStore.getState().increment();
+    expect(useClientStore.getState()).toMatchInlineSnapshot(`
+{
+  "count": 3,
+  "increment": [Function],
+  "name": "WorkerInternal",
+}
+`);
+    increment();
+    expect(useClientStore.getState()).toMatchInlineSnapshot(`
+{
+  "count": 4,
+  "increment": [Function],
+  "name": "WorkerInternal",
+}
+`);
+  }
 });
 
 test('base - Slices', () => {
