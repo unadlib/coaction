@@ -41,12 +41,12 @@ test('worker', async () => {
   const { count, increment, name } = useServerStore();
   expect(count).toBe(0);
   expect(increment).toBeInstanceOf(Function);
-  expect(name).toBe('test');
+  expect(name).toBe('WorkerInternal');
   expect(useServerStore.getState()).toMatchInlineSnapshot(`
 {
   "count": 0,
   "increment": [Function],
-  "name": "test",
+  "name": "WorkerInternal",
 }
 `);
   const fn = jest.fn();
@@ -56,7 +56,7 @@ test('worker', async () => {
 {
   "count": 1,
   "increment": [Function],
-  "name": "test",
+  "name": "WorkerInternal",
 }
 `);
   increment.call(useServerStore.getState());
@@ -64,52 +64,52 @@ test('worker', async () => {
 {
   "count": 2,
   "increment": [Function],
-  "name": "test",
+  "name": "WorkerInternal",
 }
 `);
-  //   {
-  //     const useClientStore = createWithMobx(counter)({
-  //       transport: clientTransport,
-  //       workerType: 'WorkerMain'
-  //     });
+  {
+    const useClientStore = createWithMobx(counter)({
+      transport: clientTransport,
+      workerType: 'WorkerMain'
+    });
 
-  //     await new Promise((resolve) => {
-  //       clientTransport.onConnect(() => {
-  //         setTimeout(resolve);
-  //       });
-  //     });
+    await new Promise((resolve) => {
+      clientTransport.onConnect(() => {
+        setTimeout(resolve);
+      });
+    });
 
-  //     // @ts-ignore
-  //     const { count, increment, name } = useClientStore();
-  //     expect(count).toBe(2);
-  //     expect(increment).toBeInstanceOf(Function);
-  //     expect(name).toBe('WorkerInternal');
-  //     expect(useClientStore.getState()).toMatchInlineSnapshot(`
-  // {
-  //   "count": 2,
-  //   "increment": [Function],
-  //   "name": "WorkerInternal",
-  // }
-  // `);
-  //     const fn = jest.fn();
-  //     useClientStore.subscribe(fn);
-  //     useClientStore.getState().increment();
-  //     expect(useClientStore.getState()).toMatchInlineSnapshot(`
-  // {
-  //   "count": 3,
-  //   "increment": [Function],
-  //   "name": "WorkerInternal",
-  // }
-  // `);
-  //     increment();
-  //     expect(useClientStore.getState()).toMatchInlineSnapshot(`
-  // {
-  //   "count": 4,
-  //   "increment": [Function],
-  //   "name": "WorkerInternal",
-  // }
-  // `);
-  //   }
+    // @ts-ignore
+    const { count, increment, name } = useClientStore();
+    expect(count).toBe(2);
+    expect(increment).toBeInstanceOf(Function);
+    expect(name).toBe('WorkerInternal');
+    expect(useClientStore.getState()).toMatchInlineSnapshot(`
+  {
+    "count": 2,
+    "increment": [Function],
+    "name": "WorkerInternal",
+  }
+  `);
+    const fn = jest.fn();
+    useClientStore.subscribe(fn);
+    useClientStore.getState().increment();
+    expect(useClientStore.getState()).toMatchInlineSnapshot(`
+  {
+    "count": 3,
+    "increment": [Function],
+    "name": "WorkerInternal",
+  }
+  `);
+    increment();
+    expect(useClientStore.getState()).toMatchInlineSnapshot(`
+  {
+    "count": 4,
+    "increment": [Function],
+    "name": "WorkerInternal",
+  }
+  `);
+  }
 });
 
 test('base', () => {

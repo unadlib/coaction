@@ -77,12 +77,13 @@ const handleStore = (
 };
 
 export const createWithMobx = (
-  createMobxState: () => any | Record<string, () => any>
+  createMobxState: () => any | Record<string, () => any>,
+  options: any
 ) => {
   if (typeof createMobxState === 'function') {
     return create((get, set, api) => {
       return handleStore(api, createMobxState);
-    });
+    }, options);
   }
   if (typeof createMobxState === 'object' && createMobxState !== null) {
     return create(
@@ -90,7 +91,8 @@ export const createWithMobx = (
         acc[key] = (get: any, set: any, api: any) =>
           handleStore(api, createMobxState[key], key);
         return acc;
-      }, {} as any)
+      }, {} as any),
+      options
     );
   }
   throw new Error('createWithMobx must be a function or an object');
