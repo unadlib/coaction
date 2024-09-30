@@ -58,6 +58,7 @@ export interface Store<T extends ISlices> {
 type Option = {
   worker?: Worker | SharedWorker;
   transport?: Transport;
+  workerType?: 'SharedWorkerInternal' | 'WorkerInternal';
 };
 
 type Internal = {
@@ -91,11 +92,13 @@ type Slices<T extends ISlices> = (
 export const create = <T extends ISlices>(
   createState: Slices<T> | Record<string, Slices<T>>,
   options?: {
-    name: string;
+    name?: string;
     transport?: Transport;
+    workerType?: 'SharedWorkerInternal' | 'WorkerInternal';
     middlewares: any[];
   }
 ) => {
+  const _workerType = options?.workerType ?? workerType;
   let state: T;
   const createApi = ({ share }: { share?: 'client' | 'main' } = {}) => {
     let transport: Transport<{ emit: Internal; listen: External }> | null =
@@ -111,10 +114,10 @@ export const create = <T extends ISlices>(
         if (typeof next === 'function') {
           // @ts-ignore
           result = createWithMutative(state, (draft) => next(draft), {
-            enablePatches: !!workerType
+            enablePatches: !!_workerType
           });
           // @ts-ignore
-          nextState = workerType ? result[0] : result;
+          nextState = _workerType ? result[0] : result;
         } else {
           // TODO: deep merge and fix performance issue
           nextState = Object.assign({}, state, next);
@@ -164,8 +167,8 @@ export const create = <T extends ISlices>(
     // in worker, the transport is the worker itself
     transport =
       options?.transport ??
-      (workerType
-        ? createTransport(workerType, {
+      (_workerType
+        ? createTransport(_workerType, {
             // TODO: fix prefix
             // @ts-ignore
             // prefix: state!.name
@@ -202,13 +205,13 @@ export const create = <T extends ISlices>(
         // @ts-ignore
         createState(api.setState, api.getState, api)) as any;
 
-    if (workerType) {
-      initialState.name = workerType
+    if (_workerType) {
+      initialState.name = _workerType
         ? // @ts-ignore
           globalThis.name
           ? // @ts-ignore
             globalThis.name
-          : workerType
+          : _workerType
         : '';
     }
     if (transport) {
@@ -250,7 +253,7 @@ export const create = <T extends ISlices>(
     const _api = createApi({ share: 'client' });
     _api.transport = transport;
     const _state = _api.getState();
-    if (typeof createState === 'object') {
+    if (_api.isSlices) {
       for (const key in _state) {
         const value = _state[key];
         for (const _key in value) {

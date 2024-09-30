@@ -27,6 +27,7 @@
     "preinstall": "node ./scripts/ensure-yarn.js",
     "postinstall": "manypkg check && preconstruct dev",
     "build": "preconstruct build",
+    "clean": "lerna exec rimraf ./dist",
     "watch": "preconstruct watch",
     "fix": "manypkg fix",
     "typecheck": "tsc",
