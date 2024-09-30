@@ -18,7 +18,7 @@ export interface Store<T extends ISlices> {
    * Set the next state.
    */
   setState: (
-    next: T | ((draft: Draft<T>) => void) | null,
+    next: T | ((draft: Draft<T>) => any) | null,
     updater?: () => void
   ) => void;
   /**
@@ -49,6 +49,10 @@ export interface Store<T extends ISlices> {
    * The transport is used to communicate between the main thread and the worker or shared worker.
    */
   transport?: Transport;
+  /**
+   * The store is a slices.
+   */
+  isSlices: boolean;
 }
 
 type Option = {
@@ -119,9 +123,10 @@ export const create = <T extends ISlices>(
           state = nextState!;
           listeners.forEach((listener) => listener(state, previousState));
         }
+        return result;
       }
     ) => {
-      updater();
+      const result = updater();
       if (transport) {
         sequence += 1;
         transport.emit('update', {
@@ -186,18 +191,16 @@ export const create = <T extends ISlices>(
       };
     });
     api.share = transport ? 'main' : share;
-    const initialState = (state =
-      typeof createState === 'object'
-        ? Object.entries(createState).reduce(
-            (stateTree, [key, _createState]) => {
-              // !!! createState is a function
-              stateTree[key] = _createState(setState, getState, api);
-              return stateTree;
-            },
-            {} as any
-          )
-        : // !!! createState is a function
-          createState(api.setState, api.getState, api)) as any;
+    const isSlices = typeof createState === 'object';
+    api.isSlices = isSlices;
+    const initialState = (state = isSlices
+      ? Object.entries(createState).reduce((stateTree, [key, _createState]) => {
+          // !!! createState is a function
+          stateTree[key] = _createState(setState, getState, api);
+          return stateTree;
+        }, {} as any)
+      : // !!! createState is a function
+        createState(api.setState, api.getState, api)) as any;
 
     if (workerType) {
       initialState.name = workerType

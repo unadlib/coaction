@@ -173,4 +173,4 @@ const CounterComponent = () => {
 
 ## License
 
-coaction is [MIT licensed](./LICENSE).
+`Coaction` is [MIT licensed](./LICENSE).
