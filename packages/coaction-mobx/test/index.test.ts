@@ -1,6 +1,6 @@
 import { makeAutoObservable, autorun } from 'mobx';
 import { createTransport, mockPorts } from 'data-transport';
-import { createWithMobx } from '../src';
+import { createWithMobx as create } from '../src';
 
 test('base', () => {
   const store = makeAutoObservable({
@@ -25,14 +25,15 @@ test('worker', async () => {
   const serverTransport = createTransport('WorkerInternal', ports.main);
   const clientTransport = createTransport('WorkerMain', ports.create());
 
-  const counter = () => ({
-    name: 'test',
-    count: 0,
-    increment() {
-      this.count += 1;
-    }
-  });
-  const useServerStore = createWithMobx(counter, {
+  const counter = () =>
+    makeAutoObservable({
+      name: 'test',
+      count: 0,
+      increment() {
+        this.count += 1;
+      }
+    });
+  const useServerStore = create(counter, {
     transport: serverTransport,
     workerType: 'WorkerInternal'
   });
@@ -68,7 +69,7 @@ test('worker', async () => {
 }
 `);
   {
-    const useClientStore = createWithMobx(counter)({
+    const useClientStore = create(counter)({
       transport: clientTransport,
       workerType: 'WorkerMain'
     });
@@ -113,7 +114,7 @@ test('worker', async () => {
 });
 
 test('base', () => {
-  const useStore = createWithMobx(() =>
+  const useStore = create(() =>
     makeAutoObservable({
       name: 'test',
       count: 0,
