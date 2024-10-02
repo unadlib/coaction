@@ -165,6 +165,8 @@ const CounterComponent = () => {
 - [ ] Valtio
 - [ ] XState
 - [ ] Pinia
+- [ ] nanostores
+- [ ] @ngrx/store
 
 ## Runner
 
