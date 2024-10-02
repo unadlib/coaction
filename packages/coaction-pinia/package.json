@@ -1,0 +1,58 @@
+{
+  "name": "@coaction/pinia",
+  "version": "0.0.1",
+  "description": "Coaction tools for Pinia",
+  "keywords": [
+    "state",
+    "coaction",
+    "pinia"
+  ],
+  "authors": [
+    "Michael Lin <unadlib@gmail.com> (https://github.com/unadlib)"
+  ],
+  "homepage": "https://github.com/unadlib/coaction/tree/main/packages/coaction-pinia#readme",
+  "license": "MIT",
+  "main": "dist/coaction-pinia.cjs.js",
+  "module": "dist/coaction-pinia.esm.js",
+  "exports": {
+    ".": {
+      "types": {
+        "import": "./dist/coaction-pinia.cjs.mjs",
+        "default": "./dist/coaction-pinia.cjs.js"
+      },
+      "module": "./dist/coaction-pinia.esm.js",
+      "import": "./dist/coaction-pinia.cjs.mjs",
+      "default": "./dist/coaction-pinia.cjs.js"
+    },
+    "./package.json": "./package.json"
+  },
+  "types": "dist/coaction-pinia.cjs.d.ts",
+  "sideEffects": false,
+  "files": [
+    "dist"
+  ],
+  "repository": {
+    "type": "git",
+    "url": "git+ssh://git@github.com/unadlib/coaction.git"
+  },
+  "scripts": {},
+  "bugs": {
+    "url": "https://github.com/unadlib/coaction/issues"
+  },
+  "peerDependencies": {
+    "coaction": "^0.0.1",
+    "pinia": "^2.0"
+  },
+  "peerDependenciesMeta": {
+    "coaction": {
+      "optional": true
+    }
+  },
+  "devDependencies": {
+    "coaction": "^0.0.1",
+    "pinia": "^2.2.4"
+  },
+  "dependencies": {
+    "mutability": "^1.1.1"
+  }
+}

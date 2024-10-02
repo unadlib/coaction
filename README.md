@@ -161,10 +161,10 @@ const CounterComponent = () => {
 - [ ] Redux Toolkit
 - [ ] Zustand
 - [x] MobX
-- [ ] Jotai
-- [ ] Valtio
-- [ ] XState
 - [ ] Pinia
+- [ ] Jotai
+- [ ] XState
+- [ ] Valtio
 - [ ] nanostores
 - [ ] @ngrx/store
 

@@ -29,7 +29,11 @@
 - [ ] implement coaction for Redux Toolkit
 - [ ] implement coaction for Zustand
 - [ ] implement coaction for MobX
+  - no support for custom observables
+  - no support for lazy observables
 - [ ] implement coaction for Jotai
-- [ ] implement coaction for Recoil
 - [ ] implement coaction for XState
 - [ ] implement coaction for Pinia
+- [ ] implement coaction for Valtio
+- [ ] implement coaction for nanostores
+- [ ] implement coaction for @ngrx/store
