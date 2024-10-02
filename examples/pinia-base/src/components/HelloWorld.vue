@@ -2,7 +2,12 @@
 import { computed, ref } from 'vue'
 import { useCounterStore } from '../store';
 const store = useCounterStore();
+
 defineProps<{ msg: string }>()
+
+console.dir(store);
+
+globalThis.useCounterStore = useCounterStore;
 
 const count = computed(() => store.count)
 </script>
