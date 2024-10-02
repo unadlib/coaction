@@ -205,7 +205,9 @@ export const create = <T extends ISlices>(
     });
     transport?.listen('fullSync', async () => {
       return {
-        state: JSON.stringify(state),
+        // TODO: only send the state without computed properties and methods
+        // TODO: remove the code about pinia
+        state: JSON.stringify(state.$state ?? state),
         sequence
       };
     });
