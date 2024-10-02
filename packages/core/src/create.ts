@@ -187,9 +187,7 @@ export const create = <T extends ISlices>(
       }
       return base(...args);
     });
-    console.log('fullSync0', transport);
     transport?.listen('fullSync', async () => {
-      console.log('fullSync1');
       return {
         state: JSON.stringify(state),
         sequence
