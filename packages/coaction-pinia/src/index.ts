@@ -2,6 +2,7 @@ import { mutate, apply } from 'mutability';
 import { create, type Store } from 'coaction';
 import { createPinia, setActivePinia } from 'pinia';
 
+// TODO: fix defineStore same name
 const handleStore = (
   api: Store<object>,
   createMobxState: () => any,
@@ -10,10 +11,10 @@ const handleStore = (
   console.log('api', api);
   const pinia = createPinia();
   setActivePinia(pinia);
-  const store = createMobxState();
+  const store = createMobxState()();
   Object.assign(api, {
     // TODO: fix destroy
-    subscribe: store().$subscribe
+    subscribe: store.$subscribe
   });
   if (api.share === 'client') {
     api.apply = (state, patches) => {
@@ -36,7 +37,7 @@ const handleStore = (
     };
   }
   if (!api.share) {
-    return store();
+    return store;
   }
   if (process.env.NODE_ENV === 'development') {
     // TODO: check with observe for unexpected changes
@@ -53,12 +54,10 @@ const handleStore = (
         );
       }
       let result: any;
-      const { patches, inversePatches } = await mutate(
-        store,
-        async (draft: any) => {
-          result = await fn.apply(draft, args);
-        }
-      );
+      const { patches, inversePatches } = mutate(store, (draft: any) => {
+        // TODO: support async actions
+        result = fn.apply(draft, args);
+      });
       if (stateKey) {
         patches.forEach((patch) => {
           patch.path = [stateKey, ...patch.path];
@@ -71,8 +70,7 @@ const handleStore = (
       return result;
     };
   });
-  console.log('store', store);
-  return store();
+  return store;
 };
 
 export const createWithPinia = (

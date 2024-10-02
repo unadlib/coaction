@@ -1,7 +1,7 @@
 import { defineStore } from 'pinia';
 import { createWithPinia } from '@coaction/pinia';
 
-export const useCounterStore = createWithPinia(() =>
+export const useStore = createWithPinia(() =>
   defineStore('counter', {
     state: () => ({
       count: 0
@@ -18,4 +18,4 @@ export const useCounterStore = createWithPinia(() =>
   })
 );
 
-globalThis.useCounterStore = useCounterStore;
+globalThis.useStore = useStore;

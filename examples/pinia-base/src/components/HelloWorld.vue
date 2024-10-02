@@ -1,13 +1,11 @@
 <script setup lang="ts">
 import { computed, ref } from 'vue'
-import { useCounterStore } from '../store';
-const store = useCounterStore();
+// import { useStore } from '../store';
+const store = globalThis.useWorkerStore();
 
 defineProps<{ msg: string }>()
 
 console.dir(store);
-
-globalThis.useCounterStore = useCounterStore;
 
 const count = computed(() => store.count)
 </script>
