@@ -119,8 +119,24 @@ export const create = <T extends ISlices>(
           // @ts-ignore
           nextState = _workerType ? result[0] : result;
         } else {
-          // TODO: deep merge and fix performance issue
-          nextState = Object.assign({}, state, next);
+          // TODO: fix performance issue
+          if (api.isSlices) {
+            nextState = {
+              name: next!.name
+            } as T;
+            for (const key in next) {
+              if (key === 'name') continue;
+              nextState[key] = {
+                ...state[key],
+                ...next[key]
+              };
+            }
+          } else {
+            nextState = {
+              ...state,
+              ...next
+            };
+          }
         }
         if (!Object.is(nextState, state)) {
           state = nextState!;

@@ -248,7 +248,6 @@ describe('Slices', () => {
         transport: clientTransport,
         workerType: 'WorkerMain'
       });
-
       await new Promise((resolve) => {
         clientTransport.onConnect(() => {
           setTimeout(resolve);
@@ -257,36 +256,37 @@ describe('Slices', () => {
 
       // @ts-ignore
       const { count, increment, name } = useClientStore().counter;
-      console.log('count', useClientStore());
-      return;
       expect(count).toBe(2);
       expect(increment).toBeInstanceOf(Function);
-      expect(name).toBe('WorkerInternal');
+      expect(name).toBe('test');
       expect(useClientStore.getState()).toMatchInlineSnapshot(`
-  {
+{
+  "counter": {
     "count": 2,
     "increment": [Function],
-    "name": "WorkerInternal",
-  }
-  `);
+    "name": "test",
+  },
+  "name": "WorkerInternal",
+}
+`);
       const fn = jest.fn();
       useClientStore.subscribe(fn);
       useClientStore.getState().counter.increment();
       expect(useClientStore.getState().counter).toMatchInlineSnapshot(`
-  {
-    "count": 3,
-    "increment": [Function],
-    "name": "WorkerInternal",
-  }
-  `);
+{
+  "count": 3,
+  "increment": [Function],
+  "name": "test",
+}
+`);
       increment();
       expect(useClientStore.getState().counter).toMatchInlineSnapshot(`
-  {
-    "count": 4,
-    "increment": [Function],
-    "name": "WorkerInternal",
-  }
-  `);
+{
+  "count": 4,
+  "increment": [Function],
+  "name": "test",
+}
+`);
     }
   });
 });
