@@ -1,6 +1,7 @@
 <script setup lang="ts">
-import { computed, ref } from 'vue'
+import { computed } from 'vue'
 // import { useStore } from '../store';
+// @ts-ignore
 const store = globalThis.useWorkerStore();
 
 defineProps<{ msg: string }>()

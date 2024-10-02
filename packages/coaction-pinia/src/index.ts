@@ -1,6 +1,13 @@
 import { mutate, apply } from 'mutability';
 import { create, type Store } from 'coaction';
-import { createPinia, setActivePinia } from 'pinia';
+import { createPinia, setActivePinia, defineStore as createStore } from 'pinia';
+
+const map = new Map<string, any>();
+
+export const defineStore = (name: string, options: any) => {
+  map.set(name, options);
+  return createStore(name, options);
+};
 
 // TODO: fix defineStore same name
 const handleStore = (
@@ -11,6 +18,7 @@ const handleStore = (
   console.log('api', api);
   const pinia = createPinia();
   setActivePinia(pinia);
+  console.log(pinia);
   const store = createMobxState()();
   Object.assign(api, {
     // TODO: fix destroy
@@ -42,9 +50,9 @@ const handleStore = (
   if (process.env.NODE_ENV === 'development') {
     // TODO: check with observe for unexpected changes
   }
-  const actionKeys = Object.keys(store._hmrPayload.actions);
+  const actionKeys = Object.keys(map.get(store.$id).actions);
   actionKeys.forEach((key) => {
-    const fn = store._hmrPayload.actions[key];
+    const fn = map.get(store.$id).actions[key];
     store[key] = async (...args: any) => {
       if (api.share === 'client') {
         return api.transport?.emit(
