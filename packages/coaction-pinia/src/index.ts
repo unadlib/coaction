@@ -18,12 +18,12 @@ const handleStore = (
   console.log('api', api);
   const pinia = createPinia();
   setActivePinia(pinia);
-  console.log(pinia);
   const store = createMobxState()();
   Object.assign(api, {
     // TODO: fix destroy
     subscribe: store.$subscribe
   });
+  api.getRawState = () => (api.isSlices ? pinia.state.value : store.$state);
   if (api.share === 'client') {
     api.apply = (state, patches) => {
       apply(state, patches);

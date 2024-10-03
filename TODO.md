@@ -37,6 +37,9 @@
   - no support for async actions(it will be merged into main thread with a single patch for updating the state)
     - It must be split into sync update action
   - Pinia does not support detecting changes without a action
+  - [ ] handle $patch
+  - [ ] handle $reset
+  - [ ] handle computed properties
 - [ ] implement coaction for Valtio
 - [ ] implement coaction for nanostores
 - [ ] implement coaction for @ngrx/store
