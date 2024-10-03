@@ -53,7 +53,7 @@ const handleStore = (
   const actionKeys = Object.keys(map.get(store.$id).actions);
   actionKeys.forEach((key) => {
     const fn = map.get(store.$id).actions[key];
-    store[key] = async (...args: any) => {
+    store[key] = (...args: any) => {
       if (api.share === 'client') {
         return api.transport?.emit(
           'execute',
