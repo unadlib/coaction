@@ -1,6 +1,7 @@
 import { createWithPinia, defineStore } from '@coaction/pinia';
 
 export const useStore = createWithPinia({
+  // @ts-ignore
   counter: () =>
     defineStore('counter', {
       state: () => ({

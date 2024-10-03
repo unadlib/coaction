@@ -63,8 +63,19 @@ const handleStore = (
       }
       let result: any;
       const { patches, inversePatches } = mutate(store, (draft: any) => {
+        const { proxy, revoke } = Proxy.revocable(draft, {
+          get(target, key, receiver) {
+            const getter = map.get(store.$id).getters[key];
+            if (getter) {
+              // TODO: fix computed properties
+              return getter.call(receiver, receiver);
+            }
+            return Reflect.get(target, key, receiver);
+          }
+        });
         // TODO: support async actions
-        result = fn.apply(draft, args);
+        result = fn.apply(proxy, args);
+        revoke();
       });
       if (stateKey) {
         patches.forEach((patch) => {
