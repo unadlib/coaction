@@ -270,7 +270,6 @@ describe('Slices', () => {
     "increment": [Function],
     "name": "test",
   },
-  "name": "WorkerInternal",
 }
 `);
       const fn = jest.fn();

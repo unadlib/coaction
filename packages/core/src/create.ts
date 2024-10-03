@@ -204,10 +204,10 @@ export const create = <T extends ISlices>(
       return base(...args);
     });
     transport?.listen('fullSync', async () => {
+      console.log('fullSync', state);
       return {
         // TODO: only send the state without computed properties and methods
-        // TODO: remove the code about pinia
-        state: JSON.stringify(state.$state ?? state),
+        state: JSON.stringify(api.getRawState?.() ?? state),
         sequence
       };
     });
