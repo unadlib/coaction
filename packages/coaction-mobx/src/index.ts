@@ -1,6 +1,6 @@
 import { mutate, apply } from 'mutability';
 import { create, type Store } from 'coaction';
-import { autorun, runInAction } from 'mobx';
+import { autorun, runInAction, getAtom } from 'mobx';
 
 const handleStore = (
   api: Store<object>,
@@ -57,7 +57,17 @@ const handleStore = (
           }
           let result: any;
           const { patches, inversePatches } = mutate(target, (draft: any) => {
-            result = value.apply(draft, args);
+            const { proxy, revoke } = Proxy.revocable(draft, {
+              get(target, key, receiver) {
+                const getter = getAtom(mobxState, key).derivation;
+                if (getter) {
+                  return getter!.call(receiver);
+                }
+                return Reflect.get(target, key, receiver);
+              }
+            });
+            result = value.apply(proxy, args);
+            revoke();
           });
           if (stateKey) {
             patches.forEach((patch) => {
