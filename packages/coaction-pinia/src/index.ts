@@ -97,15 +97,19 @@ export const createWithPinia = (
   options?: any
 ) => {
   if (typeof createPiniaState === 'function') {
-    return create((get, set, api) => {
-      return handleStore(api, createPiniaState);
+    return create((set: any, get: any, api: any) => {
+      return handleStore(api, createPiniaState.bind(null, set, get, api));
     }, options);
   }
   if (typeof createPiniaState === 'object' && createPiniaState !== null) {
     return create(
       Object.keys(createPiniaState).reduce((acc, key) => {
-        acc[key] = (get: any, set: any, api: any) =>
-          handleStore(api, createPiniaState[key], key);
+        acc[key] = (set: any, get: any, api: any) =>
+          handleStore(
+            api,
+            createPiniaState[key].bind(null, set, get, api),
+            key
+          );
         return acc;
       }, {} as any),
       options
