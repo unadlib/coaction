@@ -9,7 +9,7 @@ import { createTransport, type Transport } from 'data-transport';
 // TODO: check the name
 // export type ISlices = { name: string } & Record<string, any>;
 
-type ISlices = object;
+export type ISlices = object;
 
 type Listener = () => void;
 
@@ -83,7 +83,7 @@ const workerType = globalThis.SharedWorkerGlobalScope
     ? 'WorkerInternal'
     : null;
 
-type Slices<T extends ISlices> = (
+export type Slices<T extends ISlices> = (
   set: Store<T>['setState'],
   get: Store<T>['getState'],
   store: Store<T>

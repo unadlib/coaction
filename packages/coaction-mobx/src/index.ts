@@ -1,5 +1,5 @@
 import { mutate, apply } from 'mutability';
-import { create, type Store } from 'coaction';
+import { create, ISlices, Slices, type Store } from 'coaction';
 import { autorun, runInAction, getAtom } from 'mobx';
 
 const handleStore = (
@@ -86,20 +86,20 @@ const handleStore = (
   });
 };
 
-export const createWithMobx = (
-  createMobxState: () => any | Record<string, () => any>,
+export const createWithMobx = <T extends ISlices>(
+  createMobxState: Slices<T> | Record<string, Slices<T>>,
   options: any
 ) => {
   if (typeof createMobxState === 'function') {
-    return create((get, set, api) => {
-      return handleStore(api, createMobxState);
+    return create((set: any, get: any, api: any) => {
+      return handleStore(api, createMobxState.bind(null, set, get, api));
     }, options);
   }
   if (typeof createMobxState === 'object' && createMobxState !== null) {
     return create(
       Object.keys(createMobxState).reduce((acc, key) => {
-        acc[key] = (get: any, set: any, api: any) =>
-          handleStore(api, createMobxState[key], key);
+        acc[key] = (set: any, get: any, api: any) =>
+          handleStore(api, createMobxState[key].bind(null, set, get, api), key);
         return acc;
       }, {} as any),
       options
