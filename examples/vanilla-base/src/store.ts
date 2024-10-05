@@ -1,6 +1,7 @@
 import { create } from 'coaction';
 
 export const useStore = create({
+  name: 'ccc',
   counter: (set, get, api) => ({
     name: 'test',
     count: 0,
