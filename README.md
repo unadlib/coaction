@@ -31,6 +31,7 @@ npm install coaction
 - Developer Tools Integration: Easy debugging with integrated developer tools
 - Persistence: Built-in support for state persistence
 - Scalable Architecture: Designed to scale from simple apps to complex, multiprocessing applications
+- Time Travel Debugging: Built-in support for time travel debugging
 
 ## Usage
 
