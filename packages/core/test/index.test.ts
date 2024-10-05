@@ -165,6 +165,7 @@ describe('Slices', () => {
     "increment": [Function],
     "name": "test",
   },
+  "name": "default",
 }
 `);
     const fn = jest.fn();
@@ -178,6 +179,7 @@ describe('Slices', () => {
     "increment": [Function],
     "name": "test",
   },
+  "name": "default",
 }
 `);
     increment();
@@ -188,6 +190,7 @@ describe('Slices', () => {
     "increment": [Function],
     "name": "test",
   },
+  "name": "default",
 }
 `);
   });
@@ -266,6 +269,7 @@ describe('Slices', () => {
     "increment": [Function],
     "name": "test",
   },
+  "name": "default",
 }
 `);
       const fn = jest.fn();

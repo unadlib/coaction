@@ -224,35 +224,12 @@ export const create = <T extends ISlices>(
       },
       isSlices: typeof createState === 'object'
     };
-    // in worker, the transport is the worker itself
-    transport =
-      options.transport ??
-      (_workerType ? createTransport(_workerType, {}) : null);
-    transport?.listen('execute', async (keys, args) => {
-      console.log('execute', { keys, args });
-      let base = api.getState();
-      let obj = base;
-      for (const key of keys) {
-        base = base[key];
-        if (typeof base === 'function') {
-          base = base.bind(obj);
-        }
-        obj = base;
-      }
-      return base(...args);
-    });
-    transport?.listen('fullSync', async () => {
-      console.log('fullSync', rootState);
-      return {
-        state: JSON.stringify(rootState),
-        sequence
-      };
-    });
     api.share = transport ? 'main' : share;
     const initialState = api.isSlices
       ? Object.entries(createState).reduce(
-          (stateTree, [key, _createState]) => {
-            stateTree[key] = _createState(setState, getState, api);
+          (stateTree, [key, value]) => {
+            stateTree[key] =
+              key === 'name' ? value : value(setState, getState, api);
             return stateTree;
           },
           {} as Record<string, Slices<T>>
@@ -296,7 +273,7 @@ export const create = <T extends ISlices>(
     if (api.isSlices) {
       module = {} as T;
       Object.entries(initialState).forEach(([key, value]) => {
-        rawState[key] = {};
+        rawState[key] = key === 'name' ? value : {};
         // @ts-ignore
         module[key] =
           key === 'name' ? value : handle(rawState[key], value, key);
@@ -306,15 +283,47 @@ export const create = <T extends ISlices>(
     }
     // TODO: consider to remove this, about name property should be required.
     name = module.name ?? 'default';
+    module.name = name;
+    rootState = rawState;
+    // in worker, the transport is the worker itself
+    transport =
+      options.transport ??
+      (_workerType
+        ? createTransport(_workerType, {
+            prefix: module.name
+          })
+        : null);
+    transport?.listen('execute', async (keys, args) => {
+      console.log('execute', { keys, args });
+      let base = api.getState();
+      let obj = base;
+      for (const key of keys) {
+        base = base[key];
+        if (typeof base === 'function') {
+          base = base.bind(obj);
+        }
+        obj = base;
+      }
+      return base(...args);
+    });
+    transport?.listen('fullSync', async () => {
+      console.log('fullSync', rootState);
+      return {
+        state: JSON.stringify(rootState),
+        sequence
+      };
+    });
     if (transport) {
       api.transport = transport;
     }
-    rootState = rawState;
     return api;
   };
   const api = createApi();
   return Object.assign((option: Option) => {
     if (!option) return api.getState();
+    const _api = createApi({
+      share: 'client'
+    });
     // the transport is in the worker or shared worker, and the client is in the main thread.
     // This store can't be directly executed by any of the store's methods
     // its methods are proxied to the worker or share worker for execution.
@@ -332,16 +341,14 @@ export const create = <T extends ISlices>(
             ? 'SharedWorkerClient'
             : 'WorkerMain',
           {
-            worker: (option as WorkerOptions).worker as SharedWorker
+            worker: (option as WorkerOptions).worker as SharedWorker,
+            prefix: _api.getState().name
           }
         )
       : (option as TransportOptions).transport;
     if (!transport) {
       throw new Error('transport is required');
     }
-    const _api = createApi({
-      share: 'client'
-    });
     _api.transport = transport;
     let _sequence: number;
     const fullSync = async () => {
