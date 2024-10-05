@@ -3,7 +3,6 @@
 - [x] Slices Pattern: Easily combine multiple slices into a single store
 - [ ] Middleware Support: Supports state subscriptions and middleware for side effects and enhanced state handling, also supports Zustand middlewares and Redux middlewares
 - [ ] Cross-Framework Compatibility: Seamlessly works with React, Vue, Solid.js, Angular, and other modern web frameworks
-- [ ] Cross-Store Access: Read states and call functions across different stores while preventing unintended modifications
 - [ ] Multi-Store Workers: Run multiple stores within a single Web Worker
 - [ ] Shared Stores Across Workers: Use the same store definition across multiple Workers
 - [x] Multiprocessing State Management: Effortlessly manage state across main thread and Workers
@@ -43,3 +42,5 @@
 - [ ] implement coaction for Valtio
 - [ ] implement coaction for nanostores
 - [ ] implement coaction for @ngrx/store
+
+- No Support for Cross-Store Access: Read states and call functions across different stores while preventing unintended modifications

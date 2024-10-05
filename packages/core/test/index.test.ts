@@ -67,12 +67,12 @@ test('worker', async () => {
   const { count, increment, name } = useServerStore();
   expect(count).toBe(0);
   expect(increment).toBeInstanceOf(Function);
-  expect(name).toBe('WorkerInternal');
+  expect(name).toBe('test');
   expect(useServerStore.getState()).toMatchInlineSnapshot(`
 {
   "count": 0,
   "increment": [Function],
-  "name": "WorkerInternal",
+  "name": "test",
 }
 `);
   const fn = jest.fn();
@@ -82,7 +82,7 @@ test('worker', async () => {
 {
   "count": 1,
   "increment": [Function],
-  "name": "WorkerInternal",
+  "name": "test",
 }
 `);
   increment();
@@ -90,7 +90,7 @@ test('worker', async () => {
 {
   "count": 2,
   "increment": [Function],
-  "name": "WorkerInternal",
+  "name": "test",
 }
 `);
   {
@@ -109,12 +109,12 @@ test('worker', async () => {
     const { count, increment, name } = useClientStore();
     expect(count).toBe(2);
     expect(increment).toBeInstanceOf(Function);
-    expect(name).toBe('WorkerInternal');
+    expect(name).toBe('test');
     expect(useClientStore.getState()).toMatchInlineSnapshot(`
 {
   "count": 2,
   "increment": [Function],
-  "name": "WorkerInternal",
+  "name": "test",
 }
 `);
     const fn = jest.fn();
@@ -124,7 +124,7 @@ test('worker', async () => {
 {
   "count": 3,
   "increment": [Function],
-  "name": "WorkerInternal",
+  "name": "test",
 }
 `);
     increment();
@@ -132,7 +132,7 @@ test('worker', async () => {
 {
   "count": 4,
   "increment": [Function],
-  "name": "WorkerInternal",
+  "name": "test",
 }
 `);
   }
@@ -159,37 +159,37 @@ describe('Slices', () => {
     expect(increment).toBeInstanceOf(Function);
     expect(name).toBe('test');
     expect(useStore.getState()).toMatchInlineSnapshot(`
-  {
-    "counter": {
-      "count": 0,
-      "increment": [Function],
-      "name": "test",
-    },
-  }
-  `);
+{
+  "counter": {
+    "count": 0,
+    "increment": [Function],
+    "name": "test",
+  },
+}
+`);
     const fn = jest.fn();
     useStore.subscribe(fn);
     // @ts-ignore
     useStore.getState().counter.increment();
     expect(useStore.getState()).toMatchInlineSnapshot(`
-  {
-    "counter": {
-      "count": 1,
-      "increment": [Function],
-      "name": "test",
-    },
-  }
-  `);
+{
+  "counter": {
+    "count": 1,
+    "increment": [Function],
+    "name": "test",
+  },
+}
+`);
     increment();
     expect(useStore.getState()).toMatchInlineSnapshot(`
-  {
-    "counter": {
-      "count": 2,
-      "increment": [Function],
-      "name": "test",
-    },
-  }
-  `);
+{
+  "counter": {
+    "count": 2,
+    "increment": [Function],
+    "name": "test",
+  },
+}
+`);
   });
   test('worker', async () => {
     const ports = mockPorts();
@@ -266,7 +266,6 @@ describe('Slices', () => {
     "increment": [Function],
     "name": "test",
   },
-  "name": "WorkerInternal",
 }
 `);
       const fn = jest.fn();

@@ -18,8 +18,10 @@ globalThis.useWorkerStore = useWorkerStore;
 export function setupCounter(element: HTMLButtonElement) {
   const useStore = useWorkerStore;
   useStore.subscribe(() => {
-    element.innerHTML = `count is ${useStore.getState().count}`;
+    element.innerHTML = `count is ${useStore.getState().counter.count}`;
   });
-  element.addEventListener('click', () => useStore.getState().increment());
-  element.innerHTML = `count is ${useStore.getState().count}`;
+  element.addEventListener('click', () =>
+    useStore.getState().counter.increment()
+  );
+  element.innerHTML = `count is ${useStore.getState().counter.count}`;
 }

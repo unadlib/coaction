@@ -6,10 +6,12 @@ import {
 } from 'mutative';
 import { createTransport, type Transport } from 'data-transport';
 
-// TODO: check the name
-// export type ISlices = { name: string } & Record<string, any>;
-
-export type ISlices = object;
+export type ISlices = {
+  /**
+   * The name of the store.
+   */
+  name?: string;
+} & Record<string, any>;
 
 type Listener = () => void;
 
@@ -18,7 +20,13 @@ export interface Store<T extends ISlices> {
    * Set the next state.
    */
   setState: (
+    /**
+     * The next state.
+     */
     next: T | ((draft: Draft<T>) => any) | null,
+    /**
+     * The updater is used to update the state.
+     */
     updater?: () => void
   ) => void;
   /**
@@ -40,7 +48,7 @@ export interface Store<T extends ISlices> {
   /**
    * apply the patches to the state.
    */
-  apply: (state: T, patches: Patches) => void;
+  apply: (state: T, patches?: Patches) => void;
   /**
    * The store is shared in the worker or shared worker.
    */
@@ -55,52 +63,96 @@ export interface Store<T extends ISlices> {
   isSlices: boolean;
 }
 
-type Option = {
+type WorkerOptions = {
+  /**
+   * The worker is used to execute the function in the worker or shared worker.
+   */
   worker?: Worker | SharedWorker;
-  transport?: Transport;
+  /**
+   * The worker type is used to determine the type of worker.
+   */
   workerType?: 'SharedWorkerInternal' | 'WorkerInternal';
 };
 
+type TransportOptions = {
+  /**
+   * The transport is used to communicate between the main thread and the worker or shared worker.
+   */
+  transport?: Transport;
+};
+
+type Option = WorkerOptions | TransportOptions;
+
 type Internal = {
+  /**
+   * Update the state in the worker or shared worker.
+   */
   update(options: {
-    name: string;
+    /**
+     * The patches is used to update the state.
+     */
     patches: Patches;
+    /**
+     * The sequence is used to ensure the sequence of the state.
+     */
     sequence: number;
   }): Promise<void>;
 };
 
 type External = {
+  /**
+   * Execute the function in the worker or shared worker.
+   */
   execute(keys: string[], args: any[]): Promise<any>;
+  /**
+   * Full sync the state with the worker or shared worker.
+   */
   fullSync(): Promise<{ state: string; sequence: number }>;
 };
 
-// TODO: fix this
-// @ts-ignore
 const workerType = globalThis.SharedWorkerGlobalScope
   ? 'SharedWorkerInternal'
-  : // @ts-ignore
-    globalThis.WorkerGlobalScope
+  : globalThis.WorkerGlobalScope
     ? 'WorkerInternal'
     : null;
 
 export type Slices<T extends ISlices> = (
+  /**
+   * The setState is used to update the state.
+   */
   set: Store<T>['setState'],
+  /**
+   * The getState is used to get the state.
+   */
   get: Store<T>['getState'],
+  /**
+   * The store is used to store the state.
+   */
   store: Store<T>
 ) => T;
 
+type Middlewares = any;
+
 export const create = <T extends ISlices>(
   createState: Slices<T> | Record<string, Slices<T>>,
-  options?: {
-    name?: string;
+  options: {
+    // TODO: remove this, it's only used in test
     transport?: Transport;
+    // TODO: remove this, it's only used in test
     workerType?: 'SharedWorkerInternal' | 'WorkerInternal';
-    middlewares: any[];
-  }
+    middlewares?: Middlewares[];
+  } = {}
 ) => {
-  const _workerType = options?.workerType ?? workerType;
-  let state: T;
-  const createApi = ({ share }: { share?: 'client' | 'main' } = {}) => {
+  const _workerType = options.workerType ?? workerType;
+  const createApi = ({
+    share
+  }: {
+    share?: 'client' | 'main';
+  } = {}) => {
+    let module: T;
+    let rootState: T | Draft<T>;
+    let api: Store<any>;
+    let name: string;
     let transport: Transport<{ emit: Internal; listen: External }> | null =
       null;
     let sequence = 0;
@@ -112,36 +164,31 @@ export const create = <T extends ISlices>(
         let nextState: T | null = null;
         let result: T | [T, Patches<true>, Patches<true>] | null = null;
         if (typeof next === 'function') {
-          // @ts-ignore
-          result = createWithMutative(state, (draft) => next(draft), {
-            enablePatches: !!_workerType
-          });
-          // @ts-ignore
-          nextState = _workerType ? result[0] : result;
-        } else {
-          // TODO: fix performance issue
-          if (api.isSlices) {
-            nextState = {
-              name: next!.name
-            } as T;
-            for (const key in next) {
-              if (key === 'name') continue;
-              nextState[key] = {
-                ...state[key],
-                ...next[key]
-              };
+          result = createWithMutative(
+            rootState as T,
+            (draft) => {
+              rootState = draft;
+              const returnValue = next(draft);
+              if (returnValue instanceof Promise) {
+                throw new Error(
+                  'setState with async function is not supported'
+                );
+              }
+            },
+            {
+              enablePatches: !!_workerType
             }
-          } else {
-            nextState = {
-              ...state,
-              ...next
-            };
-          }
+          );
+          rootState = _workerType ? result[0] : result;
+        } else {
+          // only merge the state
+          nextState = {
+            ...(rootState as T),
+            ...next
+          };
+          rootState = nextState!;
         }
-        if (!Object.is(nextState, state)) {
-          state = nextState!;
-          listeners.forEach((listener) => listener());
-        }
+        listeners.forEach((listener) => listener());
         return result;
       }
     ) => {
@@ -149,15 +196,12 @@ export const create = <T extends ISlices>(
       if (transport) {
         sequence += 1;
         transport.emit('update', {
-          // @ts-ignore
           patches: result![1],
-          // @ts-ignore
-          name: state.name,
           sequence
         });
       }
     };
-    const getState = () => state;
+    const getState = () => module;
     const getInitialState = () => initialState;
     const subscribe: Store<T>['subscribe'] = (listener) => {
       listeners.add(listener);
@@ -168,28 +212,22 @@ export const create = <T extends ISlices>(
       listeners.clear();
       transport?.dispose();
     };
-    const api: Store<any> = {
+    api = {
       setState,
       getState,
       getInitialState,
       subscribe,
       destroy,
-      apply: (state, patches) => {
-        const next = apply(state, patches);
-        api.setState(next);
+      apply: (state = rootState, patches) => {
+        rootState = patches ? apply(state, patches) : state;
+        listeners.forEach((listener) => listener());
       },
       isSlices: typeof createState === 'object'
     };
     // in worker, the transport is the worker itself
     transport =
-      options?.transport ??
-      (_workerType
-        ? createTransport(_workerType, {
-            // TODO: fix prefix
-            // @ts-ignore
-            // prefix: state!.name
-          })
-        : null);
+      options.transport ??
+      (_workerType ? createTransport(_workerType, {}) : null);
     transport?.listen('execute', async (keys, args) => {
       console.log('execute', { keys, args });
       let base = api.getState();
@@ -204,37 +242,74 @@ export const create = <T extends ISlices>(
       return base(...args);
     });
     transport?.listen('fullSync', async () => {
-      console.log('fullSync', state);
+      console.log('fullSync', rootState);
       return {
-        // TODO: only send the state without computed properties and methods
-        state: JSON.stringify(api.getRawState?.() ?? state),
+        state: JSON.stringify(rootState),
         sequence
       };
     });
     api.share = transport ? 'main' : share;
-    const initialState = (state = api.isSlices
-      ? Object.entries(createState).reduce((stateTree, [key, _createState]) => {
-          // !!! createState is a function
-          stateTree[key] = _createState(setState, getState, api);
-          return stateTree;
-        }, {} as any)
-      : // !!! createState is a function
-        // @ts-ignore
-        createState(api.setState, api.getState, api)) as any;
+    const initialState = api.isSlices
+      ? Object.entries(createState).reduce(
+          (stateTree, [key, _createState]) => {
+            stateTree[key] = _createState(setState, getState, api);
+            return stateTree;
+          },
+          {} as Record<string, Slices<T>>
+        )
+      : (createState as Slices<T>)(api.setState, api.getState, api);
 
-    if (_workerType) {
-      initialState.name = _workerType
-        ? // @ts-ignore
-          globalThis.name
-          ? // @ts-ignore
-            globalThis.name
-          : _workerType
-        : '';
+    const rawState = {} as any;
+    const handle = (_rawState: any, _initialState: any, _key?: string) => {
+      const descriptors = Object.getOwnPropertyDescriptors(_initialState);
+      Object.entries(descriptors).forEach(([key, descriptor]) => {
+        if (Object.prototype.hasOwnProperty.call(descriptor, 'value')) {
+          if (typeof descriptor.value !== 'function') {
+            _rawState[key] = descriptor.value;
+            if (key !== 'name') {
+              delete descriptor.value;
+              delete descriptor.writable;
+              descriptor.get = () =>
+                _key ? (rootState as any)[_key][key] : (rootState as any)[key];
+              descriptor.set = (value: any) => {
+                if (_key) {
+                  (rootState as any)[_key][key] = value;
+                } else {
+                  (rootState as any)[key] = value;
+                }
+              };
+            }
+          } else if (share === 'client') {
+            descriptor.value = (...args: any[]) => {
+              const keys = _key ? [_key, key] : [key];
+              console.log('execute', { keys, args });
+              return api.transport!.emit('execute', keys, args);
+            };
+          }
+        }
+      });
+      // TODO: improve perf
+      // it should be a immutable state
+      const slice = Object.defineProperties({} as T, descriptors);
+      return slice;
+    };
+    if (api.isSlices) {
+      module = {} as T;
+      Object.entries(initialState).forEach(([key, value]) => {
+        rawState[key] = {};
+        // @ts-ignore
+        module[key] =
+          key === 'name' ? value : handle(rawState[key], value, key);
+      });
+    } else {
+      module = handle(rawState, initialState);
     }
+    // TODO: consider to remove this, about name property should be required.
+    name = module.name ?? 'default';
     if (transport) {
-      // @ts-ignore
       api.transport = transport;
     }
+    rootState = rawState;
     return api;
   };
   const api = createApi();
@@ -251,58 +326,29 @@ export const create = <T extends ISlices>(
            */
           onConnect?: (fn: () => void) => void;
         })
-      | undefined = option.worker
+      | undefined = (option as WorkerOptions).worker
       ? createTransport(
-          option.worker instanceof SharedWorker
+          (option as WorkerOptions).worker instanceof SharedWorker
             ? 'SharedWorkerClient'
             : 'WorkerMain',
           {
-            // TODO: fix prefix
-            // @ts-ignore
-            // prefix: state.name,
-            worker: option.worker as SharedWorker
+            worker: (option as WorkerOptions).worker as SharedWorker
           }
         )
-      : option.transport;
+      : (option as TransportOptions).transport;
     if (!transport) {
       throw new Error('transport is required');
     }
-    const _api = createApi({ share: 'client' });
+    const _api = createApi({
+      share: 'client'
+    });
     _api.transport = transport;
-    const _state = _api.getState();
-    if (_api.isSlices) {
-      for (const key in _state) {
-        const value = _state[key];
-        for (const _key in value) {
-          const _value = value[_key];
-          if (typeof _value === 'function') {
-            // @ts-ignore
-            value[_key] = (...args: any[]) => {
-              console.log('execute', { key, args });
-              return transport.emit('execute', [key, _key], args);
-            };
-          }
-        }
-      }
-    } else {
-      for (const key in _state) {
-        const value = _state[key];
-        if (typeof value === 'function') {
-          // @ts-ignore
-          _state[key] = (...args: any[]) => {
-            console.log('execute', { key, args });
-            return transport.emit('execute', [key], args);
-          };
-        }
-      }
-    }
     let _sequence: number;
     const fullSync = async () => {
       console.log('fullSync');
       const latest = await transport.emit('fullSync');
-      console.log('fullSync', latest);
-      // TODO: fix this for mutable state
-      _api.setState(JSON.parse(latest.state) as T);
+      console.log('fullSync', latest, _api.getState().name);
+      _api.apply(JSON.parse(latest.state) as T);
       _sequence = latest.sequence;
     };
     // TODO: implement to handle the case for the custom transport connects
@@ -313,14 +359,11 @@ export const create = <T extends ISlices>(
       console.log('onConnect');
       await fullSync();
     });
-    transport.listen('update', async ({ patches, name, sequence }) => {
-      console.log('update', { patches, name, sequence });
-      // TODO: fix this
-      // @ts-ignore
-      // if (name !== state.name) return;
+    transport.listen('update', async ({ patches, sequence }) => {
+      console.log('update', { patches, sequence });
       if (typeof sequence === 'number' && sequence === _sequence + 1) {
         _sequence = sequence;
-        _api.apply(_api.getState(), patches);
+        _api.apply(undefined, patches);
       } else {
         await fullSync();
       }
