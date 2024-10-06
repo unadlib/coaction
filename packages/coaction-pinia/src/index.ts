@@ -35,6 +35,7 @@ const handleStore = (api: Store<object>, createMobxState: () => any) => {
   const state = createMobxState();
   Object.assign(api, {
     // TODO: fix destroy
+    // TODO: fix override subscribe if multiple store
     subscribe: api.getMutableInstance(state).$subscribe
   });
   if (api.share === 'client') {
