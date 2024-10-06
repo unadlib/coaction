@@ -43,4 +43,6 @@
 - [ ] implement coaction for nanostores
 - [ ] implement coaction for @ngrx/store
 
-- No Support for Cross-Store Access: Read states and call functions across different stores while preventing unintended modifications
+- [ ] No Support for Cross-Store Access: Read states and call functions across different stores while preventing unintended modifications
+- [ ] fix slices checker
+- [ ] fix type
