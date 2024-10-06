@@ -18,6 +18,23 @@ export const useStore = createWithPinia({
           this.count++;
         }
       }
+    }),
+  counter1: () =>
+    defineStore('counter1', {
+      state: () => ({
+        count: 0
+      }),
+      getters: {
+        // @ts-ignore
+        doubleCount: (state) => state.count * 2
+      },
+      actions: {
+        // since we rely on `this`, we cannot use an arrow function
+        increment() {
+          // @ts-ignore
+          this.count++;
+        }
+      }
     })
 });
 

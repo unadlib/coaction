@@ -27,17 +27,49 @@ export const defineStore = (name: string, options: any) => {
   return rawState;
 };
 
+type StoreWithSubscriptions = Store<object> & {
+  // TODO: fix type
+  _subscriptions?: Set<(...args: any) => void>;
+  _destroyers?: Set<() => void>;
+};
+
 // TODO: fix defineStore same name
-const handleStore = (api: Store<object>, createMobxState: () => any) => {
-  api.getMutableInstance = (key: any) => instancesMap.get(key);
+const handleStore = (
+  api: StoreWithSubscriptions,
+  createMobxState: () => any
+) => {
   const pinia = createPinia();
   setActivePinia(pinia);
   const state = createMobxState();
-  Object.assign(api, {
-    // TODO: fix destroy
-    // TODO: fix override subscribe if multiple store
-    subscribe: api.getMutableInstance(state).$subscribe
-  });
+  if (!api.getMutableInstance) {
+    api.getMutableInstance = (key: any) => instancesMap.get(key);
+    Object.assign(api, {
+      subscribe: (callback: any) => {
+        api._subscriptions!.add(callback);
+        return () => api._subscriptions!.delete(callback);
+      }
+    });
+    api._subscriptions = new Set<() => void>();
+    api._destroyers = new Set<() => void>();
+    const oldDestroy = api.destroy;
+    api.destroy = () => {
+      oldDestroy();
+      api._subscriptions!.clear();
+      api._subscriptions = undefined;
+      api._destroyers!.forEach((destroy) => destroy());
+      api._destroyers = undefined;
+    };
+  }
+  const stopWatch = api
+    .getMutableInstance(state)
+    .$subscribe((...args: any[]) => {
+      api._subscriptions!.forEach((callback) => callback(...args));
+    });
+  const destroy = () => {
+    instancesMap.delete(state);
+    stopWatch();
+  };
+  api._destroyers!.add(destroy);
   if (api.share === 'client') {
     api.apply = (state = api.getState(), patches) => {
       if (!patches) {
