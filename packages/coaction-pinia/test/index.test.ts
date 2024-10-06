@@ -28,25 +28,119 @@ test('pinia', () => {
   expect(store.count).toBe(10);
 });
 
+test('base', () => {
+  const stateFn = jest.fn();
+  const getterFn = jest.fn();
+  const useStore = create((set, get, api) =>
+    defineStore('test', {
+      state: () => ({ count: 0 }),
+      getters: {
+        double: (state) => state.count * 2
+      },
+      actions: {
+        increment() {
+          this.count += 1;
+          stateFn(get().count, api.getState().count, this.count);
+          getterFn(get().double, api.getState().double, this.double);
+        }
+      }
+    })
+  );
+  // TODO: fix this
+  // @ts-ignore
+  const { count, increment, name } = useStore();
+  expect(count).toBe(0);
+  expect(increment).toBeInstanceOf(Function);
+  expect(name).toBe('test');
+  expect(useStore.getState()).toMatchInlineSnapshot(`
+{
+  "count": 0,
+  "increment": [Function],
+  "name": "test",
+}
+`);
+  const fn = jest.fn();
+  useStore.subscribe(fn);
+  useStore.getState().increment();
+  expect(stateFn.mock.calls).toMatchInlineSnapshot(`
+[
+  [
+    1,
+    1,
+    1,
+  ],
+]
+`);
+  expect(getterFn.mock.calls).toMatchInlineSnapshot(`
+[
+  [
+    2,
+    2,
+    2,
+  ],
+]
+`);
+  expect(useStore.getState()).toMatchInlineSnapshot(`
+{
+  "count": 1,
+  "increment": [Function],
+  "name": "test",
+}
+`);
+  increment();
+  expect(stateFn.mock.calls).toMatchInlineSnapshot(`
+[
+  [
+    1,
+    1,
+    1,
+  ],
+  [
+    2,
+    2,
+    2,
+  ],
+]
+`);
+  expect(getterFn.mock.calls).toMatchInlineSnapshot(`
+[
+  [
+    2,
+    2,
+    2,
+  ],
+  [
+    4,
+    4,
+    4,
+  ],
+]
+`);
+  expect(useStore.getState()).toMatchInlineSnapshot(`
+{
+  "count": 2,
+  "increment": [Function],
+  "name": "test",
+}
+`);
+});
+
 test('worker', async () => {
   const ports = mockPorts();
   const serverTransport = createTransport('WorkerInternal', ports.main);
   const clientTransport = createTransport('WorkerMain', ports.create());
 
   const counter = () =>
-    defineStore('counter', {
-      state: () => ({
-        count: 0
-      }),
+    defineStore('test', {
+      state: () => ({ count: 0 }),
       getters: {
-        // @ts-ignore
-        doubleCount: (state) => state.count * 2
+        double() {
+          return this.count * 2;
+        }
       },
       actions: {
-        // since we rely on `this`, we cannot use an arrow function
         increment() {
-          // @ts-ignore
-          this.count++;
+          this.count += 1;
         }
       }
     });
@@ -59,11 +153,32 @@ test('worker', async () => {
   const { count, increment, name } = useServerStore();
   expect(count).toBe(0);
   expect(increment).toBeInstanceOf(Function);
-  expect(name).toBe('WorkerInternal');
+  expect(name).toBe('test');
+  expect(useServerStore.getState()).toMatchInlineSnapshot(`
+{
+  "count": 0,
+  "increment": [Function],
+  "name": "test",
+}
+`);
   const fn = jest.fn();
   useServerStore.subscribe(fn);
   useServerStore.getState().increment();
-  increment.call(useServerStore.getState());
+  expect(useServerStore.getState()).toMatchInlineSnapshot(`
+{
+  "count": 1,
+  "increment": [Function],
+  "name": "test",
+}
+`);
+  increment();
+  expect(useServerStore.getState()).toMatchInlineSnapshot(`
+{
+  "count": 2,
+  "increment": [Function],
+  "name": "test",
+}
+`);
   {
     const useClientStore = create(counter)({
       transport: clientTransport,
@@ -80,204 +195,208 @@ test('worker', async () => {
     const { count, increment, name } = useClientStore();
     expect(count).toBe(2);
     expect(increment).toBeInstanceOf(Function);
-    // TODO: fix this
-    expect(name).toBe(undefined);
+    expect(name).toBe('test');
+    expect(useClientStore.getState()).toMatchInlineSnapshot(`
+{
+  "count": 2,
+  "increment": [Function],
+  "name": "test",
+}
+`);
     const fn = jest.fn();
     useClientStore.subscribe(fn);
-    await useClientStore.getState().increment();
-    expect(useClientStore().count).toBe(3);
-    await increment();
-    expect(useClientStore().count).toBe(4);
+    useClientStore.getState().increment();
+    expect(useClientStore.getState()).toMatchInlineSnapshot(`
+{
+  "count": 3,
+  "increment": [Function],
+  "name": "test",
+}
+`);
+    increment();
+    expect(useClientStore.getState()).toMatchInlineSnapshot(`
+{
+  "count": 4,
+  "increment": [Function],
+  "name": "test",
+}
+`);
   }
 });
 
-test('base', () => {
-  const counter = () =>
-    defineStore('counter', {
-      state: () => ({
-        count: 0
-      }),
-      getters: {
-        // @ts-ignore
-        doubleCount: (state) => state.count * 2
-      },
-      actions: {
-        // since we rely on `this`, we cannot use an arrow function
-        increment() {
-          // @ts-ignore
-          this.count++;
-        }
-      }
+describe('Slices', () => {
+  test('base', () => {
+    const stateFn = jest.fn();
+    const getterFn = jest.fn();
+    const useStore = create({
+      counter: (set, get, api) =>
+        defineStore('test', {
+          state: () => ({ count: 0 }),
+          getters: {
+            double() {
+              return this.count * 2;
+            }
+          },
+          actions: {
+            increment(state) {
+              this.count += 1;
+              stateFn(
+                get().counter.count,
+                api.getState().counter.count,
+                this.count
+              );
+              getterFn(
+                get().counter.double,
+                api.getState().counter.double,
+                this.double
+              );
+            }
+          }
+        })
     });
-  const useStore = create(counter);
-  // TODO: fix this
-  // @ts-ignore
-  const { count, increment, name } = useStore();
-  expect(count).toBe(0);
-  expect(increment).toBeInstanceOf(Function);
-  expect(name).toBe(undefined);
-  expect(useStore.getState().count).toBe(0);
-  const fn = jest.fn();
-  useStore.subscribe(() => {
-    fn(useStore.getState().count);
+    // TODO: fix this
+    // @ts-ignore
+    const { count, increment, name } = useStore().counter;
+    expect(count).toBe(0);
+    expect(increment).toBeInstanceOf(Function);
+    expect(name).toBe('test');
+    expect(useStore.getState()).toMatchInlineSnapshot(`
+{
+  "counter": {
+    "count": 0,
+    "increment": [Function],
+    "name": "test",
+  },
+  "name": "default",
+}
+`);
+    const fn = jest.fn();
+    useStore.subscribe(fn);
+    // @ts-ignore
+    useStore.getState().counter.increment();
+    expect(useStore.getState()).toMatchInlineSnapshot(`
+{
+  "counter": {
+    "count": 1,
+    "increment": [Function],
+    "name": "test",
+  },
+  "name": "default",
+}
+`);
+    increment();
+    expect(useStore.getState()).toMatchInlineSnapshot(`
+{
+  "counter": {
+    "count": 2,
+    "increment": [Function],
+    "name": "test",
+  },
+  "name": "default",
+}
+`);
   });
-  // // @ts-ignore
-  useStore.getState().increment();
-  expect(useStore.getState().count).toBe(1);
-  // TODO: fix this
-  // expect(fn).toHaveBeenCalledTimes(2);
-  increment.call(useStore.getState());
-  expect(useStore.getState().count).toBe(2);
-  // expect(fn).toHaveBeenCalledTimes(3);
+  test('worker', async () => {
+    const ports = mockPorts();
+    const serverTransport = createTransport('WorkerInternal', ports.main);
+    const clientTransport = createTransport('WorkerMain', ports.create());
+
+    const counter = () =>
+      defineStore('test', {
+        state: () => ({ count: 0 }),
+        getters: {
+          double() {
+            return this.count * 2;
+          }
+        },
+        actions: {
+          increment() {
+            this.count += 1;
+          }
+        }
+      });
+    const useServerStore = create(
+      { counter },
+      {
+        transport: serverTransport,
+        workerType: 'WorkerInternal'
+      }
+    );
+    // TODO: fix this
+    // @ts-ignore
+    const { count, increment, name } = useServerStore().counter;
+    expect(count).toBe(0);
+    expect(increment).toBeInstanceOf(Function);
+    expect(name).toBe('test');
+    expect(useServerStore.getState().counter).toMatchInlineSnapshot(`
+  {
+    "count": 0,
+    "increment": [Function],
+    "name": "test",
+  }
+  `);
+    const fn = jest.fn();
+    useServerStore.subscribe(fn);
+    useServerStore.getState().counter.increment();
+    expect(useServerStore.getState().counter).toMatchInlineSnapshot(`
+{
+  "count": 1,
+  "increment": [Function],
+  "name": "test",
+}
+`);
+    increment();
+    expect(useServerStore.getState().counter).toMatchInlineSnapshot(`
+{
+  "count": 2,
+  "increment": [Function],
+  "name": "test",
+}
+`);
+    {
+      const useClientStore = create({ counter })({
+        transport: clientTransport,
+        workerType: 'WorkerMain'
+      });
+      await new Promise((resolve) => {
+        clientTransport.onConnect(() => {
+          setTimeout(resolve);
+        });
+      });
+
+      // @ts-ignore
+      const { count, increment, name } = useClientStore().counter;
+      expect(count).toBe(2);
+      expect(increment).toBeInstanceOf(Function);
+      expect(name).toBe('test');
+      expect(useClientStore.getState()).toMatchInlineSnapshot(`
+{
+  "counter": {
+    "count": 2,
+    "increment": [Function],
+    "name": "test",
+  },
+  "name": "default",
+}
+`);
+      const fn = jest.fn();
+      useClientStore.subscribe(fn);
+      useClientStore.getState().counter.increment();
+      expect(useClientStore.getState().counter).toMatchInlineSnapshot(`
+{
+  "count": 3,
+  "increment": [Function],
+  "name": "test",
+}
+`);
+      increment();
+      expect(useClientStore.getState().counter).toMatchInlineSnapshot(`
+{
+  "count": 4,
+  "increment": [Function],
+  "name": "test",
+}
+`);
+    }
+  });
 });
-
-// describe.only('Slices', () => {
-//   test('base', () => {
-//     const useStore = create({
-//       counter: () =>
-//         makeAutoObservable({
-//           name: 'test',
-//           count: 0,
-//           increment() {
-//             this.count += 1;
-//           }
-//         })
-//     });
-//     // TODO: fix this
-//     // @ts-ignore
-//     const { count, increment, name } = useStore().counter;
-//     expect(count).toBe(0);
-//     expect(increment).toBeInstanceOf(Function);
-//     expect(name).toBe('test');
-//     expect(useStore.getState()).toMatchInlineSnapshot(`
-//   {
-//     "counter": {
-//       "count": 0,
-//       "increment": [Function],
-//       "name": "test",
-//     },
-//   }
-//   `);
-//     const fn = jest.fn();
-//     useStore.subscribe(fn);
-//     // @ts-ignore
-//     useStore.getState().counter.increment();
-//     expect(useStore.getState()).toMatchInlineSnapshot(`
-//   {
-//     "counter": {
-//       "count": 1,
-//       "increment": [Function],
-//       "name": "test",
-//     },
-//   }
-//   `);
-//     // TODO: fix this
-//     increment.call(useStore.getState().counter);
-//     expect(useStore.getState()).toMatchInlineSnapshot(`
-//   {
-//     "counter": {
-//       "count": 2,
-//       "increment": [Function],
-//       "name": "test",
-//     },
-//   }
-//   `);
-//   });
-//   test('worker', async () => {
-//     const ports = mockPorts();
-//     const serverTransport = createTransport('WorkerInternal', ports.main);
-//     const clientTransport = createTransport('WorkerMain', ports.create());
-
-//     const counter = () =>
-//       makeAutoObservable({
-//         name: 'test',
-//         count: 0,
-//         increment() {
-//           this.count += 1;
-//         }
-//       });
-//     const useServerStore = create(
-//       { counter },
-//       {
-//         transport: serverTransport,
-//         workerType: 'WorkerInternal'
-//       }
-//     );
-//     // TODO: fix this
-//     // @ts-ignore
-//     const { count, increment, name } = useServerStore().counter;
-//     expect(count).toBe(0);
-//     expect(increment).toBeInstanceOf(Function);
-//     expect(name).toBe('test');
-//     expect(useServerStore.getState().counter).toMatchInlineSnapshot(`
-//   {
-//     "count": 0,
-//     "increment": [Function],
-//     "name": "test",
-//   }
-//   `);
-//     const fn = jest.fn();
-//     useServerStore.subscribe(fn);
-//     useServerStore.getState().counter.increment();
-//     expect(useServerStore.getState().counter).toMatchInlineSnapshot(`
-// {
-//   "count": 1,
-//   "increment": [Function],
-//   "name": "test",
-// }
-// `);
-//     increment();
-//     expect(useServerStore.getState().counter).toMatchInlineSnapshot(`
-// {
-//   "count": 2,
-//   "increment": [Function],
-//   "name": "test",
-// }
-// `);
-//     {
-//       const useClientStore = create({ counter })({
-//         transport: clientTransport,
-//         workerType: 'WorkerMain'
-//       });
-//       await new Promise((resolve) => {
-//         clientTransport.onConnect(() => {
-//           setTimeout(resolve);
-//         });
-//       });
-
-//       // @ts-ignore
-//       const { count, increment, name } = useClientStore().counter;
-//       expect(count).toBe(2);
-//       expect(increment).toBeInstanceOf(Function);
-//       expect(name).toBe('test');
-//       expect(useClientStore.getState()).toMatchInlineSnapshot(`
-// {
-//   "counter": {
-//     "count": 2,
-//     "increment": [Function],
-//     "name": "test",
-//   },
-//   "name": "WorkerInternal",
-// }
-// `);
-//       const fn = jest.fn();
-//       useClientStore.subscribe(fn);
-//       useClientStore.getState().counter.increment();
-//       expect(useClientStore.getState().counter).toMatchInlineSnapshot(`
-// {
-//   "count": 3,
-//   "increment": [Function],
-//   "name": "test",
-// }
-// `);
-//       increment();
-//       expect(useClientStore.getState().counter).toMatchInlineSnapshot(`
-// {
-//   "count": 4,
-//   "increment": [Function],
-//   "name": "test",
-// }
-// `);
-//     }
-//   });
-// });
