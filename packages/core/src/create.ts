@@ -168,7 +168,7 @@ export const create = <T extends ISlices>(
             rootState as T,
             (draft) => {
               rootState = draft;
-              const returnValue = next(draft);
+              const returnValue = next(module as Draft<T>);
               if (returnValue instanceof Promise) {
                 throw new Error(
                   'setState with async function is not supported'
@@ -261,6 +261,14 @@ export const create = <T extends ISlices>(
               const keys = _key ? [_key, key] : [key];
               console.log('execute', { keys, args });
               return api.transport!.emit('execute', keys, args);
+            };
+          } else {
+            const fn = descriptor.value;
+            descriptor.value = (...args: any[]) => {
+              return fn.apply(
+                _key ? api.getState()[_key] : api.getState(),
+                args
+              );
             };
           }
         }

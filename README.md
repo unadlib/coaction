@@ -161,7 +161,7 @@ const CounterComponent = () => {
 - [ ] Redux Toolkit
 - [ ] Zustand
 - [x] MobX
-- [ ] Pinia
+- [x] Pinia
 - [ ] Jotai
 - [ ] XState
 - [ ] Valtio
