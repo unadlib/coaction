@@ -1,13 +1,16 @@
-import { createWithMobx } from '@coaction/mobx';
-import { makeAutoObservable } from 'mobx';
+import { createWithMobx, makeAutoObservable } from '@coaction/mobx';
 
 export const useStore = createWithMobx({
   counter: () =>
     makeAutoObservable({
       name: 'test',
       count: 0,
+      get double() {
+        return this.count * 2;
+      },
       increment() {
         this.count += 1;
+        console.log('count', this.count, this.double);
       }
     })
 });

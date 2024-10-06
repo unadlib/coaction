@@ -61,6 +61,10 @@ export interface Store<T extends ISlices> {
    * The store is a slices.
    */
   isSlices: boolean;
+  /**
+   * get the mutable instance
+   */
+  getMutableInstance?: (key: any) => any;
 }
 
 type WorkerOptions = {
@@ -238,11 +242,23 @@ export const create = <T extends ISlices>(
 
     const rawState = {} as any;
     const handle = (_rawState: any, _initialState: any, _key?: string) => {
+      const mutableInstance = api.getMutableInstance?.(_initialState);
+      console.log('_initialState', _initialState);
       const descriptors = Object.getOwnPropertyDescriptors(_initialState);
       Object.entries(descriptors).forEach(([key, descriptor]) => {
         if (Object.prototype.hasOwnProperty.call(descriptor, 'value')) {
           if (typeof descriptor.value !== 'function') {
-            _rawState[key] = descriptor.value;
+            if (mutableInstance) {
+              Object.defineProperty(_rawState, key, {
+                get: () => mutableInstance[key],
+                set: (value) => {
+                  mutableInstance[key] = value;
+                },
+                enumerable: true
+              });
+            } else {
+              _rawState[key] = descriptor.value;
+            }
             if (key !== 'name') {
               delete descriptor.value;
               delete descriptor.writable;
@@ -265,6 +281,28 @@ export const create = <T extends ISlices>(
           } else {
             const fn = descriptor.value;
             descriptor.value = (...args: any[]) => {
+              if (mutableInstance) {
+                let result: any;
+                let backupState = rootState;
+                const [, patches, inversePatches] = createWithMutative(
+                  rootState,
+                  (draft: any) => {
+                    rootState = draft;
+                    result = fn.apply(
+                      _key ? api.getState()[_key] : api.getState(),
+                      args
+                    );
+                  },
+                  {
+                    mark: () => 'immutable',
+                    enablePatches: true
+                  }
+                );
+                rootState = backupState;
+                api.apply(rootState, patches);
+                api.setState(null, () => [null, patches, inversePatches]);
+                return result;
+              }
               return fn.apply(
                 _key ? api.getState()[_key] : api.getState(),
                 args
@@ -362,7 +400,7 @@ export const create = <T extends ISlices>(
     const fullSync = async () => {
       console.log('fullSync');
       const latest = await transport.emit('fullSync');
-      console.log('fullSync', latest, _api.getState().name);
+      console.log('fullSync', latest);
       _api.apply(JSON.parse(latest.state) as T);
       _sequence = latest.sequence;
     };
