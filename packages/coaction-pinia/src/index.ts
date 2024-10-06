@@ -3,7 +3,9 @@ import { create, type Store } from 'coaction';
 import { createPinia, setActivePinia, defineStore as createStore } from 'pinia';
 
 const instancesMap = new Map<object, any>();
-
+// TODO: fix single store without worker
+// TODO: fix async actions
+// TODO: fix set function
 export const defineStore = (name: string, options: any) => {
   const descriptors: Record<string, PropertyDescriptor> = {};
   options.getters = options.getters ?? {};
