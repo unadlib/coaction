@@ -1,95 +1,74 @@
-import { mutate, apply } from 'mutability';
+import { apply } from 'mutability';
 import { create, type Store } from 'coaction';
 import { createPinia, setActivePinia, defineStore as createStore } from 'pinia';
 
-const map = new Map<string, any>();
+const instancesMap = new Map<object, any>();
 
 export const defineStore = (name: string, options: any) => {
-  map.set(name, options);
-  return createStore(name, options);
-};
-
-// TODO: fix defineStore same name
-const handleStore = (
-  api: Store<object>,
-  createMobxState: () => any,
-  stateKey?: string
-) => {
-  console.log('api', api);
-  const pinia = createPinia();
-  setActivePinia(pinia);
-  const store = createMobxState()();
-  Object.assign(api, {
-    // TODO: fix destroy
-    subscribe: store.$subscribe
-  });
-  api.getRawState = () => (api.isSlices ? pinia.state.value : store.$state);
-  if (api.share === 'client') {
-    api.apply = (state, patches) => {
-      apply(state, patches);
-    };
-    api.setState = (next) => {
-      if (api.isSlices) {
-        if (typeof next === 'object' && next !== null) {
-          for (const key in next) {
-            // @ts-ignore
-            if (typeof next[key] === 'object' && next[key] !== null) {
-              // @ts-ignore
-              Object.assign(api.getState()[key], next[key]);
-            }
-          }
-        }
-      } else {
-        Object.assign(api.getState(), next);
+  const descriptors: Record<string, PropertyDescriptor> = {};
+  options.getters = options.getters ?? {};
+  for (const key in options.getters) {
+    descriptors[key] = {
+      get() {
+        return options.getters[key].call(this, this);
       }
     };
   }
+  const rawState = Object.defineProperties(
+    {
+      name,
+      ...options.state(),
+      ...options.actions
+    },
+    descriptors
+  );
+  const store = createStore(name, options)();
+  instancesMap.set(rawState, store);
+  return rawState;
+};
+
+// TODO: fix defineStore same name
+const handleStore = (api: Store<object>, createMobxState: () => any) => {
+  api.getMutableInstance = (key: any) => instancesMap.get(key);
+  const pinia = createPinia();
+  setActivePinia(pinia);
+  const state = createMobxState();
+  Object.assign(api, {
+    // TODO: fix destroy
+    subscribe: api.getMutableInstance(state).$subscribe
+  });
+  if (api.share === 'client') {
+    api.apply = (state = api.getState(), patches) => {
+      if (!patches) {
+        if (api.isSlices) {
+          if (typeof state === 'object' && state !== null) {
+            for (const key in state) {
+              if (
+                typeof state[key as keyof typeof state] === 'object' &&
+                state[key as keyof typeof state] !== null
+              ) {
+                Object.assign(
+                  api.getState()[key as keyof typeof state],
+                  state[key as keyof typeof state]
+                );
+              }
+            }
+          }
+        } else {
+          Object.assign(api.getState(), state);
+        }
+        return;
+      }
+      apply(state, patches);
+    };
+  }
   if (!api.share) {
-    return store;
+    return state;
   }
   if (process.env.NODE_ENV === 'development') {
     // TODO: check with observe for unexpected changes
   }
-  const actionKeys = Object.keys(map.get(store.$id).actions);
-  actionKeys.forEach((key) => {
-    const fn = map.get(store.$id).actions[key];
-    store[key] = (...args: any) => {
-      if (api.share === 'client') {
-        return api.transport?.emit(
-          'execute',
-          stateKey ? [stateKey, key] : [key],
-          args
-        );
-      }
-      let result: any;
-      const { patches, inversePatches } = mutate(store, (draft: any) => {
-        const { proxy, revoke } = Proxy.revocable(draft, {
-          get(target, key, receiver) {
-            const getter = map.get(store.$id).getters[key];
-            if (getter) {
-              // TODO: fix computed properties
-              return getter.call(receiver, receiver);
-            }
-            return Reflect.get(target, key, receiver);
-          }
-        });
-        // TODO: support async actions
-        result = fn.apply(proxy, args);
-        revoke();
-      });
-      if (stateKey) {
-        patches.forEach((patch) => {
-          patch.path = [stateKey, ...patch.path];
-        });
-        inversePatches.forEach((patch) => {
-          patch.path = [stateKey, ...patch.path];
-        });
-      }
-      api.setState(null, () => [store, patches, inversePatches]);
-      return result;
-    };
-  });
-  return store;
+  return state;
 };
 
 export const createWithPinia = (
@@ -105,15 +84,11 @@ export const createWithPinia = (
     return create(
       Object.keys(createPiniaState).reduce((acc, key) => {
         acc[key] = (set: any, get: any, api: any) =>
-          handleStore(
-            api,
-            createPiniaState[key].bind(null, set, get, api),
-            key
-          );
+          handleStore(api, createPiniaState[key].bind(null, set, get, api));
         return acc;
       }, {} as any),
       options
     );
   }
-  throw new Error('createWithPinia must be a function or an object');
+  throw new Error('createPiniaState must be a function or an object');
 };

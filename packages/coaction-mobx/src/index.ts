@@ -1,4 +1,4 @@
-import { mutate, apply } from 'mutability';
+import { apply } from 'mutability';
 import { create, ISlices, Slices, type Store } from 'coaction';
 import {
   autorun,
