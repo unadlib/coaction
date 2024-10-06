@@ -1,89 +1,68 @@
 import { mutate, apply } from 'mutability';
 import { create, ISlices, Slices, type Store } from 'coaction';
-import { autorun, runInAction, getAtom } from 'mobx';
+import {
+  autorun,
+  runInAction,
+  makeAutoObservable as makeAutoObservableMobx
+} from 'mobx';
 
-const handleStore = (
-  api: Store<object>,
-  createMobxState: () => any,
-  stateKey?: string
-) => {
-  Object.assign(api, {
-    subscribe: autorun
-  });
+const instancesMap = new Map<object, any>();
+
+export const makeAutoObservable = (options: any) => {
+  const descriptors = Object.getOwnPropertyDescriptors(options);
+  const copyState = Object.defineProperties({}, descriptors);
+  const rawState = Object.defineProperties({}, descriptors);
+  const mobxState = makeAutoObservableMobx(copyState);
+  instancesMap.set(rawState, mobxState);
+  return rawState;
+};
+
+const handleStore = (api: Store<object>, createMobxState: () => any) => {
+  api.getMutableInstance = (key: any) => instancesMap.get(key);
+  if (api.subscribe !== autorun) {
+    Object.assign(api, {
+      subscribe: autorun
+    });
+  }
   if (api.share === 'client') {
-    api.apply = (state, patches) => {
-      runInAction(() => {
-        apply(state, patches);
-      });
-    };
-    api.setState = (next) => {
-      if (api.isSlices) {
-        if (typeof next === 'object' && next !== null) {
-          runInAction(() => {
-            for (const key in next) {
-              // @ts-ignore
-              if (typeof next[key] === 'object' && next[key] !== null) {
-                // @ts-ignore
-                Object.assign(api.getState()[key], next[key]);
+    api.apply = (state = api.getState(), patches) => {
+      if (!patches) {
+        if (api.isSlices) {
+          if (typeof state === 'object' && state !== null) {
+            runInAction(() => {
+              for (const key in state) {
+                if (
+                  typeof state[key as keyof typeof state] === 'object' &&
+                  state[key as keyof typeof state] !== null
+                ) {
+                  Object.assign(
+                    api.getState()[key as keyof typeof state],
+                    state[key as keyof typeof state]
+                  );
+                }
               }
-            }
+            });
+          }
+        } else {
+          runInAction(() => {
+            Object.assign(api.getState(), state);
           });
         }
-      } else {
-        runInAction(() => {
-          Object.assign(api.getState(), next);
-        });
+        return;
       }
+      runInAction(() => {
+        apply(state, patches!);
+      });
     };
   }
-  const mobxState = createMobxState();
+  const state = createMobxState();
   if (!api.share) {
-    return mobxState;
+    return state;
   }
   if (process.env.NODE_ENV === 'development') {
     // TODO: check with observe for unexpected changes
   }
-  return new Proxy(mobxState, {
-    get(target, key, receiver) {
-      const value = Reflect.get(target, key, receiver);
-      if (typeof value === 'function') {
-        return (...args: any) => {
-          if (api.share === 'client') {
-            return api.transport?.emit(
-              'execute',
-              stateKey ? [stateKey, key] : [key],
-              args
-            );
-          }
-          let result: any;
-          const { patches, inversePatches } = mutate(target, (draft: any) => {
-            const { proxy, revoke } = Proxy.revocable(draft, {
-              get(target, key, receiver) {
-                const getter = getAtom(mobxState, key).derivation;
-                if (getter) {
-                  return getter!.call(receiver);
-                }
-                return Reflect.get(target, key, receiver);
-              }
-            });
-            result = value.apply(proxy, args);
-            revoke();
-          });
-          if (stateKey) {
-            patches.forEach((patch) => {
-              patch.path = [stateKey, ...patch.path];
-            });
-            inversePatches.forEach((patch) => {
-              patch.path = [stateKey, ...patch.path];
-            });
-          }
-          api.setState(null, () => [target, patches, inversePatches]);
-          return result;
-        };
-      }
-      return value;
-    }
-  });
+  return state;
 };
 
 export const createWithMobx = <T extends ISlices>(
@@ -99,11 +78,11 @@ export const createWithMobx = <T extends ISlices>(
     return create(
       Object.keys(createMobxState).reduce((acc, key) => {
         acc[key] = (set: any, get: any, api: any) =>
-          handleStore(api, createMobxState[key].bind(null, set, get, api), key);
+          handleStore(api, createMobxState[key].bind(null, set, get, api));
         return acc;
       }, {} as any),
       options
     );
   }
-  throw new Error('createWithMobx must be a function or an object');
+  throw new Error('createMobxState must be a function or an object');
 };

@@ -11,8 +11,6 @@ const useWorkerStore = useStore({
   worker
 });
 
-console.log('create');
-
 // @ts-ignore
 globalThis.useWorkerStore = useWorkerStore;
 

@@ -1,6 +1,104 @@
-import { makeAutoObservable, autorun } from 'mobx';
 import { createTransport, mockPorts } from 'data-transport';
-import { createWithMobx as create } from '../src';
+import { createWithMobx as create, makeAutoObservable } from '../src';
+
+test('base', () => {
+  const stateFn = jest.fn();
+  const getterFn = jest.fn();
+  const useStore = create((set, get, api) =>
+    makeAutoObservable({
+      name: 'test',
+      count: 0,
+      get double() {
+        return this.count * 2;
+      },
+      increment() {
+        this.count += 1;
+        stateFn(get().count, api.getState().count, this.count);
+        getterFn(get().double, api.getState().double, this.double);
+      }
+    })
+  );
+  // TODO: fix this
+  // @ts-ignore
+  const { count, increment, name } = useStore();
+  expect(count).toBe(0);
+  expect(increment).toBeInstanceOf(Function);
+  expect(name).toBe('test');
+  expect(useStore.getState()).toMatchInlineSnapshot(`
+{
+  "count": 0,
+  "double": 0,
+  "increment": [Function],
+  "name": "test",
+}
+`);
+  const fn = jest.fn();
+  useStore.subscribe(fn);
+  useStore.getState().increment();
+  expect(stateFn.mock.calls).toMatchInlineSnapshot(`
+[
+  [
+    1,
+    1,
+    1,
+  ],
+]
+`);
+  expect(getterFn.mock.calls).toMatchInlineSnapshot(`
+[
+  [
+    2,
+    2,
+    2,
+  ],
+]
+`);
+  expect(useStore.getState()).toMatchInlineSnapshot(`
+{
+  "count": 1,
+  "double": 2,
+  "increment": [Function],
+  "name": "test",
+}
+`);
+  increment();
+  expect(stateFn.mock.calls).toMatchInlineSnapshot(`
+[
+  [
+    1,
+    1,
+    1,
+  ],
+  [
+    2,
+    2,
+    2,
+  ],
+]
+`);
+  expect(getterFn.mock.calls).toMatchInlineSnapshot(`
+[
+  [
+    2,
+    2,
+    2,
+  ],
+  [
+    4,
+    4,
+    4,
+  ],
+]
+`);
+  expect(useStore.getState()).toMatchInlineSnapshot(`
+{
+  "count": 2,
+  "double": 4,
+  "increment": [Function],
+  "name": "test",
+}
+`);
+});
 
 test('worker', async () => {
   const ports = mockPorts();
@@ -24,12 +122,12 @@ test('worker', async () => {
   const { count, increment, name } = useServerStore();
   expect(count).toBe(0);
   expect(increment).toBeInstanceOf(Function);
-  expect(name).toBe('WorkerInternal');
+  expect(name).toBe('test');
   expect(useServerStore.getState()).toMatchInlineSnapshot(`
 {
   "count": 0,
   "increment": [Function],
-  "name": "WorkerInternal",
+  "name": "test",
 }
 `);
   const fn = jest.fn();
@@ -39,15 +137,15 @@ test('worker', async () => {
 {
   "count": 1,
   "increment": [Function],
-  "name": "WorkerInternal",
+  "name": "test",
 }
 `);
-  increment.call(useServerStore.getState());
+  increment();
   expect(useServerStore.getState()).toMatchInlineSnapshot(`
 {
   "count": 2,
   "increment": [Function],
-  "name": "WorkerInternal",
+  "name": "test",
 }
 `);
   {
@@ -66,93 +164,59 @@ test('worker', async () => {
     const { count, increment, name } = useClientStore();
     expect(count).toBe(2);
     expect(increment).toBeInstanceOf(Function);
-    expect(name).toBe('WorkerInternal');
+    expect(name).toBe('test');
     expect(useClientStore.getState()).toMatchInlineSnapshot(`
-  {
-    "count": 2,
-    "increment": [Function],
-    "name": "WorkerInternal",
-  }
-  `);
-    const fn = jest.fn();
-    useClientStore.subscribe(fn);
-    useClientStore.getState().increment();
-    expect(useClientStore.getState()).toMatchInlineSnapshot(`
-  {
-    "count": 3,
-    "increment": [Function],
-    "name": "WorkerInternal",
-  }
-  `);
-    increment();
-    expect(useClientStore.getState()).toMatchInlineSnapshot(`
-  {
-    "count": 4,
-    "increment": [Function],
-    "name": "WorkerInternal",
-  }
-  `);
-  }
-});
-
-test('base', () => {
-  const useStore = create(() =>
-    makeAutoObservable({
-      name: 'test',
-      count: 0,
-      increment() {
-        this.count += 1;
-      }
-    })
-  );
-  // TODO: fix this
-  // @ts-ignore
-  const { count, increment, name } = useStore();
-  expect(count).toBe(0);
-  expect(increment).toBeInstanceOf(Function);
-  expect(name).toBe('test');
-  expect(useStore.getState()).toMatchInlineSnapshot(`
-  {
-    "count": 0,
-    "increment": [Function],
-    "name": "test",
-  }
-  `);
-  const fn = jest.fn();
-  useStore.subscribe(() => {
-    fn(useStore.getState().count);
-  });
-  // // @ts-ignore
-  useStore.getState().increment();
-  expect(useStore.getState()).toMatchInlineSnapshot(`
-{
-  "count": 1,
-  "increment": [Function],
-  "name": "test",
-}
-`);
-  expect(fn).toHaveBeenCalledTimes(2);
-  // useStore.getState().increment();
-  increment.call(useStore.getState());
-  expect(useStore.getState()).toMatchInlineSnapshot(`
 {
   "count": 2,
   "increment": [Function],
   "name": "test",
 }
 `);
-  expect(fn).toHaveBeenCalledTimes(3);
+    const fn = jest.fn();
+    useClientStore.subscribe(fn);
+    useClientStore.getState().increment();
+    expect(useClientStore.getState()).toMatchInlineSnapshot(`
+{
+  "count": 3,
+  "increment": [Function],
+  "name": "test",
+}
+`);
+    increment();
+    expect(useClientStore.getState()).toMatchInlineSnapshot(`
+{
+  "count": 4,
+  "increment": [Function],
+  "name": "test",
+}
+`);
+  }
 });
 
 describe('Slices', () => {
   test('base', () => {
+    const stateFn = jest.fn();
+    const getterFn = jest.fn();
     const useStore = create({
-      counter: () =>
+      counter: (set, get, api) =>
         makeAutoObservable({
           name: 'test',
           count: 0,
+          get double() {
+            return this.count * 2;
+          },
           increment() {
             this.count += 1;
+            stateFn(
+              get().counter.count,
+              api.getState().counter.count,
+              this.count
+            );
+            getterFn(
+              get().counter.double,
+              api.getState().counter.double,
+              this.double
+            );
           }
         })
     });
@@ -163,38 +227,43 @@ describe('Slices', () => {
     expect(increment).toBeInstanceOf(Function);
     expect(name).toBe('test');
     expect(useStore.getState()).toMatchInlineSnapshot(`
-  {
-    "counter": {
-      "count": 0,
-      "increment": [Function],
-      "name": "test",
-    },
-  }
-  `);
+{
+  "counter": {
+    "count": 0,
+    "double": 0,
+    "increment": [Function],
+    "name": "test",
+  },
+  "name": "default",
+}
+`);
     const fn = jest.fn();
     useStore.subscribe(fn);
     // @ts-ignore
     useStore.getState().counter.increment();
     expect(useStore.getState()).toMatchInlineSnapshot(`
-  {
-    "counter": {
-      "count": 1,
-      "increment": [Function],
-      "name": "test",
-    },
-  }
-  `);
-    // TODO: fix this
-    increment.call(useStore.getState().counter);
+{
+  "counter": {
+    "count": 1,
+    "double": 2,
+    "increment": [Function],
+    "name": "test",
+  },
+  "name": "default",
+}
+`);
+    increment();
     expect(useStore.getState()).toMatchInlineSnapshot(`
-  {
-    "counter": {
-      "count": 2,
-      "increment": [Function],
-      "name": "test",
-    },
-  }
-  `);
+{
+  "counter": {
+    "count": 2,
+    "double": 4,
+    "increment": [Function],
+    "name": "test",
+  },
+  "name": "default",
+}
+`);
   });
   test('worker', async () => {
     const ports = mockPorts();
@@ -270,6 +339,7 @@ describe('Slices', () => {
     "increment": [Function],
     "name": "test",
   },
+  "name": "default",
 }
 `);
       const fn = jest.fn();
