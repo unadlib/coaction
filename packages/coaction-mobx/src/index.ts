@@ -18,13 +18,11 @@ export const makeAutoObservable = (options: any) => {
 };
 
 const handleStore = (api: Store<object>, createMobxState: () => any) => {
-  api.getMutableInstance = (key: any) => instancesMap.get(key);
-  if (api.subscribe !== autorun) {
+  if (!api.getMutableInstance) {
+    api.getMutableInstance = (key: any) => instancesMap.get(key);
     Object.assign(api, {
       subscribe: autorun
     });
-  }
-  if (api.share === 'client') {
     api.apply = (state = api.getState(), patches) => {
       if (!patches) {
         if (api.isSlices) {
@@ -56,9 +54,6 @@ const handleStore = (api: Store<object>, createMobxState: () => any) => {
     };
   }
   const state = createMobxState();
-  if (!api.share) {
-    return state;
-  }
   if (process.env.NODE_ENV === 'development') {
     // TODO: check with observe for unexpected changes
   }
