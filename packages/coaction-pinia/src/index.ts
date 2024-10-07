@@ -3,7 +3,6 @@ import { create, type Store } from 'coaction';
 import { createPinia, setActivePinia, defineStore as createStore } from 'pinia';
 
 const instancesMap = new Map<object, any>();
-// TODO: fix single store without worker
 // TODO: fix async actions
 // TODO: fix set function
 export const defineStore = (name: string, options: any) => {
@@ -61,18 +60,6 @@ const handleStore = (
       api._destroyers!.forEach((destroy) => destroy());
       api._destroyers = undefined;
     };
-  }
-  const stopWatch = api
-    .getMutableInstance(state)
-    .$subscribe((...args: any[]) => {
-      api._subscriptions!.forEach((callback) => callback(...args));
-    });
-  const destroy = () => {
-    instancesMap.delete(state);
-    stopWatch();
-  };
-  api._destroyers!.add(destroy);
-  if (api.share === 'client') {
     api.apply = (state = api.getState(), patches) => {
       if (!patches) {
         if (api.isSlices) {
@@ -97,9 +84,16 @@ const handleStore = (
       apply(state, patches);
     };
   }
-  if (!api.share) {
-    return state;
-  }
+  const stopWatch = api
+    .getMutableInstance(state)
+    .$subscribe((...args: any[]) => {
+      api._subscriptions!.forEach((callback) => callback(...args));
+    });
+  const destroy = () => {
+    instancesMap.delete(state);
+    stopWatch();
+  };
+  api._destroyers!.add(destroy);
   if (process.env.NODE_ENV === 'development') {
     // TODO: check with observe for unexpected changes
   }

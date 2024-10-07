@@ -217,6 +217,7 @@ export const create = <T extends ISlices>(
       transport?.dispose();
     };
     api = {
+      share,
       setState,
       getState,
       getInitialState,
@@ -228,7 +229,6 @@ export const create = <T extends ISlices>(
       },
       isSlices: typeof createState === 'object'
     };
-    api.share = transport ? 'main' : share;
     const initialState = api.isSlices
       ? Object.entries(createState).reduce(
           (stateTree, [key, value]) => {
@@ -364,7 +364,9 @@ export const create = <T extends ISlices>(
     }
     return api;
   };
-  const api = createApi();
+  const api = createApi({
+    share: _workerType || options.transport ? 'main' : undefined
+  });
   return Object.assign((option: Option) => {
     if (!option) return api.getState();
     const _api = createApi({
