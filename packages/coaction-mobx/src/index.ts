@@ -18,14 +18,14 @@ export const makeAutoObservable = (options: any) => {
 };
 
 const handleStore = (api: Store<object>, createMobxState: () => any) => {
-  if (!api.getMutableInstance) {
-    api.getMutableInstance = (key: any) => instancesMap.get(key);
+  if (!api.toRaw) {
+    api.toRaw = (key: any) => instancesMap.get(key);
     Object.assign(api, {
       subscribe: autorun
     });
     api.apply = (state = api.getState(), patches) => {
       if (!patches) {
-        if (api.isSlices) {
+        if (api.isSliceStore) {
           if (typeof state === 'object' && state !== null) {
             runInAction(() => {
               for (const key in state) {

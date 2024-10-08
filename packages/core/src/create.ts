@@ -60,11 +60,11 @@ export interface Store<T extends ISlices> {
   /**
    * The store is a slices.
    */
-  isSlices: boolean;
+  isSliceStore: boolean;
   /**
-   * get the mutable instance
+   * Get the raw instance via the initial state.
    */
-  getMutableInstance?: (key: any) => any;
+  toRaw?: (key: any) => any;
 }
 
 type WorkerOptions = {
@@ -227,9 +227,9 @@ export const create = <T extends ISlices>(
         rootState = patches ? apply(state, patches) : state;
         listeners.forEach((listener) => listener());
       },
-      isSlices: typeof createState === 'object'
+      isSliceStore: typeof createState === 'object'
     };
-    const initialState = api.isSlices
+    const initialState = api.isSliceStore
       ? Object.entries(createState).reduce(
           (stateTree, [key, value]) => {
             stateTree[key] =
@@ -242,7 +242,7 @@ export const create = <T extends ISlices>(
 
     const rawState = {} as any;
     const handle = (_rawState: any, _initialState: any, _key?: string) => {
-      const mutableInstance = api.getMutableInstance?.(_initialState);
+      const mutableInstance = api.toRaw?.(_initialState);
       console.log('_initialState', _initialState);
       const descriptors = Object.getOwnPropertyDescriptors(_initialState);
       Object.entries(descriptors).forEach(([key, descriptor]) => {
@@ -316,7 +316,7 @@ export const create = <T extends ISlices>(
       const slice = Object.defineProperties({} as T, descriptors);
       return slice;
     };
-    if (api.isSlices) {
+    if (api.isSliceStore) {
       module = {} as T;
       Object.entries(initialState).forEach(([key, value]) => {
         rawState[key] = key === 'name' ? value : {};
