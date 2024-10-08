@@ -42,8 +42,8 @@ const handleStore = (
   const pinia = createPinia();
   setActivePinia(pinia);
   const state = createMobxState();
-  if (!api.getMutableInstance) {
-    api.getMutableInstance = (key: any) => instancesMap.get(key);
+  if (!api.toRaw) {
+    api.toRaw = (key: any) => instancesMap.get(key);
     Object.assign(api, {
       subscribe: (callback: any) => {
         api._subscriptions!.add(callback);
@@ -62,7 +62,7 @@ const handleStore = (
     };
     api.apply = (state = api.getState(), patches) => {
       if (!patches) {
-        if (api.isSlices) {
+        if (api.isSliceStore) {
           if (typeof state === 'object' && state !== null) {
             for (const key in state) {
               if (
@@ -84,11 +84,9 @@ const handleStore = (
       apply(state, patches);
     };
   }
-  const stopWatch = api
-    .getMutableInstance(state)
-    .$subscribe((...args: any[]) => {
-      api._subscriptions!.forEach((callback) => callback(...args));
-    });
+  const stopWatch = api.toRaw(state).$subscribe((...args: any[]) => {
+    api._subscriptions!.forEach((callback) => callback(...args));
+  });
   const destroy = () => {
     instancesMap.delete(state);
     stopWatch();
