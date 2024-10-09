@@ -46,10 +46,6 @@ export interface Store<T extends ISlices> {
    */
   destroy: () => void;
   /**
-   * apply the patches to the state.
-   */
-  apply: (state: T, patches?: Patches) => void;
-  /**
    * The store is shared in the worker or shared worker.
    */
   share?: 'main' | 'client' | void;
@@ -61,6 +57,10 @@ export interface Store<T extends ISlices> {
    * The store is a slices.
    */
   isSliceStore: boolean;
+  /**
+   * apply the patches to the state.
+   */
+  apply: (state: T, patches?: Patches) => void;
   /**
    * Get the raw instance via the initial state.
    */
@@ -145,6 +145,7 @@ export const create = <T extends ISlices>(
     // TODO: remove this, it's only used in test
     workerType?: 'SharedWorkerInternal' | 'WorkerInternal';
     middlewares?: Middlewares[];
+    enablePatches?: boolean;
   } = {}
 ) => {
   const _workerType = options.workerType ?? workerType;
@@ -197,6 +198,15 @@ export const create = <T extends ISlices>(
                 }
               }
             : merge;
+        const enablePatches = api.transport ?? options.enablePatches;
+        if (!enablePatches) {
+          // best performance by default for immutable state
+          rootState = createWithMutative(rootState, () => {
+            return fn.apply(null);
+          });
+          listeners.forEach((listener) => listener());
+          return [];
+        }
         let backupState = rootState;
         const [, patches, inversePatches] = createWithMutative(
           rootState,
@@ -205,7 +215,7 @@ export const create = <T extends ISlices>(
             return fn.apply(null);
           },
           {
-            mark: () => 'immutable',
+            // mark: () => 'immutable',
             enablePatches: true
           }
         );
@@ -315,7 +325,7 @@ export const create = <T extends ISlices>(
                     );
                   },
                   {
-                    mark: () => 'immutable',
+                    // mark: () => 'immutable',
                     enablePatches: true
                   }
                 );

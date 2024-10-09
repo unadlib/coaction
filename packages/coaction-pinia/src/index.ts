@@ -103,9 +103,12 @@ export const createWithPinia = (
   options?: any
 ) => {
   if (typeof createPiniaState === 'function') {
-    return create((set: any, get: any, api: any) => {
-      return handleStore(api, createPiniaState.bind(null, set, get, api));
-    }, options);
+    return create(
+      (set: any, get: any, api: any) => {
+        return handleStore(api, createPiniaState.bind(null, set, get, api));
+      },
+      { ...options, enablePatches: true }
+    );
   }
   if (typeof createPiniaState === 'object' && createPiniaState !== null) {
     return create(
@@ -114,7 +117,7 @@ export const createWithPinia = (
           handleStore(api, createPiniaState[key].bind(null, set, get, api));
         return acc;
       }, {} as any),
-      options
+      { ...options, enablePatches: true }
     );
   }
   throw new Error('createPiniaState must be a function or an object');
