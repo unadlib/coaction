@@ -65,9 +65,12 @@ export const createWithMobx = <T extends ISlices>(
   options: any
 ) => {
   if (typeof createMobxState === 'function') {
-    return create((set: any, get: any, api: any) => {
-      return handleStore(api, createMobxState.bind(null, set, get, api));
-    }, options);
+    return create(
+      (set: any, get: any, api: any) => {
+        return handleStore(api, createMobxState.bind(null, set, get, api));
+      },
+      { ...options, enablePatches: true }
+    );
   }
   if (typeof createMobxState === 'object' && createMobxState !== null) {
     return create(
@@ -76,7 +79,7 @@ export const createWithMobx = <T extends ISlices>(
           handleStore(api, createMobxState[key].bind(null, set, get, api));
         return acc;
       }, {} as any),
-      options
+      { ...options, enablePatches: true }
     );
   }
   throw new Error('createMobxState must be a function or an object');
