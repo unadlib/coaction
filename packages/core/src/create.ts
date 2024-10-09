@@ -27,7 +27,7 @@ export interface Store<T extends ISlices> {
     /**
      * The updater is used to update the state.
      */
-    updater?: () => void
+    updater?: (next: T | ((draft: Draft<T>) => any) | null) => void
   ) => void;
   /**
    * Get the current state.
@@ -42,7 +42,7 @@ export interface Store<T extends ISlices> {
    */
   subscribe: (listener: Listener) => () => void;
   /**
-   * Unsubscribe all listeners.
+   * Unsubscribe all listeners and dispose the transport.
    */
   destroy: () => void;
   /**
@@ -163,40 +163,61 @@ export const create = <T extends ISlices>(
     const listeners = new Set<Listener>();
     const setState: Store<T>['setState'] = (
       next,
-      updater = () => {
-        // TODO: implement mutable type state
-        let nextState: T | null = null;
-        let result: T | [T, Patches<true>, Patches<true>] | null = null;
-        if (typeof next === 'function') {
-          result = createWithMutative(
-            rootState as T,
-            (draft) => {
-              rootState = draft;
-              const returnValue = next(module as Draft<T>);
-              if (returnValue instanceof Promise) {
-                throw new Error(
-                  'setState with async function is not supported'
-                );
+      updater = (next) => {
+        const merge = (_next = next) => {
+          if (api.isSliceStore) {
+            if (typeof _next === 'object' && _next !== null) {
+              for (const key in _next) {
+                if (
+                  typeof _next[key as keyof typeof _next] === 'object' &&
+                  _next[key as keyof typeof _next] !== null
+                ) {
+                  Object.assign(
+                    rootState[key],
+                    _next[key as keyof typeof _next]
+                  );
+                }
               }
-            },
-            {
-              enablePatches: !!_workerType
             }
-          );
-          rootState = _workerType ? result[0] : result;
-        } else {
-          // only merge the state
-          nextState = {
-            ...(rootState as T),
-            ...next
-          };
-          rootState = nextState!;
-        }
+          } else {
+            Object.assign(rootState, _next);
+          }
+        };
+        const fn =
+          typeof next === 'function'
+            ? () => {
+                const returnValue = next(module as Draft<T>);
+                if (returnValue instanceof Promise) {
+                  throw new Error(
+                    'setState with async function is not supported'
+                  );
+                }
+                if (typeof returnValue === 'object' && returnValue !== null) {
+                  merge(returnValue);
+                }
+              }
+            : merge;
+        let backupState = rootState;
+        const [, patches, inversePatches] = createWithMutative(
+          rootState,
+          (draft: any) => {
+            rootState = draft;
+            return fn.apply(null);
+          },
+          {
+            mark: () => 'immutable',
+            enablePatches: true
+          }
+        );
+        rootState = backupState;
+        console.log('apply', { patches, inversePatches });
+        api.apply(rootState, patches);
+        api.setState(null, () => [null, patches, inversePatches]);
         listeners.forEach((listener) => listener());
-        return result;
+        return [rootState, patches, inversePatches];
       }
     ) => {
-      const result = updater();
+      const result = updater(next);
       if (transport) {
         sequence += 1;
         transport.emit('update', {
@@ -299,6 +320,7 @@ export const create = <T extends ISlices>(
                   }
                 );
                 rootState = backupState;
+                console.log('apply', { patches, inversePatches });
                 api.apply(rootState, patches);
                 api.setState(null, () => [null, patches, inversePatches]);
                 return result;
