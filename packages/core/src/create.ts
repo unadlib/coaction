@@ -315,21 +315,17 @@ export const create = <T extends ISlices>(
               if (mutableInstance) {
                 let result: any;
                 let backupState = rootState;
-                const [, patches, inversePatches] = createWithMutative(
-                  rootState,
-                  (draft: any) => {
-                    rootState = draft;
-                    result = fn.apply(
-                      _key ? api.getState()[_key] : api.getState(),
-                      args
-                    );
-                  },
-                  {
-                    // mark: () => 'immutable',
-                    enablePatches: true
-                  }
+                const [draft, finalize] = createWithMutative(rootState, {
+                  // mark: () => 'immutable',
+                  enablePatches: true
+                });
+                rootState = draft;
+                result = fn.apply(
+                  _key ? api.getState()[_key] : api.getState(),
+                  args
                 );
                 rootState = backupState;
+                const [, patches, inversePatches] = finalize();
                 console.log('apply', { patches, inversePatches });
                 api.apply(rootState, patches);
                 api.setState(null, () => [null, patches, inversePatches]);
