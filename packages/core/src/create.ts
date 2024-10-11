@@ -319,16 +319,22 @@ export const create = <T extends ISlices>(
                   // mark: () => 'immutable',
                   enablePatches: true
                 });
-                rootState = draft;
+                rootState = draft as any;
                 result = fn.apply(
                   _key ? api.getState()[_key] : api.getState(),
                   args
                 );
-                rootState = backupState;
-                const [, patches, inversePatches] = finalize();
-                console.log('apply', { patches, inversePatches });
-                api.apply(rootState, patches);
-                api.setState(null, () => [null, patches, inversePatches]);
+                const handleResult = () => {
+                  rootState = backupState;
+                  const [, patches, inversePatches] = finalize();
+                  console.log('apply', { patches, inversePatches });
+                  api.apply(rootState, patches);
+                  api.setState(null, () => [null, patches, inversePatches]);
+                };
+                if (result instanceof Promise) {
+                  return result.finally(handleResult);
+                }
+                handleResult();
                 return result;
               }
               return fn.apply(
