@@ -2,7 +2,8 @@ import {
   create as createWithMutative,
   type Draft,
   apply,
-  type Patches
+  type Patches,
+  isDraft
 } from 'mutative';
 import { createTransport, type Transport } from 'data-transport';
 
@@ -314,6 +315,13 @@ export const create = <T extends ISlices>(
             descriptor.value = (...args: any[]) => {
               if (mutableInstance) {
                 let result: any;
+                if (isDraft(rootState)) {
+                  result = fn.apply(
+                    _key ? api.getState()[_key] : api.getState(),
+                    args
+                  );
+                  return result;
+                }
                 let backupState = rootState;
                 const [draft, finalize] = createWithMutative(rootState, {
                   // mark: () => 'immutable',
