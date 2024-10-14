@@ -340,6 +340,11 @@ export const create = <T extends ISlices>(
                   api.setState(null, () => [null, patches, inversePatches]);
                 };
                 if (result instanceof Promise) {
+                  if (process.env.NODE_ENV === 'development') {
+                    console.warn(
+                      'It will be combined with the next state in the async function.'
+                    );
+                  }
                   return result.finally(handleResult);
                 }
                 handleResult();
