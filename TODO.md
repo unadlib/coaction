@@ -1,13 +1,13 @@
 # TODO
 
-- [x] Slices Pattern: Easily combine multiple slices into a single store
 - [ ] Middleware Support: Supports state subscriptions and middleware for side effects and enhanced state handling, also supports Zustand middlewares and Redux middlewares
-- [ ] Cross-Framework Compatibility: Seamlessly works with React, Vue, Solid.js, Angular, and other modern web frameworks
+- [x] Slices Pattern: Easily combine multiple slices into a single store
+- [x] Cross-Framework Compatibility: Seamlessly works with React, Vue, Solid.js, Angular, and other modern web frameworks
 - [ ] Multi-Store Workers: Run multiple stores within a single Web Worker
-- [ ] Shared Stores Across Workers: Use the same store definition across multiple Workers
+- [x] Shared Stores Across Workers: Use the same store definition across multiple Workers
 - [x] Multiprocessing State Management: Effortlessly manage state across main thread and Workers
 - [x] Intuitive API Design: Simple and expressive API inspired by popular state management libraries
-- [ ] Flexible Store Creation: Create multiple stores with unique names for better organization
+- [x] Flexible Store Creation: Create multiple stores with unique names for better organization
 - [x] Worker Integration: Easy integration with Web Workers and Shared Worker for offloading computations
 - [ ] Computed Properties: Support for derived state through getter functions
 - [ ] Namespace Support: Avoid key conflicts with namespaced slices
@@ -46,3 +46,5 @@
 - [ ] No Support for Cross-Store Access: Read states and call functions across different stores while preventing unintended modifications
 - [ ] fix slices checker
 - [ ] fix type
+
+- [ ] add devtools support
