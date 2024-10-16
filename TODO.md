@@ -22,9 +22,6 @@
 - [ ] Scalable Architecture: Designed to scale from simple apps to complex, multiprocessing applications
 - [ ] implement coaction-react
 - [ ] implement coaction-vue
-- [ ] implement coaction-angular
-- [ ] implement coaction-svelte
-- [ ] implement coaction-Solid
 - [ ] implement coaction for Redux Toolkit
 - [ ] implement coaction for Zustand
 - [ ] implement coaction for MobX
@@ -42,6 +39,9 @@
 - [ ] implement coaction for Valtio
 - [ ] implement coaction for nanostores
 - [ ] implement coaction for @ngrx/store
+- [ ] implement coaction-angular
+- [ ] implement coaction-svelte
+- [ ] implement coaction-Solid
 
 - [ ] No Support for Cross-Store Access: Read states and call functions across different stores while preventing unintended modifications
 - [ ] fix slices checker
