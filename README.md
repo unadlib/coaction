@@ -42,6 +42,7 @@ import { create } from 'coaction';
 const useStore = create((set) => ({
   name: 'counter',
   count: 0,
+  // computed properties
   get countSquared() {
     return this.count ** 2;
   },
