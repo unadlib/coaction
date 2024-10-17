@@ -66,6 +66,13 @@ export interface Store<T extends ISlices> {
    * Get the raw instance via the initial state.
    */
   toRaw?: (key: any) => any;
+  /**
+   * The store is a slices.
+   */
+  patch?: (option: { patches: Patches; inversePatches: Patches }) => {
+    patches: Patches;
+    inversePatches: Patches;
+  };
 }
 
 type WorkerOptions = {
@@ -221,9 +228,15 @@ export const create = <T extends ISlices>(
           }
         );
         rootState = backupState;
-        console.log('apply', { patches, inversePatches });
-        api.apply(rootState, patches);
-        api.setState(null, () => [null, patches, inversePatches]);
+        const finalPatches = api.patch
+          ? api.patch({ patches, inversePatches })
+          : { patches, inversePatches };
+        api.apply(rootState, finalPatches.patches);
+        api.setState(null, () => [
+          null,
+          finalPatches.patches,
+          finalPatches.inversePatches
+        ]);
         listeners.forEach((listener) => listener());
         return [rootState, patches, inversePatches];
       }
@@ -335,9 +348,15 @@ export const create = <T extends ISlices>(
                 const handleResult = () => {
                   rootState = backupState;
                   const [, patches, inversePatches] = finalize();
-                  console.log('apply', { patches, inversePatches });
-                  api.apply(rootState, patches);
-                  api.setState(null, () => [null, patches, inversePatches]);
+                  const finalPatches = api.patch
+                    ? api.patch({ patches, inversePatches })
+                    : { patches, inversePatches };
+                  api.apply(rootState, finalPatches.patches);
+                  api.setState(null, () => [
+                    null,
+                    finalPatches.patches,
+                    finalPatches.inversePatches
+                  ]);
                 };
                 if (result instanceof Promise) {
                   if (process.env.NODE_ENV === 'development') {
