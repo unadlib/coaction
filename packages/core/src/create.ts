@@ -67,7 +67,7 @@ export interface Store<T extends ISlices> {
    */
   toRaw?: (key: any) => any;
   /**
-   * The store is a slices.
+   * The patch is used to update the state.
    */
   patch?: (option: { patches: Patches; inversePatches: Patches }) => {
     patches: Patches;
