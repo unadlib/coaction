@@ -145,30 +145,39 @@ export type Slices<T extends ISlices> = (
 
 type Middlewares = any;
 
-export function create<T extends ISlices>(
-  createState: Slices<T> | Record<string, Slices<T>>,
-  options: {
-    // TODO: remove this, it's only used in test
-    transport?: Transport;
-    // TODO: remove this, it's only used in test
-    workerType?: 'SharedWorkerInternal' | 'WorkerInternal';
-    middlewares?: Middlewares[];
-    enablePatches?: boolean;
-  } = {}
-): Store<T> &
-  (<
-    O extends
-      | [
-          {
-            workerType?: 'WorkerMain';
-            transport?: Transport<any>;
-            worker?: SharedWorker | Worker;
-          }
-        ]
-      | []
-  >(
+type SliceState<T extends Record<string, Slices<any>>> = {
+  [K in keyof T]: ReturnType<T[K]>;
+};
+
+type StoreOptions = {
+  // TODO: remove this, it's only used in test
+  transport?: Transport;
+  // TODO: remove this, it's only used in test
+  workerType?: 'SharedWorkerInternal' | 'WorkerInternal';
+  middlewares?: Middlewares[];
+  enablePatches?: boolean;
+};
+
+type WorkerStoreOptions = {
+  workerType?: 'WorkerMain';
+  transport?: Transport<any>;
+  worker?: SharedWorker | Worker;
+};
+
+type StoreReturn<T extends object> = Store<T> &
+  (<O extends [WorkerStoreOptions] | []>(
     ...args: O
-  ) => O extends [any, ...any[]] ? Store<T> & (() => T) : T) {
+  ) => O extends [any, ...any[]] ? Store<T> & (() => T) : T);
+
+function create<T extends ISlices>(
+  createState: Slices<T>,
+  options?: StoreOptions
+): StoreReturn<T>;
+function create<T extends Record<string, Slices<any>>>(
+  createState: T,
+  options?: StoreOptions
+): StoreReturn<SliceState<T>>;
+function create(createState: any, options: any = {}): any {
   const _workerType = options.workerType ?? workerType;
   const createApi = ({
     share
@@ -505,3 +514,5 @@ export function create<T extends ISlices>(
     return Object.assign(() => _api.getState(), _api);
   }, api);
 }
+
+export { create };
