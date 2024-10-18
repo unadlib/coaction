@@ -282,8 +282,6 @@ describe('Slices', () => {
         }
       })
     });
-    // TODO: fix this
-    // @ts-ignore
     const { count, increment, name } = useStore().counter;
     expect(count).toBe(0);
     expect(increment).toBeInstanceOf(Function);
