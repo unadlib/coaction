@@ -164,10 +164,27 @@ type WorkerStoreOptions = {
   worker?: SharedWorker | Worker;
 };
 
-type StoreReturn<T extends object> = Store<T> &
+type Asyncify<T extends object, D extends true | false> = {
+  [K in keyof T]: T[K] extends (...args: any[]) => any
+    ? (...args: Parameters<T[K]>) => Promise<ReturnType<T[K]>>
+    : D extends false
+      ? T[K]
+      : {
+          [P in keyof T[K]]: T[K][P] extends (...args: any[]) => any
+            ? (...args: Parameters<T[K][P]>) => Promise<ReturnType<T[K][P]>>
+            : T[K][P];
+        };
+};
+
+type StoreWithAsyncFunction<T extends object, D extends true | false> = Store<
+  Asyncify<T, D>
+> &
+  (() => Asyncify<T, D>);
+
+type StoreReturn<T extends object, D extends true | false = false> = Store<T> &
   (<O extends [WorkerStoreOptions] | []>(
     ...args: O
-  ) => O extends [any, ...any[]] ? Store<T> & (() => T) : T);
+  ) => O extends [any, ...any[]] ? StoreWithAsyncFunction<T, D> : T);
 
 function create<T extends ISlices>(
   createState: Slices<T>,
@@ -176,7 +193,7 @@ function create<T extends ISlices>(
 function create<T extends Record<string, Slices<any>>>(
   createState: T,
   options?: StoreOptions
-): StoreReturn<SliceState<T>>;
+): StoreReturn<SliceState<T>, true>;
 function create(createState: any, options: any = {}): any {
   const _workerType = options.workerType ?? workerType;
   const createApi = ({
