@@ -1,4 +1,8 @@
-import { createTransport, mockPorts } from 'data-transport';
+import {
+  createTransport,
+  mockPorts,
+  WorkerMainTransportOptions
+} from 'data-transport';
 import { create, Slices } from '../src';
 
 test('base', () => {
@@ -149,7 +153,10 @@ test('base', () => {
 test('worker', async () => {
   const ports = mockPorts();
   const serverTransport = createTransport('WorkerInternal', ports.main);
-  const clientTransport = createTransport('WorkerMain', ports.create());
+  const clientTransport = createTransport(
+    'WorkerMain',
+    ports.create() as WorkerMainTransportOptions
+  );
 
   const counter: Slices<{
     name: string;
@@ -223,7 +230,9 @@ test('worker', async () => {
 `);
     const fn = jest.fn();
     useClientStore.subscribe(fn);
-    useClientStore.getState().increment();
+    const returnValue0 = useClientStore.getState().increment();
+    expect(returnValue0 instanceof Promise).toBeTruthy();
+    await returnValue0;
     expect(useClientStore.getState()).toMatchInlineSnapshot(`
 {
   "count": 3,
@@ -231,7 +240,8 @@ test('worker', async () => {
   "name": "test",
 }
 `);
-    increment();
+    const returnValue1 = increment();
+    expect(returnValue1 instanceof Promise).toBeTruthy();
     expect(useClientStore.getState()).toMatchInlineSnapshot(`
 {
   "count": 4,
@@ -299,7 +309,6 @@ describe('Slices', () => {
 `);
     const fn = jest.fn();
     useStore.subscribe(fn);
-    // @ts-ignore
     useStore.getState().counter.increment();
     expect(useStore.getState()).toMatchInlineSnapshot(`
 {
@@ -330,7 +339,11 @@ describe('Slices', () => {
     const serverTransport = createTransport('WorkerInternal', ports.main);
     const clientTransport = createTransport('WorkerMain', ports.create());
 
-    const counter = (set) => ({
+    const counter: Slices<{
+      name: string;
+      count: number;
+      increment: () => void;
+    }> = (set) => ({
       name: 'test',
       count: 0,
       increment() {
@@ -346,8 +359,6 @@ describe('Slices', () => {
         workerType: 'WorkerInternal'
       }
     );
-    // TODO: fix this
-    // @ts-ignore
     const { count, increment, name } = useServerStore().counter;
     expect(count).toBe(0);
     expect(increment).toBeInstanceOf(Function);
@@ -387,8 +398,6 @@ describe('Slices', () => {
           setTimeout(resolve);
         });
       });
-
-      // @ts-ignore
       const { count, increment, name } = useClientStore().counter;
       expect(count).toBe(2);
       expect(increment).toBeInstanceOf(Function);
@@ -405,7 +414,9 @@ describe('Slices', () => {
 `);
       const fn = jest.fn();
       useClientStore.subscribe(fn);
-      useClientStore.getState().counter.increment();
+      const returnValue0 = useClientStore.getState().counter.increment();
+      expect(returnValue0 instanceof Promise).toBeTruthy();
+      await returnValue0;
       expect(useClientStore.getState().counter).toMatchInlineSnapshot(`
 {
   "count": 3,
@@ -413,7 +424,9 @@ describe('Slices', () => {
   "name": "test",
 }
 `);
-      increment();
+      const returnValue1 = increment();
+      expect(returnValue1 instanceof Promise).toBeTruthy();
+      await returnValue1;
       expect(useClientStore.getState().counter).toMatchInlineSnapshot(`
 {
   "count": 4,
