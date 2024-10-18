@@ -145,7 +145,7 @@ export type Slices<T extends ISlices> = (
 
 type Middlewares = any;
 
-export const create = <T extends ISlices>(
+export function create<T extends ISlices>(
   createState: Slices<T> | Record<string, Slices<T>>,
   options: {
     // TODO: remove this, it's only used in test
@@ -155,7 +155,20 @@ export const create = <T extends ISlices>(
     middlewares?: Middlewares[];
     enablePatches?: boolean;
   } = {}
-) => {
+): Store<T> &
+  (<
+    O extends
+      | [
+          {
+            workerType?: 'WorkerMain';
+            transport?: Transport<any>;
+            worker?: SharedWorker | Worker;
+          }
+        ]
+      | []
+  >(
+    ...args: O
+  ) => O extends [any, ...any[]] ? Store<T> & (() => T) : T) {
   const _workerType = options.workerType ?? workerType;
   const createApi = ({
     share
@@ -491,4 +504,4 @@ export const create = <T extends ISlices>(
     });
     return Object.assign(() => _api.getState(), _api);
   }, api);
-};
+}

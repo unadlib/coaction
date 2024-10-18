@@ -1,10 +1,15 @@
 import { createTransport, mockPorts } from 'data-transport';
-import { create } from '../src';
+import { create, Slices } from '../src';
 
 test('base', () => {
   const stateFn = jest.fn();
   const getterFn = jest.fn();
-  const useStore = create((set, get, api) => ({
+  const useStore = create<{
+    count: number;
+    double: number;
+    increment: () => void;
+    name: string;
+  }>((set, get, api) => ({
     name: 'test',
     count: 0,
     get double() {
@@ -25,8 +30,6 @@ test('base', () => {
       getterFn(get().double, api.getState().double, this.double);
     }
   }));
-  // TODO: fix this
-  // @ts-ignore
   const { count, increment, name } = useStore();
   expect(count).toBe(0);
   expect(increment).toBeInstanceOf(Function);
@@ -148,7 +151,11 @@ test('worker', async () => {
   const serverTransport = createTransport('WorkerInternal', ports.main);
   const clientTransport = createTransport('WorkerMain', ports.create());
 
-  const counter = (set) => ({
+  const counter: Slices<{
+    name: string;
+    count: number;
+    increment: () => void;
+  }> = (set) => ({
     name: 'test',
     count: 0,
     increment() {
@@ -161,8 +168,6 @@ test('worker', async () => {
     transport: serverTransport,
     workerType: 'WorkerInternal'
   });
-  // TODO: fix this
-  // @ts-ignore
   const { count, increment, name } = useServerStore();
   expect(count).toBe(0);
   expect(increment).toBeInstanceOf(Function);
@@ -193,7 +198,8 @@ test('worker', async () => {
 }
 `);
   {
-    const useClientStore = create(counter)({
+    const useStore = create(counter);
+    const useClientStore = useStore({
       transport: clientTransport,
       workerType: 'WorkerMain'
     });
@@ -204,7 +210,6 @@ test('worker', async () => {
       });
     });
 
-    // @ts-ignore
     const { count, increment, name } = useClientStore();
     expect(count).toBe(2);
     expect(increment).toBeInstanceOf(Function);
