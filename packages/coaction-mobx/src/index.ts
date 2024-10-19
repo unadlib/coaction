@@ -1,5 +1,5 @@
 import { apply } from 'mutability';
-import { create, ISlices, Slice, type Store } from 'coaction';
+import { create, type ISlices, type Slice, type Store } from 'coaction';
 import {
   autorun,
   runInAction,

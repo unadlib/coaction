@@ -1,205 +1,30 @@
 import {
-  create as createWithMutative,
   type Draft,
+  create as createWithMutative,
   apply,
-  type Patches,
   isDraft
 } from 'mutative';
 import { createTransport, type Transport } from 'data-transport';
-
-export type ISlices = {
-  /**
-   * The name of the store.
-   */
-  name?: string;
-} & Record<string, any>;
-
-type Listener = () => void;
-
-export interface Store<T extends ISlices> {
-  /**
-   * Set the next state.
-   */
-  setState: (
-    /**
-     * The next state.
-     */
-    next: T | ((draft: Draft<T>) => any) | null,
-    /**
-     * The updater is used to update the state.
-     */
-    updater?: (next: T | ((draft: Draft<T>) => any) | null) => void
-  ) => void;
-  /**
-   * Get the current state.
-   */
-  getState: () => T;
-  /**
-   * Get the initial state.
-   */
-  getInitialState: () => T;
-  /**
-   * Subscribe to the state changes.
-   */
-  subscribe: (listener: Listener) => () => void;
-  /**
-   * Unsubscribe all listeners and dispose the transport.
-   */
-  destroy: () => void;
-  /**
-   * The store is shared in the worker or shared worker.
-   */
-  share?: 'main' | 'client' | void;
-  /**
-   * The transport is used to communicate between the main thread and the worker or shared worker.
-   */
-  transport?: Transport;
-  /**
-   * The store is a slices.
-   */
-  isSliceStore: boolean;
-  /**
-   * apply the patches to the state.
-   */
-  apply: (state: T, patches?: Patches) => void;
-  /**
-   * Get the raw instance via the initial state.
-   */
-  toRaw?: (key: any) => any;
-  /**
-   * The patch is used to update the state.
-   */
-  patch?: (option: { patches: Patches; inversePatches: Patches }) => {
-    patches: Patches;
-    inversePatches: Patches;
-  };
-}
-
-type WorkerOptions = {
-  /**
-   * The worker is used to execute the function in the worker or shared worker.
-   */
-  worker?: Worker | SharedWorker;
-  /**
-   * The worker type is used to determine the type of worker.
-   */
-  workerType?: 'SharedWorkerInternal' | 'WorkerInternal';
-};
-
-type TransportOptions = {
-  /**
-   * The transport is used to communicate between the main thread and the worker or shared worker.
-   */
-  transport?: Transport;
-};
-
-type Option = WorkerOptions | TransportOptions;
-
-type Internal = {
-  /**
-   * Update the state in the worker or shared worker.
-   */
-  update(options: {
-    /**
-     * The patches is used to update the state.
-     */
-    patches: Patches;
-    /**
-     * The sequence is used to ensure the sequence of the state.
-     */
-    sequence: number;
-  }): Promise<void>;
-};
-
-type External = {
-  /**
-   * Execute the function in the worker or shared worker.
-   */
-  execute(keys: string[], args: any[]): Promise<any>;
-  /**
-   * Full sync the state with the worker or shared worker.
-   */
-  fullSync(): Promise<{ state: string; sequence: number }>;
-};
+import type {
+  ExternalEvents,
+  InternalEvents,
+  ISlices,
+  Listener,
+  Slice,
+  SliceState,
+  Store,
+  StoreOptions,
+  StoreReturn,
+  WorkerOptions,
+  TransportOptions,
+  AsyncStoreOption
+} from './interface';
 
 const workerType = globalThis.SharedWorkerGlobalScope
   ? 'SharedWorkerInternal'
   : globalThis.WorkerGlobalScope
     ? 'WorkerInternal'
     : null;
-
-export type Slice<T extends ISlices> = (
-  /**
-   * The setState is used to update the state.
-   */
-  set: Store<T>['setState'],
-  /**
-   * The getState is used to get the state.
-   */
-  get: Store<T>['getState'],
-  /**
-   * The store is used to store the state.
-   */
-  store: Store<T>
-) => T;
-
-export type Slices<T extends ISlices, K extends keyof T> = (
-  /**
-   * The setState is used to update the state.
-   */
-  set: Store<T>['setState'],
-  /**
-   * The getState is used to get the state.
-   */
-  get: Store<T>['getState'],
-  /**
-   * The store is used to store the state.
-   */
-  store: Store<T>
-) => T[K];
-
-type Middlewares = any;
-
-type SliceState<T extends Record<string, Slice<any>>> = {
-  [K in keyof T]: ReturnType<T[K]>;
-};
-
-type StoreOptions = {
-  // TODO: remove this, it's only used in test
-  transport?: Transport;
-  // TODO: remove this, it's only used in test
-  workerType?: 'SharedWorkerInternal' | 'WorkerInternal';
-  middlewares?: Middlewares[];
-  enablePatches?: boolean;
-};
-
-type WorkerStoreOptions = {
-  workerType?: 'WorkerMain';
-  transport?: Transport<any>;
-  worker?: SharedWorker | Worker;
-};
-
-type Asyncify<T extends object, D extends true | false> = {
-  [K in keyof T]: T[K] extends (...args: any[]) => any
-    ? (...args: Parameters<T[K]>) => Promise<ReturnType<T[K]>>
-    : D extends false
-      ? T[K]
-      : {
-          [P in keyof T[K]]: T[K][P] extends (...args: any[]) => any
-            ? (...args: Parameters<T[K][P]>) => Promise<ReturnType<T[K][P]>>
-            : T[K][P];
-        };
-};
-
-type StoreWithAsyncFunction<T extends object, D extends true | false> = Store<
-  Asyncify<T, D>
-> &
-  (() => Asyncify<T, D>);
-
-type StoreReturn<T extends object, D extends true | false = false> = Store<T> &
-  (<O extends [WorkerStoreOptions] | []>(
-    ...args: O
-  ) => O extends [any, ...any[]] ? StoreWithAsyncFunction<T, D> : T);
 
 function create<T extends ISlices>(
   createState: Slice<T>,
@@ -209,7 +34,10 @@ function create<T extends Record<string, Slice<any>>>(
   createState: T,
   options?: StoreOptions
 ): StoreReturn<SliceState<T>, true>;
-function create(createState: any, options: any = {}): any {
+function create<T extends { name?: string }>(
+  createState: any,
+  options: any = {}
+): any {
   const _workerType = options.workerType ?? workerType;
   const createApi = ({
     share
@@ -220,8 +48,10 @@ function create(createState: any, options: any = {}): any {
     let rootState: T | Draft<T>;
     let api: Store<any>;
     let name: string;
-    let transport: Transport<{ emit: Internal; listen: External }> | null =
-      null;
+    let transport: Transport<{
+      emit: InternalEvents;
+      listen: ExternalEvents;
+    }> | null = null;
     let sequence = 0;
     const listeners = new Set<Listener>();
     const setState: Store<T>['setState'] = (
@@ -236,6 +66,7 @@ function create(createState: any, options: any = {}): any {
                   _next[key as keyof typeof _next] !== null
                 ) {
                   Object.assign(
+                    // @ts-ignore
                     rootState[key],
                     _next[key as keyof typeof _next]
                   );
@@ -331,14 +162,16 @@ function create(createState: any, options: any = {}): any {
     const initialState = api.isSliceStore
       ? Object.entries(createState).reduce(
           (stateTree, [key, value]) => {
-            stateTree[key] =
-              key === 'name' ? value : value(setState, getState, api);
+            const state =
+              key === 'name'
+                ? value
+                : (value as Slice<T>)(setState, getState, api);
+            Object.assign(stateTree, { [key]: state });
             return stateTree;
           },
-          {} as Record<string, Slice<T>>
+          {} as ISlices<Slice<T>>
         )
       : (createState as Slice<T>)(api.setState, api.getState, api);
-
     const rawState = {} as any;
     const handle = (_rawState: any, _initialState: any, _key?: string) => {
       const mutableInstance = api.toRaw?.(_initialState);
@@ -487,7 +320,7 @@ function create(createState: any, options: any = {}): any {
   const api = createApi({
     share: _workerType || options.transport ? 'main' : undefined
   });
-  return Object.assign((option: Option) => {
+  return Object.assign((option: AsyncStoreOption) => {
     if (!option) return api.getState();
     const _api = createApi({
       share: 'client'
@@ -497,7 +330,7 @@ function create(createState: any, options: any = {}): any {
     // its methods are proxied to the worker or share worker for execution.
     // and the executed patch is sent to the store to be applied to synchronize the state.
     const transport:
-      | (Transport<{ listen: Internal; emit: External }> & {
+      | (Transport<{ listen: InternalEvents; emit: ExternalEvents }> & {
           /**
            * onConnect is called when the transport is connected.
            */
