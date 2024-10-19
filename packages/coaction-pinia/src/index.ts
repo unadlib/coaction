@@ -99,7 +99,11 @@ const handleStore = (
 };
 
 export const createWithPinia = (
-  createPiniaState: () => any | Record<string, () => any>,
+  createPiniaState: (
+    set: any,
+    get: any,
+    api: any
+  ) => any | Record<string, () => any>,
   options?: any
 ) => {
   if (typeof createPiniaState === 'function') {
@@ -114,6 +118,7 @@ export const createWithPinia = (
     return create(
       Object.keys(createPiniaState).reduce((acc, key) => {
         acc[key] = (set: any, get: any, api: any) =>
+          // @ts-ignore
           handleStore(api, createPiniaState[key].bind(null, set, get, api));
         return acc;
       }, {} as any),
