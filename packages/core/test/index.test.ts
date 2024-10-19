@@ -3,7 +3,7 @@ import {
   mockPorts,
   WorkerMainTransportOptions
 } from 'data-transport';
-import { create, Slices } from '../src';
+import { create, Slice, Slices } from '../src';
 
 test('base', () => {
   const stateFn = jest.fn();
@@ -158,7 +158,7 @@ test('worker', async () => {
     ports.create() as WorkerMainTransportOptions
   );
 
-  const counter: Slices<{
+  const counter: Slice<{
     name: string;
     count: number;
     increment: () => void;
@@ -257,7 +257,7 @@ describe('Slices', () => {
     const stateFn = jest.fn();
     const getterFn = jest.fn();
     const useStore = create({
-      counter: (set, get, api) => ({
+      counter: ((set, get, api) => ({
         name: 'test',
         count: 0,
         get double() {
@@ -290,7 +290,17 @@ describe('Slices', () => {
             this.double
           );
         }
-      })
+      })) satisfies Slices<
+        {
+          counter: {
+            name: string;
+            count: number;
+            readonly double: number;
+            increment: () => void;
+          };
+        },
+        'counter'
+      >
     });
     const { count, increment, name } = useStore().counter;
     expect(count).toBe(0);
@@ -337,13 +347,21 @@ describe('Slices', () => {
   test('worker', async () => {
     const ports = mockPorts();
     const serverTransport = createTransport('WorkerInternal', ports.main);
-    const clientTransport = createTransport('WorkerMain', ports.create());
+    const clientTransport = createTransport(
+      'WorkerMain',
+      ports.create() as WorkerMainTransportOptions
+    );
 
-    const counter: Slices<{
-      name: string;
-      count: number;
-      increment: () => void;
-    }> = (set) => ({
+    const counter: Slices<
+      {
+        counter: {
+          name: string;
+          count: number;
+          increment: () => void;
+        };
+      },
+      'counter'
+    > = (set) => ({
       name: 'test',
       count: 0,
       increment() {
@@ -352,8 +370,11 @@ describe('Slices', () => {
         });
       }
     });
+
     const useServerStore = create(
-      { counter },
+      {
+        counter
+      },
       {
         transport: serverTransport,
         workerType: 'WorkerInternal'

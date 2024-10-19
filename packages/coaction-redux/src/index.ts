@@ -1,6 +1,6 @@
-import type { Slices, Store } from 'coaction';
+import type { Slice, Store } from 'coaction';
 
-export const create = <T extends Slices>(
+export const create = <T extends Slice>(
   createState: (store: Store<T>) => T
 ) => {
   //

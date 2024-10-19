@@ -1,5 +1,5 @@
 import { apply } from 'mutability';
-import { create, ISlices, Slices, type Store } from 'coaction';
+import { create, ISlices, Slice, type Store } from 'coaction';
 import {
   autorun,
   runInAction,
@@ -61,7 +61,7 @@ const handleStore = (api: Store<object>, createMobxState: () => any) => {
 };
 
 export const createWithMobx = <T extends ISlices>(
-  createMobxState: Slices<T> | Record<string, Slices<T>>,
+  createMobxState: Slice<T> | Record<string, Slice<T>>,
   options: any
 ) => {
   if (typeof createMobxState === 'function') {
