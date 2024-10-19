@@ -38,6 +38,12 @@
   "bugs": {
     "url": "https://github.com/unadlib/coaction/issues"
   },
+  "preconstruct": {
+    "umdName": "CoactionSolid",
+    "entrypoints": [
+      "./index.ts"
+    ]
+  },
   "peerDependencies": {
     "coaction": "^0.0.1",
     "solid-js": "^1.6.0"

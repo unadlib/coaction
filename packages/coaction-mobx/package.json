@@ -39,6 +39,12 @@
   "bugs": {
     "url": "https://github.com/unadlib/coaction/issues"
   },
+  "preconstruct": {
+    "umdName": "CoactionMobx",
+    "entrypoints": [
+      "./index.ts"
+    ]
+  },
   "peerDependencies": {
     "coaction": "^0.0.1",
     "mobx": "^6.13.2",
