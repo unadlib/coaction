@@ -1,11 +1,11 @@
-import { create, Slice } from '../../../packages/core/src/index';
+import { create, Slices } from 'coaction';
 
 type Counter = {
   count: number;
   increment: () => void;
 };
 
-const counter: Slice<
+const counter: Slices<
   {
     counter: Counter;
   },
