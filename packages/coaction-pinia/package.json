@@ -39,6 +39,12 @@
   "bugs": {
     "url": "https://github.com/unadlib/coaction/issues"
   },
+  "preconstruct": {
+    "umdName": "CoactionPinia",
+    "entrypoints": [
+      "./index.ts"
+    ]
+  },
   "peerDependencies": {
     "coaction": "^0.0.1",
     "pinia": "^2.0"

@@ -40,6 +40,12 @@
   "bugs": {
     "url": "https://github.com/unadlib/coaction/issues"
   },
+  "preconstruct": {
+    "umdName": "CoactionSvelte",
+    "entrypoints": [
+      "./index.ts"
+    ]
+  },
   "peerDependencies": {
     "coaction": "^0.0.1",
     "svelte": "^3.24.1 || ^4"

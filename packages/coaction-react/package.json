@@ -40,6 +40,12 @@
   "bugs": {
     "url": "https://github.com/unadlib/coaction/issues"
   },
+  "preconstruct": {
+    "umdName": "CoactionReact",
+    "entrypoints": [
+      "./index.ts"
+    ]
+  },
   "peerDependencies": {
     "coaction": "^0.0.1",
     "react": "^16.8.0 || ^17.0.0 || ^18.0.0"
