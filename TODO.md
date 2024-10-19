@@ -43,8 +43,15 @@
 - [ ] implement coaction-svelte
 - [ ] implement coaction-Solid
 
-- [ ] No Support for Cross-Store Access: Read states and call functions across different stores while preventing unintended modifications
 - [ ] fix slices checker
 - [ ] fix type
 
 - [ ] add devtools support
+
+### TODOs
+
+- [ ] namespace support
+- [ ] computed properties
+- [ ] support for cross-store
+- [ ] multi-transport
+- [ ] Undo/Redo
