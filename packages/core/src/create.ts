@@ -128,7 +128,7 @@ const workerType = globalThis.SharedWorkerGlobalScope
     ? 'WorkerInternal'
     : null;
 
-export type Slices<T extends ISlices> = (
+export type Slice<T extends ISlices> = (
   /**
    * The setState is used to update the state.
    */
@@ -143,9 +143,24 @@ export type Slices<T extends ISlices> = (
   store: Store<T>
 ) => T;
 
+export type Slices<T extends ISlices, K extends keyof T> = (
+  /**
+   * The setState is used to update the state.
+   */
+  set: Store<T>['setState'],
+  /**
+   * The getState is used to get the state.
+   */
+  get: Store<T>['getState'],
+  /**
+   * The store is used to store the state.
+   */
+  store: Store<T>
+) => T[K];
+
 type Middlewares = any;
 
-type SliceState<T extends Record<string, Slices<any>>> = {
+type SliceState<T extends Record<string, Slice<any>>> = {
   [K in keyof T]: ReturnType<T[K]>;
 };
 
@@ -187,10 +202,10 @@ type StoreReturn<T extends object, D extends true | false = false> = Store<T> &
   ) => O extends [any, ...any[]] ? StoreWithAsyncFunction<T, D> : T);
 
 function create<T extends ISlices>(
-  createState: Slices<T>,
+  createState: Slice<T>,
   options?: StoreOptions
 ): StoreReturn<T>;
-function create<T extends Record<string, Slices<any>>>(
+function create<T extends Record<string, Slice<any>>>(
   createState: T,
   options?: StoreOptions
 ): StoreReturn<SliceState<T>, true>;
@@ -320,9 +335,9 @@ function create(createState: any, options: any = {}): any {
               key === 'name' ? value : value(setState, getState, api);
             return stateTree;
           },
-          {} as Record<string, Slices<T>>
+          {} as Record<string, Slice<T>>
         )
-      : (createState as Slices<T>)(api.setState, api.getState, api);
+      : (createState as Slice<T>)(api.setState, api.getState, api);
 
     const rawState = {} as any;
     const handle = (_rawState: any, _initialState: any, _key?: string) => {
