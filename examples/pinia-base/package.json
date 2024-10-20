@@ -6,7 +6,8 @@
   "scripts": {
     "dev": "vite",
     "build": "vue-tsc -b && vite build",
-    "preview": "vite preview"
+    "preview": "vite preview",
+    "host": "npx http-server -p 5173 dist"
   },
   "dependencies": {
     "pinia": "^2.2.4",
