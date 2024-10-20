@@ -1,6 +1,8 @@
-import { createWithMobx, makeAutoObservable } from '@coaction/mobx';
+import { mobx } from '@coaction/mobx';
+import { makeAutoObservable } from 'mobx';
 
-export const useStore = createWithMobx({
+// @ts-ignore
+export const useStore = mobx({
   counter: (set) =>
     makeAutoObservable({
       name: 'test',
@@ -23,7 +25,7 @@ export const useStore = createWithMobx({
       }
     })
 });
-
+// @ts-ignore
 globalThis.useStore = useStore;
 
 // @ts-ignore
