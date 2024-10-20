@@ -1,5 +1,7 @@
 import { createTransport, mockPorts } from 'data-transport';
-import { createWithMobx as create, makeAutoObservable } from '../src';
+import { makeAutoObservable } from 'mobx';
+
+import { createWithMobx as create } from '../src';
 
 test('base', () => {
   const stateFn = jest.fn();
@@ -27,11 +29,11 @@ test('base', () => {
   expect(useStore.getState()).toMatchInlineSnapshot(`
 {
   "count": 0,
-  "double": 0,
   "increment": [Function],
   "name": "test",
 }
 `);
+  expect(useStore.getState().double).toBe(0);
   const fn = jest.fn();
   useStore.subscribe(fn);
   useStore.getState().increment();
@@ -56,11 +58,11 @@ test('base', () => {
   expect(useStore.getState()).toMatchInlineSnapshot(`
 {
   "count": 1,
-  "double": 2,
   "increment": [Function],
   "name": "test",
 }
 `);
+  expect(useStore.getState().double).toBe(2);
   increment();
   expect(stateFn.mock.calls).toMatchInlineSnapshot(`
 [
@@ -93,11 +95,11 @@ test('base', () => {
   expect(useStore.getState()).toMatchInlineSnapshot(`
 {
   "count": 2,
-  "double": 4,
   "increment": [Function],
   "name": "test",
 }
 `);
+  expect(useStore.getState().double).toBe(4);
 });
 
 test('worker', async () => {
@@ -331,13 +333,13 @@ describe('Slices', () => {
 {
   "counter": {
     "count": 0,
-    "double": 0,
     "increment": [Function],
     "name": "test",
   },
   "name": "default",
 }
 `);
+    expect(useStore.getState().counter.double).toBe(0);
     const fn = jest.fn();
     useStore.subscribe(fn);
     // @ts-ignore
@@ -346,25 +348,25 @@ describe('Slices', () => {
 {
   "counter": {
     "count": 1,
-    "double": 2,
     "increment": [Function],
     "name": "test",
   },
   "name": "default",
 }
 `);
+    expect(useStore.getState().counter.double).toBe(2);
     increment();
     expect(useStore.getState()).toMatchInlineSnapshot(`
 {
   "counter": {
     "count": 2,
-    "double": 4,
     "increment": [Function],
     "name": "test",
   },
   "name": "default",
 }
 `);
+    expect(useStore.getState().counter.double).toBe(4);
   });
   test('worker', async () => {
     const ports = mockPorts();
