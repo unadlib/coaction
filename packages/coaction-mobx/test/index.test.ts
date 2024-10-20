@@ -1,7 +1,7 @@
 import { createTransport, mockPorts } from 'data-transport';
 import { makeAutoObservable } from 'mobx';
 
-import { createWithMobx as create } from '../src';
+import { mobx as create } from '../src';
 
 test('base', () => {
   const stateFn = jest.fn();
