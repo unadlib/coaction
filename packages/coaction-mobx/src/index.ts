@@ -1,29 +1,18 @@
 import { apply } from 'mutability';
 import { create, type ISlices, type Slice, type Store } from 'coaction';
-import { autorun, runInAction, _getAdministration } from 'mobx';
+import {
+  autorun,
+  runInAction,
+  makeAutoObservable as makeAutoObservableMobx
+} from 'mobx';
 
 const instancesMap = new Map<object, any>();
 
-const mapState = (mobxState: object) => {
-  const stateMap = _getAdministration(mobxState).values_;
-  if (!(stateMap instanceof Map)) {
-    throw new Error(`the state should be a Mobx state.`);
-  }
-  const rawState = {} as Record<string, any>;
-  stateMap.forEach((value, key) => {
-    if (typeof value.value_ === 'function') {
-      rawState[key] = value.value_;
-      return;
-    }
-    if (value.derivation) {
-      Object.defineProperty(rawState, key, {
-        get: value.derivation,
-        enumerable: false
-      });
-      return;
-    }
-    rawState[key] = JSON.parse(JSON.stringify(value.value_));
-  });
+export const makeAutoObservable = (options: any) => {
+  const descriptors = Object.getOwnPropertyDescriptors(options);
+  const copyState = Object.defineProperties({}, descriptors);
+  const rawState = Object.defineProperties({}, descriptors);
+  const mobxState = makeAutoObservableMobx(copyState);
   instancesMap.set(rawState, mobxState);
   return rawState;
 };
@@ -64,14 +53,14 @@ const handleStore = (api: Store<object>, createMobxState: () => any) => {
       });
     };
   }
-  const state = mapState(createMobxState());
+  const state = createMobxState();
   if (process.env.NODE_ENV === 'development') {
     // TODO: check with observe for unexpected changes
   }
   return state;
 };
 
-export const mobx = <T extends ISlices>(
+export const createWithMobx = <T extends ISlices>(
   createMobxState: Slice<T> | Record<string, Slice<T>>,
   options: any
 ) => {
