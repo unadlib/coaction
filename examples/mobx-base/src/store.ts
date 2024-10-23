@@ -1,8 +1,7 @@
-import { mobx } from '@coaction/mobx';
-import { makeAutoObservable } from 'mobx';
+import { createWithMobx, makeAutoObservable } from '@coaction/mobx';
 
 // @ts-ignore
-export const useStore = mobx({
+export const useStore = createWithMobx({
   counter: (set) =>
     makeAutoObservable({
       name: 'test',
