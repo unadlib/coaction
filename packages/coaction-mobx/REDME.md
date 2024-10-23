@@ -3,7 +3,7 @@
 # Usage
 
 ```ts
-import { defineStore, create } from '@coaction/mobx';
+import { makeAutoObservable, create } from '@coaction/mobx';
 
 const useStore = create((set, get, api) =>
   makeAutoObservable({
