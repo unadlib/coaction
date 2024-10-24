@@ -3,12 +3,13 @@
 # Usage
 
 ```ts
-import { create, name } from '@coaction/mobx';
+import { create } from 'coaction';
+import { bindMobx } from '@coaction/mobx';
 import { makeAutoObservable } from 'mobx';
 
 const useStore = create((set, get, api) =>
   makeAutoObservable(
-    bind({
+    bindMobx({
       name: 'test',
       count: 0,
       get double() {
