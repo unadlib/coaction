@@ -1,22 +1,25 @@
 import { createTransport, mockPorts } from 'data-transport';
-import { createWithMobx as create, makeAutoObservable } from '../src';
+import { createWithMobx as create, bind } from '../src';
+import { makeAutoObservable } from 'mobx';
 
 test('base', () => {
   const stateFn = jest.fn();
   const getterFn = jest.fn();
   const useStore = create((set, get, api) =>
-    makeAutoObservable({
-      name: 'test',
-      count: 0,
-      get double() {
-        return this.count * 2;
-      },
-      increment() {
-        this.count += 1;
-        stateFn(get().count, api.getState().count, this.count);
-        getterFn(get().double, api.getState().double, this.double);
-      }
-    })
+    makeAutoObservable(
+      bind({
+        name: 'test',
+        count: 0,
+        get double() {
+          return this.count * 2;
+        },
+        increment() {
+          this.count += 1;
+          stateFn(get().count, api.getState().count, this.count);
+          getterFn(get().double, api.getState().double, this.double);
+        }
+      })
+    )
   );
   // TODO: fix this
   // @ts-ignore
