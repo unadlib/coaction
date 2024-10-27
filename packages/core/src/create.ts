@@ -157,11 +157,6 @@ function create<T extends { name?: string }>(
           ? api.patch({ patches, inversePatches })
           : { patches, inversePatches };
         api.apply(rootState, finalPatches.patches);
-        api.setState(null, () => [
-          null,
-          finalPatches.patches,
-          finalPatches.inversePatches
-        ]);
         listeners.forEach((listener) => listener());
         return [rootState, patches, inversePatches];
       }
@@ -169,6 +164,7 @@ function create<T extends { name?: string }>(
       const result = updater(next);
       if (transport) {
         sequence += 1;
+        console.log('sequence', sequence);
         transport.emit('update', {
           patches: result![1],
           sequence

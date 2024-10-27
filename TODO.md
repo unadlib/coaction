@@ -58,3 +58,4 @@
 - [x] Fix @coaction/mobx type issue
 - [ ] Fix @coaction/pinia type issue
 - [ ] Fix @coaction/pinia name checker
+- [ ] Fix enablePatches checker
