@@ -22,14 +22,14 @@ import type {
 
 const bindSymbol = Symbol('bind');
 
-export const createBinder = ({
+export function createBinder<F = (...args: any[]) => any>({
   handleState,
   handleStore
 }: {
   /**
    * handleState is a function to handle the state object.
    */
-  handleState: <T extends object>(
+  handleState: <T extends object = object>(
     state: T
   ) => {
     /**
@@ -49,8 +49,8 @@ export const createBinder = ({
    * handleStore is a function to handle the store object.
    */
   handleStore: (api: Store<object>, rawState: object, state: object) => void;
-}) => {
-  return <T extends object>(state: T): T => {
+}): F {
+  return (<T extends object>(state: T): T => {
     const { copyState, key, bind } = handleState(state);
     const value = key ? copyState[key] : copyState;
     (value as any)[bindSymbol] = {
@@ -58,8 +58,8 @@ export const createBinder = ({
       bind
     };
     return copyState;
-  };
-};
+  }) as any;
+}
 
 const workerType = globalThis.SharedWorkerGlobalScope
   ? 'SharedWorkerInternal'

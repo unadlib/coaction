@@ -1,12 +1,21 @@
-import { createTransport, mockPorts } from 'data-transport';
+import {
+  createTransport,
+  mockPorts,
+  type WorkerMainTransportOptions
+} from 'data-transport';
 import { bindMobx } from '../src';
 import { makeAutoObservable } from 'mobx';
-import { create } from 'coaction';
+import { create, type Slices, type Slice } from 'coaction';
 
 test('base', () => {
   const stateFn = jest.fn();
   const getterFn = jest.fn();
-  const useStore = create((set, get, api) =>
+  const useStore = create<{
+    count: number;
+    readonly double: number;
+    increment: () => void;
+    name: string;
+  }>((set, get, api) =>
     makeAutoObservable(
       bindMobx({
         name: 'test',
@@ -22,8 +31,6 @@ test('base', () => {
       })
     )
   );
-  // TODO: fix this
-  // @ts-ignore
   const { count, increment, name } = useStore();
   expect(count).toBe(0);
   expect(increment).toBeInstanceOf(Function);
@@ -107,9 +114,16 @@ test('base', () => {
 test('worker', async () => {
   const ports = mockPorts();
   const serverTransport = createTransport('WorkerInternal', ports.main);
-  const clientTransport = createTransport('WorkerMain', ports.create());
+  const clientTransport = createTransport(
+    'WorkerMain',
+    ports.create() as WorkerMainTransportOptions
+  );
 
-  const counter = () =>
+  const counter: Slice<{
+    name: string;
+    count: number;
+    increment: () => void;
+  }> = () =>
     makeAutoObservable(
       bindMobx({
         name: 'test',
@@ -123,8 +137,6 @@ test('worker', async () => {
     transport: serverTransport,
     workerType: 'WorkerInternal'
   });
-  // TODO: fix this
-  // @ts-ignore
   const { count, increment, name } = useServerStore();
   expect(count).toBe(0);
   expect(increment).toBeInstanceOf(Function);
@@ -165,8 +177,6 @@ test('worker', async () => {
         setTimeout(resolve);
       });
     });
-
-    // @ts-ignore
     const { count, increment, name } = useClientStore();
     expect(count).toBe(2);
     expect(increment).toBeInstanceOf(Function);
@@ -202,9 +212,16 @@ test('worker', async () => {
 test('worker - async', async () => {
   const ports = mockPorts();
   const serverTransport = createTransport('WorkerInternal', ports.main);
-  const clientTransport = createTransport('WorkerMain', ports.create());
+  const clientTransport = createTransport(
+    'WorkerMain',
+    ports.create() as WorkerMainTransportOptions
+  );
 
-  const counter = () =>
+  const counter: Slice<{
+    name: string;
+    count: number;
+    increment: () => void;
+  }> = () =>
     makeAutoObservable(
       bindMobx({
         name: 'test',
@@ -221,8 +238,6 @@ test('worker - async', async () => {
     transport: serverTransport,
     workerType: 'WorkerInternal'
   });
-  // TODO: fix this
-  // @ts-ignore
   const { count, increment, name } = useServerStore();
   expect(count).toBe(0);
   expect(increment).toBeInstanceOf(Function);
@@ -268,8 +283,6 @@ test('worker - async', async () => {
         setTimeout(resolve);
       });
     });
-
-    // @ts-ignore
     const { count, increment, name } = useClientStore();
     expect(count).toBe(4);
     expect(increment).toBeInstanceOf(Function);
@@ -307,7 +320,7 @@ describe('Slices', () => {
     const stateFn = jest.fn();
     const getterFn = jest.fn();
     const useStore = create({
-      counter: (set, get, api) =>
+      counter: ((set, get, api) =>
         makeAutoObservable(
           bindMobx({
             name: 'test',
@@ -329,10 +342,18 @@ describe('Slices', () => {
               );
             }
           })
-        )
+        )) satisfies Slices<
+        {
+          counter: {
+            name: string;
+            count: number;
+            readonly double: number;
+            increment: () => void;
+          };
+        },
+        'counter'
+      >
     });
-    // TODO: fix this
-    // @ts-ignore
     const { count, increment, name } = useStore().counter;
     expect(count).toBe(0);
     expect(increment).toBeInstanceOf(Function);
@@ -350,7 +371,6 @@ describe('Slices', () => {
 `);
     const fn = jest.fn();
     useStore.subscribe(fn);
-    // @ts-ignore
     useStore.getState().counter.increment();
     expect(useStore.getState()).toMatchInlineSnapshot(`
 {
@@ -379,9 +399,21 @@ describe('Slices', () => {
   test('worker', async () => {
     const ports = mockPorts();
     const serverTransport = createTransport('WorkerInternal', ports.main);
-    const clientTransport = createTransport('WorkerMain', ports.create());
+    const clientTransport = createTransport(
+      'WorkerMain',
+      ports.create() as WorkerMainTransportOptions
+    );
 
-    const counter = () =>
+    const counter: Slices<
+      {
+        counter: {
+          name: string;
+          count: number;
+          increment: () => void;
+        };
+      },
+      'counter'
+    > = () =>
       makeAutoObservable(
         bindMobx({
           name: 'test',
@@ -398,8 +430,6 @@ describe('Slices', () => {
         workerType: 'WorkerInternal'
       }
     );
-    // TODO: fix this
-    // @ts-ignore
     const { count, increment, name } = useServerStore().counter;
     expect(count).toBe(0);
     expect(increment).toBeInstanceOf(Function);
@@ -439,8 +469,6 @@ describe('Slices', () => {
           setTimeout(resolve);
         });
       });
-
-      // @ts-ignore
       const { count, increment, name } = useClientStore().counter;
       expect(count).toBe(2);
       expect(increment).toBeInstanceOf(Function);

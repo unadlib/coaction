@@ -2,14 +2,9 @@ import { apply } from 'mutability';
 import { createBinder, type Store } from 'coaction';
 import { createPinia, setActivePinia } from 'pinia';
 
-const instancesMap = new Map<object, any>();
+const instancesMap = new WeakMap<object, any>();
 // TODO: fix async actions
 // TODO: fix set function
-// export const defineStore = (name: string, options: any) => {
-//   // const store = createStore(name, options)();
-//   instancesMap.set(rawState, store);
-//   return rawState;
-// };
 
 type StoreWithSubscriptions = Store<object> & {
   // TODO: fix type

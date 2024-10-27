@@ -3,14 +3,14 @@ import {
   mockPorts,
   WorkerMainTransportOptions
 } from 'data-transport';
-import { create, Slice, Slices } from '../src';
+import { create, type Slice, type Slices } from '../src';
 
 test('base', () => {
   const stateFn = jest.fn();
   const getterFn = jest.fn();
   const useStore = create<{
     count: number;
-    double: number;
+    readonly double: number;
     increment: () => void;
     name: string;
   }>((set, get, api) => ({
