@@ -1,13 +1,14 @@
 import { createTransport, mockPorts } from 'data-transport';
-import { createWithMobx as create, bind } from '../src';
+import { bindMobx } from '../src';
 import { makeAutoObservable } from 'mobx';
+import { create } from 'coaction';
 
 test('base', () => {
   const stateFn = jest.fn();
   const getterFn = jest.fn();
   const useStore = create((set, get, api) =>
     makeAutoObservable(
-      bind({
+      bindMobx({
         name: 'test',
         count: 0,
         get double() {
@@ -109,13 +110,15 @@ test('worker', async () => {
   const clientTransport = createTransport('WorkerMain', ports.create());
 
   const counter = () =>
-    makeAutoObservable({
-      name: 'test',
-      count: 0,
-      increment() {
-        this.count += 1;
-      }
-    });
+    makeAutoObservable(
+      bindMobx({
+        name: 'test',
+        count: 0,
+        increment() {
+          this.count += 1;
+        }
+      })
+    );
   const useServerStore = create(counter, {
     transport: serverTransport,
     workerType: 'WorkerInternal'
@@ -202,16 +205,18 @@ test('worker - async', async () => {
   const clientTransport = createTransport('WorkerMain', ports.create());
 
   const counter = () =>
-    makeAutoObservable({
-      name: 'test',
-      count: 0,
-      async increment() {
-        this.count += 1;
-        await Promise.resolve();
-        this.count += 1;
-        console.log('increment', this.count);
-      }
-    });
+    makeAutoObservable(
+      bindMobx({
+        name: 'test',
+        count: 0,
+        async increment() {
+          this.count += 1;
+          await Promise.resolve();
+          this.count += 1;
+          console.log('increment', this.count);
+        }
+      })
+    );
   const useServerStore = create(counter, {
     transport: serverTransport,
     workerType: 'WorkerInternal'
@@ -303,26 +308,28 @@ describe('Slices', () => {
     const getterFn = jest.fn();
     const useStore = create({
       counter: (set, get, api) =>
-        makeAutoObservable({
-          name: 'test',
-          count: 0,
-          get double() {
-            return this.count * 2;
-          },
-          increment() {
-            this.count += 1;
-            stateFn(
-              get().counter.count,
-              api.getState().counter.count,
-              this.count
-            );
-            getterFn(
-              get().counter.double,
-              api.getState().counter.double,
-              this.double
-            );
-          }
-        })
+        makeAutoObservable(
+          bindMobx({
+            name: 'test',
+            count: 0,
+            get double() {
+              return this.count * 2;
+            },
+            increment() {
+              this.count += 1;
+              stateFn(
+                get().counter.count,
+                api.getState().counter.count,
+                this.count
+              );
+              getterFn(
+                get().counter.double,
+                api.getState().counter.double,
+                this.double
+              );
+            }
+          })
+        )
     });
     // TODO: fix this
     // @ts-ignore
@@ -375,13 +382,15 @@ describe('Slices', () => {
     const clientTransport = createTransport('WorkerMain', ports.create());
 
     const counter = () =>
-      makeAutoObservable({
-        name: 'test',
-        count: 0,
-        increment() {
-          this.count += 1;
-        }
-      });
+      makeAutoObservable(
+        bindMobx({
+          name: 'test',
+          count: 0,
+          increment() {
+            this.count += 1;
+          }
+        })
+      );
     const useServerStore = create(
       { counter },
       {

@@ -20,6 +20,26 @@ import type {
   AsyncStoreOption
 } from './interface';
 
+const bindSymbol = Symbol('bind');
+
+export const createBinder = ({
+  handleState,
+  handleStore
+}: {
+  handleState: any;
+  handleStore: any;
+}) => {
+  return (options: any) => {
+    const { copyState, key, bind } = handleState(options);
+    const value = key ? copyState[key] : copyState;
+    value[bindSymbol] = {
+      handleStore,
+      bind
+    };
+    return copyState;
+  };
+};
+
 const workerType = globalThis.SharedWorkerGlobalScope
   ? 'SharedWorkerInternal'
   : globalThis.WorkerGlobalScope
@@ -159,19 +179,28 @@ function create<T extends { name?: string }>(
       },
       isSliceStore: typeof createState === 'object'
     };
+    const makeState = (fn: (...args: any[]) => any) => {
+      let state = fn(api.setState, api.getState, api);
+      if (typeof state === 'function') {
+        state = state();
+      }
+      if (state[bindSymbol]) {
+        const rawState = state[bindSymbol].bind(state);
+        state[bindSymbol].handleStore(api, rawState, state);
+        return rawState;
+      }
+      return state;
+    };
     const initialState = api.isSliceStore
       ? Object.entries(createState).reduce(
           (stateTree, [key, value]) => {
-            const state =
-              key === 'name'
-                ? value
-                : (value as Slice<T>)(setState, getState, api);
+            const state = key === 'name' ? value : makeState(value as Slice<T>);
             Object.assign(stateTree, { [key]: state });
             return stateTree;
           },
           {} as ISlices<Slice<T>>
         )
-      : (createState as Slice<T>)(api.setState, api.getState, api);
+      : makeState(createState as Slice<T>);
     const rawState = {} as any;
     const handle = (_rawState: any, _initialState: any, _key?: string) => {
       const mutableInstance = api.toRaw?.(_initialState);
