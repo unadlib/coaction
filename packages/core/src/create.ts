@@ -26,13 +26,19 @@ export const createBinder = ({
   handleState,
   handleStore
 }: {
-  handleState: any;
+  handleState: <T extends object>(
+    createState: T
+  ) => {
+    copyState: T;
+    key?: keyof T;
+    bind: (state: T) => T;
+  };
   handleStore: any;
 }) => {
-  return (options: any) => {
+  return <T extends object>(options: T): T => {
     const { copyState, key, bind } = handleState(options);
     const value = key ? copyState[key] : copyState;
-    value[bindSymbol] = {
+    (value as any)[bindSymbol] = {
       handleStore,
       bind
     };
