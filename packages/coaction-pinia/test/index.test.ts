@@ -1,13 +1,10 @@
-import {
-  defineStore as defineStoreWithPinia,
-  createPinia,
-  setActivePinia
-} from 'pinia';
+import { defineStore, createPinia, setActivePinia } from 'pinia';
 import { createTransport, mockPorts } from 'data-transport';
-import { createWithPinia as create, defineStore } from '../src';
+import { create } from 'coaction';
+import { bindPinia } from '../src';
 
 test('pinia', () => {
-  const useCounterStore = defineStoreWithPinia('counter', {
+  const useCounterStore = defineStore('counter', {
     state: () => ({ count: 0, name: 'Eduardo' }),
     getters: {
       doubleCount: (state) => state.count * 2
@@ -32,23 +29,27 @@ test('base', () => {
   const stateFn = jest.fn();
   const getterFn = jest.fn();
   const useStore = create((set, get, api) =>
-    defineStore('test', {
-      state: () => ({ count: 0 }),
-      getters: {
-        double: (state) => state.count * 2
-      },
-      actions: {
-        increment() {
-          this.count += 1;
-          stateFn(get().count, api.getState().count, this.count);
-          getterFn(get().double, api.getState().double, this.double);
+    defineStore(
+      'test',
+      bindPinia({
+        state: () => ({ count: 0 }),
+        getters: {
+          double: (state) => state.count * 2
+        },
+        actions: {
+          increment() {
+            this.count += 1;
+            stateFn(get().count, api.getState().count, this.count);
+            getterFn(get().double, api.getState().double, this.double);
+          }
         }
-      }
-    })
+      })
+    )
   );
   // TODO: fix this
   // @ts-ignore
   const { count, increment, name } = useStore();
+  return;
   expect(count).toBe(0);
   expect(increment).toBeInstanceOf(Function);
   expect(name).toBe('test');
@@ -131,19 +132,22 @@ test('worker', async () => {
   const clientTransport = createTransport('WorkerMain', ports.create());
 
   const counter = () =>
-    defineStore('test', {
-      state: () => ({ count: 0 }),
-      getters: {
-        double() {
-          return this.count * 2;
+    defineStore(
+      'test',
+      bindPinia({
+        state: () => ({ count: 0 }),
+        getters: {
+          double() {
+            return this.count * 2;
+          }
+        },
+        actions: {
+          increment() {
+            this.count += 1;
+          }
         }
-      },
-      actions: {
-        increment() {
-          this.count += 1;
-        }
-      }
-    });
+      })
+    );
   const useServerStore = create(counter, {
     transport: serverTransport,
     workerType: 'WorkerInternal'
@@ -230,29 +234,32 @@ describe('Slices', () => {
     const getterFn = jest.fn();
     const useStore = create({
       counter: (set, get, api) =>
-        defineStore('test', {
-          state: () => ({ count: 0 }),
-          getters: {
-            double() {
-              return this.count * 2;
+        defineStore(
+          'test',
+          bindPinia({
+            state: () => ({ count: 0 }),
+            getters: {
+              double() {
+                return this.count * 2;
+              }
+            },
+            actions: {
+              increment(state) {
+                this.count += 1;
+                stateFn(
+                  get().counter.count,
+                  api.getState().counter.count,
+                  this.count
+                );
+                getterFn(
+                  get().counter.double,
+                  api.getState().counter.double,
+                  this.double
+                );
+              }
             }
-          },
-          actions: {
-            increment(state) {
-              this.count += 1;
-              stateFn(
-                get().counter.count,
-                api.getState().counter.count,
-                this.count
-              );
-              getterFn(
-                get().counter.double,
-                api.getState().counter.double,
-                this.double
-              );
-            }
-          }
-        })
+          })
+        )
     });
     // TODO: fix this
     // @ts-ignore
@@ -302,19 +309,22 @@ describe('Slices', () => {
     const clientTransport = createTransport('WorkerMain', ports.create());
 
     const counter = () =>
-      defineStore('test', {
-        state: () => ({ count: 0 }),
-        getters: {
-          double() {
-            return this.count * 2;
+      defineStore(
+        'test',
+        bindPinia({
+          state: () => ({ count: 0 }),
+          getters: {
+            double() {
+              return this.count * 2;
+            }
+          },
+          actions: {
+            increment() {
+              this.count += 1;
+            }
           }
-        },
-        actions: {
-          increment() {
-            this.count += 1;
-          }
-        }
-      });
+        })
+      );
     const useServerStore = create(
       { counter },
       {

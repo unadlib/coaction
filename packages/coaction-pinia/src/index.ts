@@ -1,32 +1,15 @@
 import { apply } from 'mutability';
-import { create, type Store } from 'coaction';
-import { createPinia, setActivePinia, defineStore as createStore } from 'pinia';
+import { createBinder, type Store } from 'coaction';
+import { createPinia, setActivePinia } from 'pinia';
 
 const instancesMap = new Map<object, any>();
 // TODO: fix async actions
 // TODO: fix set function
-export const defineStore = (name: string, options: any) => {
-  const descriptors: Record<string, PropertyDescriptor> = {};
-  options.getters = options.getters ?? {};
-  for (const key in options.getters) {
-    descriptors[key] = {
-      get() {
-        return options.getters[key].call(this, this);
-      }
-    };
-  }
-  const rawState = Object.defineProperties(
-    {
-      name,
-      ...options.state(),
-      ...options.actions
-    },
-    descriptors
-  );
-  const store = createStore(name, options)();
-  instancesMap.set(rawState, store);
-  return rawState;
-};
+// export const defineStore = (name: string, options: any) => {
+//   // const store = createStore(name, options)();
+//   instancesMap.set(rawState, store);
+//   return rawState;
+// };
 
 type StoreWithSubscriptions = Store<object> & {
   // TODO: fix type
@@ -35,13 +18,7 @@ type StoreWithSubscriptions = Store<object> & {
 };
 
 // TODO: fix defineStore same name
-const handleStore = (
-  api: StoreWithSubscriptions,
-  createMobxState: () => any
-) => {
-  const pinia = createPinia();
-  setActivePinia(pinia);
-  const state = createMobxState();
+const handleStore = (api: StoreWithSubscriptions, state: any) => {
   if (!api.toRaw) {
     api.toRaw = (key: any) => instancesMap.get(key);
     Object.assign(api, {
@@ -92,38 +69,37 @@ const handleStore = (
     stopWatch();
   };
   api._destroyers!.add(destroy);
-  if (process.env.NODE_ENV === 'development') {
-    // TODO: check with observe for unexpected changes
-  }
-  return state;
 };
 
-export const createWithPinia = (
-  createPiniaState: (
-    set: any,
-    get: any,
-    api: any
-  ) => any | Record<string, () => any>,
-  options?: any
-) => {
-  if (typeof createPiniaState === 'function') {
-    return create(
-      (set: any, get: any, api: any) => {
-        return handleStore(api, createPiniaState.bind(null, set, get, api));
+export const bindPinia = createBinder({
+  handleStore,
+  handleState: (options: any) => {
+    const descriptors: Record<string, PropertyDescriptor> = {};
+    options.getters = options.getters ?? {};
+    for (const key in options.getters) {
+      descriptors[key] = {
+        get() {
+          return options.getters[key].call(this, this);
+        }
+      };
+    }
+    const rawState = Object.defineProperties(
+      {
+        ...options.state(),
+        ...options.actions
       },
-      { ...options, enablePatches: true }
+      descriptors
     );
+    const pinia = createPinia();
+    setActivePinia(pinia);
+    return {
+      copyState: options,
+      key: 'actions',
+      bind: (state: any) => {
+        rawState.name = state.$id;
+        instancesMap.set(rawState, state);
+        return rawState;
+      }
+    };
   }
-  if (typeof createPiniaState === 'object' && createPiniaState !== null) {
-    return create(
-      Object.keys(createPiniaState).reduce((acc, key) => {
-        acc[key] = (set: any, get: any, api: any) =>
-          // @ts-ignore
-          handleStore(api, createPiniaState[key].bind(null, set, get, api));
-        return acc;
-      }, {} as any),
-      { ...options, enablePatches: true }
-    );
-  }
-  throw new Error('createPiniaState must be a function or an object');
-};
+});
