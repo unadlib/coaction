@@ -55,5 +55,6 @@
 - [ ] support for cross-store
 - [ ] multi-transport
 - [ ] Undo/Redo
-- [ ] Fix @coaction/mobx type issue
+- [x] Fix @coaction/mobx type issue
 - [ ] Fix @coaction/pinia type issue
+- [ ] Fix @coaction/pinia name checker
