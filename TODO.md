@@ -59,3 +59,5 @@
 - [ ] Fix @coaction/pinia type issue
 - [ ] Fix @coaction/pinia name checker
 - [ ] Fix enablePatches checker
+- [ ] Fix @coaction/pinia multiple action in a single function
+- [ ] Fix @coaction/mobx multiple action in a single function
