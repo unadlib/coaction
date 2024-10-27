@@ -2,11 +2,11 @@ import { apply } from 'mutability';
 import { type Store, createBinder } from 'coaction';
 import { autorun, runInAction } from 'mobx';
 
-const instancesMap = new Map<object, any>();
+const instancesMap = new WeakMap<object, object>();
 
 const handleStore = (api: Store<object>) => {
   if (api.toRaw) return;
-  api.toRaw = (key: any) => instancesMap.get(key);
+  api.toRaw = (key: object) => instancesMap.get(key);
   Object.assign(api, {
     subscribe: autorun
   });
@@ -41,15 +41,22 @@ const handleStore = (api: Store<object>) => {
   };
 };
 
-export const bindMobx = createBinder({
+interface BindMobx {
+  <T>(target: T): T;
+}
+
+export const bindMobx = createBinder<BindMobx>({
   handleStore,
-  handleState: (options: any) => {
+  handleState: (options) => {
     const descriptors = Object.getOwnPropertyDescriptors(options);
-    const copyState = Object.defineProperties({}, descriptors);
-    const rawState = Object.defineProperties({}, descriptors);
+    const copyState = Object.defineProperties(
+      {},
+      descriptors
+    ) as typeof options;
+    const rawState = Object.defineProperties({}, descriptors) as typeof options;
     return {
       copyState,
-      bind: (state: any) => {
+      bind: (state) => {
         instancesMap.set(rawState, state);
         return rawState;
       }
