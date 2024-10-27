@@ -26,17 +26,32 @@ export const createBinder = ({
   handleState,
   handleStore
 }: {
+  /**
+   * handleState is a function to handle the state object.
+   */
   handleState: <T extends object>(
-    createState: T
+    state: T
   ) => {
+    /**
+     * copyState is a copy of the state object.
+     */
     copyState: T;
+    /**
+     * key is the key of the state object.
+     */
     key?: keyof T;
+    /**
+     * bind is a function to bind the state object.
+     */
     bind: (state: T) => T;
   };
-  handleStore: any;
+  /**
+   * handleStore is a function to handle the store object.
+   */
+  handleStore: (api: Store<object>, rawState: object, state: object) => void;
 }) => {
-  return <T extends object>(options: T): T => {
-    const { copyState, key, bind } = handleState(options);
+  return <T extends object>(state: T): T => {
+    const { copyState, key, bind } = handleState(state);
     const value = key ? copyState[key] : copyState;
     (value as any)[bindSymbol] = {
       handleStore,
@@ -92,8 +107,7 @@ function create<T extends { name?: string }>(
                   _next[key as keyof typeof _next] !== null
                 ) {
                   Object.assign(
-                    // @ts-ignore
-                    rootState[key],
+                    (rootState as any)[key],
                     _next[key as keyof typeof _next]
                   );
                 }
@@ -308,8 +322,7 @@ function create<T extends { name?: string }>(
       module = {} as T;
       Object.entries(initialState).forEach(([key, value]) => {
         rawState[key] = key === 'name' ? value : {};
-        // @ts-ignore
-        module[key] =
+        (module as any)[key] =
           key === 'name' ? value : handle(rawState[key], value, key);
       });
     } else {
