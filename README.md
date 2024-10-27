@@ -47,7 +47,9 @@ const useStore = create((set) => ({
     return this.count ** 2;
   },
   increment() {
-    set(() => (this.count += 1));
+    set(() => {
+      this.count += 1;
+    });
   }
 }));
 ```
@@ -96,7 +98,9 @@ const counterSlices = (set) => ({
     return this.count ** 2;
   },
   increment() {
-    set(() => (this.count += 1));
+    set(() => {
+      this.count += 1;
+    });
   }
 });
 
@@ -107,7 +111,9 @@ const counter1Slices = (set) => ({
     return this.count ** 2;
   },
   increment() {
-    set(() => (this.count += 1));
+    set(() => {
+      this.count += 1;
+    });
   }
 });
 
