@@ -1,6 +1,5 @@
 import { useStore } from './store';
 
-// @ts-ignore
 // const { increment } = useStore();
 
 const worker = new SharedWorker(new URL('./store.ts', import.meta.url), {

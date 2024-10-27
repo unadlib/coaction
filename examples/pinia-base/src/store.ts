@@ -1,41 +1,35 @@
-import { createWithPinia, defineStore } from '@coaction/pinia';
+import { create } from 'coaction';
+import { bindPinia } from '@coaction/pinia';
+import { defineStore } from 'pinia';
 
-export const useStore = createWithPinia({
-  // @ts-ignore
-  counter: () =>
-    defineStore('counter', {
-      state: () => ({
-        count: 0
-      }),
-      getters: {
-        // @ts-ignore
-        doubleCount: (state) => state.count * 2
-      },
-      actions: {
-        // since we rely on `this`, we cannot use an arrow function
-        increment() {
+export const useStore = create({
+  counter: (set) =>
+    defineStore(
+      'counter',
+      bindPinia({
+        state: () => ({
+          count: 0
+        }),
+        getters: {
           // @ts-ignore
-          this.count++;
+          doubleCount: (state) => state.count * 2
+        },
+        actions: {
+          // since we rely on `this`, we cannot use an arrow function
+          increment() {
+            set(() => {
+              // @ts-ignore
+              this.count++;
+            });
+
+            set(() => {
+              // @ts-ignore
+              this.count++;
+            });
+          }
         }
-      }
-    }),
-  counter1: () =>
-    defineStore('counter1', {
-      state: () => ({
-        count: 0
-      }),
-      getters: {
-        // @ts-ignore
-        doubleCount: (state) => state.count * 2
-      },
-      actions: {
-        // since we rely on `this`, we cannot use an arrow function
-        increment() {
-          // @ts-ignore
-          this.count++;
-        }
-      }
-    })
+      })
+    )
 });
 
 // @ts-ignore
