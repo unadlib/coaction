@@ -4,8 +4,31 @@ import {
   type WorkerMainTransportOptions
 } from 'data-transport';
 import { bindMobx } from '../src';
-import { makeAutoObservable } from 'mobx';
+import { makeAutoObservable, autorun } from 'mobx';
 import { create, type Slices, type Slice } from 'coaction';
+
+test('mobx', async () => {
+  const state = makeAutoObservable({
+    value: 0,
+    get double() {
+      return this.value * 2;
+    },
+    d() {
+      this.value++;
+    },
+    async increment() {
+      this.value++;
+      await Promise.resolve();
+      this.d();
+      await Promise.resolve();
+      this.d();
+    }
+  });
+  autorun(() => {
+    console.log('state', state.value, state.double);
+  });
+  await state.increment();
+});
 
 test('base', () => {
   const stateFn = jest.fn();
