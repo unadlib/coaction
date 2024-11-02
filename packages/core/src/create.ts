@@ -80,7 +80,7 @@ function create<T extends { name?: string }>(
   createState: any,
   options: any = {}
 ): any {
-  const _workerType = options.workerType ?? workerType;
+  const _workerType = (options.workerType ?? workerType) as typeof workerType;
   const createApi = ({
     share
   }: {
@@ -90,7 +90,7 @@ function create<T extends { name?: string }>(
     let rootState: T | Draft<T>;
     let backupState: T | Draft<T>;
     // TODO: fix the type of finalizeDraft
-    let finalizeDraft: () => any;
+    let finalizeDraft: () => [T, Patches, Patches];
     let mutableInstance: any;
     let api: Store<any>;
     let name: string;
@@ -204,12 +204,11 @@ function create<T extends { name?: string }>(
             // with mutableInstance, 3rd party model will send update notifications on its own after api.apply
             emit(finalPatches.patches);
           }
-          console.log(isDraft(rootState), finalPatches.patches.length);
         }
         result = updater(next);
         if (isDrafted) {
           backupState = rootState;
-          const [draft, finalize] = createWithMutative(rootState, {
+          const [draft, finalize] = createWithMutative(rootState as T, {
             // mark: () => 'immutable',
             enablePatches: true
           });
@@ -240,6 +239,7 @@ function create<T extends { name?: string }>(
       subscribe,
       destroy,
       apply: (state = rootState, patches) => {
+        console.log('apply', { state, patches });
         rootState = patches ? apply(state, patches) : state;
         listeners.forEach((listener) => listener());
       },
@@ -286,18 +286,21 @@ function create<T extends { name?: string }>(
             } else {
               _rawState[key] = descriptor.value;
             }
+            // handle state property
             if (key !== 'name') {
               delete descriptor.value;
               delete descriptor.writable;
-              descriptor.get = () =>
-                _key ? (rootState as any)[_key][key] : (rootState as any)[key];
-              descriptor.set = (value: any) => {
-                if (_key) {
+              if (_key) {
+                descriptor.get = () => (rootState as any)[_key][key];
+                descriptor.set = (value: any) => {
                   (rootState as any)[_key][key] = value;
-                } else {
+                };
+              } else {
+                descriptor.get = () => (rootState as any)[key];
+                descriptor.set = (value: any) => {
                   (rootState as any)[key] = value;
-                }
-              };
+                };
+              }
             }
           } else if (share === 'client') {
             descriptor.value = (...args: any[]) => {
@@ -323,10 +326,13 @@ function create<T extends { name?: string }>(
                   }
                   if (isDrafted) {
                     backupState = rootState;
-                    const [draft, finalize] = createWithMutative(rootState, {
-                      // mark: () => 'immutable',
-                      enablePatches: true
-                    });
+                    const [draft, finalize] = createWithMutative(
+                      rootState as T,
+                      {
+                        // mark: () => 'immutable',
+                        enablePatches: true
+                      }
+                    );
                     finalizeDraft = finalize;
                     rootState = draft as any;
                   }
@@ -336,7 +342,7 @@ function create<T extends { name?: string }>(
                   handleResult();
                 }
                 backupState = rootState;
-                const [draft, finalize] = createWithMutative(rootState, {
+                const [draft, finalize] = createWithMutative(rootState as T, {
                   // mark: () => 'immutable',
                   enablePatches: true
                 });
