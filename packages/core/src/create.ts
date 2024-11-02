@@ -219,7 +219,7 @@ function create<T extends { name?: string }>(
       } finally {
         isBatching = false;
       }
-      emit(result[1]);
+      emit(result?.[1]);
     };
     const getState = () => module;
     const getInitialState = () => initialState;
