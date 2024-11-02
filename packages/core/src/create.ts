@@ -114,6 +114,11 @@ function create<T extends { name?: string }>(
     const setState: Store<T>['setState'] = (
       next,
       updater = (next) => {
+        if (mutableInstance && typeof next !== 'function') {
+          throw new Error(
+            'setState only supports the function in mutable mode'
+          );
+        }
         const merge = (_next = next) => {
           if (api.isSliceStore) {
             if (typeof _next === 'object' && _next !== null) {
@@ -149,6 +154,16 @@ function create<T extends { name?: string }>(
             : merge;
         const enablePatches = api.transport ?? options.enablePatches;
         if (!enablePatches) {
+          if (mutableInstance) {
+            if (api.act) {
+              api.act(() => {
+                fn.apply(null);
+              });
+              return [];
+            }
+            fn.apply(null);
+            return [];
+          }
           // best performance by default for immutable state
           // TODO: supporting nested set functions?
           rootState = createWithMutative(rootState, () => {
@@ -311,7 +326,8 @@ function create<T extends { name?: string }>(
           } else {
             const fn = descriptor.value;
             descriptor.value = (...args: any[]) => {
-              if (mutableInstance && !isBatching) {
+              const enablePatches = api.transport ?? options.enablePatches;
+              if (mutableInstance && !isBatching && enablePatches) {
                 let result: any;
                 const handleResult = (isDrafted?: boolean) => {
                   rootState = backupState;
@@ -353,15 +369,23 @@ function create<T extends { name?: string }>(
                   args
                 );
                 if (result instanceof Promise) {
-                  if (process.env.NODE_ENV === 'development') {
-                    console.warn(
-                      'It will be combined with the next state in the async function.'
-                    );
-                  }
+                  // if (process.env.NODE_ENV === 'development') {
+                  //   console.warn(
+                  //     'It will be combined with the next state in the async function.'
+                  //   );
+                  // }
                   return result.finally(() => handleResult(isDrafted));
                 }
                 handleResult(isDrafted);
                 return result;
+              }
+              if (mutableInstance && api.act) {
+                return api.act(() => {
+                  return fn.apply(
+                    _key ? api.getState()[_key] : api.getState(),
+                    args
+                  );
+                });
               }
               return fn.apply(
                 _key ? api.getState()[_key] : api.getState(),

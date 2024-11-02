@@ -69,6 +69,10 @@ export interface Store<T extends ISlices> {
     patches: Patches;
     inversePatches: Patches;
   };
+  /**
+   * The act is used to run the function in the action.
+   */
+  act?: <T extends () => any>(fn: T) => ReturnType<T>;
 }
 
 export type WorkerOptions = {

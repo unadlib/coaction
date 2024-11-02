@@ -10,7 +10,9 @@ const handleStore = (api: Store<object>) => {
   Object.assign(api, {
     subscribe: autorun
   });
+  api.act = runInAction;
   api.apply = (state = api.getState(), patches) => {
+    console.log('apply', state, patches);
     if (!patches) {
       if (api.isSliceStore) {
         if (typeof state === 'object' && state !== null) {
