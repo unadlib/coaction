@@ -2,7 +2,8 @@ import {
   type Draft,
   create as createWithMutative,
   apply,
-  isDraft
+  isDraft,
+  Patches
 } from 'mutative';
 import { createTransport, type Transport } from 'data-transport';
 import type {
@@ -87,6 +88,10 @@ function create<T extends { name?: string }>(
   } = {}) => {
     let module: T;
     let rootState: T | Draft<T>;
+    let backupState: T | Draft<T>;
+    // TODO: fix the type of finalizeDraft
+    let finalizeDraft: () => any;
+    let mutableInstance: any;
     let api: Store<any>;
     let name: string;
     let transport: Transport<{
@@ -95,6 +100,17 @@ function create<T extends { name?: string }>(
     }> | null = null;
     let sequence = 0;
     const listeners = new Set<Listener>();
+    const emit = (patches?: Patches) => {
+      if (transport && patches?.length) {
+        sequence += 1;
+        console.log('sequence', sequence);
+        transport.emit('update', {
+          patches: patches,
+          sequence
+        });
+      }
+    };
+    let isBatching = false;
     const setState: Store<T>['setState'] = (
       next,
       updater = (next) => {
@@ -134,13 +150,18 @@ function create<T extends { name?: string }>(
         const enablePatches = api.transport ?? options.enablePatches;
         if (!enablePatches) {
           // best performance by default for immutable state
+          // TODO: supporting nested set functions?
           rootState = createWithMutative(rootState, () => {
             return fn.apply(null);
           });
           listeners.forEach((listener) => listener());
           return [];
         }
-        let backupState = rootState;
+        if (api.transport && !options.enablePatches) {
+          // TODO: dev warning
+          console.warn(`enablePatches is required for the transport`);
+        }
+        backupState = rootState;
         const [, patches, inversePatches] = createWithMutative(
           rootState,
           (draft: any) => {
@@ -156,20 +177,49 @@ function create<T extends { name?: string }>(
         const finalPatches = api.patch
           ? api.patch({ patches, inversePatches })
           : { patches, inversePatches };
-        api.apply(rootState, finalPatches.patches);
-        listeners.forEach((listener) => listener());
-        return [rootState, patches, inversePatches];
+        if (finalPatches.patches.length) {
+          api.apply(rootState, finalPatches.patches);
+          if (!mutableInstance) {
+            listeners.forEach((listener) => listener());
+          }
+        }
+        return [rootState as T, patches, inversePatches];
       }
     ) => {
-      const result = updater(next);
-      if (transport) {
-        sequence += 1;
-        console.log('sequence', sequence);
-        transport.emit('update', {
-          patches: result![1],
-          sequence
-        });
+      if (isBatching) {
+        throw new Error('setState cannot be called within the updater');
       }
+      isBatching = true;
+      let result: any;
+      try {
+        const isDrafted = mutableInstance && isDraft(rootState);
+        if (isDrafted) {
+          rootState = backupState;
+          const [, patches, inversePatches] = finalizeDraft();
+          const finalPatches = api.patch
+            ? api.patch({ patches, inversePatches })
+            : { patches, inversePatches };
+          if (finalPatches.patches.length) {
+            api.apply(rootState, finalPatches.patches);
+            // with mutableInstance, 3rd party model will send update notifications on its own after api.apply
+            emit(finalPatches.patches);
+          }
+          console.log(isDraft(rootState), finalPatches.patches.length);
+        }
+        result = updater(next);
+        if (isDrafted) {
+          backupState = rootState;
+          const [draft, finalize] = createWithMutative(rootState, {
+            // mark: () => 'immutable',
+            enablePatches: true
+          });
+          finalizeDraft = finalize;
+          rootState = draft as any;
+        }
+      } finally {
+        isBatching = false;
+      }
+      emit(result[1]);
     };
     const getState = () => module;
     const getInitialState = () => initialState;
@@ -219,7 +269,7 @@ function create<T extends { name?: string }>(
       : makeState(createState as Slice<T>);
     const rawState = {} as any;
     const handle = (_rawState: any, _initialState: any, _key?: string) => {
-      const mutableInstance = api.toRaw?.(_initialState);
+      mutableInstance = api.toRaw?.(_initialState);
       console.log('_initialState', _initialState);
       const descriptors = Object.getOwnPropertyDescriptors(_initialState);
       Object.entries(descriptors).forEach(([key, descriptor]) => {
@@ -258,47 +308,53 @@ function create<T extends { name?: string }>(
           } else {
             const fn = descriptor.value;
             descriptor.value = (...args: any[]) => {
-              if (mutableInstance) {
+              if (mutableInstance && !isBatching) {
                 let result: any;
-                if (isDraft(rootState)) {
-                  result = fn.apply(
-                    _key ? api.getState()[_key] : api.getState(),
-                    args
-                  );
-                  return result;
+                const handleResult = (isDrafted?: boolean) => {
+                  rootState = backupState;
+                  const [, patches, inversePatches] = finalizeDraft();
+                  const finalPatches = api.patch
+                    ? api.patch({ patches, inversePatches })
+                    : { patches, inversePatches };
+                  if (finalPatches.patches.length) {
+                    api.apply(rootState, finalPatches.patches);
+                    // with mutableInstance, 3rd party model will send update notifications on its own after api.apply
+                    emit(finalPatches.patches);
+                  }
+                  if (isDrafted) {
+                    backupState = rootState;
+                    const [draft, finalize] = createWithMutative(rootState, {
+                      // mark: () => 'immutable',
+                      enablePatches: true
+                    });
+                    finalizeDraft = finalize;
+                    rootState = draft as any;
+                  }
+                };
+                const isDrafted = isDraft(rootState);
+                if (isDrafted) {
+                  handleResult();
                 }
-                let backupState = rootState;
+                backupState = rootState;
                 const [draft, finalize] = createWithMutative(rootState, {
                   // mark: () => 'immutable',
                   enablePatches: true
                 });
+                finalizeDraft = finalize;
                 rootState = draft as any;
                 result = fn.apply(
                   _key ? api.getState()[_key] : api.getState(),
                   args
                 );
-                const handleResult = () => {
-                  rootState = backupState;
-                  const [, patches, inversePatches] = finalize();
-                  const finalPatches = api.patch
-                    ? api.patch({ patches, inversePatches })
-                    : { patches, inversePatches };
-                  api.apply(rootState, finalPatches.patches);
-                  api.setState(null, () => [
-                    null,
-                    finalPatches.patches,
-                    finalPatches.inversePatches
-                  ]);
-                };
                 if (result instanceof Promise) {
                   if (process.env.NODE_ENV === 'development') {
                     console.warn(
                       'It will be combined with the next state in the async function.'
                     );
                   }
-                  return result.finally(handleResult);
+                  return result.finally(() => handleResult(isDrafted));
                 }
-                handleResult();
+                handleResult(isDrafted);
                 return result;
               }
               return fn.apply(

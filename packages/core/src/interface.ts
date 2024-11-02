@@ -22,7 +22,9 @@ export interface Store<T extends ISlices> {
     /**
      * The updater is used to update the state.
      */
-    updater?: (next: T | ((draft: Draft<T>) => any) | null) => void
+    updater?: (
+      next: T | ((draft: Draft<T>) => any) | null
+    ) => [] | [T, Patches, Patches]
   ) => void;
   /**
    * Get the current state.

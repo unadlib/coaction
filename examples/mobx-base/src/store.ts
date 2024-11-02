@@ -15,14 +15,24 @@ export const useStore = create({
           this.count += 1;
           console.log('count', this.count, this.double);
         },
-        async increment() {
+        increment() {
+          // this.count += 1;
+          // this.a();
           set(() => {
             this.a();
           });
-          await new Promise((resolve) => setTimeout(resolve, 1000));
-          set(() => {
-            this.a();
-          });
+          // set(() => {
+          //   this.count += 1;
+          // });
+          // await new Promise((resolve) => setTimeout(resolve, 1000));
+          // this.count += 1;
+          // set(() => {
+          //   this.count += 1;
+          // });
+          // set(() => {
+          //   this.a();
+          // });
+          // this.a();
         }
       })
     )
