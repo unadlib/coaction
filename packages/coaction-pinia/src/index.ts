@@ -33,6 +33,7 @@ const handleStore = (api: StoreWithSubscriptions, state: any) => {
       api._destroyers = undefined;
     };
     api.apply = (state = api.getState(), patches) => {
+      console.log('apply', state, patches);
       if (!patches) {
         if (api.isSliceStore) {
           if (typeof state === 'object' && state !== null) {

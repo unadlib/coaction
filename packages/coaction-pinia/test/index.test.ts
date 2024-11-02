@@ -46,10 +46,7 @@ test('base', () => {
       })
     )
   );
-  // TODO: fix this
-  // @ts-ignore
   const { count, increment, name } = useStore();
-  return;
   expect(count).toBe(0);
   expect(increment).toBeInstanceOf(Function);
   expect(name).toBe('test');

@@ -21,7 +21,7 @@ test('base', () => {
     },
     increment() {
       set((draft) => {
-        draft.count += 1;
+        this.count += 1;
         stateFn(get().count, api.getState().count, this.count, draft.count);
         getterFn(
           get().double,
