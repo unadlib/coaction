@@ -157,14 +157,14 @@ function create<T extends { name?: string }>(
           listeners.forEach((listener) => listener());
           return [];
         }
-        if (api.transport && !options.enablePatches) {
+        if (api.transport && options.enablePatches === false) {
           // TODO: dev warning
           console.warn(`enablePatches is required for the transport`);
         }
         backupState = rootState;
         const [, patches, inversePatches] = createWithMutative(
-          rootState,
-          (draft: any) => {
+          rootState as T,
+          (draft) => {
             rootState = draft;
             return fn.apply(null);
           },
@@ -190,7 +190,7 @@ function create<T extends { name?: string }>(
         throw new Error('setState cannot be called within the updater');
       }
       isBatching = true;
-      let result: any;
+      let result: void | [] | [T, Patches, Patches];
       try {
         const isDrafted = mutableInstance && isDraft(rootState);
         if (isDrafted) {
