@@ -1,10 +1,9 @@
 import { apply } from 'mutability';
 import { createBinder, type Store } from 'coaction';
 import { createPinia, setActivePinia } from 'pinia';
+import type { _GettersTree, DefineStoreOptions, StateTree } from 'pinia';
 
 const instancesMap = new WeakMap<object, any>();
-// TODO: fix async actions
-// TODO: fix set function
 
 type StoreWithSubscriptions = Store<object> & {
   // TODO: fix type
@@ -69,7 +68,7 @@ const handleStore = (api: StoreWithSubscriptions, state: any) => {
 
 export const bindPinia = createBinder({
   handleStore,
-  handleState: (options: any) => {
+  handleState: ((options: DefineStoreOptions<any, any, any, any>) => {
     const descriptors: Record<string, PropertyDescriptor> = {};
     options.getters = options.getters ?? {};
     for (const key in options.getters) {
@@ -81,7 +80,7 @@ export const bindPinia = createBinder({
     }
     const rawState = Object.defineProperties(
       {
-        ...options.state(),
+        ...options.state?.(),
         ...options.actions
       },
       descriptors
@@ -89,7 +88,7 @@ export const bindPinia = createBinder({
     const pinia = createPinia();
     setActivePinia(pinia);
     return {
-      copyState: options,
+      copyState: options as any,
       key: 'actions',
       bind: (state: any) => {
         rawState.name = state.$id;
@@ -97,5 +96,12 @@ export const bindPinia = createBinder({
         return rawState;
       }
     };
-  }
-});
+  }) as any
+}) as <
+  Id extends string,
+  S extends StateTree = {},
+  G extends _GettersTree<S> = {},
+  A = {}
+>(
+  options: Omit<DefineStoreOptions<Id, S, G, A>, 'id'>
+) => Omit<DefineStoreOptions<Id, S, G, A>, 'id'>;
