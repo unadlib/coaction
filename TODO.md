@@ -50,14 +50,16 @@
 
 ### TODOs
 
-- [ ] namespace support
 - [ ] computed properties
-- [ ] support for cross-store
+- [ ] refactor name properties
 - [ ] multi-transport
 - [ ] Undo/Redo
 - [x] Fix @coaction/mobx type issue
+- [x] Support for multiple worker stores with same base store
 - [ ] Fix @coaction/pinia type issue
 - [ ] Fix @coaction/pinia name checker
-- [ ] Fix enablePatches checker
-- [ ] Fix @coaction/pinia multiple action in a single function
-- [ ] Fix @coaction/mobx multiple action in a single function
+- [x] Fix enablePatches checker
+- [x] Fix @coaction/pinia multiple action in a single function
+- [x] Fix @coaction/mobx multiple action in a single function
+- [ ] namespace support
+- [ ] support for cross-store
