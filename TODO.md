@@ -32,34 +32,33 @@
 - [ ] implement coaction for Pinia
   - no support for async actions(it will be merged into main thread with a single patch for updating the state)
     - It must be split into sync update action
-  - Pinia does not support detecting changes without a action
-  - [ ] handle $patch
-  - [ ] handle $reset
-  - [ ] handle computed properties
 - [ ] implement coaction for Valtio
 - [ ] implement coaction for nanostores
 - [ ] implement coaction for @ngrx/store
 - [ ] implement coaction-angular
 - [ ] implement coaction-svelte
 - [ ] implement coaction-Solid
-
 - [ ] fix slices checker
 - [ ] fix type
-
 - [ ] add devtools support
 
 ### TODOs
 
+- [ ] Fix @coaction/pinia type issue
+- [ ] Fix @coaction/pinia name checker
 - [ ] computed properties
 - [ ] refactor name properties
 - [ ] multi-transport
 - [ ] Undo/Redo
 - [x] Fix @coaction/mobx type issue
 - [x] Support for multiple worker stores with same base store
-- [ ] Fix @coaction/pinia type issue
-- [ ] Fix @coaction/pinia name checker
 - [x] Fix enablePatches checker
 - [x] Fix @coaction/pinia multiple action in a single function
 - [x] Fix @coaction/mobx multiple action in a single function
 - [ ] namespace support
 - [ ] support for cross-store
+- [ ] Fix Pinia StoreProperties
+- [ ] Pinia does not support detecting changes without a action
+  - [ ] handle $patch
+  - [ ] handle $reset
+  - [ ] handle computed properties

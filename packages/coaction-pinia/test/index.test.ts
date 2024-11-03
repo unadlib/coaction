@@ -1,13 +1,19 @@
 import { defineStore, createPinia, setActivePinia } from 'pinia';
-import { createTransport, mockPorts } from 'data-transport';
-import { create } from 'coaction';
+import {
+  createTransport,
+  mockPorts,
+  WorkerMainTransportOptions
+} from 'data-transport';
+import { create, Slice, Slices } from 'coaction';
 import { bindPinia } from '../src';
 
 test('pinia', () => {
   const useCounterStore = defineStore('counter', {
     state: () => ({ count: 0, name: 'Eduardo' }),
     getters: {
-      doubleCount: (state) => state.count * 2
+      doubleCount: (state) => {
+        return state.count * 2;
+      }
     },
     actions: {
       increment() {
@@ -23,28 +29,35 @@ test('pinia', () => {
   store.increment();
   store.$state.count = 10;
   expect(store.count).toBe(10);
+  expect(store.doubleCount).toBe(10);
 });
 
 test('base', () => {
   const stateFn = jest.fn();
   const getterFn = jest.fn();
-  const useStore = create((set, get, api) =>
-    defineStore(
-      'test',
-      bindPinia({
-        state: () => ({ count: 0 }),
-        getters: {
-          double: (state) => state.count * 2
-        },
-        actions: {
-          increment() {
-            this.count += 1;
-            stateFn(get().count, api.getState().count, this.count);
-            getterFn(get().double, api.getState().double, this.double);
+  const useStore = create<{
+    count: number;
+    readonly double: number;
+    increment: () => void;
+    name: string;
+  }>(
+    (set, get, api) =>
+      defineStore(
+        'test',
+        bindPinia({
+          state: () => ({ count: 0 }),
+          getters: {
+            double: (state) => state.count * 2
+          },
+          actions: {
+            increment() {
+              this.count += 1;
+              stateFn(get().count, api.getState().count, this.count);
+              getterFn(get().double, api.getState().double, this.double);
+            }
           }
-        }
-      })
-    )
+        })
+      ) as any
   );
   const { count, increment, name } = useStore();
   expect(count).toBe(0);
@@ -126,16 +139,23 @@ test('base', () => {
 test('worker', async () => {
   const ports = mockPorts();
   const serverTransport = createTransport('WorkerInternal', ports.main);
-  const clientTransport = createTransport('WorkerMain', ports.create());
+  const clientTransport = createTransport(
+    'WorkerMain',
+    ports.create() as WorkerMainTransportOptions
+  );
 
-  const counter = () =>
+  const counter: Slice<{
+    name: string;
+    count: number;
+    increment: () => void;
+  }> = () =>
     defineStore(
       'test',
       bindPinia({
         state: () => ({ count: 0 }),
         getters: {
-          double() {
-            return this.count * 2;
+          double: (state) => {
+            return state.count * 2;
           }
         },
         actions: {
@@ -144,13 +164,11 @@ test('worker', async () => {
           }
         }
       })
-    );
+    ) as any;
   const useServerStore = create(counter, {
     transport: serverTransport,
     workerType: 'WorkerInternal'
   });
-  // TODO: fix this
-  // @ts-ignore
   const { count, increment, name } = useServerStore();
   expect(count).toBe(0);
   expect(increment).toBeInstanceOf(Function);
@@ -191,8 +209,6 @@ test('worker', async () => {
         setTimeout(resolve);
       });
     });
-
-    // @ts-ignore
     const { count, increment, name } = useClientStore();
     expect(count).toBe(2);
     expect(increment).toBeInstanceOf(Function);
@@ -230,18 +246,18 @@ describe('Slices', () => {
     const stateFn = jest.fn();
     const getterFn = jest.fn();
     const useStore = create({
-      counter: (set, get, api) =>
+      counter: ((set, get, api) =>
         defineStore(
           'test',
           bindPinia({
             state: () => ({ count: 0 }),
             getters: {
-              double() {
-                return this.count * 2;
+              double: (state) => {
+                return state.count * 2;
               }
             },
             actions: {
-              increment(state) {
+              increment() {
                 this.count += 1;
                 stateFn(
                   get().counter.count,
@@ -256,10 +272,18 @@ describe('Slices', () => {
               }
             }
           })
-        )
+        ) as any) as Slices<
+        {
+          counter: {
+            name: string;
+            count: number;
+            readonly double: number;
+            increment: () => void;
+          };
+        },
+        'counter'
+      >
     });
-    // TODO: fix this
-    // @ts-ignore
     const { count, increment, name } = useStore().counter;
     expect(count).toBe(0);
     expect(increment).toBeInstanceOf(Function);
@@ -276,7 +300,6 @@ describe('Slices', () => {
 `);
     const fn = jest.fn();
     useStore.subscribe(fn);
-    // @ts-ignore
     useStore.getState().counter.increment();
     expect(useStore.getState()).toMatchInlineSnapshot(`
 {
@@ -303,15 +326,27 @@ describe('Slices', () => {
   test('worker', async () => {
     const ports = mockPorts();
     const serverTransport = createTransport('WorkerInternal', ports.main);
-    const clientTransport = createTransport('WorkerMain', ports.create());
+    const clientTransport = createTransport(
+      'WorkerMain',
+      ports.create() as WorkerMainTransportOptions
+    );
 
-    const counter = () =>
+    const counter: Slices<
+      {
+        counter: {
+          name: string;
+          count: number;
+          increment: () => void;
+        };
+      },
+      'counter'
+    > = (() =>
       defineStore(
         'test',
         bindPinia({
           state: () => ({ count: 0 }),
           getters: {
-            double() {
+            double(state) {
               return this.count * 2;
             }
           },
@@ -321,7 +356,7 @@ describe('Slices', () => {
             }
           }
         })
-      );
+      )) as any;
     const useServerStore = create(
       { counter },
       {
@@ -329,8 +364,6 @@ describe('Slices', () => {
         workerType: 'WorkerInternal'
       }
     );
-    // TODO: fix this
-    // @ts-ignore
     const { count, increment, name } = useServerStore().counter;
     expect(count).toBe(0);
     expect(increment).toBeInstanceOf(Function);
@@ -370,8 +403,6 @@ describe('Slices', () => {
           setTimeout(resolve);
         });
       });
-
-      // @ts-ignore
       const { count, increment, name } = useClientStore().counter;
       expect(count).toBe(2);
       expect(increment).toBeInstanceOf(Function);
