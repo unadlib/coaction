@@ -45,9 +45,9 @@
 ### TODOs
 
 - [ ] Fix @coaction/pinia type issue
-- [ ] Fix @coaction/pinia name checker
-- [ ] computed properties
+- [x] Fix @coaction/pinia name checker
 - [ ] refactor name properties
+- [ ] computed properties
 - [ ] multi-transport
 - [ ] Undo/Redo
 - [x] Fix @coaction/mobx type issue
