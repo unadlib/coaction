@@ -44,10 +44,10 @@
 
 ### TODOs
 
+- [ ] refactor name properties
 - [ ] Fix @coaction/pinia type issue
 - [x] Fix @coaction/pinia name checker
-- [ ] refactor name properties
-- [ ] computed properties
+- [ ] computed properties in @coaction/react
 - [ ] multi-transport
 - [ ] Undo/Redo
 - [x] Fix @coaction/mobx type issue
