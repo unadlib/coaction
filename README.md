@@ -36,13 +36,45 @@ npm install coaction
 
 ### Basic Usage
 
+#### Base Store
+
+```tsx
+import { create } from 'coaction';
+
+const useStore = create((set) => ({
+  count: 0,
+  get countSquared() {
+    return this.count ** 2;
+  },
+  increment() {
+    set(() => {
+      this.count += 1;
+    });
+  }
+}));
+
+const CounterComponent = () => {
+  const store = useStore();
+  return (
+    <div>
+      <p>Count: {store.count}</p>
+      <button onClick={store.increment}>Increment</button>
+      <button onClick={store.decrement}>Decrement</button>
+    </div>
+  );
+};
+```
+
+#### Worker Store
+
+`store.js`:
+
 ```ts
 import { create } from 'coaction';
 
 const useStore = create((set) => ({
   name: 'counter',
   count: 0,
-  // computed properties
   get countSquared() {
     return this.count ** 2;
   },
@@ -111,8 +143,6 @@ const useStore = create({
 ```
 
 ```tsx
-import { useStore } from './store';
-
 const worker = new Worker(new URL('./store.js', import.meta.url));
 const useWorkerStore = useStore({
   name: 'WorkerCounter',
@@ -120,23 +150,13 @@ const useWorkerStore = useStore({
 });
 
 const CounterComponent = () => {
-  const { counter: store } = useStore();
-  const { counter: workerStore } = useWorkerStore();
-
-  useEffect(
-    () => useWorkerStore.subscribe(() => useWorkerStore.count, console.log),
-    []
-  );
+  const workerStore = useWorkerStore();
 
   return (
     <div>
-      <p>Count: {store.count}</p>
-      <button onClick={store.increment}>Increment</button>
-      <button onClick={store.decrement}>Decrement</button>
-
       <p>Count in Worker: {workerStore.count}</p>
-      <button onClick={workerStore.increment}>Increment</button>
-      <button onClick={workerStore.decrement}>Decrement</button>
+      <button onClick={workerStore.counter.increment}>Increment</button>
+      <button onClick={workerStore.counter.decrement}>Decrement</button>
     </div>
   );
 };
