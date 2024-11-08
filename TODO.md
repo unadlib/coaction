@@ -44,8 +44,8 @@
 
 ### TODOs
 
-- [ ] refactor name properties
-- [ ] Fix @coaction/pinia type issue
+- [x] refactor name properties
+- [x] Fix @coaction/pinia type issue
 - [x] Fix @coaction/pinia name checker
 - [ ] computed properties in @coaction/react
 - [ ] multi-transport
