@@ -20,8 +20,7 @@ import type {
   TransportOptions,
   AsyncStoreOption
 } from './interface';
-
-const bindSymbol = Symbol('bind');
+import { bindSymbol } from './constant';
 
 export function createBinder<F = (...args: any[]) => any>({
   handleState,
@@ -50,16 +49,16 @@ export function createBinder<F = (...args: any[]) => any>({
    * handleStore is a function to handle the store object.
    */
   handleStore: (api: Store<object>, rawState: object, state: object) => void;
-}): F {
+}) {
   return (<T extends object>(state: T): T => {
     const { copyState, key, bind } = handleState(state);
-    const value = key ? copyState[key] : copyState;
-    (value as any)[bindSymbol] = {
+    const value: any = key ? copyState[key] : copyState;
+    value[bindSymbol] = {
       handleStore,
       bind
     };
     return copyState;
-  }) as any;
+  }) as F;
 }
 
 const workerType = globalThis.SharedWorkerGlobalScope
