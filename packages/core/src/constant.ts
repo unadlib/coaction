@@ -1,1 +1,1 @@
-export const MUTABLE = Symbol('mutable');
+export const bindSymbol = Symbol('bind');
