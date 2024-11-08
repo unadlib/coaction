@@ -77,7 +77,7 @@ function create<T extends Record<string, Slice<any>>>(
 ): StoreReturn<SliceState<T>, true>;
 function create<T extends { name?: string }>(
   createState: any,
-  options: any = {}
+  options: StoreOptions = {}
 ): any {
   const _workerType = (options.workerType ?? workerType) as typeof workerType;
   const createApi = ({
@@ -92,7 +92,8 @@ function create<T extends { name?: string }>(
     let finalizeDraft: () => [T, Patches, Patches];
     let mutableInstance: any;
     let api: Store<any>;
-    let name: string;
+    // TODO: consider to remove this, about name property should be required.
+    const name = options.id ?? 'default';
     let transport: Transport<{
       emit: InternalEvents;
       listen: ExternalEvents;
@@ -246,6 +247,7 @@ function create<T extends { name?: string }>(
       transport?.dispose();
     };
     api = {
+      id: name,
       share,
       setState,
       getState,
@@ -273,16 +275,13 @@ function create<T extends { name?: string }>(
     };
     const initialState = api.isSliceStore
       ? Object.entries(createState).reduce(
-          (stateTree, [key, value]) => {
-            const state = key === 'name' ? value : makeState(value as Slice<T>);
-            Object.assign(stateTree, { [key]: state });
-            return stateTree;
-          },
+          (stateTree, [key, value]) =>
+            Object.assign(stateTree, { [key]: makeState(value as Slice<T>) }),
           {} as ISlices<Slice<T>>
         )
       : makeState(createState as Slice<T>);
     const rawState = {} as any;
-    const handle = (_rawState: any, _initialState: any, _key?: string) => {
+    const handle = (_rawState: any, _initialState: any, sliceKey?: string) => {
       mutableInstance = api.toRaw?.(_initialState);
       console.log('_initialState', _initialState);
       const descriptors = Object.getOwnPropertyDescriptors(_initialState);
@@ -301,24 +300,22 @@ function create<T extends { name?: string }>(
               _rawState[key] = descriptor.value;
             }
             // handle state property
-            if (key !== 'name') {
-              delete descriptor.value;
-              delete descriptor.writable;
-              if (_key) {
-                descriptor.get = () => (rootState as any)[_key][key];
-                descriptor.set = (value: any) => {
-                  (rootState as any)[_key][key] = value;
-                };
-              } else {
-                descriptor.get = () => (rootState as any)[key];
-                descriptor.set = (value: any) => {
-                  (rootState as any)[key] = value;
-                };
-              }
+            delete descriptor.value;
+            delete descriptor.writable;
+            if (sliceKey) {
+              descriptor.get = () => (rootState as any)[sliceKey][key];
+              descriptor.set = (value: any) => {
+                (rootState as any)[sliceKey][key] = value;
+              };
+            } else {
+              descriptor.get = () => (rootState as any)[key];
+              descriptor.set = (value: any) => {
+                (rootState as any)[key] = value;
+              };
             }
           } else if (share === 'client') {
             descriptor.value = (...args: any[]) => {
-              const keys = _key ? [_key, key] : [key];
+              const keys = sliceKey ? [sliceKey, key] : [key];
               console.log('execute', { keys, args });
               return api.transport!.emit('execute', keys, args);
             };
@@ -364,7 +361,7 @@ function create<T extends { name?: string }>(
                 finalizeDraft = finalize;
                 rootState = draft as any;
                 result = fn.apply(
-                  _key ? api.getState()[_key] : api.getState(),
+                  sliceKey ? api.getState()[sliceKey] : api.getState(),
                   args
                 );
                 if (result instanceof Promise) {
@@ -381,13 +378,13 @@ function create<T extends { name?: string }>(
               if (mutableInstance && api.act) {
                 return api.act(() => {
                   return fn.apply(
-                    _key ? api.getState()[_key] : api.getState(),
+                    sliceKey ? api.getState()[sliceKey] : api.getState(),
                     args
                   );
                 });
               }
               return fn.apply(
-                _key ? api.getState()[_key] : api.getState(),
+                sliceKey ? api.getState()[sliceKey] : api.getState(),
                 args
               );
             };
@@ -402,23 +399,19 @@ function create<T extends { name?: string }>(
     if (api.isSliceStore) {
       module = {} as T;
       Object.entries(initialState).forEach(([key, value]) => {
-        rawState[key] = key === 'name' ? value : {};
-        (module as any)[key] =
-          key === 'name' ? value : handle(rawState[key], value, key);
+        rawState[key] = {};
+        (module as any)[key] = handle(rawState[key], value, key);
       });
     } else {
       module = handle(rawState, initialState);
     }
-    // TODO: consider to remove this, about name property should be required.
-    name = module.name ?? 'default';
-    module.name = name;
     rootState = rawState;
     // in worker, the transport is the worker itself
     transport =
       options.transport ??
       (_workerType
         ? createTransport(_workerType, {
-            prefix: module.name
+            prefix: name
           })
         : null);
     transport?.listen('execute', async (keys, args) => {
@@ -472,7 +465,7 @@ function create<T extends { name?: string }>(
             : 'WorkerMain',
           {
             worker: (option as WorkerOptions).worker as SharedWorker,
-            prefix: _api.getState().name
+            prefix: _api.name
           }
         )
       : (option as TransportOptions).transport;

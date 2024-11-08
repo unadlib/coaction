@@ -26,10 +26,13 @@ test('pinia', () => {
   setActivePinia(pinia);
   const store = useCounterStore();
   expect(store.count).toBe(0);
+  expect(store.doubleCount).toBe(0);
   store.increment();
+  expect(store.count).toBe(1);
+  expect(store.doubleCount).toBe(2);
   store.$state.count = 10;
   expect(store.count).toBe(10);
-  expect(store.doubleCount).toBe(10);
+  expect(store.doubleCount).toBe(20);
 });
 
 test('base', () => {
@@ -39,7 +42,6 @@ test('base', () => {
     count: number;
     readonly double: number;
     increment: () => void;
-    name: string;
   }>(
     (set, get, api) =>
       defineStore(
@@ -57,17 +59,20 @@ test('base', () => {
             }
           }
         })
-      ) as any
+      ) as any,
+    {
+      id: 'test'
+    }
   );
-  const { count, increment, name } = useStore();
+  const { count, increment } = useStore();
   expect(count).toBe(0);
   expect(increment).toBeInstanceOf(Function);
-  expect(name).toBe('test');
+  expect(useStore.id).toBe('test');
   expect(useStore.getState()).toMatchInlineSnapshot(`
 {
   "count": 0,
   "increment": [Function],
-  "name": "test",
+  "name": undefined,
 }
 `);
   const fn = jest.fn();
@@ -95,7 +100,7 @@ test('base', () => {
 {
   "count": 1,
   "increment": [Function],
-  "name": "test",
+  "name": undefined,
 }
 `);
   increment();
@@ -131,7 +136,7 @@ test('base', () => {
 {
   "count": 2,
   "increment": [Function],
-  "name": "test",
+  "name": undefined,
 }
 `);
 });
@@ -145,7 +150,6 @@ test('worker', async () => {
   );
 
   const counter: Slice<{
-    name: string;
     count: number;
     increment: () => void;
   }> = () =>
@@ -167,17 +171,18 @@ test('worker', async () => {
     ) as any;
   const useServerStore = create(counter, {
     transport: serverTransport,
-    workerType: 'WorkerInternal'
+    workerType: 'WorkerInternal',
+    id: 'test'
   });
-  const { count, increment, name } = useServerStore();
+  const { count, increment } = useServerStore();
   expect(count).toBe(0);
   expect(increment).toBeInstanceOf(Function);
-  expect(name).toBe('test');
+  expect(useServerStore.id).toBe('test');
   expect(useServerStore.getState()).toMatchInlineSnapshot(`
 {
   "count": 0,
   "increment": [Function],
-  "name": "test",
+  "name": undefined,
 }
 `);
   const fn = jest.fn();
@@ -187,7 +192,7 @@ test('worker', async () => {
 {
   "count": 1,
   "increment": [Function],
-  "name": "test",
+  "name": undefined,
 }
 `);
   increment();
@@ -195,11 +200,13 @@ test('worker', async () => {
 {
   "count": 2,
   "increment": [Function],
-  "name": "test",
+  "name": undefined,
 }
 `);
   {
-    const useClientStore = create(counter)({
+    const useClientStore = create(counter, {
+      id: 'test'
+    })({
       transport: clientTransport,
       workerType: 'WorkerMain'
     });
@@ -209,15 +216,15 @@ test('worker', async () => {
         setTimeout(resolve);
       });
     });
-    const { count, increment, name } = useClientStore();
+    const { count, increment } = useClientStore();
     expect(count).toBe(2);
     expect(increment).toBeInstanceOf(Function);
-    expect(name).toBe('test');
+    expect(useClientStore.id).toBe('test');
     expect(useClientStore.getState()).toMatchInlineSnapshot(`
 {
   "count": 2,
   "increment": [Function],
-  "name": "test",
+  "name": undefined,
 }
 `);
     const fn = jest.fn();
@@ -227,7 +234,7 @@ test('worker', async () => {
 {
   "count": 3,
   "increment": [Function],
-  "name": "test",
+  "name": undefined,
 }
 `);
     increment();
@@ -235,7 +242,7 @@ test('worker', async () => {
 {
   "count": 4,
   "increment": [Function],
-  "name": "test",
+  "name": undefined,
 }
 `);
   }
@@ -245,57 +252,60 @@ describe('Slices', () => {
   test('base', () => {
     const stateFn = jest.fn();
     const getterFn = jest.fn();
-    const useStore = create({
-      counter: ((set, get, api) =>
-        defineStore(
-          'test',
-          bindPinia({
-            state: () => ({ count: 0 }),
-            getters: {
-              double: (state) => {
-                return state.count * 2;
+    const useStore = create(
+      {
+        counter: ((set, get, api) =>
+          defineStore(
+            'test',
+            bindPinia({
+              state: () => ({ count: 0 }),
+              getters: {
+                double: (state) => {
+                  return state.count * 2;
+                }
+              },
+              actions: {
+                increment() {
+                  this.count += 1;
+                  stateFn(
+                    get().counter.count,
+                    api.getState().counter.count,
+                    this.count
+                  );
+                  getterFn(
+                    get().counter.double,
+                    api.getState().counter.double,
+                    this.double
+                  );
+                }
               }
-            },
-            actions: {
-              increment() {
-                this.count += 1;
-                stateFn(
-                  get().counter.count,
-                  api.getState().counter.count,
-                  this.count
-                );
-                getterFn(
-                  get().counter.double,
-                  api.getState().counter.double,
-                  this.double
-                );
-              }
-            }
-          })
-        ) as any) as Slices<
-        {
-          counter: {
-            name: string;
-            count: number;
-            readonly double: number;
-            increment: () => void;
-          };
-        },
-        'counter'
-      >
-    });
-    const { count, increment, name } = useStore().counter;
+            })
+          ) as any) as Slices<
+          {
+            counter: {
+              count: number;
+              readonly double: number;
+              increment: () => void;
+            };
+          },
+          'counter'
+        >
+      },
+      {
+        id: 'test'
+      }
+    );
+    const { count, increment } = useStore().counter;
     expect(count).toBe(0);
     expect(increment).toBeInstanceOf(Function);
-    expect(name).toBe('test');
+    expect(useStore.id).toBe('test');
     expect(useStore.getState()).toMatchInlineSnapshot(`
 {
   "counter": {
     "count": 0,
     "increment": [Function],
-    "name": "test",
+    "name": undefined,
   },
-  "name": "default",
 }
 `);
     const fn = jest.fn();
@@ -306,9 +316,8 @@ describe('Slices', () => {
   "counter": {
     "count": 1,
     "increment": [Function],
-    "name": "test",
+    "name": undefined,
   },
-  "name": "default",
 }
 `);
     increment();
@@ -317,9 +326,8 @@ describe('Slices', () => {
   "counter": {
     "count": 2,
     "increment": [Function],
-    "name": "test",
+    "name": undefined,
   },
-  "name": "default",
 }
 `);
   });
@@ -334,7 +342,6 @@ describe('Slices', () => {
     const counter: Slices<
       {
         counter: {
-          name: string;
           count: number;
           increment: () => void;
         };
@@ -360,21 +367,22 @@ describe('Slices', () => {
     const useServerStore = create(
       { counter },
       {
+        id: 'test',
         transport: serverTransport,
         workerType: 'WorkerInternal'
       }
     );
-    const { count, increment, name } = useServerStore().counter;
+    const { count, increment } = useServerStore().counter;
     expect(count).toBe(0);
     expect(increment).toBeInstanceOf(Function);
-    expect(name).toBe('test');
+    expect(useServerStore.id).toBe('test');
     expect(useServerStore.getState().counter).toMatchInlineSnapshot(`
-  {
-    "count": 0,
-    "increment": [Function],
-    "name": "test",
-  }
-  `);
+{
+  "count": 0,
+  "increment": [Function],
+  "name": undefined,
+}
+`);
     const fn = jest.fn();
     useServerStore.subscribe(fn);
     useServerStore.getState().counter.increment();
@@ -382,7 +390,7 @@ describe('Slices', () => {
 {
   "count": 1,
   "increment": [Function],
-  "name": "test",
+  "name": undefined,
 }
 `);
     increment();
@@ -390,11 +398,16 @@ describe('Slices', () => {
 {
   "count": 2,
   "increment": [Function],
-  "name": "test",
+  "name": undefined,
 }
 `);
     {
-      const useClientStore = create({ counter })({
+      const useClientStore = create(
+        { counter },
+        {
+          id: 'test'
+        }
+      )({
         transport: clientTransport,
         workerType: 'WorkerMain'
       });
@@ -403,18 +416,17 @@ describe('Slices', () => {
           setTimeout(resolve);
         });
       });
-      const { count, increment, name } = useClientStore().counter;
+      const { count, increment } = useClientStore().counter;
       expect(count).toBe(2);
       expect(increment).toBeInstanceOf(Function);
-      expect(name).toBe('test');
+      expect(useClientStore.id).toBe('test');
       expect(useClientStore.getState()).toMatchInlineSnapshot(`
 {
   "counter": {
     "count": 2,
     "increment": [Function],
-    "name": "test",
+    "name": undefined,
   },
-  "name": "default",
 }
 `);
       const fn = jest.fn();
@@ -424,7 +436,7 @@ describe('Slices', () => {
 {
   "count": 3,
   "increment": [Function],
-  "name": "test",
+  "name": undefined,
 }
 `);
       increment();
@@ -432,7 +444,7 @@ describe('Slices', () => {
 {
   "count": 4,
   "increment": [Function],
-  "name": "test",
+  "name": undefined,
 }
 `);
     }

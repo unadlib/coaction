@@ -11,7 +11,6 @@ type StoreWithSubscriptions = Store<object> & {
   _destroyers?: Set<() => void>;
 };
 
-// TODO: fix defineStore same name
 const handleStore = (api: StoreWithSubscriptions, state: any) => {
   if (!api.toRaw) {
     api.toRaw = (key: any) => instancesMap.get(key);

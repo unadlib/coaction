@@ -1,16 +1,15 @@
 import type { Transport } from 'data-transport';
 import type { Draft, Patches } from 'mutative';
 
-export type ISlices<T = any> = {
-  /**
-   * The name of the store.
-   */
-  name?: string;
-} & Record<string, T>;
+export type ISlices<T = any> = Record<string, T>;
 
 export type Listener = () => void;
 
 export interface Store<T extends ISlices> {
+  /**
+   * The id of the store.
+   */
+  id: string;
   /**
    * Set the next state.
    */
@@ -159,11 +158,18 @@ export type SliceState<T extends Record<string, Slice<any>>> = {
 };
 
 export type StoreOptions = {
+  /**
+   * The id of the store.
+   */
+  id?: string;
   // TODO: remove this, it's only used in test
   transport?: Transport;
   // TODO: remove this, it's only used in test
   workerType?: 'SharedWorkerInternal' | 'WorkerInternal';
   middlewares?: Middlewares[];
+  /**
+   * enable patches
+   */
   enablePatches?: boolean;
 };
 
