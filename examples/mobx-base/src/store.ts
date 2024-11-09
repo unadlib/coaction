@@ -17,16 +17,12 @@ export const useStore = create(
             console.log('count', this.count, this.double);
           },
           async increment() {
-            // this.count += 1;
-            // this.a();
             set(() => {
               this.a();
             });
             set(() => {
               this.count += 1;
             });
-            // await new Promise((resolve) => setTimeout(resolve, 1000));
-            // this.count += 1;
             set(() => {
               this.count += 1;
             });
@@ -34,11 +30,8 @@ export const useStore = create(
               this.a();
             });
             set((state) => {
-              // console.log('state', state);
-              // debugger;
               state.counter.a();
             });
-            // this.a();
           }
         })
       )
@@ -47,8 +40,3 @@ export const useStore = create(
     enablePatches: true
   }
 );
-// @ts-ignore
-globalThis.useStore = useStore;
-
-// @ts-ignore
-globalThis.WorkerGlobalScope && console.log('store', globalThis.name ?? 'main');

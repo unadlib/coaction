@@ -10,7 +10,10 @@
       "packages/!(coaction-dev)"
     ],
     "globals": {
-      "react": "React"
+      "react": "React",
+      "mutative": "Mutative",
+      "mobx": "Mobx",
+      "pinia": "Pinia"
     },
     "exports": {
       "importConditionDefaultExport": "default"

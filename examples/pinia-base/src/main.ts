@@ -10,8 +10,10 @@ const worker = new SharedWorker(new URL('./store.ts', import.meta.url), {
 const useWorkerStore = useStore({
   worker
 });
-// @ts-ignore
+
 globalThis.useWorkerStore = useWorkerStore;
+
+globalThis.useStore = useStore;
 
 const app = createApp(App);
 
