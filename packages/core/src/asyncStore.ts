@@ -9,7 +9,7 @@ import type {
 } from './interface';
 
 export const createAsyncStore = (
-  createStore: ({ share }?: { share?: 'client' | 'main' }) => Store<any>,
+  createStore: (options: { share?: 'client' | 'main' }) => Store<any>,
   asyncStoreOption: AsyncStoreOption
 ) => {
   const asyncStore = createStore({
@@ -46,7 +46,7 @@ export const createAsyncStore = (
     console.log('fullSync');
     const latest = await transport.emit('fullSync');
     console.log('fullSync', latest);
-    asyncStore.apply(JSON.parse(latest.state) as T);
+    asyncStore.apply(JSON.parse(latest.state));
     _sequence = latest.sequence;
   };
   // TODO: implement to handle the case for the custom transport connects

@@ -16,8 +16,6 @@ import type {
   Store,
   StoreOptions,
   StoreReturn,
-  WorkerOptions,
-  TransportOptions,
   AsyncStoreOption
 } from './interface';
 import { bindSymbol } from './constant';
@@ -81,11 +79,7 @@ function create<T extends { name?: string }>(
   options: StoreOptions = {}
 ): any {
   const _workerType = (options.workerType ?? workerType) as typeof workerType;
-  const createStore = ({
-    share
-  }: {
-    share?: 'client' | 'main';
-  } = {}) => {
+  const createStore = ({ share }: { share?: 'client' | 'main' }) => {
     let module: T;
     let rootState: T | Draft<T>;
     let backupState: T | Draft<T>;
@@ -407,31 +401,31 @@ function create<T extends { name?: string }>(
             prefix: name
           })
         : null);
-    transport?.listen('execute', async (keys, args) => {
-      console.log('execute', { keys, args });
-      let base = store.getState();
-      let obj = base;
-      for (const key of keys) {
-        base = base[key];
-        if (typeof base === 'function') {
-          base = base.bind(obj);
-        }
-        obj = base;
-      }
-      return base(...args);
-    });
-    transport?.listen('fullSync', async () => {
-      console.log('fullSync', rootState);
-      return {
-        state: JSON.stringify(rootState),
-        sequence
-      };
-    });
     if (transport) {
+      if (options.enablePatches === false) {
+        throw new Error(`enablePatches: true is required for the transport`);
+      }
+      transport.listen('execute', async (keys, args) => {
+        console.log('execute', { keys, args });
+        let base = store.getState();
+        let obj = base;
+        for (const key of keys) {
+          base = base[key];
+          if (typeof base === 'function') {
+            base = base.bind(obj);
+          }
+          obj = base;
+        }
+        return base(...args);
+      });
+      transport.listen('fullSync', async () => {
+        console.log('fullSync', rootState);
+        return {
+          state: JSON.stringify(rootState),
+          sequence
+        };
+      });
       store.transport = transport;
-    }
-    if (store.transport && options.enablePatches === false) {
-      throw new Error(`enablePatches: true is required for the transport`);
     }
     return store;
   };
