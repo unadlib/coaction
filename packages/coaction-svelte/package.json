@@ -14,6 +14,7 @@
   "license": "MIT",
   "main": "dist/coaction-svelte.cjs.js",
   "module": "dist/coaction-svelte.esm.js",
+  "umd:main": "dist/coaction-svelte.umd.min.js",
   "exports": {
     ".": {
       "types": {
