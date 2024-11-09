@@ -18,12 +18,10 @@ export const useStore = create({
           // since we rely on `this`, we cannot use an arrow function
           increment() {
             set(() => {
-              // @ts-ignore
               this.count++;
             });
 
             set(() => {
-              // @ts-ignore
               this.count++;
             });
           }
@@ -31,6 +29,3 @@ export const useStore = create({
       })
     )
 });
-
-// @ts-ignore
-globalThis.useStore = useStore;

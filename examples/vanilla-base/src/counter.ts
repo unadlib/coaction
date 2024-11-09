@@ -1,7 +1,5 @@
 import { useStore } from './store';
 
-// const { increment } = useStore();
-
 const worker = new SharedWorker(new URL('./store.ts', import.meta.url), {
   type: 'module'
 });
@@ -12,8 +10,9 @@ const useWorkerStore = useStore({
 
 console.log('create');
 
-// @ts-ignore
 globalThis.useWorkerStore = useWorkerStore;
+
+globalThis.useStore = useStore;
 
 export function setupCounter(element: HTMLButtonElement) {
   const useStore = useWorkerStore;

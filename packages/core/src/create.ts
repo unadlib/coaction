@@ -434,6 +434,9 @@ function create<T extends { name?: string }>(
   });
   return Object.assign((asyncStoreOption: AsyncStoreOption) => {
     if (!asyncStoreOption) return store.getState();
+    if (options.enablePatches === false) {
+      throw new Error(`enablePatches: true is required for the async store`);
+    }
     return createAsyncStore(createStore, asyncStoreOption);
   }, store);
 }
