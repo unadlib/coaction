@@ -47,6 +47,7 @@
 - [x] refactor name properties
 - [x] Fix @coaction/pinia type issue
 - [x] Fix @coaction/pinia name checker
+- [ ] handle error proxy action
 - [ ] Middleware Support
 - [ ] computed properties in @coaction/react
 - [ ] multi-transport
