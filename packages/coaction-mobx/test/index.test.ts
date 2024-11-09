@@ -38,7 +38,7 @@ test('base', () => {
     readonly double: number;
     increment: () => void;
   }>(
-    (set, get, api) =>
+    (set, get, store) =>
       makeAutoObservable(
         bindMobx({
           count: 0,
@@ -47,8 +47,8 @@ test('base', () => {
           },
           increment() {
             this.count += 1;
-            stateFn(get().count, api.getState().count, this.count);
-            getterFn(get().double, api.getState().double, this.double);
+            stateFn(get().count, store.getState().count, this.count);
+            getterFn(get().double, store.getState().double, this.double);
           }
         })
       ),
@@ -401,7 +401,7 @@ describe('Slices', () => {
     const getterFn = jest.fn();
     const useStore = create(
       {
-        counter: ((set, get, api) =>
+        counter: ((set, get, store) =>
           makeAutoObservable(
             bindMobx({
               count: 0,
@@ -412,12 +412,12 @@ describe('Slices', () => {
                 this.count += 1;
                 stateFn(
                   get().counter.count,
-                  api.getState().counter.count,
+                  store.getState().counter.count,
                   this.count
                 );
                 getterFn(
                   get().counter.double,
-                  api.getState().counter.double,
+                  store.getState().counter.double,
                   this.double
                 );
               }
