@@ -3,6 +3,10 @@ import type { Draft, Patches } from 'mutative';
 
 export type ISlices<T = any> = Record<string, T>;
 
+export type DeepPartial<T> = {
+  [K in keyof T]?: T[K] extends object ? DeepPartial<T[K]> : T[K];
+};
+
 export type Listener = () => void;
 
 export interface Store<T extends ISlices> {
@@ -17,7 +21,7 @@ export interface Store<T extends ISlices> {
     /**
      * The next state.
      */
-    next: T | ((draft: Draft<T>) => any) | null,
+    next: DeepPartial<T> | ((draft: Draft<T>) => any) | null,
     /**
      * The updater is used to update the state.
      */
