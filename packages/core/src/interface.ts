@@ -26,7 +26,7 @@ export interface Store<T extends ISlices> {
      * The updater is used to update the state.
      */
     updater?: (
-      next: T | ((draft: Draft<T>) => any) | null
+      next: DeepPartial<T> | ((draft: Draft<T>) => any) | null
     ) => [] | [T, Patches, Patches]
   ) => void;
   /**

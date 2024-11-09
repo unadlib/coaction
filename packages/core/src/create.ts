@@ -80,7 +80,7 @@ function create<T extends { name?: string }>(
   options: StoreOptions = {}
 ): any {
   const _workerType = (options.workerType ?? workerType) as typeof workerType;
-  const createApi = ({
+  const createStore = ({
     share
   }: {
     share?: 'client' | 'main';
@@ -434,12 +434,12 @@ function create<T extends { name?: string }>(
     }
     return api;
   };
-  const api = createApi({
+  const api = createStore({
     share: _workerType || options.transport ? 'main' : undefined
   });
-  return Object.assign((option: AsyncStoreOption) => {
-    if (!option) return api.getState();
-    const _api = createApi({
+  return Object.assign((asyncStoreOption: AsyncStoreOption) => {
+    if (!asyncStoreOption) return api.getState();
+    const _api = createStore({
       share: 'client'
     });
     // the transport is in the worker or shared worker, and the client is in the main thread.
@@ -453,17 +453,17 @@ function create<T extends { name?: string }>(
            */
           onConnect?: (fn: () => void) => void;
         })
-      | undefined = (option as WorkerOptions).worker
+      | undefined = (asyncStoreOption as WorkerOptions).worker
       ? createTransport(
-          (option as WorkerOptions).worker instanceof SharedWorker
+          (asyncStoreOption as WorkerOptions).worker instanceof SharedWorker
             ? 'SharedWorkerClient'
             : 'WorkerMain',
           {
-            worker: (option as WorkerOptions).worker as SharedWorker,
+            worker: (asyncStoreOption as WorkerOptions).worker as SharedWorker,
             prefix: _api.id
           }
         )
-      : (option as TransportOptions).transport;
+      : (asyncStoreOption as TransportOptions).transport;
     if (!transport) {
       throw new Error('transport is required');
     }
