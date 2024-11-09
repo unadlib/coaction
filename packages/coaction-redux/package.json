@@ -16,6 +16,7 @@
   "license": "MIT",
   "main": "dist/coaction-redux.cjs.js",
   "module": "dist/coaction-redux.esm.js",
+  "umd:main": "dist/coaction-redux.umd.min.js",
   "exports": {
     ".": {
       "types": {

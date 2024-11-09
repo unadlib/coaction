@@ -16,6 +16,7 @@
   "license": "MIT",
   "main": "dist/coaction-zustand.cjs.js",
   "module": "dist/coaction-zustand.esm.js",
+  "umd:main": "dist/coaction-zustand.umd.min.js",
   "exports": {
     ".": {
       "types": {

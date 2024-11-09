@@ -18,7 +18,7 @@ import type {
   StoreReturn,
   AsyncStoreOption
 } from './interface';
-import { bindSymbol } from './constant';
+import { bindSymbol, defaultId } from './constant';
 import { createAsyncStore } from './asyncStore';
 
 export function createBinder<F = (...args: any[]) => any>({
@@ -88,7 +88,7 @@ function create<T extends { name?: string }>(
     let mutableInstance: any;
     let store: Store<any>;
     // TODO: consider to remove this, about name property should be required.
-    const name = options.id ?? 'default';
+    const name = options.id ?? defaultId;
     let transport: Transport<{
       emit: InternalEvents;
       listen: ExternalEvents;
