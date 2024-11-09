@@ -7,7 +7,7 @@ import { create } from 'coaction';
 import { bindPinia } from '@coaction/pinia';
 import { defineStore } from 'pinia';
 
-const useStore = create((set, get, api) =>
+const useStore = create(() =>
   defineStore(
     'test',
     bindPinia({

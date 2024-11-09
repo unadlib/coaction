@@ -15,7 +15,7 @@ test('base', () => {
     readonly double: number;
     increment: () => void;
   }>(
-    (set, get, api) =>
+    (set, get, store) =>
       makeAutoObservable(
         bindMobx({
           count: 0,

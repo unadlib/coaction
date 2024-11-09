@@ -3,7 +3,7 @@ import { bindMobx } from '@coaction/mobx';
 import { makeAutoObservable } from 'mobx';
 
 const useStore = create(
-  (set, get, api) =>
+  (set, get, store) =>
     makeAutoObservable(
       bindMobx({
         categories: [] as {

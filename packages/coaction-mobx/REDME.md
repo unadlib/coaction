@@ -7,7 +7,7 @@ import { create } from 'coaction';
 import { bindMobx } from '@coaction/mobx';
 import { makeAutoObservable } from 'mobx';
 
-const useStore = create((set, get, api) =>
+const useStore = create(() =>
   makeAutoObservable(
     bindMobx({
       name: 'test',
