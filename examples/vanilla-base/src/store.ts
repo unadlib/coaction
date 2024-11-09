@@ -1,16 +1,16 @@
 import { create, Slices } from 'coaction';
 
-type Counter = {
-  count: number;
-  increment: () => void;
-};
-
-const counter: Slices<
+type Counter = Slices<
   {
-    counter: Counter;
+    counter: {
+      count: number;
+      increment: () => void;
+    };
   },
   'counter'
-> = (set, get, api) => ({
+>;
+
+const counter: Counter = (set, get, store) => ({
   name: 'test',
   count: 0,
   increment() {
