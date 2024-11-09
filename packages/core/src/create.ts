@@ -193,6 +193,7 @@ function create<T extends { name?: string }>(
           ? api.patch({ patches, inversePatches })
           : { patches, inversePatches };
         if (finalPatches.patches.length) {
+          console.log('ddddd');
           api.apply(rootState, finalPatches.patches);
           if (!mutableInstance) {
             listeners.forEach((listener) => listener());
@@ -465,7 +466,7 @@ function create<T extends { name?: string }>(
             : 'WorkerMain',
           {
             worker: (option as WorkerOptions).worker as SharedWorker,
-            prefix: _api.name
+            prefix: _api.id
           }
         )
       : (option as TransportOptions).transport;
