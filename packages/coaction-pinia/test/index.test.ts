@@ -52,6 +52,11 @@ test('base', () => {
             double: (state) => state.count * 2
           },
           actions: {
+            increment1() {
+              set(() => {
+                this.count += 1;
+              });
+            },
             increment() {
               this.count += 1;
               stateFn(get().count, api.getState().count, this.count);
@@ -72,6 +77,7 @@ test('base', () => {
 {
   "count": 0,
   "increment": [Function],
+  "increment1": [Function],
   "name": undefined,
 }
 `);
@@ -100,6 +106,7 @@ test('base', () => {
 {
   "count": 1,
   "increment": [Function],
+  "increment1": [Function],
   "name": undefined,
 }
 `);
@@ -136,6 +143,45 @@ test('base', () => {
 {
   "count": 2,
   "increment": [Function],
+  "increment1": [Function],
+  "name": undefined,
+}
+`);
+
+  useStore.getState().increment1();
+  expect(stateFn.mock.calls).toMatchInlineSnapshot(`
+[
+  [
+    1,
+    1,
+    1,
+  ],
+  [
+    2,
+    2,
+    2,
+  ],
+]
+`);
+  expect(getterFn.mock.calls).toMatchInlineSnapshot(`
+[
+  [
+    2,
+    2,
+    2,
+  ],
+  [
+    4,
+    4,
+    4,
+  ],
+]
+`);
+  expect(useStore.getState()).toMatchInlineSnapshot(`
+{
+  "count": 3,
+  "increment": [Function],
+  "increment1": [Function],
   "name": undefined,
 }
 `);

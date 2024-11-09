@@ -1,4 +1,9 @@
-import { create, type Slices } from '../src';
+import {
+  createTransport,
+  mockPorts,
+  WorkerMainTransportOptions
+} from 'data-transport';
+import { create, type Slice, type Slices } from '../src';
 
 const spyMiddleware = (initializer, spy) => (set, get, store) => {
   spy(store);
@@ -164,6 +169,37 @@ test('base', () => {
   "increment": [Function],
 }
 `);
+});
+
+test('worker', async () => {
+  const ports = mockPorts();
+  const serverTransport = createTransport('WorkerInternal', ports.main);
+  const clientTransport = createTransport(
+    'WorkerMain',
+    ports.create() as WorkerMainTransportOptions
+  );
+
+  const counter: Slice<{
+    count: number;
+    increment: () => void;
+  }> = (set) => ({
+    count: 0,
+    increment() {
+      set((draft) => {
+        draft.count += 1;
+      });
+    }
+  });
+  expect(() => {
+    const useServerStore = create(counter, {
+      transport: serverTransport,
+      workerType: 'WorkerInternal',
+      id: 'test',
+      enablePatches: false
+    });
+  }).toThrowErrorMatchingInlineSnapshot(
+    `"enablePatches: true is required for the transport"`
+  );
 });
 
 describe('Slices', () => {

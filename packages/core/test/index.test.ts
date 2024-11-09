@@ -247,6 +247,69 @@ test('worker', async () => {
   }
 });
 
+test('worker without transport', async () => {
+  const ports = mockPorts();
+  const serverTransport = createTransport('WorkerInternal', ports.main);
+  const clientTransport = createTransport(
+    'WorkerMain',
+    ports.create() as WorkerMainTransportOptions
+  );
+
+  const counter: Slice<{
+    count: number;
+    increment: () => void;
+  }> = (set) => ({
+    count: 0,
+    increment() {
+      set((draft) => {
+        draft.count += 1;
+      });
+    }
+  });
+  const useServerStore = create(counter, {
+    transport: serverTransport,
+    workerType: 'WorkerInternal',
+    id: 'test'
+  });
+  const { count, increment } = useServerStore();
+  expect(count).toBe(0);
+  expect(increment).toBeInstanceOf(Function);
+  expect(useServerStore.id).toBe('test');
+  expect(useServerStore.getState()).toMatchInlineSnapshot(`
+{
+  "count": 0,
+  "increment": [Function],
+}
+`);
+  const fn = jest.fn();
+  useServerStore.subscribe(fn);
+  useServerStore.getState().increment();
+  expect(useServerStore.getState()).toMatchInlineSnapshot(`
+{
+  "count": 1,
+  "increment": [Function],
+}
+`);
+  increment();
+  expect(useServerStore.getState()).toMatchInlineSnapshot(`
+{
+  "count": 2,
+  "increment": [Function],
+}
+`);
+  {
+    const useStore = create(counter, {
+      id: 'test'
+    });
+    expect(() => {
+      const useClientStore = useStore({
+        // transport: clientTransport,
+        workerType: 'WorkerMain'
+      });
+    }).toThrowErrorMatchingInlineSnapshot(`"transport is required"`);
+  }
+});
+
 describe('Slices', () => {
   test('base', () => {
     const stateFn = jest.fn();

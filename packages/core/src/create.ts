@@ -167,10 +167,6 @@ function create<T extends { name?: string }>(
           listeners.forEach((listener) => listener());
           return [];
         }
-        if (api.transport && options.enablePatches === false) {
-          // TODO: dev warning
-          console.warn(`enablePatches is required for the transport`);
-        }
         backupState = rootState;
         const [, patches, inversePatches] = createWithMutative(
           rootState as T,
@@ -432,6 +428,9 @@ function create<T extends { name?: string }>(
     });
     if (transport) {
       api.transport = transport;
+    }
+    if (api.transport && options.enablePatches === false) {
+      throw new Error(`enablePatches: true is required for the transport`);
     }
     return api;
   };

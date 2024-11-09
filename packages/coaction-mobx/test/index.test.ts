@@ -144,12 +144,40 @@ test('worker', async () => {
   const counter: Slice<{
     count: number;
     increment: () => void;
-  }> = () =>
+    increment2: () => void;
+    increment3: () => void;
+    increment1: () => Promise<void>;
+  }> = (set) =>
     makeAutoObservable(
       bindMobx({
         count: 0,
         increment() {
           this.count += 1;
+        },
+        increment2() {
+          this.count += 1;
+        },
+        async increment1() {
+          this.count += 1;
+          set(() => {
+            this.count += 1;
+          });
+          this.count += 1;
+          set({
+            count: this.count + 1
+          });
+          this.increment2();
+        },
+        increment3() {
+          this.count += 1;
+          set(() => {
+            this.count += 1;
+          });
+          this.count += 1;
+          set({
+            count: this.count + 1
+          });
+          this.increment2();
         }
       })
     );
@@ -166,6 +194,9 @@ test('worker', async () => {
 {
   "count": 0,
   "increment": [Function],
+  "increment1": [Function],
+  "increment2": [Function],
+  "increment3": [Function],
 }
 `);
   const fn = jest.fn();
@@ -175,6 +206,9 @@ test('worker', async () => {
 {
   "count": 1,
   "increment": [Function],
+  "increment1": [Function],
+  "increment2": [Function],
+  "increment3": [Function],
 }
 `);
   increment();
@@ -182,6 +216,9 @@ test('worker', async () => {
 {
   "count": 2,
   "increment": [Function],
+  "increment1": [Function],
+  "increment2": [Function],
+  "increment3": [Function],
 }
 `);
   {
@@ -205,22 +242,53 @@ test('worker', async () => {
 {
   "count": 2,
   "increment": [Function],
+  "increment1": [Function],
+  "increment2": [Function],
+  "increment3": [Function],
 }
 `);
     const fn = jest.fn();
     useClientStore.subscribe(fn);
-    useClientStore.getState().increment();
+    await useClientStore.getState().increment();
     expect(useClientStore.getState()).toMatchInlineSnapshot(`
 {
   "count": 3,
   "increment": [Function],
+  "increment1": [Function],
+  "increment2": [Function],
+  "increment3": [Function],
 }
 `);
-    increment();
+    await increment();
     expect(useClientStore.getState()).toMatchInlineSnapshot(`
 {
   "count": 4,
   "increment": [Function],
+  "increment1": [Function],
+  "increment2": [Function],
+  "increment3": [Function],
+}
+`);
+
+    await useClientStore.getState().increment1();
+    expect(useClientStore.getState()).toMatchInlineSnapshot(`
+{
+  "count": 9,
+  "increment": [Function],
+  "increment1": [Function],
+  "increment2": [Function],
+  "increment3": [Function],
+}
+`);
+
+    await useClientStore.getState().increment3();
+    expect(useClientStore.getState()).toMatchInlineSnapshot(`
+{
+  "count": 14,
+  "increment": [Function],
+  "increment1": [Function],
+  "increment2": [Function],
+  "increment3": [Function],
 }
 `);
   }
