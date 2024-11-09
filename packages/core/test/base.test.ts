@@ -12,10 +12,16 @@ test('base', () => {
     count: number;
     readonly double: number;
     increment: () => void;
+    increment1: () => void;
   }>((set, get, api) => ({
     count: 0,
     get double() {
       return this.count * 2;
+    },
+    increment1() {
+      set({
+        count: this.count + 1
+      });
     },
     increment() {
       set((draft) => {
@@ -41,6 +47,7 @@ test('base', () => {
   "count": 0,
   "double": 0,
   "increment": [Function],
+  "increment1": [Function],
 }
 `);
   const fn = jest.fn();
@@ -81,6 +88,7 @@ test('base', () => {
   "count": 1,
   "double": 2,
   "increment": [Function],
+  "increment1": [Function],
 }
 `);
   increment();
@@ -141,6 +149,69 @@ test('base', () => {
   "count": 2,
   "double": 4,
   "increment": [Function],
+  "increment1": [Function],
+}
+`);
+
+  useStore.getState().increment1();
+  expect(stateFn.mock.calls).toMatchInlineSnapshot(`
+[
+  [
+    1,
+    1,
+    1,
+    1,
+  ],
+  [
+    1,
+    1,
+    1,
+  ],
+  [
+    2,
+    2,
+    2,
+    2,
+  ],
+  [
+    2,
+    2,
+    2,
+  ],
+]
+`);
+  expect(getterFn.mock.calls).toMatchInlineSnapshot(`
+[
+  [
+    2,
+    2,
+    2,
+    2,
+  ],
+  [
+    2,
+    2,
+    2,
+  ],
+  [
+    4,
+    4,
+    4,
+    4,
+  ],
+  [
+    4,
+    4,
+    4,
+  ],
+]
+`);
+  expect(useStore.getState()).toMatchInlineSnapshot(`
+{
+  "count": 3,
+  "double": 6,
+  "increment": [Function],
+  "increment1": [Function],
 }
 `);
 });
@@ -249,6 +320,13 @@ describe('Slices', () => {
         get double() {
           return this.count * 2;
         },
+        increment1() {
+          set({
+            counter: {
+              count: this.count + 1
+            }
+          });
+        },
         increment() {
           set((draft) => {
             draft.counter.count += 1;
@@ -281,6 +359,7 @@ describe('Slices', () => {
           counter: {
             count: number;
             readonly double: number;
+            increment1: () => void;
             increment: () => void;
           };
         },
@@ -297,6 +376,7 @@ describe('Slices', () => {
     "count": 0,
     "double": 0,
     "increment": [Function],
+    "increment1": [Function],
   },
 }
 `);
@@ -309,6 +389,7 @@ describe('Slices', () => {
     "count": 1,
     "double": 2,
     "increment": [Function],
+    "increment1": [Function],
   },
 }
 `);
@@ -319,6 +400,19 @@ describe('Slices', () => {
     "count": 2,
     "double": 4,
     "increment": [Function],
+    "increment1": [Function],
+  },
+}
+`);
+
+    useStore.getState().counter.increment1();
+    expect(useStore.getState()).toMatchInlineSnapshot(`
+{
+  "counter": {
+    "count": 3,
+    "double": 6,
+    "increment": [Function],
+    "increment1": [Function],
   },
 }
 `);

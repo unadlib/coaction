@@ -114,11 +114,6 @@ function create<T extends { name?: string }>(
     const setState: Store<T>['setState'] = (
       next,
       updater = (next) => {
-        if (mutableInstance && typeof next !== 'function') {
-          throw new Error(
-            'setState only supports the function in mutable mode'
-          );
-        }
         const merge = (_next = next) => {
           if (api.isSliceStore) {
             if (typeof _next === 'object' && _next !== null) {
