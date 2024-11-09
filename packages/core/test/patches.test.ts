@@ -20,7 +20,7 @@ test('base', () => {
     increment: () => void;
   }>(
     spyMiddleware(
-      (set, get, api) => ({
+      (set, get, store) => ({
         count: 0,
         get double() {
           return this.count * 2;
@@ -28,16 +28,21 @@ test('base', () => {
         increment() {
           set((draft) => {
             this.count += 1;
-            stateFn(get().count, api.getState().count, this.count, draft.count);
+            stateFn(
+              get().count,
+              store.getState().count,
+              this.count,
+              draft.count
+            );
             getterFn(
               get().double,
-              api.getState().double,
+              store.getState().double,
               this.double,
               draft.double
             );
           });
-          stateFn(get().count, api.getState().count, this.count);
-          getterFn(get().double, api.getState().double, this.double);
+          stateFn(get().count, store.getState().count, this.count);
+          getterFn(get().double, store.getState().double, this.double);
         }
       }),
       (store) => {
@@ -208,7 +213,7 @@ describe('Slices', () => {
     const getterFn = jest.fn();
     const useStore = create(
       {
-        counter: ((set, get, api) => ({
+        counter: ((set, get, store) => ({
           count: 0,
           get double() {
             return this.count * 2;
@@ -218,25 +223,25 @@ describe('Slices', () => {
               draft.counter.count += 1;
               stateFn(
                 get().counter.count,
-                api.getState().counter.count,
+                store.getState().counter.count,
                 this.count,
                 draft.counter.count
               );
               getterFn(
                 get().counter.double,
-                api.getState().counter.double,
+                store.getState().counter.double,
                 this.double,
                 draft.counter.double
               );
             });
             stateFn(
               get().counter.count,
-              api.getState().counter.count,
+              store.getState().counter.count,
               this.count
             );
             getterFn(
               get().counter.double,
-              api.getState().counter.double,
+              store.getState().counter.double,
               this.double
             );
           }

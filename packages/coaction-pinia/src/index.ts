@@ -11,29 +11,29 @@ type StoreWithSubscriptions = Store<object> & {
   _destroyers?: Set<() => void>;
 };
 
-const handleStore = (api: StoreWithSubscriptions, state: any) => {
-  if (!api.toRaw) {
-    api.toRaw = (key: any) => instancesMap.get(key);
-    Object.assign(api, {
+const handleStore = (store: StoreWithSubscriptions, state: any) => {
+  if (!store.toRaw) {
+    store.toRaw = (key: any) => instancesMap.get(key);
+    Object.assign(store, {
       subscribe: (callback: any) => {
-        api._subscriptions!.add(callback);
-        return () => api._subscriptions!.delete(callback);
+        store._subscriptions!.add(callback);
+        return () => store._subscriptions!.delete(callback);
       }
     });
-    api._subscriptions = new Set<() => void>();
-    api._destroyers = new Set<() => void>();
-    const oldDestroy = api.destroy;
-    api.destroy = () => {
+    store._subscriptions = new Set<() => void>();
+    store._destroyers = new Set<() => void>();
+    const oldDestroy = store.destroy;
+    store.destroy = () => {
       oldDestroy();
-      api._subscriptions!.clear();
-      api._subscriptions = undefined;
-      api._destroyers!.forEach((destroy) => destroy());
-      api._destroyers = undefined;
+      store._subscriptions!.clear();
+      store._subscriptions = undefined;
+      store._destroyers!.forEach((destroy) => destroy());
+      store._destroyers = undefined;
     };
-    api.apply = (state = api.getState(), patches) => {
+    store.apply = (state = store.getState(), patches) => {
       console.log('apply', state, patches);
       if (!patches) {
-        if (api.isSliceStore) {
+        if (store.isSliceStore) {
           if (typeof state === 'object' && state !== null) {
             for (const key in state) {
               if (
@@ -41,28 +41,28 @@ const handleStore = (api: StoreWithSubscriptions, state: any) => {
                 state[key as keyof typeof state] !== null
               ) {
                 Object.assign(
-                  api.getState()[key as keyof typeof state],
+                  store.getState()[key as keyof typeof state],
                   state[key as keyof typeof state]
                 );
               }
             }
           }
         } else {
-          Object.assign(api.getState(), state);
+          Object.assign(store.getState(), state);
         }
         return;
       }
       apply(state, patches);
     };
   }
-  const stopWatch = api.toRaw(state).$subscribe((...args: any[]) => {
-    api._subscriptions!.forEach((callback) => callback(...args));
+  const stopWatch = store.toRaw(state).$subscribe((...args: any[]) => {
+    store._subscriptions!.forEach((callback) => callback(...args));
   });
   const destroy = () => {
     instancesMap.delete(state);
     stopWatch();
   };
-  api._destroyers!.add(destroy);
+  store._destroyers!.add(destroy);
 };
 
 export const bindPinia = createBinder({

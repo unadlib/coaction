@@ -4,17 +4,17 @@ import { autorun, runInAction } from 'mobx';
 
 const instancesMap = new WeakMap<object, object>();
 
-const handleStore = (api: Store<object>) => {
-  if (api.toRaw) return;
-  api.toRaw = (key: object) => instancesMap.get(key);
-  Object.assign(api, {
+const handleStore = (store: Store<object>) => {
+  if (store.toRaw) return;
+  store.toRaw = (key: object) => instancesMap.get(key);
+  Object.assign(store, {
     subscribe: autorun
   });
-  api.act = runInAction;
-  api.apply = (state = api.getState(), patches) => {
+  store.act = runInAction;
+  store.apply = (state = store.getState(), patches) => {
     console.log('apply', state, patches);
     if (!patches) {
-      if (api.isSliceStore) {
+      if (store.isSliceStore) {
         if (typeof state === 'object' && state !== null) {
           runInAction(() => {
             for (const key in state) {
@@ -23,7 +23,7 @@ const handleStore = (api: Store<object>) => {
                 state[key as keyof typeof state] !== null
               ) {
                 Object.assign(
-                  api.getState()[key as keyof typeof state],
+                  store.getState()[key as keyof typeof state],
                   state[key as keyof typeof state]
                 );
               }
@@ -32,7 +32,7 @@ const handleStore = (api: Store<object>) => {
         }
       } else {
         runInAction(() => {
-          Object.assign(api.getState(), state);
+          Object.assign(store.getState(), state);
         });
       }
       return;
