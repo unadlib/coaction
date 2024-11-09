@@ -208,7 +208,7 @@ function create<T extends { name?: string }>(
             : { patches, inversePatches };
           if (finalPatches.patches.length) {
             store.apply(rootState, finalPatches.patches);
-            // with mutableInstance, 3rd party model will send update notifications on its own after api.apply
+            // with mutableInstance, 3rd party model will send update notifications on its own after store.apply
             emit(finalPatches.patches);
           }
         }
@@ -325,7 +325,7 @@ function create<T extends { name?: string }>(
                     : { patches, inversePatches };
                   if (finalPatches.patches.length) {
                     store.apply(rootState, finalPatches.patches);
-                    // with mutableInstance, 3rd party model will send update notifications on its own after api.apply
+                    // with mutableInstance, 3rd party model will send update notifications on its own after store.apply
                     emit(finalPatches.patches);
                   }
                   if (isDrafted) {
@@ -434,12 +434,12 @@ function create<T extends { name?: string }>(
     }
     return store;
   };
-  const api = createStore({
+  const store = createStore({
     share: _workerType || options.transport ? 'main' : undefined
   });
   return Object.assign((asyncStoreOption: AsyncStoreOption) => {
-    if (!asyncStoreOption) return api.getState();
-    const _api = createStore({
+    if (!asyncStoreOption) return store.getState();
+    const asyncStore = createStore({
       share: 'client'
     });
     // the transport is in the worker or shared worker, and the client is in the main thread.
@@ -460,20 +460,20 @@ function create<T extends { name?: string }>(
             : 'WorkerMain',
           {
             worker: (asyncStoreOption as WorkerOptions).worker as SharedWorker,
-            prefix: _api.id
+            prefix: asyncStore.id
           }
         )
       : (asyncStoreOption as TransportOptions).transport;
     if (!transport) {
       throw new Error('transport is required');
     }
-    _api.transport = transport;
+    asyncStore.transport = transport;
     let _sequence: number;
     const fullSync = async () => {
       console.log('fullSync');
       const latest = await transport.emit('fullSync');
       console.log('fullSync', latest);
-      _api.apply(JSON.parse(latest.state) as T);
+      asyncStore.apply(JSON.parse(latest.state) as T);
       _sequence = latest.sequence;
     };
     // TODO: implement to handle the case for the custom transport connects
@@ -488,13 +488,13 @@ function create<T extends { name?: string }>(
       console.log('update', { patches, sequence });
       if (typeof sequence === 'number' && sequence === _sequence + 1) {
         _sequence = sequence;
-        _api.apply(undefined, patches);
+        asyncStore.apply(undefined, patches);
       } else {
         await fullSync();
       }
     });
-    return Object.assign(() => _api.getState(), _api);
-  }, api);
+    return Object.assign(() => asyncStore.getState(), asyncStore);
+  }, store);
 }
 
 export { create };
