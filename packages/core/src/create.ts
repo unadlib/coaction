@@ -48,7 +48,7 @@ export function createBinder<F = (...args: any[]) => any>({
   /**
    * handleStore is a function to handle the store object.
    */
-  handleStore: (api: Store<object>, rawState: object, state: object) => void;
+  handleStore: (store: Store<object>, rawState: object, state: object) => void;
 }) {
   return (<T extends object>(state: T): T => {
     const { copyState, key, bind } = handleState(state);
@@ -91,7 +91,7 @@ function create<T extends { name?: string }>(
     // TODO: fix the type of finalizeDraft
     let finalizeDraft: () => [T, Patches, Patches];
     let mutableInstance: any;
-    let api: Store<any>;
+    let store: Store<any>;
     // TODO: consider to remove this, about name property should be required.
     const name = options.id ?? 'default';
     let transport: Transport<{
@@ -115,7 +115,7 @@ function create<T extends { name?: string }>(
       next,
       updater = (next) => {
         const merge = (_next = next) => {
-          if (api.isSliceStore) {
+          if (store.isSliceStore) {
             if (typeof _next === 'object' && _next !== null) {
               for (const key in _next) {
                 if (
@@ -147,11 +147,11 @@ function create<T extends { name?: string }>(
                 }
               }
             : merge;
-        const enablePatches = api.transport ?? options.enablePatches;
+        const enablePatches = store.transport ?? options.enablePatches;
         if (!enablePatches) {
           if (mutableInstance) {
-            if (api.act) {
-              api.act(() => {
+            if (store.act) {
+              store.act(() => {
                 fn.apply(null);
               });
               return [];
@@ -180,12 +180,12 @@ function create<T extends { name?: string }>(
           }
         );
         rootState = backupState;
-        const finalPatches = api.patch
-          ? api.patch({ patches, inversePatches })
+        const finalPatches = store.patch
+          ? store.patch({ patches, inversePatches })
           : { patches, inversePatches };
         if (finalPatches.patches.length) {
           console.log('ddddd');
-          api.apply(rootState, finalPatches.patches);
+          store.apply(rootState, finalPatches.patches);
           if (!mutableInstance) {
             listeners.forEach((listener) => listener());
           }
@@ -203,11 +203,11 @@ function create<T extends { name?: string }>(
         if (isDrafted) {
           rootState = backupState;
           const [, patches, inversePatches] = finalizeDraft();
-          const finalPatches = api.patch
-            ? api.patch({ patches, inversePatches })
+          const finalPatches = store.patch
+            ? store.patch({ patches, inversePatches })
             : { patches, inversePatches };
           if (finalPatches.patches.length) {
-            api.apply(rootState, finalPatches.patches);
+            store.apply(rootState, finalPatches.patches);
             // with mutableInstance, 3rd party model will send update notifications on its own after api.apply
             emit(finalPatches.patches);
           }
@@ -238,7 +238,7 @@ function create<T extends { name?: string }>(
       listeners.clear();
       transport?.dispose();
     };
-    api = {
+    store = {
       id: name,
       share,
       setState,
@@ -254,18 +254,18 @@ function create<T extends { name?: string }>(
       isSliceStore: typeof createState === 'object'
     };
     const makeState = (fn: (...args: any[]) => any) => {
-      let state = fn(api.setState, api.getState, api);
+      let state = fn(store.setState, store.getState, store);
       if (typeof state === 'function') {
         state = state();
       }
       if (state[bindSymbol]) {
         const rawState = state[bindSymbol].bind(state);
-        state[bindSymbol].handleStore(api, rawState, state);
+        state[bindSymbol].handleStore(store, rawState, state);
         return rawState;
       }
       return state;
     };
-    const initialState = api.isSliceStore
+    const initialState = store.isSliceStore
       ? Object.entries(createState).reduce(
           (stateTree, [key, value]) =>
             Object.assign(stateTree, { [key]: makeState(value as Slice<T>) }),
@@ -274,7 +274,7 @@ function create<T extends { name?: string }>(
       : makeState(createState as Slice<T>);
     const rawState = {} as any;
     const handle = (_rawState: any, _initialState: any, sliceKey?: string) => {
-      mutableInstance = api.toRaw?.(_initialState);
+      mutableInstance = store.toRaw?.(_initialState);
       console.log('_initialState', _initialState);
       const descriptors = Object.getOwnPropertyDescriptors(_initialState);
       Object.entries(descriptors).forEach(([key, descriptor]) => {
@@ -309,22 +309,22 @@ function create<T extends { name?: string }>(
             descriptor.value = (...args: any[]) => {
               const keys = sliceKey ? [sliceKey, key] : [key];
               console.log('execute', { keys, args });
-              return api.transport!.emit('execute', keys, args);
+              return store.transport!.emit('execute', keys, args);
             };
           } else {
             const fn = descriptor.value;
             descriptor.value = (...args: any[]) => {
-              const enablePatches = api.transport ?? options.enablePatches;
+              const enablePatches = store.transport ?? options.enablePatches;
               if (mutableInstance && !isBatching && enablePatches) {
                 let result: any;
                 const handleResult = (isDrafted?: boolean) => {
                   rootState = backupState;
                   const [, patches, inversePatches] = finalizeDraft();
-                  const finalPatches = api.patch
-                    ? api.patch({ patches, inversePatches })
+                  const finalPatches = store.patch
+                    ? store.patch({ patches, inversePatches })
                     : { patches, inversePatches };
                   if (finalPatches.patches.length) {
-                    api.apply(rootState, finalPatches.patches);
+                    store.apply(rootState, finalPatches.patches);
                     // with mutableInstance, 3rd party model will send update notifications on its own after api.apply
                     emit(finalPatches.patches);
                   }
@@ -353,7 +353,7 @@ function create<T extends { name?: string }>(
                 finalizeDraft = finalize;
                 rootState = draft as any;
                 result = fn.apply(
-                  sliceKey ? api.getState()[sliceKey] : api.getState(),
+                  sliceKey ? store.getState()[sliceKey] : store.getState(),
                   args
                 );
                 if (result instanceof Promise) {
@@ -367,16 +367,16 @@ function create<T extends { name?: string }>(
                 handleResult(isDrafted);
                 return result;
               }
-              if (mutableInstance && api.act) {
-                return api.act(() => {
+              if (mutableInstance && store.act) {
+                return store.act(() => {
                   return fn.apply(
-                    sliceKey ? api.getState()[sliceKey] : api.getState(),
+                    sliceKey ? store.getState()[sliceKey] : store.getState(),
                     args
                   );
                 });
               }
               return fn.apply(
-                sliceKey ? api.getState()[sliceKey] : api.getState(),
+                sliceKey ? store.getState()[sliceKey] : store.getState(),
                 args
               );
             };
@@ -388,7 +388,7 @@ function create<T extends { name?: string }>(
       const slice = Object.defineProperties({} as T, descriptors);
       return slice;
     };
-    if (api.isSliceStore) {
+    if (store.isSliceStore) {
       module = {} as T;
       Object.entries(initialState).forEach(([key, value]) => {
         rawState[key] = {};
@@ -408,7 +408,7 @@ function create<T extends { name?: string }>(
         : null);
     transport?.listen('execute', async (keys, args) => {
       console.log('execute', { keys, args });
-      let base = api.getState();
+      let base = store.getState();
       let obj = base;
       for (const key of keys) {
         base = base[key];
@@ -427,12 +427,12 @@ function create<T extends { name?: string }>(
       };
     });
     if (transport) {
-      api.transport = transport;
+      store.transport = transport;
     }
-    if (api.transport && options.enablePatches === false) {
+    if (store.transport && options.enablePatches === false) {
       throw new Error(`enablePatches: true is required for the transport`);
     }
-    return api;
+    return store;
   };
   const api = createStore({
     share: _workerType || options.transport ? 'main' : undefined
