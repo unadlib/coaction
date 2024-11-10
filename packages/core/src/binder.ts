@@ -29,7 +29,7 @@ export function createBinder<F = (...args: any[]) => any>({
    */
   handleStore: (store: Store<object>, rawState: object, state: object) => void;
 }) {
-  return (<T extends object>(state: T): T => {
+  return (<S extends object>(state: S): S => {
     const { copyState, key, bind } = handleState(state);
     const value = (key ? copyState[key] : copyState) as {
       [bindSymbol]: {
