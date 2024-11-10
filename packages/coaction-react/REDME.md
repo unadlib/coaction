@@ -10,6 +10,7 @@ import { create } from '@coaction/react';
 const counterSlices = (set) => ({
   name: 'counter',
   count: 0,
+  // computed property
   get countSquared() {
     return this.count ** 2;
   },
@@ -18,12 +19,14 @@ const counterSlices = (set) => ({
   }
 });
 
-const counter1Slices = (set) => ({
+const counter1Slices = (set, get) => ({
   name: 'counter1',
   count: 0,
-  get countSquared() {
-    return this.count ** 2;
-  },
+  // computed property
+  countSquared: get(
+    (state) => [state.count],
+    (count) => count ** 2
+  ),
   increment() {
     set(() => (this.count += 1));
   }
