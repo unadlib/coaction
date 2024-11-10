@@ -21,45 +21,6 @@ import type {
 import { bindSymbol, defaultId } from './constant';
 import { createAsyncStore } from './asyncStore';
 
-export function createBinder<F = (...args: any[]) => any>({
-  handleState,
-  handleStore
-}: {
-  /**
-   * handleState is a function to handle the state object.
-   */
-  handleState: <T extends object = object>(
-    state: T
-  ) => {
-    /**
-     * copyState is a copy of the state object.
-     */
-    copyState: T;
-    /**
-     * key is the key of the state object.
-     */
-    key?: keyof T;
-    /**
-     * bind is a function to bind the state object.
-     */
-    bind: (state: T) => T;
-  };
-  /**
-   * handleStore is a function to handle the store object.
-   */
-  handleStore: (store: Store<object>, rawState: object, state: object) => void;
-}) {
-  return (<T extends object>(state: T): T => {
-    const { copyState, key, bind } = handleState(state);
-    const value: any = key ? copyState[key] : copyState;
-    value[bindSymbol] = {
-      handleStore,
-      bind
-    };
-    return copyState;
-  }) as F;
-}
-
 const workerType = globalThis.SharedWorkerGlobalScope
   ? 'SharedWorkerInternal'
   : globalThis.WorkerGlobalScope
@@ -106,6 +67,18 @@ function create<T extends { name?: string }>(
       }
     };
     let isBatching = false;
+    const handleDraft = () => {
+      rootState = backupState;
+      const [, patches, inversePatches] = finalizeDraft();
+      const finalPatches = store.patch
+        ? store.patch({ patches, inversePatches })
+        : { patches, inversePatches };
+      if (finalPatches.patches.length) {
+        store.apply(rootState, finalPatches.patches);
+        // with mutableInstance, 3rd party model will send update notifications on its own after store.apply
+        emit(finalPatches.patches);
+      }
+    };
     const setState: Store<T>['setState'] = (
       next,
       updater = (next) => {
@@ -179,7 +152,6 @@ function create<T extends { name?: string }>(
           ? store.patch({ patches, inversePatches })
           : { patches, inversePatches };
         if (finalPatches.patches.length) {
-          console.log('ddddd');
           store.apply(rootState, finalPatches.patches);
           if (!mutableInstance) {
             listeners.forEach((listener) => listener());
@@ -196,16 +168,7 @@ function create<T extends { name?: string }>(
       try {
         const isDrafted = mutableInstance && isDraft(rootState);
         if (isDrafted) {
-          rootState = backupState;
-          const [, patches, inversePatches] = finalizeDraft();
-          const finalPatches = store.patch
-            ? store.patch({ patches, inversePatches })
-            : { patches, inversePatches };
-          if (finalPatches.patches.length) {
-            store.apply(rootState, finalPatches.patches);
-            // with mutableInstance, 3rd party model will send update notifications on its own after store.apply
-            emit(finalPatches.patches);
-          }
+          handleDraft();
         }
         result = updater(next);
         if (isDrafted) {
@@ -249,6 +212,9 @@ function create<T extends { name?: string }>(
       isSliceStore: typeof createState === 'object'
     };
     const makeState = (fn: (...args: any[]) => any) => {
+      if (process.env.NODE_ENV !== 'production' && typeof fn !== 'function') {
+        throw new Error('createState should be a function');
+      }
       let state = fn(store.setState, store.getState, store);
       if (typeof state === 'function') {
         state = state();
@@ -313,16 +279,7 @@ function create<T extends { name?: string }>(
               if (mutableInstance && !isBatching && enablePatches) {
                 let result: any;
                 const handleResult = (isDrafted?: boolean) => {
-                  rootState = backupState;
-                  const [, patches, inversePatches] = finalizeDraft();
-                  const finalPatches = store.patch
-                    ? store.patch({ patches, inversePatches })
-                    : { patches, inversePatches };
-                  if (finalPatches.patches.length) {
-                    store.apply(rootState, finalPatches.patches);
-                    // with mutableInstance, 3rd party model will send update notifications on its own after store.apply
-                    emit(finalPatches.patches);
-                  }
+                  handleDraft();
                   if (isDrafted) {
                     backupState = rootState;
                     const [draft, finalize] = createWithMutative(
