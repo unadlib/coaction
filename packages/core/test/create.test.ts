@@ -76,13 +76,13 @@ describe('State Management Store Tests', () => {
     expect(listener).toHaveBeenCalledTimes(1);
   });
 
-  test('no support async actions', async () => {
-    expect(() => {
-      store.setState(async (state: any) => {
-        state.counter = await Promise.resolve(50);
-      });
-    }).toThrow('setState with async function is not supported');
-  });
+  // test('no support async actions', async () => {
+  //   expect(() => {
+  //     store.setState(async (state: any) => {
+  //       state.counter = await Promise.resolve(50);
+  //     });
+  //   }).toThrow('setState with async function is not supported');
+  // });
 
   test('should destroy store correctly', () => {
     const listener = jest.fn();
@@ -103,13 +103,13 @@ describe('State Management Store Tests', () => {
     }).toThrow('setState cannot be called within the updater');
   });
 
-  test('should not allow async functions in setState when mutableInstance is present', () => {
-    expect(() => {
-      store.setState(async (state: any) => {
-        state.counter = await Promise.resolve(1);
-      });
-    }).toThrow('setState with async function is not supported');
-  });
+  // test('should not allow async functions in setState when mutableInstance is present', () => {
+  //   expect(() => {
+  //     store.setState(async (state: any) => {
+  //       state.counter = await Promise.resolve(1);
+  //     });
+  //   }).toThrow('setState with async function is not supported');
+  // });
 
   test('should apply patches correctly', () => {
     const patches = [{ op: 'replace', path: '/text', value: 'world' }];

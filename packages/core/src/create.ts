@@ -129,7 +129,8 @@ function create<T extends { name?: string }>(
           }
           // best performance by default for immutable state
           // TODO: supporting nested set functions?
-          rootState = createWithMutative(rootState, () => {
+          rootState = createWithMutative(rootState, (draft) => {
+            rootState = draft as Draft<T>;
             return fn.apply(null);
           });
           listeners.forEach((listener) => listener());
@@ -178,7 +179,7 @@ function create<T extends { name?: string }>(
             enablePatches: true
           });
           finalizeDraft = finalize;
-          rootState = draft as any;
+          rootState = draft;
         }
       } finally {
         isBatching = false;
@@ -290,7 +291,7 @@ function create<T extends { name?: string }>(
                       }
                     );
                     finalizeDraft = finalize;
-                    rootState = draft as any;
+                    rootState = draft;
                   }
                 };
                 const isDrafted = isDraft(rootState);
