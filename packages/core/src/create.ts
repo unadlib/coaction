@@ -59,7 +59,7 @@ function create<T extends { name?: string }>(
     const emit = (patches?: Patches) => {
       if (transport && patches?.length) {
         sequence += 1;
-        console.log('sequence', sequence);
+        // console.log('sequence', sequence);
         transport.emit('update', {
           patches: patches,
           sequence
@@ -206,7 +206,7 @@ function create<T extends { name?: string }>(
       subscribe,
       destroy,
       apply: (state = rootState, patches) => {
-        console.log('apply', { state, patches });
+        // console.log('apply', { state, patches });
         rootState = patches ? apply(state, patches) : state;
         listeners.forEach((listener) => listener());
       },
@@ -237,7 +237,7 @@ function create<T extends { name?: string }>(
     const rawState = {} as any;
     const handle = (_rawState: any, _initialState: any, sliceKey?: string) => {
       mutableInstance = store.toRaw?.(_initialState);
-      console.log('_initialState', _initialState);
+      // console.log('_initialState', _initialState);
       const descriptors = Object.getOwnPropertyDescriptors(_initialState);
       Object.entries(descriptors).forEach(([key, descriptor]) => {
         if (Object.prototype.hasOwnProperty.call(descriptor, 'value')) {
@@ -270,7 +270,7 @@ function create<T extends { name?: string }>(
           } else if (share === 'client') {
             descriptor.value = (...args: unknown[]) => {
               const keys = sliceKey ? [sliceKey, key] : [key];
-              console.log('execute', { keys, args });
+              // console.log('execute', { keys, args });
               return store.transport!.emit('execute', keys, args);
             };
           } else {
@@ -364,7 +364,7 @@ function create<T extends { name?: string }>(
         throw new Error(`enablePatches: true is required for the transport`);
       }
       transport.listen('execute', async (keys, args) => {
-        console.log('execute', { keys, args });
+        // console.log('execute', { keys, args });
         let base = store.getState();
         let obj = base;
         for (const key of keys) {
@@ -377,7 +377,7 @@ function create<T extends { name?: string }>(
         return base(...args);
       });
       transport.listen('fullSync', async () => {
-        console.log('fullSync', rootState);
+        // console.log('fullSync', rootState);
         return {
           state: JSON.stringify(rootState),
           sequence
