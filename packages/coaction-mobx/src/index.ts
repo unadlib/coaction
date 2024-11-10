@@ -12,20 +12,15 @@ const handleStore = (store: Store<object>) => {
   });
   store.act = runInAction;
   store.apply = (state = store.getState(), patches) => {
-    console.log('apply', state, patches);
     if (!patches) {
       if (store.isSliceStore) {
         if (typeof state === 'object' && state !== null) {
           runInAction(() => {
             for (const key in state) {
-              if (
-                typeof state[key as keyof typeof state] === 'object' &&
-                state[key as keyof typeof state] !== null
-              ) {
-                Object.assign(
-                  store.getState()[key as keyof typeof state],
-                  state[key as keyof typeof state]
-                );
+              const _key = key as keyof typeof state;
+              const _state = state[_key];
+              if (typeof _state === 'object' && _state !== null) {
+                Object.assign(store.getState()[_key], _state);
               }
             }
           });

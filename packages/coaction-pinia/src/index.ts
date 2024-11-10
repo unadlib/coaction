@@ -3,7 +3,7 @@ import { createBinder, type Store } from 'coaction';
 import { createPinia, setActivePinia } from 'pinia';
 import type { _GettersTree, DefineStoreOptions, StateTree } from 'pinia';
 
-const instancesMap = new WeakMap<object, any>();
+const instancesMap = new WeakMap<object, unknown>();
 
 type StoreWithSubscriptions = Store<object> & {
   // TODO: fix type
@@ -11,7 +11,7 @@ type StoreWithSubscriptions = Store<object> & {
   _destroyers?: Set<() => void>;
 };
 
-const handleStore = (store: StoreWithSubscriptions, state: any) => {
+const handleStore = (store: StoreWithSubscriptions, state: object) => {
   if (!store.toRaw) {
     store.toRaw = (key: any) => instancesMap.get(key);
     Object.assign(store, {
@@ -36,14 +36,10 @@ const handleStore = (store: StoreWithSubscriptions, state: any) => {
         if (store.isSliceStore) {
           if (typeof state === 'object' && state !== null) {
             for (const key in state) {
-              if (
-                typeof state[key as keyof typeof state] === 'object' &&
-                state[key as keyof typeof state] !== null
-              ) {
-                Object.assign(
-                  store.getState()[key as keyof typeof state],
-                  state[key as keyof typeof state]
-                );
+              const _key = key as keyof typeof state;
+              const _state = state[_key];
+              if (typeof _state === 'object' && _state !== null) {
+                Object.assign(store.getState()[_key], _state);
               }
             }
           }
@@ -55,7 +51,7 @@ const handleStore = (store: StoreWithSubscriptions, state: any) => {
       apply(state, patches);
     };
   }
-  const stopWatch = store.toRaw(state).$subscribe((...args: any[]) => {
+  const stopWatch = store.toRaw(state).$subscribe((...args: unknown[]) => {
     store._subscriptions!.forEach((callback) => callback(...args));
   });
   const destroy = () => {
