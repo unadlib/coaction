@@ -1,76 +1,83 @@
 import { create } from 'coaction';
-import { bindMobx } from '@coaction/mobx';
-import { makeAutoObservable } from 'mobx';
 
 const useStore = create(
-  (set, get, store) =>
-    makeAutoObservable(
-      bindMobx({
-        categories: [] as {
-          id: number;
-          text: string;
-        }[],
-        todos: [] as {
-          text: string;
-          done?: boolean;
-          category?: {
-            id: number;
-            text: string;
-          };
-        }[],
+  (set, get, store) => ({
+    categories: [] as {
+      id: number;
+      text: string;
+    }[],
+    todos: [] as {
+      text: string;
+      done?: boolean;
+      category?: {
+        id: number;
+        text: string;
+      };
+    }[],
 
-        reset() {
-          this.categories = [];
-          this.todos = [];
-        },
+    reset() {
+      set(() => {
+        this.categories = [];
+        this.todos = [];
+      });
+    },
 
-        bigInitWithoutRefsWithoutAssign() {
-          const todos = [];
-          for (let i = 0; i < 100_000; i++) {
-            todos.push({ text: '', done: false });
-          }
-          this.todos = todos;
-        },
-
-        bigInitWithoutRefsWithAssign() {
-          const todos = [];
-          for (let i = 0; i < 100_000; i++) {
-            todos.push({ text: '', done: false });
-          }
-          this.todos = [...this.todos, ...todos];
-        },
-
-        bigInitWithRefsWithoutAssign() {
-          const category = { id: this.categories.length, text: 'category' };
-          const todos = [];
-          for (let i = 0; i < 100_000; i++) {
-            todos.push({ text: '', done: false, category });
-          }
-          this.todos = todos;
-        },
-
-        bigInitWithRefsWithAssign() {
-          const category = { id: this.categories.length, text: 'category' };
-          this.categories.push(category);
-
-          const todos = [];
-          for (let i = 0; i < 100_000; i++) {
-            todos.push({ text: '', done: false, category });
-          }
-          this.todos = [...this.todos, ...todos];
-        },
-
-        mobxInit() {
-          const todos = [];
-          for (let i = 0; i < 100_000; i++) {
-            todos.push({ text: '' });
-          }
-          this.todos = todos;
+    bigInitWithoutRefsWithoutAssign() {
+      set(() => {
+        const todos = [];
+        for (let i = 0; i < 100_000; i++) {
+          todos.push({ text: '', done: false });
         }
-      })
-    ),
+        this.todos = todos;
+      });
+    },
+
+    bigInitWithoutRefsWithAssign() {
+      set(() => {
+        const todos = [];
+        for (let i = 0; i < 100_000; i++) {
+          todos.push({ text: '', done: false });
+        }
+        this.todos = [...this.todos, ...todos];
+      });
+    },
+
+    bigInitWithRefsWithoutAssign() {
+      set(() => {
+        const category = { id: this.categories.length, text: 'category' };
+        const todos = [];
+        for (let i = 0; i < 100_000; i++) {
+          todos.push({ text: '', done: false, category });
+        }
+        this.todos = todos;
+      });
+    },
+
+    bigInitWithRefsWithAssign() {
+      set(() => {
+        const category = { id: this.categories.length, text: 'category' };
+        this.categories.push(category);
+
+        const todos = [];
+        for (let i = 0; i < 100_000; i++) {
+          todos.push({ text: '', done: false, category });
+        }
+        this.todos = [...this.todos, ...todos];
+      });
+    },
+
+    mobxInit() {
+      set(() => {
+        const todos = [];
+        for (let i = 0; i < 100_000; i++) {
+          todos.push({ text: '' });
+        }
+        this.todos = todos;
+      });
+    }
+  }),
   {
-    enablePatches: true
+    enablePatches: false
   }
 );
 
