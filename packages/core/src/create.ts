@@ -257,24 +257,24 @@ function create<T extends { name?: string }>(
             delete descriptor.writable;
             if (sliceKey) {
               descriptor.get = () => (rootState as any)[sliceKey][key];
-              descriptor.set = (value: any) => {
+              descriptor.set = (value: unknown) => {
                 (rootState as any)[sliceKey][key] = value;
               };
             } else {
               descriptor.get = () => (rootState as any)[key];
-              descriptor.set = (value: any) => {
+              descriptor.set = (value: unknown) => {
                 (rootState as any)[key] = value;
               };
             }
           } else if (share === 'client') {
-            descriptor.value = (...args: any[]) => {
+            descriptor.value = (...args: unknown[]) => {
               const keys = sliceKey ? [sliceKey, key] : [key];
               console.log('execute', { keys, args });
               return store.transport!.emit('execute', keys, args);
             };
           } else {
             const fn = descriptor.value;
-            descriptor.value = (...args: any[]) => {
+            descriptor.value = (...args: unknown[]) => {
               const enablePatches = store.transport ?? options.enablePatches;
               if (mutableInstance && !isBatching && enablePatches) {
                 let result: any;
@@ -303,7 +303,7 @@ function create<T extends { name?: string }>(
                   enablePatches: true
                 });
                 finalizeDraft = finalize;
-                rootState = draft as any;
+                rootState = draft;
                 result = fn.apply(
                   sliceKey ? store.getState()[sliceKey] : store.getState(),
                   args
@@ -386,8 +386,9 @@ function create<T extends { name?: string }>(
     }
     return store;
   };
+  const share = _workerType || options.transport ? 'main' : undefined;
   const store = createStore({
-    share: _workerType || options.transport ? 'main' : undefined
+    share
   });
   return Object.assign((asyncStoreOption: AsyncStoreOption) => {
     if (!asyncStoreOption) return store.getState();

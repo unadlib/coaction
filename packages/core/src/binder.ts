@@ -31,7 +31,12 @@ export function createBinder<F = (...args: any[]) => any>({
 }) {
   return (<T extends object>(state: T): T => {
     const { copyState, key, bind } = handleState(state);
-    const value: any = key ? copyState[key] : copyState;
+    const value = (key ? copyState[key] : copyState) as {
+      [bindSymbol]: {
+        handleStore: typeof handleStore;
+        bind: typeof bind;
+      };
+    };
     value[bindSymbol] = {
       handleStore,
       bind
