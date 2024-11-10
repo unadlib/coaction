@@ -18,28 +18,25 @@ import type {
   StoreReturn,
   AsyncStoreOption
 } from './interface';
-import { bindSymbol, defaultId } from './constant';
+import { defaultId, workerType } from './constant';
 import { createAsyncStore } from './asyncStore';
+import { getInitialState } from './getInitialState';
 
-const workerType = globalThis.SharedWorkerGlobalScope
-  ? 'SharedWorkerInternal'
-  : globalThis.WorkerGlobalScope
-    ? 'WorkerInternal'
-    : null;
-
-function create<T extends ISlices>(
-  createState: Slice<T>,
-  options?: StoreOptions
-): StoreReturn<T>;
-function create<T extends Record<string, Slice<any>>>(
-  createState: T,
-  options?: StoreOptions
-): StoreReturn<SliceState<T>, true>;
-function create<T extends { name?: string }>(
+export const create: {
+  <T extends Record<string, Slice<any>>>(
+    createState: T,
+    options?: StoreOptions
+  ): StoreReturn<SliceState<T>, true>;
+  <T extends ISlices>(
+    createState: Slice<T>,
+    options?: StoreOptions
+  ): StoreReturn<T>;
+} = <T extends ISlices | Record<string, Slice<any>>>(
   createState: any,
   options: StoreOptions = {}
-): any {
+): any => {
   const _workerType = (options.workerType ?? workerType) as typeof workerType;
+  const share = _workerType || options.transport ? 'main' : undefined;
   const createStore = ({ share }: { share?: 'client' | 'main' }) => {
     let module: T;
     let rootState: T | Draft<T>;
@@ -187,7 +184,6 @@ function create<T extends { name?: string }>(
       emit(result?.[1]);
     };
     const getState = () => module;
-    const getInitialState = () => initialState;
     const subscribe: Store<T>['subscribe'] = (listener) => {
       listeners.add(listener);
       return () => listeners.delete(listener);
@@ -202,7 +198,6 @@ function create<T extends { name?: string }>(
       share,
       setState,
       getState,
-      getInitialState,
       subscribe,
       destroy,
       apply: (state = rootState, patches) => {
@@ -212,28 +207,7 @@ function create<T extends { name?: string }>(
       },
       isSliceStore: typeof createState === 'object'
     };
-    const makeState = (fn: (...args: any[]) => any) => {
-      if (process.env.NODE_ENV !== 'production' && typeof fn !== 'function') {
-        throw new Error('createState should be a function');
-      }
-      let state = fn(store.setState, store.getState, store);
-      if (typeof state === 'function') {
-        state = state();
-      }
-      if (state[bindSymbol]) {
-        const rawState = state[bindSymbol].bind(state);
-        state[bindSymbol].handleStore(store, rawState, state);
-        return rawState;
-      }
-      return state;
-    };
-    const initialState = store.isSliceStore
-      ? Object.entries(createState).reduce(
-          (stateTree, [key, value]) =>
-            Object.assign(stateTree, { [key]: makeState(value as Slice<T>) }),
-          {} as ISlices<Slice<T>>
-        )
-      : makeState(createState as Slice<T>);
+    const initialState = getInitialState(store, createState);
     const rawState = {} as any;
     const handle = (_rawState: any, _initialState: any, sliceKey?: string) => {
       mutableInstance = store.toRaw?.(_initialState);
@@ -387,7 +361,6 @@ function create<T extends { name?: string }>(
     }
     return store;
   };
-  const share = _workerType || options.transport ? 'main' : undefined;
   const store = createStore({
     share
   });
@@ -398,6 +371,4 @@ function create<T extends { name?: string }>(
     }
     return createAsyncStore(createStore, asyncStoreOption);
   }, store);
-}
-
-export { create };
+};

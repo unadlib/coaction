@@ -34,10 +34,6 @@ export interface Store<T extends ISlices> {
    */
   getState: () => T;
   /**
-   * Get the initial state.
-   */
-  getInitialState: () => T;
-  /**
    * Subscribe to the state changes.
    */
   subscribe: (listener: Listener) => () => void;
