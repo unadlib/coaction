@@ -50,7 +50,7 @@
 - [ ] handle error proxy action
 - [ ] Middleware Support
 - [ ] computed properties in @coaction/react
-- [ ] multi-transport
+- [x] multi-transport
 - [ ] Undo/Redo
 - [x] Fix @coaction/mobx type issue
 - [x] Support for multiple worker stores with same base store

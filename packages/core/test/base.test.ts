@@ -236,8 +236,7 @@ test('worker', async () => {
     }
   });
   const useServerStore = create(counter, {
-    transport: serverTransport,
-    workerType: 'WorkerInternal'
+    transport: serverTransport
   });
   const { count, increment } = useServerStore();
   expect(count).toBe(0);
@@ -268,8 +267,7 @@ test('worker', async () => {
   {
     const useStore = create(counter);
     const useClientStore = useStore({
-      transport: clientTransport,
-      workerType: 'WorkerMain'
+      transport: clientTransport
     });
 
     await new Promise((resolve) => {
