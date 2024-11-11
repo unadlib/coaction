@@ -43,9 +43,9 @@ export const createAsyncStore = (
   asyncStore.transport = transport;
   let _sequence: number;
   const fullSync = async () => {
-    console.log('fullSync');
+    // console.log('fullSync');
     const latest = await transport.emit('fullSync');
-    console.log('fullSync', latest);
+    // console.log('fullSync', latest);
     asyncStore.apply(JSON.parse(latest.state));
     _sequence = latest.sequence;
   };
@@ -54,11 +54,11 @@ export const createAsyncStore = (
     throw new Error('transport.onConnect is required');
   }
   transport.onConnect?.(async () => {
-    console.log('onConnect');
+    // console.log('onConnect');
     await fullSync();
   });
   transport.listen('update', async ({ patches, sequence }) => {
-    console.log('update', { patches, sequence });
+    // console.log('update', { patches, sequence });
     if (typeof sequence === 'number' && sequence === _sequence + 1) {
       _sequence = sequence;
       // asyncStore.getState()

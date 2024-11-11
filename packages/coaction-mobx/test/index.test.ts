@@ -25,7 +25,7 @@ test('mobx', async () => {
     }
   });
   autorun(() => {
-    console.log('state', state.value, state.double);
+    // console.log('state', state.value, state.double);
   });
   await state.increment();
 });
@@ -313,7 +313,6 @@ test('worker - async', async () => {
           this.count += 1;
           await Promise.resolve();
           this.count += 1;
-          console.log('increment', this.count);
         }
       })
     );
