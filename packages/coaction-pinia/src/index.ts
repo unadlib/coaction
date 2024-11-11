@@ -31,7 +31,7 @@ const handleStore = (store: StoreWithSubscriptions, state: object) => {
       store._destroyers = undefined;
     };
     store.apply = (state = store.getState(), patches) => {
-      console.log('apply', state, patches);
+      // console.log('apply', state, patches);
       if (!patches) {
         if (store.isSliceStore) {
           if (typeof state === 'object' && state !== null) {
