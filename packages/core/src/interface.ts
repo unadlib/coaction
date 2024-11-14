@@ -129,7 +129,18 @@ export type Slice<T extends ISlices> = (
   /**
    * The getState is used to get the state.
    */
-  get: Store<T>['getState'],
+  get: <
+    P extends any[],
+    R,
+    A extends
+      | [
+          getDeps: (store: T) => readonly [...P] | [...P],
+          selector: (...args: P) => R
+        ]
+      | []
+  >(
+    ...args: A
+  ) => A extends [] ? T : R,
   /**
    * The store is used to store the state.
    */

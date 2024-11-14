@@ -15,9 +15,10 @@ test('base', () => {
     increment1: () => void;
   }>((set, get, store) => ({
     count: 0,
-    get double() {
-      return this.count * 2;
-    },
+    double: get(
+      (state) => [state.count],
+      (count) => count * 2
+    ),
     increment1() {
       set({
         count: this.count + 1
