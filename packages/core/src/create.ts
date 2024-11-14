@@ -21,6 +21,7 @@ import type {
 import { defaultId, workerType } from './constant';
 import { createAsyncStore } from './asyncStore';
 import { getInitialState } from './getInitialState';
+import { Computed, createSelectorWithArray } from './computed';
 
 export const create: {
   <T extends Record<string, Slice<any>>>(
@@ -183,7 +184,10 @@ export const create: {
       }
       emit(result?.[1]);
     };
-    const getState = () => module;
+    const getState = (
+      deps?: (...args: any) => any,
+      selector?: (...args: any) => any
+    ) => (deps && selector ? new Computed(deps, selector) : module);
     const subscribe: Store<T>['subscribe'] = (listener) => {
       listeners.add(listener);
       return () => listeners.delete(listener);
@@ -216,6 +220,7 @@ export const create: {
       Object.entries(descriptors).forEach(([key, descriptor]) => {
         if (Object.prototype.hasOwnProperty.call(descriptor, 'value')) {
           if (typeof descriptor.value !== 'function') {
+            const isComputed = descriptor.value instanceof Computed;
             if (mutableInstance) {
               Object.defineProperty(_rawState, key, {
                 get: () => mutableInstance[key],
@@ -224,23 +229,40 @@ export const create: {
                 },
                 enumerable: true
               });
-            } else {
+            } else if (!isComputed) {
               _rawState[key] = descriptor.value;
+            }
+            if (isComputed) {
+              const { deps, fn } = descriptor.value as Computed;
+              const depsCallbackSelector = createSelectorWithArray(
+                () => [rootState],
+                () => {
+                  return deps(rootState as any);
+                }
+              );
+              const selector = createSelectorWithArray(
+                (that) => depsCallbackSelector.call(that),
+                fn
+              );
+              descriptor.get = function () {
+                return selector.call(this);
+              };
+            } else {
+              if (sliceKey) {
+                descriptor.get = () => (rootState as any)[sliceKey][key];
+                descriptor.set = (value: unknown) => {
+                  (rootState as any)[sliceKey][key] = value;
+                };
+              } else {
+                descriptor.get = () => (rootState as any)[key];
+                descriptor.set = (value: unknown) => {
+                  (rootState as any)[key] = value;
+                };
+              }
             }
             // handle state property
             delete descriptor.value;
             delete descriptor.writable;
-            if (sliceKey) {
-              descriptor.get = () => (rootState as any)[sliceKey][key];
-              descriptor.set = (value: unknown) => {
-                (rootState as any)[sliceKey][key] = value;
-              };
-            } else {
-              descriptor.get = () => (rootState as any)[key];
-              descriptor.set = (value: unknown) => {
-                (rootState as any)[key] = value;
-              };
-            }
           } else if (share === 'client') {
             descriptor.value = (...args: unknown[]) => {
               const keys = sliceKey ? [sliceKey, key] : [key];
