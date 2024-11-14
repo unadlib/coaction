@@ -49,7 +49,7 @@
 - [x] Fix @coaction/pinia name checker
 - [ ] handle error proxy action
 - [ ] Middleware Support
-- [ ] computed properties in @coaction/react
+- [x] computed properties in @coaction/react
 - [x] multi-transport
 - [ ] Undo/Redo
 - [x] Fix @coaction/mobx type issue
