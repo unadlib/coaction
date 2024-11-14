@@ -233,6 +233,11 @@ export const create: {
               _rawState[key] = descriptor.value;
             }
             if (isComputed) {
+              if (mutableInstance) {
+                throw new Error(
+                  'Computed is not supported with mutable instance'
+                );
+              }
               const { deps, fn } = descriptor.value as Computed;
               const depsCallbackSelector = createSelectorWithArray(
                 () => [rootState],
