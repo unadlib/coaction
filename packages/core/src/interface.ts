@@ -121,6 +121,14 @@ export type ExternalEvents = {
   fullSync(): Promise<{ state: string; sequence: number }>;
 };
 
+interface Getter<T extends ISlices> {
+  <P extends any[], R>(
+    getDeps: (store: T) => readonly [...P] | [...P],
+    selector: (...args: P) => R
+  ): R;
+  (): T;
+}
+
 export type Slice<T extends ISlices> = (
   /**
    * The setState is used to update the state.
@@ -129,18 +137,7 @@ export type Slice<T extends ISlices> = (
   /**
    * The getState is used to get the state.
    */
-  get: <
-    P extends any[],
-    R,
-    A extends
-      | [
-          getDeps: (store: T) => readonly [...P] | [...P],
-          selector: (...args: P) => R
-        ]
-      | []
-  >(
-    ...args: A
-  ) => A extends [] ? T : R,
+  get: Getter<T>,
   /**
    * The store is used to store the state.
    */
@@ -155,7 +152,7 @@ export type Slices<T extends ISlices, K extends keyof T> = (
   /**
    * The getState is used to get the state.
    */
-  get: Store<T>['getState'],
+  get: Getter<T>,
   /**
    * The store is used to store the state.
    */

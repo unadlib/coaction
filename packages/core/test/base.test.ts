@@ -316,9 +316,10 @@ describe('Slices', () => {
     const useStore = create({
       counter: ((set, get, store) => ({
         count: 0,
-        get double() {
-          return this.count * 2;
-        },
+        double: get(
+          (state) => [state.counter.count],
+          (count) => count * 2
+        ),
         increment1() {
           set({
             counter: {
