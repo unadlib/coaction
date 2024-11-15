@@ -1,34 +1,11 @@
 import type { Store } from './interface';
+import { areShallowEqualWithArray } from './utils';
 
 export class Computed {
   constructor(
     public deps: (store: Store<any>) => any[],
     public fn: (...args: any[]) => any
   ) {}
-}
-
-const isEqual = (x: unknown, y: unknown) => {
-  if (x === y) {
-    return x !== 0 || y !== 0 || 1 / x === 1 / y;
-  }
-  // eslint-disable-next-line no-self-compare
-  return x !== x && y !== y;
-};
-
-function areShallowEqualWithArray(
-  prev: any[] | null | IArguments,
-  next: any[] | null | IArguments
-) {
-  if (prev === null || next === null || prev.length !== next.length) {
-    return false;
-  }
-  const { length } = prev;
-  for (let i = 0; i < length; i += 1) {
-    if (!isEqual(prev[i], next[i])) {
-      return false;
-    }
-  }
-  return true;
 }
 
 function defaultMemoize(func: (...args: any) => any) {
