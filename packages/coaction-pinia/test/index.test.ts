@@ -1,15 +1,24 @@
-import { defineStore, createPinia, setActivePinia } from 'pinia';
+import {
+  defineStore,
+  createPinia,
+  setActivePinia,
+  StoreDefinition
+} from 'pinia';
 import {
   createTransport,
   mockPorts,
   WorkerMainTransportOptions
 } from 'data-transport';
-import { create, Slice, Slices } from 'coaction';
-import { bindPinia } from '../src';
+import { create, type Slices } from 'coaction';
+import { bindPinia, cast, type PiniaStore } from '../src';
 
 test('pinia', () => {
-  const useCounterStore = defineStore('counter', {
-    state: () => ({ count: 0, name: 'Eduardo' }),
+  const useCounterStore: PiniaStore<{
+    count: number;
+    readonly doubleCount: number;
+    increment: () => void;
+  }> = defineStore('counter', {
+    state: () => ({ count: 0 }),
     getters: {
       doubleCount: (state) => {
         return state.count * 2;
@@ -38,34 +47,37 @@ test('pinia', () => {
 test('base', () => {
   const stateFn = jest.fn();
   const getterFn = jest.fn();
-  const useStore = create<{
+  type Counter = {
     count: number;
     readonly double: number;
     increment: () => void;
     increment1: () => void;
-  }>(
+  };
+  const useStore = create<Counter>(
     (set, get, store) =>
-      defineStore(
-        'test',
-        bindPinia({
-          state: () => ({ count: 0 }),
-          getters: {
-            double: (state) => state.count * 2
-          },
-          actions: {
-            increment1() {
-              set(() => {
-                this.count += 1;
-              });
+      cast<Counter>(
+        defineStore(
+          'test',
+          bindPinia({
+            state: () => ({ count: 0 }),
+            getters: {
+              double: (state) => state.count * 2
             },
-            increment() {
-              this.count += 1;
-              stateFn(get().count, store.getState().count, this.count);
-              getterFn(get().double, store.getState().double, this.double);
+            actions: {
+              increment1() {
+                set(() => {
+                  this.count += 1;
+                });
+              },
+              increment() {
+                this.count += 1;
+                stateFn(get().count, store.getState().count, this.count);
+                getterFn(get().double, store.getState().double, this.double);
+              }
             }
-          }
-        })
-      ) as any,
+          })
+        )
+      ),
     {
       id: 'test'
     }
@@ -196,26 +208,30 @@ test('worker', async () => {
     ports.create() as WorkerMainTransportOptions
   );
 
-  const counter: Slice<{
+  type Counter = {
     count: number;
     increment: () => void;
-  }> = () =>
-    defineStore(
-      'test',
-      bindPinia({
-        state: () => ({ count: 0 }),
-        getters: {
-          double: (state) => {
-            return state.count * 2;
+  };
+
+  const counter = () =>
+    cast<Counter>(
+      defineStore(
+        'test',
+        bindPinia({
+          state: () => ({ count: 0 }),
+          getters: {
+            double: (state) => {
+              return state.count * 2;
+            }
+          },
+          actions: {
+            increment() {
+              this.count += 1;
+            }
           }
-        },
-        actions: {
-          increment() {
-            this.count += 1;
-          }
-        }
-      })
-    ) as any;
+        })
+      )
+    );
   const useServerStore = create(counter, {
     transport: serverTransport,
     workerType: 'WorkerInternal',
@@ -302,32 +318,34 @@ describe('Slices', () => {
     const useStore = create(
       {
         counter: ((set, get, store) =>
-          defineStore(
-            'test',
-            bindPinia({
-              state: () => ({ count: 0 }),
-              getters: {
-                double: (state) => {
-                  return state.count * 2;
+          cast(
+            defineStore(
+              'test',
+              bindPinia({
+                state: () => ({ count: 0 }),
+                getters: {
+                  double: (state) => {
+                    return state.count * 2;
+                  }
+                },
+                actions: {
+                  increment() {
+                    this.count += 1;
+                    stateFn(
+                      get().counter.count,
+                      store.getState().counter.count,
+                      this.count
+                    );
+                    getterFn(
+                      get().counter.double,
+                      store.getState().counter.double,
+                      this.double
+                    );
+                  }
                 }
-              },
-              actions: {
-                increment() {
-                  this.count += 1;
-                  stateFn(
-                    get().counter.count,
-                    store.getState().counter.count,
-                    this.count
-                  );
-                  getterFn(
-                    get().counter.double,
-                    store.getState().counter.double,
-                    this.double
-                  );
-                }
-              }
-            })
-          ) as any) as Slices<
+              })
+            )
+          )) satisfies Slices<
           {
             counter: {
               count: number;
@@ -394,23 +412,25 @@ describe('Slices', () => {
         };
       },
       'counter'
-    > = (() =>
-      defineStore(
-        'test',
-        bindPinia({
-          state: () => ({ count: 0 }),
-          getters: {
-            double(state) {
-              return this.count * 2;
+    > = () =>
+      cast(
+        defineStore(
+          'test',
+          bindPinia({
+            state: () => ({ count: 0 }),
+            getters: {
+              double(state) {
+                return this.count * 2;
+              }
+            },
+            actions: {
+              increment() {
+                this.count += 1;
+              }
             }
-          },
-          actions: {
-            increment() {
-              this.count += 1;
-            }
-          }
-        })
-      )) as any;
+          })
+        )
+      );
     const useServerStore = create(
       { counter },
       {

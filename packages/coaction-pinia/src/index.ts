@@ -1,7 +1,12 @@
 import { apply } from 'mutability';
 import { createBinder, type Store } from 'coaction';
 import { createPinia, setActivePinia } from 'pinia';
-import type { _GettersTree, DefineStoreOptions, StateTree } from 'pinia';
+import type {
+  _GettersTree,
+  DefineStoreOptions,
+  StateTree,
+  StoreDefinition
+} from 'pinia';
 
 const instancesMap = new WeakMap<object, unknown>();
 
@@ -10,6 +15,35 @@ type StoreWithSubscriptions = Store<object> & {
   _subscriptions?: Set<(...args: any) => void>;
   _destroyers?: Set<() => void>;
 };
+
+type FunctionKeys<T> = {
+  [K in keyof T]: T[K] extends (...args: any[]) => any ? K : never;
+}[keyof T];
+
+type Equal<X, Y> =
+  (<T>() => T extends X ? 1 : 2) extends <T>() => T extends Y ? 1 : 2
+    ? true
+    : false;
+
+type ReadonlyKeys<T> = {
+  [K in keyof T]: Equal<
+    { [P in K]: T[P] },
+    Readonly<{ [P in K]: T[P] }>
+  > extends true
+    ? K
+    : never;
+}[keyof T];
+
+export type IStore<T extends object> = [
+  string,
+  Pick<T, Exclude<keyof T, ReadonlyKeys<T> | FunctionKeys<T>>>,
+  {
+    [K in ReadonlyKeys<T>]: (
+      state: Pick<T, Exclude<keyof T, ReadonlyKeys<T> | FunctionKeys<T>>>
+    ) => T[K];
+  },
+  Pick<T, FunctionKeys<T>>
+];
 
 const handleStore = (store: StoreWithSubscriptions, state: object) => {
   if (!store.toRaw) {
@@ -100,3 +134,14 @@ export const bindPinia = createBinder({
 >(
   options: Omit<DefineStoreOptions<Id, S, G, A>, 'id'>
 ) => Omit<DefineStoreOptions<Id, S, G, A>, 'id'>;
+
+export const cast = <T extends object>(
+  store: StoreDefinition<IStore<T>[0], IStore<T>[1], IStore<T>[2], IStore<T>[3]>
+) => store as any as T;
+
+export type PiniaStore<T extends object> = StoreDefinition<
+  IStore<T>[0],
+  IStore<T>[1],
+  IStore<T>[2],
+  IStore<T>[3]
+>;
