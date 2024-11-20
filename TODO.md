@@ -61,6 +61,11 @@
 - [ ] support for cross-store
 - [ ] Fix Pinia StoreProperties
 - [ ] Pinia does not support detecting changes without a action
+
   - [ ] handle $patch
   - [ ] handle $reset
   - [ ] handle computed properties
+
+- [ ] add more tests
+- [ ] add more examples
+- [ ] add more documentation
