@@ -84,14 +84,8 @@ export const create: {
           if (store.isSliceStore) {
             if (typeof _next === 'object' && _next !== null) {
               for (const key in _next) {
-                if (
-                  typeof _next[key as keyof typeof _next] === 'object' &&
-                  _next[key as keyof typeof _next] !== null
-                ) {
-                  Object.assign(
-                    (rootState as any)[key],
-                    _next[key as keyof typeof _next]
-                  );
+                if (typeof _next[key] === 'object' && _next[key] !== null) {
+                  Object.assign((rootState as any)[key], _next[key]);
                 }
               }
             }
