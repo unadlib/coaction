@@ -19,7 +19,7 @@ import type {
   AsyncStoreOption
 } from './interface';
 import { defaultId, workerType } from './constant';
-import { createAsyncStore } from './asyncStore';
+import { createAsyncStore, handleMainTransport } from './asyncStore';
 import { getInitialState } from './getInitialState';
 import { Computed, createSelectorWithArray } from './computed';
 import { mergeObject } from './utils';
@@ -342,34 +342,19 @@ export const create: {
       options.transport ??
       (_workerType
         ? createTransport(_workerType, {
-            prefix: name
+            prefix: store.id
           })
         : null);
     if (transport) {
       if (options.enablePatches === false) {
         throw new Error(`enablePatches: true is required for the transport`);
       }
-      transport.listen('execute', async (keys, args) => {
-        // console.log('execute', { keys, args });
-        let base = store.getState();
-        let obj = base;
-        for (const key of keys) {
-          base = base[key];
-          if (typeof base === 'function') {
-            base = base.bind(obj);
-          }
-          obj = base;
-        }
-        return base(...args);
-      });
-      transport.listen('fullSync', async () => {
-        // console.log('fullSync', rootState);
-        return {
-          state: JSON.stringify(rootState),
-          sequence
-        };
-      });
-      store.transport = transport;
+      handleMainTransport(
+        store,
+        transport,
+        () => store.getState(),
+        () => sequence
+      );
     }
     return store;
   };
