@@ -21,3 +21,17 @@ export function areShallowEqualWithArray(
   }
   return true;
 }
+
+export const mergeObject = (target: any, source: any, isSlice?: boolean) => {
+  if (isSlice) {
+    if (typeof source === 'object' && source !== null) {
+      for (const key in source) {
+        if (typeof source[key] === 'object' && source[key] !== null) {
+          Object.assign(target[key], source[key]);
+        }
+      }
+    }
+  } else {
+    Object.assign(target, source);
+  }
+};
