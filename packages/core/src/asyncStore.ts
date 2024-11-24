@@ -7,6 +7,8 @@ import type {
   TransportOptions,
   AsyncStoreOption
 } from './interface';
+import { Internal } from './internal';
+import { Patches } from 'mutative';
 
 export const createAsyncStore = (
   createStore: (options: { share?: 'client' | 'main' }) => Store<any>,
@@ -76,8 +78,7 @@ export const handleMainTransport = (
     emit: InternalEvents;
     listen: ExternalEvents;
   }>,
-  getRootState: () => any,
-  getSequence: () => number
+  internal: Internal<any>
 ) => {
   transport.listen('execute', async (keys, args) => {
     let base = store.getState();
@@ -93,9 +94,36 @@ export const handleMainTransport = (
   });
   transport.listen('fullSync', async () => {
     return {
-      state: JSON.stringify(getRootState()),
-      sequence: getSequence()
+      state: JSON.stringify(internal.rootState),
+      sequence: internal.sequence
     };
   });
   store.transport = transport;
+};
+
+export const emit = (
+  store: Store<any>,
+  internal: Internal<any>,
+  patches?: Patches
+) => {
+  if (store.transport && patches?.length) {
+    internal.sequence += 1;
+    store.transport.emit('update', {
+      patches: patches,
+      sequence: internal.sequence
+    });
+  }
+};
+
+export const handleDraft = (store: Store<any>, internal: Internal<any>) => {
+  internal.rootState = internal.backupState;
+  const [, patches, inversePatches] = internal.finalizeDraft();
+  const finalPatches = store.patch
+    ? store.patch({ patches, inversePatches })
+    : { patches, inversePatches };
+  if (finalPatches.patches.length) {
+    store.apply(internal.rootState, finalPatches.patches);
+    // with mutableInstance, 3rd party model will send update notifications on its own after store.apply
+    emit(store, internal, finalPatches.patches);
+  }
 };
