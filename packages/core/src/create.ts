@@ -22,6 +22,7 @@ import { defaultId, workerType } from './constant';
 import { createAsyncStore } from './asyncStore';
 import { getInitialState } from './getInitialState';
 import { Computed, createSelectorWithArray } from './computed';
+import { mergeObject } from './utils';
 
 export const create: {
   <T extends Record<string, Slice<any>>>(
@@ -81,17 +82,7 @@ export const create: {
       next,
       updater = (next) => {
         const merge = (_next = next) => {
-          if (store.isSliceStore) {
-            if (typeof _next === 'object' && _next !== null) {
-              for (const key in _next) {
-                if (typeof _next[key] === 'object' && _next[key] !== null) {
-                  Object.assign((rootState as any)[key], _next[key]);
-                }
-              }
-            }
-          } else {
-            Object.assign(rootState, _next);
-          }
+          mergeObject(rootState, _next, store.isSliceStore);
         };
         const fn =
           typeof next === 'function'
