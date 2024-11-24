@@ -69,3 +69,33 @@ export const createAsyncStore = (
   });
   return Object.assign(() => asyncStore.getState(), asyncStore);
 };
+
+export const handleMainTransport = (
+  store: Store<any>,
+  transport: Transport<{
+    emit: InternalEvents;
+    listen: ExternalEvents;
+  }>,
+  getRootState: () => any,
+  getSequence: () => number
+) => {
+  transport.listen('execute', async (keys, args) => {
+    let base = store.getState();
+    let obj = base;
+    for (const key of keys) {
+      base = base[key];
+      if (typeof base === 'function') {
+        base = base.bind(obj);
+      }
+      obj = base;
+    }
+    return base(...args);
+  });
+  transport.listen('fullSync', async () => {
+    return {
+      state: JSON.stringify(getRootState()),
+      sequence: getSequence()
+    };
+  });
+  store.transport = transport;
+};
