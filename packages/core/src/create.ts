@@ -352,7 +352,7 @@ export const create: {
       handleMainTransport(
         store,
         transport,
-        () => store.getState(),
+        () => rootState,
         () => sequence
       );
     }
