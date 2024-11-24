@@ -1,7 +1,7 @@
 import { create as createWithMutative, isDraft } from 'mutative';
 import { Computed, createSelectorWithArray } from './computed';
-import { Store, StoreOptions } from './interface';
-import { Internal } from './internal';
+import type { Store, StoreOptions } from './interface';
+import type { Internal } from './internal';
 import { handleDraft } from './asyncStore';
 
 export const getRawState = (
