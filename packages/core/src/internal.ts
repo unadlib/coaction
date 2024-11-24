@@ -1,5 +1,5 @@
-import { Draft, Patches } from 'mutative';
-import { Listener } from './interface';
+import type { Draft, Patches } from 'mutative';
+import type { Listener } from './interface';
 
 export interface Internal<T> {
   module: T;

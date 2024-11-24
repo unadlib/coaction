@@ -1,4 +1,5 @@
-import { createTransport, Transport } from 'data-transport';
+import { createTransport, type Transport } from 'data-transport';
+import type { Patches } from 'mutative';
 import type {
   ExternalEvents,
   InternalEvents,
@@ -7,8 +8,7 @@ import type {
   TransportOptions,
   AsyncStoreOption
 } from './interface';
-import { Internal } from './internal';
-import { Patches } from 'mutative';
+import type { Internal } from './internal';
 
 export const createAsyncStore = (
   createStore: (options: { share?: 'client' | 'main' }) => Store<any>,

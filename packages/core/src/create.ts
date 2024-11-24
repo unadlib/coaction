@@ -1,8 +1,6 @@
-import { type Draft, apply as applyWithMutative, Patches } from 'mutative';
-import { createTransport, type Transport } from 'data-transport';
+import { type Draft, apply as applyWithMutative, type Patches } from 'mutative';
+import { createTransport } from 'data-transport';
 import type {
-  ExternalEvents,
-  InternalEvents,
   ISlices,
   Listener,
   Slice,
