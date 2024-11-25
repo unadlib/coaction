@@ -3,6 +3,7 @@ import type { ISlices, Slice, Store } from './interface';
 
 export const getInitialState = (store: Store<any>, createState: any) => {
   const makeState = (fn: (...args: any[]) => any) => {
+    // make sure createState is a function
     if (process.env.NODE_ENV !== 'production' && typeof fn !== 'function') {
       throw new Error('createState should be a function');
     }

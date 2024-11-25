@@ -44,14 +44,14 @@
 
 ### TODOs
 
+- [ ] handle error proxy action
+- [ ] Middleware Support
+- [ ] Undo/Redo
 - [x] refactor name properties
 - [x] Fix @coaction/pinia type issue
 - [x] Fix @coaction/pinia name checker
-- [ ] handle error proxy action
-- [ ] Middleware Support
 - [x] computed properties in @coaction/react
 - [x] multi-transport
-- [ ] Undo/Redo
 - [x] Fix @coaction/mobx type issue
 - [x] Support for multiple worker stores with same base store
 - [x] Fix enablePatches checker
