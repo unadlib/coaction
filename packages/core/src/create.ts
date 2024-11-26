@@ -10,12 +10,30 @@ import type {
   StoreReturn,
   AsyncStoreOption
 } from './interface';
-import { defaultId, workerType } from './constant';
+import { defaultId, WorkerType } from './constant';
 import { createAsyncStore, handleMainTransport } from './asyncStore';
 import { getInitialState } from './getInitialState';
 import { getRawState } from './getRawState';
 import { handleState } from './handleState';
+import { Internal } from './internal';
 
+/**
+ * Create a store
+ *
+ * description:
+ * - create a store with the given state and options
+ * - if options.enablePatches is false, the store will not support patches
+ * - if options.workerType is provided, the store will be created in a worker
+ * - if options.transport is provided, the store will use the transport
+ * - if options.id is provided, the store will use the id
+ * - if options.share is provided, the store will use the share
+ * - if options.share is 'main', the store will be created in the main thread
+ * - if options.share is 'client', the store will be created in the client thread
+ * - if options.share is not provided, the store will be created in the main thread
+ * - if options.share is not provided and options.workerType is provided, the store will be created in the worker
+ * - if options.share is not provided and options.transport is provided, the store will use the transport
+ * - if options.share is not provided and options.workerType is not provided, the store will be created in the main thread
+ */
 export const create: {
   <T extends Record<string, Slice<any>>>(
     createState: T,
@@ -28,28 +46,20 @@ export const create: {
 } = <T extends ISlices | Record<string, Slice<any>>>(
   createState: any,
   options: StoreOptions = {}
-): any => {
-  const _workerType = (options.workerType ?? workerType) as typeof workerType;
-  const share = _workerType || options.transport ? 'main' : undefined;
+) => {
+  const checkEnablePatches =
+    Object.hasOwnProperty.call(options, 'enablePatches') &&
+    !options.enablePatches;
+  const workerType = (options.workerType ?? WorkerType) as typeof WorkerType;
+  const share = workerType || options.transport ? 'main' : undefined;
   const createStore = ({ share }: { share?: 'client' | 'main' }) => {
-    const store = {} as Store<any>;
+    const store = {} as Store<T>;
     const internal = {
       sequence: 0,
       isBatching: false,
       listeners: new Set<Listener>()
-    } as {
-      module: T;
-      rootState: T | Draft<T>;
-      backupState: T | Draft<T>;
-      // TODO: fix the type of finalizeDraft
-      finalizeDraft: () => [T, Patches, Patches];
-      mutableInstance: any;
-      sequence: number;
-      isBatching: boolean;
-      listeners: Set<Listener>;
-    };
-
-    // TODO: consider to remove this, about name property should be required.
+    } as Internal<T>;
+    // TODO: check id/name is unique
     const name = options.id ?? defaultId;
     const { setState, getState } = handleState(store, internal, options);
     const subscribe: Store<T>['subscribe'] = (listener) => {
@@ -57,16 +67,14 @@ export const create: {
       return () => internal.listeners.delete(listener);
     };
     const destroy = () => {
-      // TODO: implement more robust destroy method
       internal.listeners.clear();
       store.transport?.dispose();
     };
-    const apply: Store<any>['apply'] = (
-      state = internal.rootState,
-      patches
-    ) => {
+    const apply: Store<T>['apply'] = (state = internal.rootState, patches) => {
       // console.log('apply', { state, patches });
-      internal.rootState = patches ? applyWithMutative(state, patches) : state;
+      internal.rootState = patches
+        ? (applyWithMutative(state, patches) as T)
+        : state;
       internal.listeners.forEach((listener) => listener());
     };
     const isSliceStore = typeof createState === 'object';
@@ -80,19 +88,18 @@ export const create: {
       apply,
       isSliceStore
     });
-    store;
     const initialState = getInitialState(store, createState);
     internal.rootState = getRawState(store, internal, initialState, options);
     // in worker, the transport is the worker itself
     const transport =
       options.transport ??
-      (_workerType
-        ? createTransport(_workerType, {
+      (workerType
+        ? createTransport(workerType, {
             prefix: store.id
           })
         : null);
     if (transport) {
-      if (options.enablePatches === false) {
+      if (checkEnablePatches) {
         throw new Error(`enablePatches: true is required for the transport`);
       }
       handleMainTransport(store, transport, internal);
@@ -104,9 +111,9 @@ export const create: {
   });
   return Object.assign((asyncStoreOption: AsyncStoreOption) => {
     if (!asyncStoreOption) return store.getState();
-    if (options.enablePatches === false) {
+    if (checkEnablePatches) {
       throw new Error(`enablePatches: true is required for the async store`);
     }
     return createAsyncStore(createStore, asyncStoreOption);
-  }, store);
+  }, store) as StoreReturn<any>;
 };
