@@ -1,6 +1,6 @@
 import { global } from './global';
 
-export const workerType = global.SharedWorkerGlobalScope
+export const WorkerType = global.SharedWorkerGlobalScope
   ? 'SharedWorkerInternal'
   : globalThis.WorkerGlobalScope
     ? 'WorkerInternal'
