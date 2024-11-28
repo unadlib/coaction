@@ -24,7 +24,7 @@ export const handleState = (
       const fn =
         typeof next === 'function'
           ? () => {
-              const returnValue = next(internal.module as Draft<any>);
+              const returnValue = next(internal.module);
               if (returnValue instanceof Promise) {
                 throw new Error(
                   'setState with async function is not supported'

@@ -1,4 +1,4 @@
-import { type Draft, apply as applyWithMutative, type Patches } from 'mutative';
+import { apply as applyWithMutative, type Patches } from 'mutative';
 import { createTransport } from 'data-transport';
 import type {
   ISlices,
@@ -66,7 +66,7 @@ export const create: {
       internal.listeners.add(listener);
       return () => internal.listeners.delete(listener);
     };
-    const destroy = () => {
+    const destroy: Store<T>['destroy'] = () => {
       internal.listeners.clear();
       store.transport?.dispose();
     };
