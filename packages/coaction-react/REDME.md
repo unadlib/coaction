@@ -1,6 +1,6 @@
 # @coaction/react
 
-# Usage
+## Usage
 
 ### Slices Pattern
 

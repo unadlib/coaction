@@ -1,12 +1,12 @@
 # @coaction/solid
 
-# Usage
+## Usage
 
 ```tsx
-import { useStore } from "@coaction/solid";
-import counterStore from "./counterStore";
+import { useStore } from '@coaction/solid';
+import counterStore from './counterStore';
 
-const worker = new Worker(new URL("./worker.js", import.meta.url));
+const worker = new Worker(new URL('./worker.js', import.meta.url));
 
 const CounterComponent = () => {
   const { count, increment, decrement } = useStore(counterStore, worker);

@@ -1,6 +1,6 @@
 # coaction
 
-# Usage
+## Usage
 
 ```ts
 import { subscribe } from 'coaction';

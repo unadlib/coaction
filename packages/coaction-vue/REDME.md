@@ -1,6 +1,6 @@
 # @coaction/vue
 
-# Usage
+## Usage
 
 ```vue
 <template>
@@ -12,10 +12,10 @@
 </template>
 
 <script>
-import { useStore } from "@coaction/vue";
-import counterStore from "./counterStore";
+import { useStore } from '@coaction/vue';
+import counterStore from './counterStore';
 
-const worker = new Worker(new URL("./worker.js", import.meta.url));
+const worker = new Worker(new URL('./worker.js', import.meta.url));
 
 export default {
   setup() {
@@ -24,9 +24,9 @@ export default {
     return {
       count,
       increment,
-      decrement,
+      decrement
     };
-  },
+  }
 };
 </script>
 ```

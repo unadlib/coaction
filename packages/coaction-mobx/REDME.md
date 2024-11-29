@@ -1,6 +1,6 @@
 # @coaction/mobx
 
-# Usage
+## Usage
 
 ```ts
 import { create } from 'coaction';

@@ -1,6 +1,6 @@
 # @coaction/pinia
 
-# Usage
+## Usage
 
 ```ts
 import { create } from 'coaction';
