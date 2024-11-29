@@ -1,3 +1,3 @@
 # @coaction/redux
 
-# Usage
+## Usage

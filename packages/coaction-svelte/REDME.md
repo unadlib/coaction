@@ -1,6 +1,6 @@
 # @coaction/svelte
 
-# Usage
+## Usage
 
 ```svelte
 <script>

@@ -42,6 +42,9 @@ interface BindMobx {
   <T>(target: T): T;
 }
 
+/**
+ * Bind a store to Mobx
+ */
 export const bindMobx = createBinder<BindMobx>({
   handleStore,
   handleState: (options) => {

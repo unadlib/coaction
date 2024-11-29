@@ -56,9 +56,9 @@ const handleStore = (store: StoreWithSubscriptions, state: object) => {
     });
     store._subscriptions = new Set<() => void>();
     store._destroyers = new Set<() => void>();
-    const oldDestroy = store.destroy;
+    const baseDestroy = store.destroy;
     store.destroy = () => {
-      oldDestroy();
+      baseDestroy();
       store._subscriptions!.clear();
       store._subscriptions = undefined;
       store._destroyers!.forEach((destroy) => destroy());
@@ -67,6 +67,7 @@ const handleStore = (store: StoreWithSubscriptions, state: object) => {
     store.apply = (state = store.getState(), patches) => {
       // console.log('apply', state, patches);
       if (!patches) {
+        if (state === store.getState()) return;
         if (store.isSliceStore) {
           if (typeof state === 'object' && state !== null) {
             for (const key in state) {
@@ -95,6 +96,9 @@ const handleStore = (store: StoreWithSubscriptions, state: object) => {
   store._destroyers!.add(destroy);
 };
 
+/**
+ * Bind a store to Pinia
+ */
 export const bindPinia = createBinder({
   handleStore,
   handleState: ((options: DefineStoreOptions<any, any, any, any>) => {
@@ -135,6 +139,9 @@ export const bindPinia = createBinder({
   options: Omit<DefineStoreOptions<Id, S, G, A>, 'id'>
 ) => Omit<DefineStoreOptions<Id, S, G, A>, 'id'>;
 
+/**
+ * Cast a store to its original type
+ */
 export const cast = <T extends object>(
   store: StoreDefinition<IStore<T>[0], IStore<T>[1], IStore<T>[2], IStore<T>[3]>
 ) => store as any as T;
