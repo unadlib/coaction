@@ -38,12 +38,7 @@ export const logger: (options?: {
    */
   serialized?: boolean;
 }) => Middleware<any> =
-  ({
-    log = console.log.bind(console),
-    stackTrace = false,
-    collapsed = true,
-    serialized = false
-  } = {}) =>
+  ({ stackTrace = false, collapsed = true, serialized = false } = {}) =>
   (store) => {
     if (loggerStoreMap.has(store)) {
       return store;
@@ -111,10 +106,16 @@ export const logger: (options?: {
       if (stackTrace) {
         console.trace('trace');
       }
-      console.log('[state]', JSON.stringify(store.getState()));
+      console.log(
+        '[state]',
+        serialized ? JSON.stringify(store.getPureState()) : store.getPureState()
+      );
       const now = timer.now();
       const result = setState(state, action);
-      console.log('[next state]', JSON.stringify(store.getState()));
+      console.log(
+        '[next state]',
+        serialized ? JSON.stringify(store.getPureState()) : store.getPureState()
+      );
       console.log(
         [
           `%c ${date} `,
