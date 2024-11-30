@@ -14,7 +14,10 @@ export const handleState = (
   store: Store<any>,
   internal: Internal<any>,
   options: StoreOptions
-) => {
+): {
+  setState: Store<any>['setState'];
+  getState: Store<any>['getState'];
+} => {
   const setState: Store<any>['setState'] = (
     next,
     updater = (next) => {
