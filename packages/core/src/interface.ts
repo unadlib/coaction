@@ -9,7 +9,7 @@ export type DeepPartial<T> = {
 
 export type Listener = () => void;
 
-export interface Store<T extends ISlices> {
+export interface Store<T extends ISlices = ISlices> {
   /**
    * The id of the store.
    */
@@ -56,7 +56,11 @@ export interface Store<T extends ISlices> {
   /**
    * apply the patches to the state.
    */
-  apply: (state: T, patches?: Patches) => void;
+  apply: (state?: T, patches?: Patches) => void;
+  /**
+   * the pure state is used to get the state without the methods and getters.
+   */
+  getPureState: () => T;
   /**
    * Get the raw instance via the initial state.
    */
@@ -168,13 +172,13 @@ export type Slices<T extends ISlices, K extends keyof T> = (
   store: Store<T>
 ) => T[K];
 
-export type Middleware = (store: Store<any>) => Store<any>;
+export type Middleware<T extends CreateState> = (store: Store<T>) => Store<T>;
 
 export type SliceState<T extends Record<string, Slice<any>>> = {
   [K in keyof T]: ReturnType<T[K]>;
 };
 
-export type StoreOptions = {
+export type StoreOptions<T extends CreateState> = {
   /**
    * The id of the store.
    */
@@ -183,7 +187,7 @@ export type StoreOptions = {
   transport?: Transport;
   // TODO: remove this, it's only used in test
   workerType?: 'SharedWorkerInternal' | 'WorkerInternal';
-  middlewares?: Middleware[];
+  middlewares?: Middleware<T>[];
   /**
    * enable patches
    */
@@ -220,3 +224,5 @@ export type StoreReturn<
   (<O extends [WorkerStoreOptions] | []>(
     ...args: O
   ) => O extends [any, ...any[]] ? StoreWithAsyncFunction<T, D> : T);
+
+export type CreateState = ISlices | Record<string, Slice<any>>;

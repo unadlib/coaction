@@ -1,4 +1,4 @@
-import { apply as applyWithMutative, type Patches } from 'mutative';
+import { apply as applyWithMutative } from 'mutative';
 import { createTransport } from 'data-transport';
 import type {
   ISlices,
@@ -8,24 +8,25 @@ import type {
   Store,
   StoreOptions,
   StoreReturn,
-  AsyncStoreOption
+  AsyncStoreOption,
+  CreateState
 } from './interface';
 import { defaultId, WorkerType } from './constant';
 import { createAsyncStore, handleMainTransport } from './asyncStore';
 import { getInitialState } from './getInitialState';
 import { getRawState } from './getRawState';
 import { handleState } from './handleState';
-import { Internal } from './internal';
+import type { Internal } from './internal';
 import { applyMiddlewares } from './applyMiddlewares';
 
 type Creator = {
   <T extends Record<string, Slice<any>>>(
     createState: T,
-    options?: StoreOptions
+    options?: StoreOptions<T>
   ): StoreReturn<SliceState<T>, true>;
   <T extends ISlices>(
     createState: Slice<T>,
-    options?: StoreOptions
+    options?: StoreOptions<T>
   ): StoreReturn<T>;
 };
 
@@ -46,9 +47,9 @@ type Creator = {
  * - if options.share is not provided and options.transport is provided, the store will use the transport
  * - if options.share is not provided and options.workerType is not provided, the store will be created in the main thread
  */
-export const create: Creator = <T extends ISlices | Record<string, Slice<any>>>(
+export const create: Creator = <T extends CreateState>(
   createState: Slice<T> | T,
-  options: StoreOptions = {}
+  options: StoreOptions<T> = {}
 ) => {
   const checkEnablePatches =
     Object.hasOwnProperty.call(options, 'enablePatches') &&
@@ -73,12 +74,16 @@ export const create: Creator = <T extends ISlices | Record<string, Slice<any>>>(
       internal.listeners.clear();
       store.transport?.dispose();
     };
-    const apply: Store<T>['apply'] = (state = internal.rootState, patches) => {
+    const apply: Store<T>['apply'] = (
+      state = internal.rootState as T,
+      patches
+    ) => {
       internal.rootState = patches
         ? (applyWithMutative(state, patches) as T)
         : state;
       internal.listeners.forEach((listener) => listener());
     };
+    const getPureStat: Store<T>['getPureState'] = () => internal.rootState as T;
     const isSliceStore = typeof createState === 'object';
     Object.assign(store, {
       id: name,
@@ -88,11 +93,17 @@ export const create: Creator = <T extends ISlices | Record<string, Slice<any>>>(
       subscribe,
       destroy,
       apply,
-      isSliceStore
+      isSliceStore,
+      getPureStat
     });
     applyMiddlewares(store, options.middlewares ?? []);
     const initialState = getInitialState(store, createState);
-    internal.rootState = getRawState(store, internal, initialState, options);
+    internal.rootState = getRawState(
+      store,
+      internal,
+      initialState,
+      options
+    ) as T;
     // in worker, the transport is the worker itself
     const transport =
       options.transport ??

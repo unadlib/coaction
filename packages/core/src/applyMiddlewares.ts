@@ -1,8 +1,8 @@
-import type { ISlices, Middleware, Store } from './interface';
+import type { CreateState, ISlices, Middleware, Store } from './interface';
 
-export const applyMiddlewares = <T extends ISlices>(
+export const applyMiddlewares = <T extends CreateState>(
   store: Store<T>,
-  middlewares: Middleware[]
+  middlewares: Middleware<T>[]
 ) => {
   return middlewares.reduce((store, middleware, index) => {
     if (process.env.NODE_ENV === 'development') {

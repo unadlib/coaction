@@ -3,7 +3,7 @@ import { areShallowEqualWithArray } from './utils';
 
 export class Computed {
   constructor(
-    public deps: (store: Store<any>) => any[],
+    public deps: (state: Store['getState']) => any[],
     public fn: (...args: any[]) => any
   ) {}
 }

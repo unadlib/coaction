@@ -1,4 +1,4 @@
-import { Middleware, Store } from '../interface';
+import type { Middleware, Store } from '../interface';
 
 const repeat = (str: string, times: number) => new Array(times + 1).join(str);
 
@@ -17,7 +17,7 @@ export const timer =
     : Date;
 
 const traceTimeMap = new Map<string, number>();
-const loggerStoreMap = new WeakMap<Store<any>, boolean>();
+const loggerStoreMap = new WeakMap<Store, boolean>();
 
 // TODO: support custom loggers
 export const logger: (options?: {
@@ -37,7 +37,7 @@ export const logger: (options?: {
    * Serialize the patches
    */
   serialized?: boolean;
-}) => Middleware =
+}) => Middleware<any> =
   ({
     log = console.log.bind(console),
     stackTrace = false,
@@ -67,8 +67,8 @@ export const logger: (options?: {
           [
             `%c ${date} `,
             `method ${options.method}`,
-            ` [${options.id}] `,
-            `[parameters]`
+            ` [${options.id}]`,
+            ` [parameters]`
           ].join('%c'),
           'color: gray; font-weight: lighter;',
           'color: #03A9F4; font-weight: bold;',
@@ -86,8 +86,8 @@ export const logger: (options?: {
           [
             `%c ${date} `,
             `method ${options.method}`,
-            ` [${options.id}] `,
-            `(${(timer.now() - start).toFixed(3)} ms)`,
+            ` (${(timer.now() - start).toFixed(3)} ms)`,
+            ` [${options.id}]`,
             ` [result]`
           ].join('%c'),
           'color: gray; font-weight: lighter;',

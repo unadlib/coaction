@@ -1,3 +1,4 @@
+// @ts-nocheck
 import { computed, makeObservable, observable } from 'mobx';
 import {
   idProp,

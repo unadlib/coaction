@@ -1,7 +1,10 @@
 import { bindSymbol } from './constant';
-import type { ISlices, Middleware, Slice, Store } from './interface';
+import type { CreateState, ISlices, Slice, Store } from './interface';
 
-export const getInitialState = (store: Store<any>, createState: any) => {
+export const getInitialState = <T extends CreateState>(
+  store: Store<T>,
+  createState: any
+) => {
   const makeState = (fn: (...args: any[]) => any) => {
     // make sure createState is a function
     if (process.env.NODE_ENV !== 'production' && typeof fn !== 'function') {

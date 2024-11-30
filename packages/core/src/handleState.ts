@@ -4,21 +4,21 @@ import {
   isDraft,
   Patches
 } from 'mutative';
-import { Store, StoreOptions } from './interface';
-import { Internal } from './internal';
+import type { CreateState, Store, StoreOptions } from './interface';
+import type { Internal } from './internal';
 import { mergeObject } from './utils';
 import { emit, handleDraft } from './asyncStore';
 import { Computed } from './computed';
 
-export const handleState = (
-  store: Store<any>,
-  internal: Internal<any>,
-  options: StoreOptions
+export const handleState = <T extends CreateState>(
+  store: Store<T>,
+  internal: Internal<T>,
+  options: StoreOptions<T>
 ): {
-  setState: Store<any>['setState'];
-  getState: Store<any>['getState'];
+  setState: Store['setState'];
+  getState: Store['getState'];
 } => {
-  const setState: Store<any>['setState'] = (
+  const setState: Store['setState'] = (
     next,
     updater = (next) => {
       const merge = (_next = next) => {
@@ -63,7 +63,7 @@ export const handleState = (
       const [, patches, inversePatches] = createWithMutative(
         internal.rootState,
         (draft) => {
-          internal.rootState = draft;
+          internal.rootState = draft as Draft<T>;
           return fn.apply(null);
         },
         {
@@ -76,7 +76,7 @@ export const handleState = (
         ? store.patch({ patches, inversePatches })
         : { patches, inversePatches };
       if (finalPatches.patches.length) {
-        store.apply(internal.rootState, finalPatches.patches);
+        store.apply(internal.rootState as T, finalPatches.patches);
         if (!internal.mutableInstance) {
           internal.listeners.forEach((listener) => listener());
         }
