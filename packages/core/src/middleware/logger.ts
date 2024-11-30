@@ -20,8 +20,11 @@ const traceTimeMap = new Map<string, number>();
 const loggerStoreMap = new WeakMap<Store<any>, boolean>();
 
 // TODO: support custom loggers
-export const logger: (log?: (...args: any[]) => void) => Middleware =
-  (log = console.log) =>
+export const logger: (options?: {
+  log?: (...args: any[]) => void;
+  stackTrace?: boolean;
+}) => Middleware =
+  (loggerOptions = {}) =>
   (store) => {
     if (loggerStoreMap.has(store)) {
       return store;
@@ -36,22 +39,36 @@ export const logger: (log?: (...args: any[]) => void) => Middleware =
       const date = formatTime(new Date());
       if (!traceTimeMap.get(options.id)) {
         traceTimeMap.set(options.id, timer.now());
-        console.log(
-          date,
-          `[${options.id}]`,
-          options.method,
-          options.parameters
+        console.group(
+          [
+            `%c ${date} `,
+            `method ${options.method}`,
+            `[${options.id}]`,
+            `parameters: ${JSON.stringify(options.parameters)}`
+          ].join('%c'),
+          'color: gray; font-weight: lighter;',
+          'color: #03A9F4; font-weight: bold;',
+          'color: gray; font-weight: lighter;',
+          'color: gray; font-weight: lighter;'
         );
       } else {
         const start = traceTimeMap.get(options.id)!;
         traceTimeMap.delete(options.id);
         console.log(
-          date,
-          `[${options.id}]`,
-          options.method,
-          `(${(timer.now() - start).toFixed(3)} ms)`,
-          `result: ${options.result}`
+          [
+            `%c ${date} `,
+            `method ${options.method}`,
+            `[${options.id}]`,
+            `(${(timer.now() - start).toFixed(3)} ms)`,
+            `result: ${JSON.stringify(options.result)}`
+          ].join('%c'),
+          'color: gray; font-weight: lighter;',
+          'color: #03A9F4;',
+          'color: gray; font-weight: lighter;',
+          'color: gray; font-weight: lighter;',
+          'color: gray; font-weight: lighter;'
         );
+        console.groupEnd();
       }
     };
     const setState = store.setState;
@@ -67,9 +84,12 @@ export const logger: (log?: (...args: any[]) => void) => Middleware =
           `(${(timer.now() - now).toFixed(3)} ms)`
         ].join('%c'),
         'color: gray; font-weight: lighter;',
-        'color: #dd9ab5; background-color: #4b2f36',
+        'color: #4CAF50;',
         'color: gray; font-weight: lighter;'
       );
+      if (loggerOptions.stackTrace) {
+        console.trace('trace');
+      }
       console.log('[state]', baseState);
       console.log('[next state]', JSON.stringify(store.getState()));
       console.groupEnd();

@@ -25,6 +25,10 @@ export const useStore = create(
     counter
   },
   {
-    middlewares: [logger()]
+    middlewares: [
+      logger({
+        stackTrace: true
+      })
+    ]
   }
 );
