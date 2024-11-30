@@ -36,7 +36,11 @@ test('base', () => {
     }),
     {
       id: 'test',
-      middlewares: [logger(logFn)]
+      middlewares: [
+        logger({
+          log: logFn
+        })
+      ]
     }
   );
   const { count, increment } = useStore();

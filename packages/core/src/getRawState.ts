@@ -1,20 +1,24 @@
-import { create as createWithMutative, isDraft } from 'mutative';
+import {
+  create as createWithMutative,
+  Draft,
+  isDraft,
+  Patches
+} from 'mutative';
 import { Computed, createSelectorWithArray } from './computed';
-import type { Store, StoreOptions } from './interface';
+import type { CreateState, Store, StoreOptions } from './interface';
 import type { Internal } from './internal';
 import { handleDraft } from './asyncStore';
 import { uuid } from './utils';
 
-export const getRawState = (
-  store: Store<any>,
-  internal: Internal<any>,
+export const getRawState = <T extends CreateState>(
+  store: Store<T>,
+  internal: Internal<T>,
   initialState: any,
-  options: StoreOptions
+  options: StoreOptions<T>
 ) => {
-  const rawState = {} as any;
+  const rawState = {} as Record<string, any>;
   const handle = (_rawState: any, _initialState: any, sliceKey?: string) => {
     internal.mutableInstance = store.toRaw?.(_initialState);
-    // console.log('_initialState', _initialState);
     const descriptors = Object.getOwnPropertyDescriptors(_initialState);
     Object.entries(descriptors).forEach(([key, descriptor]) => {
       if (Object.prototype.hasOwnProperty.call(descriptor, 'value')) {
@@ -41,7 +45,7 @@ export const getRawState = (
             const depsCallbackSelector = createSelectorWithArray(
               () => [internal.rootState],
               () => {
-                return deps(internal.rootState as any);
+                return deps(internal.rootState as Store<T>['getState']);
               }
             );
             const selector = createSelectorWithArray(
@@ -116,8 +120,12 @@ export const getRawState = (
                       enablePatches: true
                     }
                   );
-                  internal.finalizeDraft = finalize;
-                  internal.rootState = draft;
+                  internal.finalizeDraft = finalize as () => [
+                    T,
+                    Patches,
+                    Patches
+                  ];
+                  internal.rootState = draft as Draft<T>;
                 }
               };
               const isDrafted = isDraft(internal.rootState);
@@ -129,8 +137,8 @@ export const getRawState = (
                 // mark: () => 'immutable',
                 enablePatches: true
               });
-              internal.finalizeDraft = finalize;
-              internal.rootState = draft;
+              internal.finalizeDraft = finalize as () => [T, Patches, Patches];
+              internal.rootState = draft as Draft<T>;
               result = fn.apply(
                 sliceKey ? store.getState()[sliceKey] : store.getState(),
                 args
@@ -177,13 +185,13 @@ export const getRawState = (
     return slice;
   };
   if (store.isSliceStore) {
-    internal.module = {};
+    internal.module = {} as T;
     Object.entries(initialState).forEach(([key, value]) => {
       rawState[key] = {};
-      (internal.module as any)[key] = handle(rawState[key], value, key);
+      internal.module[key] = handle(rawState[key], value, key);
     });
   } else {
-    internal.module = handle(rawState, initialState);
+    internal.module = handle(rawState, initialState) as T;
   }
   return rawState;
 };

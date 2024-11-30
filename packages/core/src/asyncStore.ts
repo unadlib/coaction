@@ -6,12 +6,13 @@ import type {
   Store,
   WorkerOptions,
   TransportOptions,
-  AsyncStoreOption
+  AsyncStoreOption,
+  CreateState
 } from './interface';
 import type { Internal } from './internal';
 
-export const createAsyncStore = (
-  createStore: (options: { share?: 'client' | 'main' }) => Store<any>,
+export const createAsyncStore = <T extends CreateState>(
+  createStore: (options: { share?: 'client' | 'main' }) => Store<T>,
   asyncStoreOption: AsyncStoreOption
 ) => {
   const asyncStore = createStore({
@@ -69,13 +70,13 @@ export const createAsyncStore = (
   return Object.assign(() => asyncStore.getState(), asyncStore);
 };
 
-export const handleMainTransport = (
-  store: Store<any>,
+export const handleMainTransport = <T extends CreateState>(
+  store: Store<T>,
   transport: Transport<{
     emit: InternalEvents;
     listen: ExternalEvents;
   }>,
-  internal: Internal<any>
+  internal: Internal<T>
 ) => {
   transport.listen('execute', async (keys, args) => {
     let base = store.getState();
@@ -87,7 +88,10 @@ export const handleMainTransport = (
       }
       obj = base;
     }
-    return base(...args);
+    if (process.env.NODE_ENV === 'development' && typeof base !== 'function') {
+      throw new Error('The function is not found');
+    }
+    return (base as Function)(...args);
   });
   transport.listen('fullSync', async () => {
     return {
@@ -98,9 +102,9 @@ export const handleMainTransport = (
   store.transport = transport;
 };
 
-export const emit = (
-  store: Store<any>,
-  internal: Internal<any>,
+export const emit = <T extends CreateState>(
+  store: Store<T>,
+  internal: Internal<T>,
   patches?: Patches
 ) => {
   if (store.transport && patches?.length) {
@@ -112,14 +116,17 @@ export const emit = (
   }
 };
 
-export const handleDraft = (store: Store<any>, internal: Internal<any>) => {
+export const handleDraft = <T extends CreateState>(
+  store: Store<T>,
+  internal: Internal<T>
+) => {
   internal.rootState = internal.backupState;
   const [, patches, inversePatches] = internal.finalizeDraft();
   const finalPatches = store.patch
     ? store.patch({ patches, inversePatches })
     : { patches, inversePatches };
   if (finalPatches.patches.length) {
-    store.apply(internal.rootState, finalPatches.patches);
+    store.apply(internal.rootState as T, finalPatches.patches);
     // 3rd party model will send update notifications on its own after `store.apply` in mutableInstance mode
     emit(store, internal, finalPatches.patches);
   }

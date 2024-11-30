@@ -1,7 +1,7 @@
 import type { Draft, Patches } from 'mutative';
-import type { Listener } from './interface';
+import type { CreateState, Listener } from './interface';
 
-export interface Internal<T> {
+export interface Internal<T extends CreateState = CreateState> {
   module: T;
   rootState: T | Draft<T>;
   backupState: T | Draft<T>;
