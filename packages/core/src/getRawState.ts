@@ -69,9 +69,22 @@ export const getRawState = (
           delete descriptor.writable;
         } else if (store.share === 'client') {
           descriptor.value = (...args: unknown[]) => {
+            let actionId: string | undefined;
+            let done: ((result: any) => void) | undefined;
+            if (store.trace) {
+              actionId = uuid();
+              store.trace({ method: key, parameters: args, id: actionId });
+              done = (result: any) => {
+                store.trace?.({ method: key, id: actionId!, result });
+              };
+            }
             const keys = sliceKey ? [sliceKey, key] : [key];
-            // console.log('execute', { keys, args });
-            return store.transport!.emit('execute', keys, args);
+            return store
+              .transport!.emit('execute', keys, args)
+              .then((result) => {
+                done?.(result);
+                return result;
+              });
           };
         } else {
           const fn = descriptor.value;

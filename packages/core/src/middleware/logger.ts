@@ -21,10 +21,29 @@ const loggerStoreMap = new WeakMap<Store<any>, boolean>();
 
 // TODO: support custom loggers
 export const logger: (options?: {
+  /**
+   * Custom log function
+   */
   log?: (...args: any[]) => void;
+  /**
+   * Print the stack trace
+   */
   stackTrace?: boolean;
+  /**
+   * Collapse the log group
+   */
+  collapsed?: boolean;
+  /**
+   * Serialize the patches
+   */
+  serialized?: boolean;
 }) => Middleware =
-  (loggerOptions = {}) =>
+  ({
+    log = console.log.bind(console),
+    stackTrace = false,
+    collapsed = true,
+    serialized = false
+  } = {}) =>
   (store) => {
     if (loggerStoreMap.has(store)) {
       return store;
@@ -32,7 +51,12 @@ export const logger: (options?: {
     loggerStoreMap.set(store, true);
     const apply = store.apply;
     store.apply = (state, patches) => {
-      console.log('apply', JSON.stringify(patches));
+      if (patches) {
+        console.log(
+          '[patches]',
+          serialized ? JSON.stringify(patches) : patches
+        );
+      }
       return apply(state, patches);
     };
     store.trace = (options) => {
@@ -43,14 +67,18 @@ export const logger: (options?: {
           [
             `%c ${date} `,
             `method ${options.method}`,
-            `[${options.id}]`,
-            `parameters: ${JSON.stringify(options.parameters)}`
+            ` [${options.id}] `,
+            `[parameters]`
           ].join('%c'),
           'color: gray; font-weight: lighter;',
           'color: #03A9F4; font-weight: bold;',
           'color: gray; font-weight: lighter;',
-          'color: gray; font-weight: lighter;'
+          'color: gray; font-weight: lighter;',
+          options.parameters
         );
+        if (stackTrace) {
+          console.trace('trace');
+        }
       } else {
         const start = traceTimeMap.get(options.id)!;
         traceTimeMap.delete(options.id);
@@ -58,40 +86,45 @@ export const logger: (options?: {
           [
             `%c ${date} `,
             `method ${options.method}`,
-            `[${options.id}]`,
+            ` [${options.id}] `,
             `(${(timer.now() - start).toFixed(3)} ms)`,
-            `result: ${JSON.stringify(options.result)}`
+            ` [result]`
           ].join('%c'),
           'color: gray; font-weight: lighter;',
           'color: #03A9F4;',
           'color: gray; font-weight: lighter;',
           'color: gray; font-weight: lighter;',
-          'color: gray; font-weight: lighter;'
+          'color: gray; font-weight: lighter;',
+          options.result
         );
         console.groupEnd();
       }
     };
     const setState = store.setState;
     store.setState = (state, action) => {
-      const baseState = JSON.stringify(store.getState());
       const date = formatTime(new Date());
+      console[collapsed ? 'groupCollapsed' : 'group'](
+        [`%c ${date} `, 'action '].join('%c'),
+        'color: gray; font-weight: lighter;',
+        'color: #4CAF50;'
+      );
+      if (stackTrace) {
+        console.trace('trace');
+      }
+      console.log('[state]', JSON.stringify(store.getState()));
       const now = timer.now();
       const result = setState(state, action);
-      console.groupCollapsed(
+      console.log('[next state]', JSON.stringify(store.getState()));
+      console.log(
         [
           `%c ${date} `,
-          'action anonymous ',
+          'action',
           `(${(timer.now() - now).toFixed(3)} ms)`
         ].join('%c'),
         'color: gray; font-weight: lighter;',
         'color: #4CAF50;',
         'color: gray; font-weight: lighter;'
       );
-      if (loggerOptions.stackTrace) {
-        console.trace('trace');
-      }
-      console.log('[state]', baseState);
-      console.log('[next state]', JSON.stringify(store.getState()));
       console.groupEnd();
       return result;
     };
