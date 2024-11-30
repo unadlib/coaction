@@ -8,7 +8,7 @@ export class Computed {
   ) {}
 }
 
-function defaultMemoize(func: (...args: any) => any) {
+const defaultMemoize = (func: (...args: any) => any) => {
   const lastArgs: WeakMap<any, IArguments | null> = new WeakMap();
   const lastResult: WeakMap<any, unknown> = new WeakMap();
   return function (this: ThisType<unknown>) {
@@ -18,7 +18,7 @@ function defaultMemoize(func: (...args: any) => any) {
     lastArgs.set(this, arguments);
     return lastResult.get(this);
   };
-}
+};
 
 const createSelectorCreatorWithArray = (
   memoize: (...args: any) => (..._args: any) => any = defaultMemoize

@@ -1,7 +1,7 @@
 import type { Store } from './interface';
 import { bindSymbol } from './constant';
 
-export function createBinder<F = (...args: any[]) => any>({
+export const createBinder = <F = (...args: any[]) => any>({
   handleState,
   handleStore
 }: {
@@ -28,7 +28,7 @@ export function createBinder<F = (...args: any[]) => any>({
    * handleStore is a function to handle the store object.
    */
   handleStore: (store: Store<object>, rawState: object, state: object) => void;
-}) {
+}) => {
   return (<S extends object>(state: S): S => {
     const { copyState, key, bind } = handleState(state);
     const value = (key ? copyState[key] : copyState) as {
@@ -43,4 +43,4 @@ export function createBinder<F = (...args: any[]) => any>({
     };
     return copyState;
   }) as F;
-}
+};

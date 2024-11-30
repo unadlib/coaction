@@ -6,10 +6,10 @@ const isEqual = (x: unknown, y: unknown) => {
   return x !== x && y !== y;
 };
 
-export function areShallowEqualWithArray(
+export const areShallowEqualWithArray = (
   prev: any[] | null | IArguments,
   next: any[] | null | IArguments
-) {
+) => {
   if (prev === null || next === null || prev.length !== next.length) {
     return false;
   }
@@ -20,7 +20,7 @@ export function areShallowEqualWithArray(
     }
   }
   return true;
-}
+};
 
 export const mergeObject = (target: any, source: any, isSlice?: boolean) => {
   if (isSlice) {
