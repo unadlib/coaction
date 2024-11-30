@@ -1,4 +1,4 @@
-import { Middleware } from '../interface';
+import { Middleware, Store } from '../interface';
 
 const repeat = (str: string, times: number) => new Array(times + 1).join(str);
 
@@ -17,10 +17,21 @@ export const timer =
     : Date;
 
 const traceTimeMap = new Map<string, number>();
+const loggerStoreMap = new WeakMap<Store<any>, boolean>();
 
+// TODO: support custom loggers
 export const logger: (log?: (...args: any[]) => void) => Middleware =
   (log = console.log) =>
   (store) => {
+    if (loggerStoreMap.has(store)) {
+      return store;
+    }
+    loggerStoreMap.set(store, true);
+    const apply = store.apply;
+    store.apply = (state, patches) => {
+      console.log('apply', JSON.stringify(patches));
+      return apply(state, patches);
+    };
     store.trace = (options) => {
       const date = formatTime(new Date());
       if (!traceTimeMap.get(options.id)) {
@@ -51,14 +62,13 @@ export const logger: (log?: (...args: any[]) => void) => Middleware =
       const result = setState(state, action);
       console.groupCollapsed(
         [
-          date,
-          'action',
-          'anonymous',
+          `%c ${date} `,
+          'action anonymous ',
           `(${(timer.now() - now).toFixed(3)} ms)`
-        ].join('%c '),
+        ].join('%c'),
+        'color: gray; font-weight: lighter;',
         'color: #dd9ab5; background-color: #4b2f36',
-        'color: #dd9ab5; background-color: #4b2f36',
-        'color: #dd9ab5; background-color: #4b2f36'
+        'color: gray; font-weight: lighter;'
       );
       console.log('[state]', baseState);
       console.log('[next state]', JSON.stringify(store.getState()));

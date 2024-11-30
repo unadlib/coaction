@@ -1,4 +1,4 @@
-import { create, Slices } from 'coaction';
+import { create, logger, Slices } from 'coaction';
 
 type Counter = Slices<
   {
@@ -20,6 +20,11 @@ const counter: Counter = (set, get, store) => ({
   }
 });
 
-export const useStore = create({
-  counter
-});
+export const useStore = create(
+  {
+    counter
+  },
+  {
+    middlewares: [logger()]
+  }
+);
