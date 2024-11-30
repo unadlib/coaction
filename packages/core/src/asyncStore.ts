@@ -43,28 +43,25 @@ export const createAsyncStore = (
     throw new Error('transport is required');
   }
   asyncStore.transport = transport;
-  let _sequence: number;
+  let sequence: number;
   const fullSync = async () => {
-    // console.log('fullSync');
     const latest = await transport.emit('fullSync');
-    // console.log('fullSync', latest);
     asyncStore.apply(JSON.parse(latest.state));
-    _sequence = latest.sequence;
+    sequence = latest.sequence;
   };
-  // TODO: implement to handle the case for the custom transport connects
   if (typeof transport.onConnect !== 'function') {
     throw new Error('transport.onConnect is required');
   }
   transport.onConnect?.(async () => {
-    // console.log('onConnect');
     await fullSync();
   });
-  transport.listen('update', async ({ patches, sequence }) => {
-    // console.log('update', { patches, sequence });
-    if (typeof sequence === 'number' && sequence === _sequence + 1) {
-      _sequence = sequence;
-      // asyncStore.getState()
-      asyncStore.apply(undefined, patches);
+  transport.listen('update', async (options) => {
+    if (
+      typeof options.sequence === 'number' &&
+      options.sequence === sequence + 1
+    ) {
+      sequence = options.sequence;
+      asyncStore.apply(undefined, options.patches);
     } else {
       await fullSync();
     }
@@ -123,7 +120,7 @@ export const handleDraft = (store: Store<any>, internal: Internal<any>) => {
     : { patches, inversePatches };
   if (finalPatches.patches.length) {
     store.apply(internal.rootState, finalPatches.patches);
-    // with mutableInstance, 3rd party model will send update notifications on its own after store.apply
+    // 3rd party model will send update notifications on its own after `store.apply` in mutableInstance mode
     emit(store, internal, finalPatches.patches);
   }
 };
