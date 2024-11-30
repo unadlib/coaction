@@ -16,6 +16,7 @@ import { getInitialState } from './getInitialState';
 import { getRawState } from './getRawState';
 import { handleState } from './handleState';
 import { Internal } from './internal';
+import { applyMiddlewares } from './applyMiddlewares';
 
 type Creator = {
   <T extends Record<string, Slice<any>>>(
@@ -73,7 +74,6 @@ export const create: Creator = <T extends ISlices | Record<string, Slice<any>>>(
       store.transport?.dispose();
     };
     const apply: Store<T>['apply'] = (state = internal.rootState, patches) => {
-      // console.log('apply', { state, patches });
       internal.rootState = patches
         ? (applyWithMutative(state, patches) as T)
         : state;
@@ -90,6 +90,7 @@ export const create: Creator = <T extends ISlices | Record<string, Slice<any>>>(
       apply,
       isSliceStore
     });
+    applyMiddlewares(store, options.middlewares ?? []);
     const initialState = getInitialState(store, createState);
     internal.rootState = getRawState(store, internal, initialState, options);
     // in worker, the transport is the worker itself

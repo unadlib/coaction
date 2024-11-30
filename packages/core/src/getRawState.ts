@@ -3,6 +3,7 @@ import { Computed, createSelectorWithArray } from './computed';
 import type { Store, StoreOptions } from './interface';
 import type { Internal } from './internal';
 import { handleDraft } from './asyncStore';
+import { uuid } from './utils';
 
 export const getRawState = (
   store: Store<any>,
@@ -75,6 +76,15 @@ export const getRawState = (
         } else {
           const fn = descriptor.value;
           descriptor.value = (...args: unknown[]) => {
+            let actionId: string | undefined;
+            let done: ((result: any) => void) | undefined;
+            if (store.trace) {
+              actionId = uuid();
+              store.trace({ method: key, parameters: args, id: actionId });
+              done = (result: any) => {
+                store.trace?.({ method: key, id: actionId!, result });
+              };
+            }
             const enablePatches = store.transport ?? options.enablePatches;
             if (
               internal.mutableInstance &&
@@ -118,23 +128,32 @@ export const getRawState = (
                 //     'It will be combined with the next state in the async function.'
                 //   );
                 // }
-                return result.finally(() => handleResult(isDrafted));
+                return result.finally(() => {
+                  const result = handleResult(isDrafted);
+                  done?.(result);
+                  return result;
+                });
               }
               handleResult(isDrafted);
+              done?.(result);
               return result;
             }
             if (internal.mutableInstance && store.act) {
-              return store.act(() => {
+              const result = store.act(() => {
                 return fn.apply(
                   sliceKey ? store.getState()[sliceKey] : store.getState(),
                   args
                 );
               });
+              done?.(result);
+              return result;
             }
-            return fn.apply(
+            const result = fn.apply(
               sliceKey ? store.getState()[sliceKey] : store.getState(),
               args
             );
+            done?.(result);
+            return result;
           };
         }
       }
