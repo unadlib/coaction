@@ -17,6 +17,17 @@ import { getRawState } from './getRawState';
 import { handleState } from './handleState';
 import { Internal } from './internal';
 
+type Creator = {
+  <T extends Record<string, Slice<any>>>(
+    createState: T,
+    options?: StoreOptions
+  ): StoreReturn<SliceState<T>, true>;
+  <T extends ISlices>(
+    createState: Slice<T>,
+    options?: StoreOptions
+  ): StoreReturn<T>;
+};
+
 /**
  * Create a store
  *
@@ -34,23 +45,14 @@ import { Internal } from './internal';
  * - if options.share is not provided and options.transport is provided, the store will use the transport
  * - if options.share is not provided and options.workerType is not provided, the store will be created in the main thread
  */
-export const create: {
-  <T extends Record<string, Slice<any>>>(
-    createState: T,
-    options?: StoreOptions
-  ): StoreReturn<SliceState<T>, true>;
-  <T extends ISlices>(
-    createState: Slice<T>,
-    options?: StoreOptions
-  ): StoreReturn<T>;
-} = <T extends ISlices | Record<string, Slice<any>>>(
-  createState: any,
+export const create: Creator = <T extends ISlices | Record<string, Slice<any>>>(
+  createState: Slice<T> | T,
   options: StoreOptions = {}
 ) => {
   const checkEnablePatches =
     Object.hasOwnProperty.call(options, 'enablePatches') &&
     !options.enablePatches;
-  const workerType = (options.workerType ?? WorkerType) as typeof WorkerType;
+  const workerType = options.workerType ?? WorkerType;
   const share = workerType || options.transport ? 'main' : undefined;
   const createStore = ({ share }: { share?: 'client' | 'main' }) => {
     const store = {} as Store<T>;
