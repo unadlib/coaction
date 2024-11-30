@@ -83,7 +83,8 @@ export const create: Creator = <T extends CreateState>(
         : state;
       internal.listeners.forEach((listener) => listener());
     };
-    const getPureStat: Store<T>['getPureState'] = () => internal.rootState as T;
+    const getPureState: Store<T>['getPureState'] = () =>
+      internal.rootState as T;
     const isSliceStore = typeof createState === 'object';
     Object.assign(store, {
       id: name,
@@ -94,8 +95,8 @@ export const create: Creator = <T extends CreateState>(
       destroy,
       apply,
       isSliceStore,
-      getPureStat
-    });
+      getPureState
+    } as Store<T>);
     applyMiddlewares(store, options.middlewares ?? []);
     const initialState = getInitialState(store, createState);
     internal.rootState = getRawState(
