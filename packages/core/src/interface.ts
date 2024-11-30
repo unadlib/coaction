@@ -72,6 +72,15 @@ export interface Store<T extends ISlices> {
    * The act is used to run the function in the action.
    */
   act?: <T extends () => any>(fn: T) => ReturnType<T>;
+  /**
+   * The trace is used to trace the action
+   */
+  trace?: (options: {
+    id: string;
+    method: string;
+    parameters?: any[];
+    result?: any;
+  }) => void;
 }
 
 export type WorkerOptions = {
@@ -159,7 +168,7 @@ export type Slices<T extends ISlices, K extends keyof T> = (
   store: Store<T>
 ) => T[K];
 
-type Middlewares = any;
+export type Middleware = (store: Store<any>) => Store<any>;
 
 export type SliceState<T extends Record<string, Slice<any>>> = {
   [K in keyof T]: ReturnType<T[K]>;
@@ -174,7 +183,7 @@ export type StoreOptions = {
   transport?: Transport;
   // TODO: remove this, it's only used in test
   workerType?: 'SharedWorkerInternal' | 'WorkerInternal';
-  middlewares?: Middlewares[];
+  middlewares?: Middleware[];
   /**
    * enable patches
    */

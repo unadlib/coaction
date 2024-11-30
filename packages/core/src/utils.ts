@@ -35,3 +35,14 @@ export const mergeObject = (target: any, source: any, isSlice?: boolean) => {
     Object.assign(target, source);
   }
 };
+
+export const uuid = () => {
+  let timestamp = new Date().getTime();
+  const uuidTemplate = 'xxxxxxxx-xxxx-4xxx-yxxx-xxxxxxxxxxxx';
+  const uuid = uuidTemplate.replace(/[xy]/g, (char) => {
+    let randomNum = (timestamp + Math.random() * 16) % 16 | 0;
+    timestamp = Math.floor(timestamp / 16);
+    return (char === 'x' ? randomNum : (randomNum & 0x3) | 0x8).toString(16);
+  });
+  return uuid;
+};

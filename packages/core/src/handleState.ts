@@ -111,6 +111,7 @@ export const handleState = (
       internal.isBatching = false;
     }
     emit(store, internal, result?.[1]);
+    return result;
   };
   const getState = (
     deps?: (...args: any) => any,

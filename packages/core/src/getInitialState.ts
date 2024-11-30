@@ -1,5 +1,5 @@
 import { bindSymbol } from './constant';
-import type { ISlices, Slice, Store } from './interface';
+import type { ISlices, Middleware, Slice, Store } from './interface';
 
 export const getInitialState = (store: Store<any>, createState: any) => {
   const makeState = (fn: (...args: any[]) => any) => {
