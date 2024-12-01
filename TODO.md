@@ -45,7 +45,7 @@
 ### TODOs
 
 - [ ] handle error proxy action
-- [ ] Middleware Support
+- [x] Middleware Support
 - [ ] Undo/Redo
 - [x] refactor name properties
 - [x] Fix @coaction/pinia type issue

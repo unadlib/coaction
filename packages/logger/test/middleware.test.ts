@@ -1,8 +1,3 @@
-import {
-  createTransport,
-  mockPorts,
-  WorkerMainTransportOptions
-} from 'data-transport';
 import { create } from 'coaction';
 import { logger } from '../src';
 
