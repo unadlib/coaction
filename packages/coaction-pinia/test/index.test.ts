@@ -10,7 +10,7 @@ import {
   WorkerMainTransportOptions
 } from 'data-transport';
 import { create, type Slices } from 'coaction';
-import { bindPinia, cast, type PiniaStore } from '../src';
+import { bindPinia, adapt, type PiniaStore } from '../src';
 
 test('pinia', () => {
   const useCounterStore: PiniaStore<{
@@ -55,7 +55,7 @@ test('base', () => {
   };
   const useStore = create<Counter>(
     (set, get, store) =>
-      cast<Counter>(
+      adapt<Counter>(
         defineStore(
           'test',
           bindPinia({
@@ -79,13 +79,13 @@ test('base', () => {
         )
       ),
     {
-      id: 'test'
+      name: 'test'
     }
   );
   const { count, increment } = useStore();
   expect(count).toBe(0);
   expect(increment).toBeInstanceOf(Function);
-  expect(useStore.id).toBe('test');
+  expect(useStore.name).toBe('test');
   expect(useStore.getState()).toMatchInlineSnapshot(`
 {
   "count": 0,
@@ -214,7 +214,7 @@ test('worker', async () => {
   };
 
   const counter = () =>
-    cast<Counter>(
+    adapt<Counter>(
       defineStore(
         'test',
         bindPinia({
@@ -235,12 +235,12 @@ test('worker', async () => {
   const useServerStore = create(counter, {
     transport: serverTransport,
     workerType: 'WorkerInternal',
-    id: 'test'
+    name: 'test'
   });
   const { count, increment } = useServerStore();
   expect(count).toBe(0);
   expect(increment).toBeInstanceOf(Function);
-  expect(useServerStore.id).toBe('test');
+  expect(useServerStore.name).toBe('test');
   expect(useServerStore.getState()).toMatchInlineSnapshot(`
 {
   "count": 0,
@@ -268,7 +268,7 @@ test('worker', async () => {
 `);
   {
     const useClientStore = create(counter, {
-      id: 'test'
+      name: 'test'
     })({
       transport: clientTransport,
       workerType: 'WorkerMain'
@@ -282,7 +282,7 @@ test('worker', async () => {
     const { count, increment } = useClientStore();
     expect(count).toBe(2);
     expect(increment).toBeInstanceOf(Function);
-    expect(useClientStore.id).toBe('test');
+    expect(useClientStore.name).toBe('test');
     expect(useClientStore.getState()).toMatchInlineSnapshot(`
 {
   "count": 2,
@@ -318,7 +318,7 @@ describe('Slices', () => {
     const useStore = create(
       {
         counter: ((set, get, store) =>
-          cast(
+          adapt(
             defineStore(
               'test',
               bindPinia({
@@ -357,13 +357,13 @@ describe('Slices', () => {
         >
       },
       {
-        id: 'test'
+        name: 'test'
       }
     );
     const { count, increment } = useStore().counter;
     expect(count).toBe(0);
     expect(increment).toBeInstanceOf(Function);
-    expect(useStore.id).toBe('test');
+    expect(useStore.name).toBe('test');
     expect(useStore.getState()).toMatchInlineSnapshot(`
 {
   "counter": {
@@ -413,7 +413,7 @@ describe('Slices', () => {
       },
       'counter'
     > = () =>
-      cast(
+      adapt(
         defineStore(
           'test',
           bindPinia({
@@ -434,7 +434,7 @@ describe('Slices', () => {
     const useServerStore = create(
       { counter },
       {
-        id: 'test',
+        name: 'test',
         transport: serverTransport,
         workerType: 'WorkerInternal'
       }
@@ -442,7 +442,7 @@ describe('Slices', () => {
     const { count, increment } = useServerStore().counter;
     expect(count).toBe(0);
     expect(increment).toBeInstanceOf(Function);
-    expect(useServerStore.id).toBe('test');
+    expect(useServerStore.name).toBe('test');
     expect(useServerStore.getState().counter).toMatchInlineSnapshot(`
 {
   "count": 0,
@@ -472,7 +472,7 @@ describe('Slices', () => {
       const useClientStore = create(
         { counter },
         {
-          id: 'test'
+          name: 'test'
         }
       )({
         transport: clientTransport,
@@ -486,7 +486,7 @@ describe('Slices', () => {
       const { count, increment } = useClientStore().counter;
       expect(count).toBe(2);
       expect(increment).toBeInstanceOf(Function);
-      expect(useClientStore.id).toBe('test');
+      expect(useClientStore.name).toBe('test');
       expect(useClientStore.getState()).toMatchInlineSnapshot(`
 {
   "counter": {

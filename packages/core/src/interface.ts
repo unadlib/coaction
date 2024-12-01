@@ -11,9 +11,9 @@ export type Listener = () => void;
 
 export interface Store<T extends ISlices = ISlices> {
   /**
-   * The id of the store.
+   * The name of the store.
    */
-  id: string;
+  name: string;
   /**
    * Set the next state.
    */
@@ -80,6 +80,9 @@ export interface Store<T extends ISlices = ISlices> {
    * The trace is used to trace the action
    */
   trace?: (options: {
+    /**
+     * The id of the method.
+     */
     id: string;
     method: string;
     parameters?: any[];
@@ -180,9 +183,9 @@ export type SliceState<T extends Record<string, Slice<any>>> = {
 
 export type StoreOptions<T extends CreateState> = {
   /**
-   * The id of the store.
+   * The name of the store.
    */
-  id?: string;
+  name?: string;
   // TODO: remove this, it's only used in test
   transport?: Transport;
   // TODO: remove this, it's only used in test

@@ -42,7 +42,7 @@ test('base', () => {
   const { count, increment } = useStore();
   expect(count).toBe(0);
   expect(increment).toBeInstanceOf(Function);
-  expect(useStore.id).toBe('default');
+  expect(useStore.name).toBe('default');
   expect(useStore.getState()).toMatchInlineSnapshot(`
 {
   "count": 0,
@@ -242,7 +242,7 @@ test('worker', async () => {
   const { count, increment } = useServerStore();
   expect(count).toBe(0);
   expect(increment).toBeInstanceOf(Function);
-  expect(useServerStore.id).toBe('default');
+  expect(useServerStore.name).toBe('default');
   expect(useServerStore.getState()).toMatchInlineSnapshot(`
 {
   "count": 0,
@@ -280,7 +280,7 @@ test('worker', async () => {
     const { count, increment } = useClientStore();
     expect(count).toBe(2);
     expect(increment).toBeInstanceOf(Function);
-    expect(useClientStore.id).toBe('default');
+    expect(useClientStore.name).toBe('default');
     expect(useClientStore.getState()).toMatchInlineSnapshot(`
 {
   "count": 2,
@@ -369,7 +369,7 @@ describe('Slices', () => {
     const { count, increment } = useStore().counter;
     expect(count).toBe(0);
     expect(increment).toBeInstanceOf(Function);
-    expect(useStore.id).toBe('default');
+    expect(useStore.name).toBe('default');
     expect(useStore.getState()).toMatchInlineSnapshot(`
 {
   "counter": {
@@ -454,7 +454,7 @@ describe('Slices', () => {
     const { count, increment } = useServerStore().counter;
     expect(count).toBe(0);
     expect(increment).toBeInstanceOf(Function);
-    expect(useServerStore.id).toBe('default');
+    expect(useServerStore.name).toBe('default');
     expect(useServerStore.getState().counter).toMatchInlineSnapshot(`
   {
     "count": 0,
@@ -490,7 +490,7 @@ describe('Slices', () => {
       const { count, increment } = useClientStore().counter;
       expect(count).toBe(2);
       expect(increment).toBeInstanceOf(Function);
-      expect(useClientStore.id).toBe('default');
+      expect(useClientStore.name).toBe('default');
       expect(useClientStore.getState()).toMatchInlineSnapshot(`
 {
   "counter": {

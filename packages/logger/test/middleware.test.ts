@@ -3,7 +3,8 @@ import {
   mockPorts,
   WorkerMainTransportOptions
 } from 'data-transport';
-import { create, type Slice, type Slices, logger } from '../src';
+import { create } from 'coaction';
+import { logger } from '../src';
 
 test('base', () => {
   const stateFn = jest.fn();
@@ -35,18 +36,14 @@ test('base', () => {
       }
     }),
     {
-      id: 'test',
-      middlewares: [
-        logger({
-          log: logFn
-        })
-      ]
+      name: 'test',
+      middlewares: [logger()]
     }
   );
   const { count, increment } = useStore();
   expect(count).toBe(0);
   expect(increment).toBeInstanceOf(Function);
-  expect(useStore.id).toBe('test');
+  expect(useStore.name).toBe('test');
   expect(useStore.getState()).toMatchInlineSnapshot(`
   {
     "count": 0,

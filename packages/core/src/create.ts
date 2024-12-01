@@ -11,7 +11,7 @@ import type {
   AsyncStoreOption,
   CreateState
 } from './interface';
-import { defaultId, WorkerType } from './constant';
+import { defaultName, WorkerType } from './constant';
 import { createAsyncStore, handleMainTransport } from './asyncStore';
 import { getInitialState } from './getInitialState';
 import { getRawState } from './getRawState';
@@ -32,20 +32,6 @@ type Creator = {
 
 /**
  * Create a store
- *
- * description:
- * - create a store with the given state and options
- * - if options.enablePatches is false, the store will not support patches
- * - if options.workerType is provided, the store will be created in a worker
- * - if options.transport is provided, the store will use the transport
- * - if options.id is provided, the store will use the id
- * - if options.share is provided, the store will use the share
- * - if options.share is 'main', the store will be created in the main thread
- * - if options.share is 'client', the store will be created in the client thread
- * - if options.share is not provided, the store will be created in the main thread
- * - if options.share is not provided and options.workerType is provided, the store will be created in the worker
- * - if options.share is not provided and options.transport is provided, the store will use the transport
- * - if options.share is not provided and options.workerType is not provided, the store will be created in the main thread
  */
 export const create: Creator = <T extends CreateState>(
   createState: Slice<T> | T,
@@ -63,8 +49,8 @@ export const create: Creator = <T extends CreateState>(
       isBatching: false,
       listeners: new Set<Listener>()
     } as Internal<T>;
-    // TODO: check id/name is unique
-    const name = options.id ?? defaultId;
+    // TODO: check name is unique
+    const name = options.name ?? defaultName;
     const { setState, getState } = handleState(store, internal, options);
     const subscribe: Store<T>['subscribe'] = (listener) => {
       internal.listeners.add(listener);
@@ -87,7 +73,7 @@ export const create: Creator = <T extends CreateState>(
       internal.rootState as T;
     const isSliceStore = typeof createState === 'object';
     Object.assign(store, {
-      id: name,
+      name,
       share,
       setState,
       getState,
@@ -110,7 +96,7 @@ export const create: Creator = <T extends CreateState>(
       options.transport ??
       (workerType
         ? createTransport(workerType, {
-            prefix: store.id
+            prefix: store.name
           })
         : null);
     if (transport) {
@@ -124,11 +110,19 @@ export const create: Creator = <T extends CreateState>(
   const store = createStore({
     share
   });
-  return Object.assign((asyncStoreOption: AsyncStoreOption) => {
-    if (!asyncStoreOption) return store.getState();
-    if (checkEnablePatches) {
-      throw new Error(`enablePatches: true is required for the async store`);
-    }
-    return createAsyncStore(createStore, asyncStoreOption);
-  }, store) as StoreReturn<any>;
+  const { name, ..._store } = store;
+  return Object.assign(
+    {
+      [name]: (asyncStoreOption: AsyncStoreOption) => {
+        if (!asyncStoreOption) return store.getState();
+        if (checkEnablePatches) {
+          throw new Error(
+            `enablePatches: true is required for the async store`
+          );
+        }
+        return createAsyncStore(createStore, asyncStoreOption);
+      }
+    }[name],
+    _store
+  ) as StoreReturn<any>;
 };

@@ -58,7 +58,7 @@ test('base', () => {
   const { count, increment } = useStore();
   expect(count).toBe(0);
   expect(increment).toBeInstanceOf(Function);
-  expect(useStore.id).toBe('default');
+  expect(useStore.name).toBe('default');
   expect(useStore.getState()).toMatchInlineSnapshot(`
 {
   "count": 0,
@@ -200,7 +200,7 @@ test('worker', async () => {
     const useServerStore = create(counter, {
       transport: serverTransport,
       workerType: 'WorkerInternal',
-      id: 'test',
+      name: 'test',
       enablePatches: false
     });
   }).toThrowErrorMatchingInlineSnapshot(
@@ -265,7 +265,7 @@ describe('Slices', () => {
     const { count, increment } = useStore().counter;
     expect(count).toBe(0);
     expect(increment).toBeInstanceOf(Function);
-    expect(useStore.id).toBe('default');
+    expect(useStore.name).toBe('default');
     expect(useStore.getState()).toMatchInlineSnapshot(`
 {
   "counter": {

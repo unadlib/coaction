@@ -53,13 +53,13 @@ test('base', () => {
         })
       ),
     {
-      id: 'test'
+      name: 'test'
     }
   );
   const { count, increment } = useStore();
   expect(count).toBe(0);
   expect(increment).toBeInstanceOf(Function);
-  expect(useStore.id).toBe('test');
+  expect(useStore.name).toBe('test');
   expect(useStore.getState()).toMatchInlineSnapshot(`
 {
   "count": 0,
@@ -182,14 +182,14 @@ test('worker', async () => {
       })
     );
   const useServerStore = create(counter, {
-    id: 'test',
+    name: 'test',
     transport: serverTransport,
     workerType: 'WorkerInternal'
   });
   const { count, increment } = useServerStore();
   expect(count).toBe(0);
   expect(increment).toBeInstanceOf(Function);
-  expect(useServerStore.id).toBe('test');
+  expect(useServerStore.name).toBe('test');
   expect(useServerStore.getState()).toMatchInlineSnapshot(`
 {
   "count": 0,
@@ -223,7 +223,7 @@ test('worker', async () => {
 `);
   {
     const useClientStore = create(counter, {
-      id: 'test'
+      name: 'test'
     })({
       transport: clientTransport,
       workerType: 'WorkerMain'
@@ -237,7 +237,7 @@ test('worker', async () => {
     const { count, increment } = useClientStore();
     expect(count).toBe(2);
     expect(increment).toBeInstanceOf(Function);
-    expect(useClientStore.id).toBe('test');
+    expect(useClientStore.name).toBe('test');
     expect(useClientStore.getState()).toMatchInlineSnapshot(`
 {
   "count": 2,
@@ -319,12 +319,12 @@ test('worker - async', async () => {
   const useServerStore = create(counter, {
     transport: serverTransport,
     workerType: 'WorkerInternal',
-    id: 'test'
+    name: 'test'
   });
   const { count, increment } = useServerStore();
   expect(count).toBe(0);
   expect(increment).toBeInstanceOf(Function);
-  expect(useServerStore.id).toBe('test');
+  expect(useServerStore.name).toBe('test');
   expect(useServerStore.getState()).toMatchInlineSnapshot(`
 {
   "count": 0,
@@ -354,7 +354,7 @@ test('worker - async', async () => {
 `);
   {
     const useClientStore = create(counter, {
-      id: 'test'
+      name: 'test'
     })({
       transport: clientTransport,
       workerType: 'WorkerMain'
@@ -368,7 +368,7 @@ test('worker - async', async () => {
     const { count, increment } = useClientStore();
     expect(count).toBe(4);
     expect(increment).toBeInstanceOf(Function);
-    expect(useClientStore.id).toBe('test');
+    expect(useClientStore.name).toBe('test');
     expect(useClientStore.getState()).toMatchInlineSnapshot(`
 {
   "count": 4,
@@ -433,13 +433,13 @@ describe('Slices', () => {
         >
       },
       {
-        id: 'test'
+        name: 'test'
       }
     );
     const { count, increment } = useStore().counter;
     expect(count).toBe(0);
     expect(increment).toBeInstanceOf(Function);
-    expect(useStore.id).toBe('test');
+    expect(useStore.name).toBe('test');
     expect(useStore.getState()).toMatchInlineSnapshot(`
 {
   "counter": {
@@ -500,7 +500,7 @@ describe('Slices', () => {
     const useServerStore = create(
       { counter },
       {
-        id: 'test',
+        name: 'test',
         transport: serverTransport,
         workerType: 'WorkerInternal'
       }
@@ -508,7 +508,7 @@ describe('Slices', () => {
     const { count, increment } = useServerStore().counter;
     expect(count).toBe(0);
     expect(increment).toBeInstanceOf(Function);
-    expect(useServerStore.id).toBe('test');
+    expect(useServerStore.name).toBe('test');
     expect(useServerStore.getState().counter).toMatchInlineSnapshot(`
   {
     "count": 0,
@@ -535,7 +535,7 @@ describe('Slices', () => {
       const useClientStore = create(
         { counter },
         {
-          id: 'test'
+          name: 'test'
         }
       )({
         transport: clientTransport,
@@ -549,7 +549,7 @@ describe('Slices', () => {
       const { count, increment } = useClientStore().counter;
       expect(count).toBe(2);
       expect(increment).toBeInstanceOf(Function);
-      expect(useClientStore.id).toBe('test');
+      expect(useClientStore.name).toBe('test');
       expect(useClientStore.getState()).toMatchInlineSnapshot(`
 {
   "counter": {
