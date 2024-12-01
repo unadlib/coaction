@@ -3,7 +3,9 @@ import {
   mockPorts,
   WorkerMainTransportOptions
 } from 'data-transport';
-import { create, type Slice, type Slices, logger } from '../src';
+import { create, type Slice, type Slices } from '../src';
+
+const logger = {};
 
 test('base', () => {
   const stateFn = jest.fn();
