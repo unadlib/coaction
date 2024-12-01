@@ -3,9 +3,19 @@ import {
   mockPorts,
   WorkerMainTransportOptions
 } from 'data-transport';
-import { create, type Slice, type Slices } from '../src';
+import { create, type Slice, type Slices, Middleware } from '../src';
 
-const logger = {};
+const logger: (log: (...args: any[]) => void) => Middleware<any> =
+  (log) => (store) => {
+    const setState = store.setState;
+    store.setState = (state, updater) => {
+      log('before', JSON.stringify(store.getState()));
+      const result = setState(state, updater);
+      log('after', JSON.stringify(store.getState()));
+      return result;
+    };
+    return store;
+  };
 
 test('base', () => {
   const stateFn = jest.fn();
@@ -37,18 +47,14 @@ test('base', () => {
       }
     }),
     {
-      id: 'test',
-      middlewares: [
-        logger({
-          log: logFn
-        })
-      ]
+      name: 'test',
+      middlewares: [logger(logFn)]
     }
   );
   const { count, increment } = useStore();
   expect(count).toBe(0);
   expect(increment).toBeInstanceOf(Function);
-  expect(useStore.id).toBe('test');
+  expect(useStore.name).toBe('test');
   expect(useStore.getState()).toMatchInlineSnapshot(`
   {
     "count": 0,
@@ -59,7 +65,18 @@ test('base', () => {
   const fn = jest.fn();
   useStore.subscribe(fn);
   useStore.getState().increment();
-  expect(logFn.mock.calls).toMatchInlineSnapshot(`[]`);
+  expect(logFn.mock.calls).toMatchInlineSnapshot(`
+[
+  [
+    "before",
+    "{"count":0,"double":0}",
+  ],
+  [
+    "after",
+    "{"count":1,"double":2}",
+  ],
+]
+`);
   expect(stateFn.mock.calls).toMatchInlineSnapshot(`
   [
     [
@@ -98,7 +115,26 @@ test('base', () => {
   }
   `);
   increment();
-  expect(logFn.mock.calls).toMatchInlineSnapshot(`[]`);
+  expect(logFn.mock.calls).toMatchInlineSnapshot(`
+[
+  [
+    "before",
+    "{"count":0,"double":0}",
+  ],
+  [
+    "after",
+    "{"count":1,"double":2}",
+  ],
+  [
+    "before",
+    "{"count":1,"double":2}",
+  ],
+  [
+    "after",
+    "{"count":2,"double":4}",
+  ],
+]
+`);
   expect(stateFn.mock.calls).toMatchInlineSnapshot(`
   [
     [

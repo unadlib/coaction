@@ -140,9 +140,9 @@ export const bindPinia = createBinder({
 ) => Omit<DefineStoreOptions<Id, S, G, A>, 'id'>;
 
 /**
- * Cast a store to its original type
+ * Adapt a store type to Pinia
  */
-export const cast = <T extends object>(
+export const adapt = <T extends object>(
   store: StoreDefinition<IStore<T>[0], IStore<T>[1], IStore<T>[2], IStore<T>[3]>
 ) => store as any as T;
 

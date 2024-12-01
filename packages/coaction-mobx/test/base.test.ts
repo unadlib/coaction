@@ -30,13 +30,13 @@ test('base', () => {
         })
       ),
     {
-      id: 'test'
+      name: 'test'
     }
   );
   const { count, increment } = useStore();
   expect(count).toBe(0);
   expect(increment).toBeInstanceOf(Function);
-  expect(useStore.id).toBe('test');
+  expect(useStore.name).toBe('test');
   expect(useStore.getState()).toMatchInlineSnapshot(`
   {
     "count": 0,

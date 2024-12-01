@@ -8,4 +8,4 @@ export const WorkerType = global.SharedWorkerGlobalScope
 
 export const bindSymbol = Symbol('bind');
 
-export const defaultId = 'default';
+export const defaultName = 'default';

@@ -36,7 +36,7 @@ export const createAsyncStore = <T extends CreateState>(
           : 'WorkerMain',
         {
           worker: (asyncStoreOption as WorkerOptions).worker as SharedWorker,
-          prefix: asyncStore.id
+          prefix: asyncStore.name
         }
       )
     : (asyncStoreOption as TransportOptions).transport;
@@ -67,7 +67,13 @@ export const createAsyncStore = <T extends CreateState>(
       await fullSync();
     }
   });
-  return Object.assign(() => asyncStore.getState(), asyncStore);
+  const { name, ..._store } = asyncStore;
+  return Object.assign(
+    {
+      [name]: () => asyncStore.getState()
+    }[name],
+    _store
+  );
 };
 
 export const handleMainTransport = <T extends CreateState>(
