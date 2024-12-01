@@ -1,5 +1,7 @@
 # @coaction/logger
 
+A logger middleware for coaction.
+
 ## Usage
 
 ```ts
