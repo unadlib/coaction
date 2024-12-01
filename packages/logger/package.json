@@ -39,7 +39,7 @@
   },
   "devDependencies": {
     "coaction": "*",
-    "mutative": "^1.0.10"
+    "mutative": "^1.1.0"
   },
   "preconstruct": {
     "umdName": "CoactionLogger",
@@ -49,7 +49,7 @@
   },
   "peerDependencies": {
     "coaction": "^0.0.1",
-    "mutative": "^1.0.10"
+    "mutative": "^1.1.0"
   },
   "peerDependenciesMeta": {
     "coaction": {

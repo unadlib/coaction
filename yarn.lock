@@ -8478,10 +8478,10 @@ mutability@^1.1.1:
   resolved "https://registry.yarnpkg.com/mutability/-/mutability-1.1.1.tgz#44a6c6941de292098c5164eb2ff12158ff642372"
   integrity sha512-hpRe4voRMPGv9dRw2inUyU0WwZrCUkuV4/wXnct6lIsBT8VDuYGO9ClkKXMP6TY3jTKi9IXzd8LLPs+eusYRgg==
 
-mutative@^1.0.10:
-  version "1.0.10"
-  resolved "https://registry.yarnpkg.com/mutative/-/mutative-1.0.10.tgz#d4c349867463e70e9c34718a65cefad479f28eb0"
-  integrity sha512-YD4MEleW9vJyIVEItz6x71fWdJ9qea3+R8hxtNiei8cQ7BGLM1c9Q6zCJ7SuLzorBhd2PBHN+xUEwEahxMI34w==
+mutative@^1.1.0:
+  version "1.1.0"
+  resolved "https://registry.yarnpkg.com/mutative/-/mutative-1.1.0.tgz#ff3e12a9903702e0487428510f8502dd4667e908"
+  integrity sha512-2PJADREjOusk3iJkD3rXV2YjAxTuaLxdfqtqTEt6vcY07LtEBR1seHuBHXWEIuscqRDGvbauYPs+A4Rj/KTczQ==
 
 mute-stream@0.0.8:
   version "0.0.8"
