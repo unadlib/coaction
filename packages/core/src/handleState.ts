@@ -52,7 +52,6 @@ export const handleState = <T extends CreateState>(
         }
         // best performance by default for immutable state
         // TODO: supporting nested set functions?
-        console.log('fff');
         try {
           internal.backupState = internal.rootState;
           internal.rootState = createWithMutative(
