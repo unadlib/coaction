@@ -4,6 +4,7 @@ import {
   WorkerMainTransportOptions
 } from 'data-transport';
 import { create, type Slice, type Slices } from '../src';
+import { isDraft } from 'mutative';
 
 test('base', () => {
   const stateFn = jest.fn();
@@ -211,6 +212,111 @@ test('base', () => {
 {
   "count": 3,
   "double": 6,
+  "increment": [Function],
+  "increment1": [Function],
+}
+`);
+});
+
+test('base - error handling', () => {
+  const useStore = create<{
+    count: number;
+    readonly double: number;
+    increment: () => void;
+    increment1: () => void;
+  }>((set, get, store) => ({
+    count: 0,
+    double: get(
+      (state) => [state.count],
+      (count) => count * 2
+    ),
+    increment1() {
+      set({
+        count: this.count + 1
+      });
+    },
+    increment() {
+      set((draft) => {
+        this.count += 1;
+        throw new Error('test');
+      });
+    }
+  }));
+  const { count, increment } = useStore();
+  expect(count).toBe(0);
+  expect(increment).toBeInstanceOf(Function);
+  expect(useStore.name).toBe('default');
+  expect(useStore.getState()).toMatchInlineSnapshot(`
+{
+  "count": 0,
+  "double": 0,
+  "increment": [Function],
+  "increment1": [Function],
+}
+`);
+  const fn = jest.fn();
+  useStore.subscribe(fn);
+  expect(() => useStore.getState().increment()).toThrow('test');
+  expect(isDraft(useStore.getPureState())).toBeFalsy();
+  expect(useStore.getState()).toMatchInlineSnapshot(`
+{
+  "count": 0,
+  "double": 0,
+  "increment": [Function],
+  "increment1": [Function],
+}
+`);
+});
+
+test('base - error handling and enablePatches', () => {
+  const useStore = create<{
+    count: number;
+    readonly double: number;
+    increment: () => void;
+    increment1: () => void;
+  }>(
+    (set, get, store) => ({
+      count: 0,
+      double: get(
+        (state) => [state.count],
+        (count) => count * 2
+      ),
+      increment1() {
+        set({
+          count: this.count + 1
+        });
+      },
+      increment() {
+        set((draft) => {
+          this.count += 1;
+          throw new Error('test');
+        });
+      }
+    }),
+    {
+      enablePatches: true
+    }
+  );
+  const { count, increment } = useStore();
+  expect(count).toBe(0);
+  expect(increment).toBeInstanceOf(Function);
+  expect(useStore.name).toBe('default');
+  expect(useStore.getState()).toMatchInlineSnapshot(`
+{
+  "count": 0,
+  "double": 0,
+  "increment": [Function],
+  "increment1": [Function],
+}
+`);
+  const fn = jest.fn();
+  useStore.subscribe(fn);
+  expect(() => useStore.getState().increment()).toThrow('test');
+  expect(isDraft(useStore.getPureState())).toBeFalsy();
+  expect(useStore.getState()).toMatchInlineSnapshot(`
+{
+  "count": 0,
+  "double": 0,
   "increment": [Function],
   "increment1": [Function],
 }

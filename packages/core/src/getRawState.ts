@@ -139,23 +139,26 @@ export const getRawState = <T extends CreateState>(
               });
               internal.finalizeDraft = finalize as () => [T, Patches, Patches];
               internal.rootState = draft as Draft<T>;
-              result = fn.apply(
-                sliceKey ? store.getState()[sliceKey] : store.getState(),
-                args
-              );
-              if (result instanceof Promise) {
-                // if (process.env.NODE_ENV === 'development') {
-                //   console.warn(
-                //     'It will be combined with the next state in the async function.'
-                //   );
-                // }
-                return result.finally(() => {
-                  const result = handleResult(isDrafted);
-                  done?.(result);
-                  return result;
-                });
+              try {
+                result = fn.apply(
+                  sliceKey ? store.getState()[sliceKey] : store.getState(),
+                  args
+                );
+              } finally {
+                if (result instanceof Promise) {
+                  // if (process.env.NODE_ENV === 'development') {
+                  //   console.warn(
+                  //     'It will be combined with the next state in the async function.'
+                  //   );
+                  // }
+                  return result.finally(() => {
+                    const result = handleResult(isDrafted);
+                    done?.(result);
+                    return result;
+                  });
+                }
+                handleResult(isDrafted);
               }
-              handleResult(isDrafted);
               done?.(result);
               return result;
             }
