@@ -8,7 +8,6 @@ const pad = (num: number, maxLength: number) =>
 const formatTime = (time: Date) =>
   `${pad(time.getHours(), 2)}:${pad(time.getMinutes(), 2)}:${pad(time.getSeconds(), 2)}.${pad(time.getMilliseconds(), 3)}`;
 
-// Use performance API if it's available in order to get better precision
 export const timer =
   typeof performance !== 'undefined' &&
   performance !== null &&
@@ -19,12 +18,20 @@ export const timer =
 const traceTimeMap = new Map<string, number>();
 const loggerStoreMap = new WeakMap<Store, boolean>();
 
+export interface Logger {
+  log: (...args: any[]) => void;
+  group: (...args: any[]) => void;
+  groupCollapsed: (...args: any[]) => void;
+  trace: (...args: any[]) => void;
+  groupEnd: () => void;
+}
+
 // TODO: support custom loggers
 export const logger: (options?: {
   /**
    * Custom log function
    */
-  log?: (...args: any[]) => void;
+  logger?: Logger;
   /**
    * Print the stack trace
    */
@@ -37,8 +44,18 @@ export const logger: (options?: {
    * Serialize the patches
    */
   serialized?: boolean;
+  /**
+   * Print verbose logs
+   */
+  verbose?: boolean;
 }) => Middleware<any> =
-  ({ stackTrace = false, collapsed = true, serialized = false } = {}) =>
+  ({
+    stackTrace = false,
+    collapsed = true,
+    serialized = false,
+    logger = console,
+    verbose = true // TODO: support verbose
+  } = {}) =>
   (store) => {
     if (loggerStoreMap.has(store)) {
       return store;
@@ -47,10 +64,7 @@ export const logger: (options?: {
     const apply = store.apply;
     store.apply = (state, patches) => {
       if (patches) {
-        console.log(
-          '[patches]',
-          serialized ? JSON.stringify(patches) : patches
-        );
+        logger.log('[patches]', serialized ? JSON.stringify(patches) : patches);
       }
       return apply(state, patches);
     };
@@ -58,7 +72,7 @@ export const logger: (options?: {
       const date = formatTime(new Date());
       if (!traceTimeMap.get(options.id)) {
         traceTimeMap.set(options.id, timer.now());
-        console.group(
+        logger.group(
           [
             `%c ${date} `,
             `method ${options.method}`,
@@ -72,12 +86,12 @@ export const logger: (options?: {
           options.parameters
         );
         if (stackTrace) {
-          console.trace('trace');
+          logger.trace('trace');
         }
       } else {
         const start = traceTimeMap.get(options.id)!;
         traceTimeMap.delete(options.id);
-        console.log(
+        logger.log(
           [
             `%c ${date} `,
             `method ${options.method}`,
@@ -92,7 +106,7 @@ export const logger: (options?: {
           'color: gray; font-weight: lighter;',
           options.result
         );
-        console.groupEnd();
+        logger.groupEnd();
       }
     };
     const setState = store.setState;
@@ -104,29 +118,29 @@ export const logger: (options?: {
         'color: #4CAF50;'
       );
       if (stackTrace) {
-        console.trace('trace');
+        logger.trace('trace');
       }
-      console.log(
+      logger.log(
         '[state]',
         serialized ? JSON.stringify(store.getPureState()) : store.getPureState()
       );
       const now = timer.now();
       const result = setState(state, action);
-      console.log(
+      logger.log(
         '[next state]',
         serialized ? JSON.stringify(store.getPureState()) : store.getPureState()
       );
-      console.log(
+      logger.log(
         [
-          `%c ${date} `,
-          'action',
-          `(${(timer.now() - now).toFixed(3)} ms)`
+          `%c ${date}`,
+          ' action',
+          ` (${(timer.now() - now).toFixed(3)} ms)`
         ].join('%c'),
         'color: gray; font-weight: lighter;',
         'color: #4CAF50;',
         'color: gray; font-weight: lighter;'
       );
-      console.groupEnd();
+      logger.groupEnd();
       return result;
     };
     return store;

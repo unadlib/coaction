@@ -1,4 +1,5 @@
-import { create, logger, Slices } from 'coaction';
+import { create, Slices } from 'coaction';
+import { logger } from '@coaction/logger';
 
 type Counter = Slices<
   {
