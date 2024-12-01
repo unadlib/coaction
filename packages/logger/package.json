@@ -1,0 +1,59 @@
+{
+  "name": "@coaction/logger",
+  "version": "0.0.1",
+  "description": "A logger middleware for Coaction.",
+  "keywords": [
+    "coaction"
+  ],
+  "authors": [
+    "Michael Lin <unadlib@gmail.com> (https://github.com/unadlib)"
+  ],
+  "homepage": "https://github.com/unadlib/coaction/tree/main/packages/logger#readme",
+  "license": "MIT",
+  "main": "dist/coaction-logger.cjs.js",
+  "module": "dist/coaction-logger.esm.js",
+  "umd:main": "dist/coaction-logger.umd.min.js",
+  "exports": {
+    ".": {
+      "types": {
+        "import": "./dist/coaction-logger.cjs.mjs",
+        "default": "./dist/coaction-logger.cjs.js"
+      },
+      "module": "./dist/coaction-logger.esm.js",
+      "import": "./dist/coaction-logger.cjs.mjs",
+      "default": "./dist/coaction-logger.cjs.js"
+    },
+    "./package.json": "./package.json"
+  },
+  "sideEffects": false,
+  "files": [
+    "dist"
+  ],
+  "repository": {
+    "type": "git",
+    "url": "git+ssh://git@github.com/unadlib/coaction.git"
+  },
+  "scripts": {},
+  "bugs": {
+    "url": "https://github.com/unadlib/coaction/issues"
+  },
+  "devDependencies": {
+    "coaction": "*",
+    "mutative": "^1.0.10"
+  },
+  "preconstruct": {
+    "umdName": "CoactionLogger",
+    "entrypoints": [
+      "./index.ts"
+    ]
+  },
+  "peerDependencies": {
+    "coaction": "^0.0.1",
+    "mutative": "^1.0.10"
+  },
+  "peerDependenciesMeta": {
+    "coaction": {
+      "optional": true
+    }
+  }
+}

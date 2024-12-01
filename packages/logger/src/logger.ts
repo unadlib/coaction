@@ -1,4 +1,4 @@
-import type { Middleware, Store } from '../interface';
+import type { Middleware, Store } from 'coaction';
 
 const repeat = (str: string, times: number) => new Array(times + 1).join(str);
 
