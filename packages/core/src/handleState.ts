@@ -52,26 +52,43 @@ export const handleState = <T extends CreateState>(
         }
         // best performance by default for immutable state
         // TODO: supporting nested set functions?
-        internal.rootState = createWithMutative(internal.rootState, (draft) => {
-          internal.rootState = draft as Draft<any>;
-          return fn.apply(null);
-        });
+        console.log('fff');
+        try {
+          internal.backupState = internal.rootState;
+          internal.rootState = createWithMutative(
+            internal.rootState,
+            (draft) => {
+              internal.rootState = draft as Draft<any>;
+              return fn.apply(null);
+            }
+          );
+        } catch (error) {
+          internal.rootState = internal.backupState;
+          throw error;
+        }
         internal.listeners.forEach((listener) => listener());
         return [];
       }
       internal.backupState = internal.rootState;
-      const [, patches, inversePatches] = createWithMutative(
-        internal.rootState,
-        (draft) => {
-          internal.rootState = draft as Draft<T>;
-          return fn.apply(null);
-        },
-        {
-          // mark: () => 'immutable',
-          enablePatches: true
-        }
-      );
-      internal.rootState = internal.backupState;
+      let patches: Patches;
+      let inversePatches: Patches;
+      try {
+        const result = createWithMutative(
+          internal.rootState,
+          (draft) => {
+            internal.rootState = draft as Draft<T>;
+            return fn.apply(null);
+          },
+          {
+            // mark: () => 'immutable',
+            enablePatches: true
+          }
+        );
+        patches = result[1];
+        inversePatches = result[2];
+      } finally {
+        internal.rootState = internal.backupState;
+      }
       const finalPatches = store.patch
         ? store.patch({ patches, inversePatches })
         : { patches, inversePatches };
