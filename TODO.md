@@ -44,9 +44,8 @@
 
 ### TODOs
 
-- [ ] handle error proxy action
+- [x] handle error proxy action
 - [x] Middleware Support
-- [ ] Undo/Redo
 - [x] refactor name properties
 - [x] Fix @coaction/pinia type issue
 - [x] Fix @coaction/pinia name checker
@@ -65,6 +64,8 @@
   - [ ] handle $patch
   - [ ] handle $reset
   - [ ] handle computed properties
+
+- [ ] Undo/Redo(@coaction/history)
 
 - [ ] add more tests
 - [ ] add more examples
