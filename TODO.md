@@ -1,35 +1,38 @@
 # TODO
 
 - [ ] Middleware Support: Supports state subscriptions and middleware for side effects and enhanced state handling, also supports Zustand middlewares and Redux middlewares
+- [ ] Namespace Support: Avoid key conflicts with namespaced slices
+- [ ] Multi-Store Workers: Run multiple stores within a single Web Worker
+- [ ] Multi-Transport Support: Use generic transports for state synchronization
 - [x] Slices Pattern: Easily combine multiple slices into a single store
 - [x] Cross-Framework Compatibility: Seamlessly works with React, Vue, Solid.js, Angular, and other modern web frameworks
-- [ ] Multi-Store Workers: Run multiple stores within a single Web Worker
 - [x] Shared Stores Across Workers: Use the same store definition across multiple Workers
 - [x] Multiprocessing State Management: Effortlessly manage state across main thread and Workers
 - [x] Intuitive API Design: Simple and expressive API inspired by popular state management libraries
 - [x] Flexible Store Creation: Create multiple stores with unique names for better organization
 - [x] Worker Integration: Easy integration with Web Workers and Shared Worker for offloading computations
-- [ ] Computed Properties: Support for derived state through getter functions
-- [ ] Namespace Support: Avoid key conflicts with namespaced slices
+- [x] Computed Properties: Support for derived state through getter functions
 - [ ] Performance Optimized: Efficient state updates and retrieval, even with deeply nested structures
 - [ ] Type-Safe: Full TypeScript support for enhanced developer experience
 - [ ] Reactive: Built-in subscription mechanism for efficient UI updates
-- [ ] Async Action Support: Easily handle asynchronous state updates
-- [ ] Multi-Transport Support: Use generic transports for state synchronization
-- [ ] Immutable Updates: Ensures predictable state changes with immutable update patterns
-- [ ] Developer Tools Integration: Easy debugging with integrated developer tools
+- [x] Async Action Support: Easily handle asynchronous state updates
+- [x] Immutable Updates: Ensures predictable state changes with immutable update patterns
+- [x] Developer Tools Integration: Easy debugging with integrated developer tools
 - [ ] Persistence: Built-in support for state persistence
 - [ ] Scalable Architecture: Designed to scale from simple apps to complex, multiprocessing applications
+
 - [ ] implement coaction-react
 - [ ] implement coaction-vue
 - [ ] implement coaction for Redux Toolkit
 - [ ] implement coaction for Zustand
-- [ ] implement coaction for MobX
+- [x] implement coaction for MobX
+
   - no support for custom observables
   - no support for lazy observables
+
 - [ ] implement coaction for Jotai
 - [ ] implement coaction for XState
-- [ ] implement coaction for Pinia
+- [x] implement coaction for Pinia
   - no support for async actions(it will be merged into main thread with a single patch for updating the state)
     - It must be split into sync update action
 - [ ] implement coaction for Valtio
@@ -38,12 +41,14 @@
 - [ ] implement coaction-angular
 - [ ] implement coaction-svelte
 - [ ] implement coaction-Solid
-- [ ] fix slices checker
-- [ ] fix type
+- [x] fix slices checker
+- [x] fix type
 - [ ] add devtools support
 
 ### TODOs
 
+- [ ] namespace support
+- [ ] support for cross-store
 - [x] handle error proxy action
 - [x] Middleware Support
 - [x] refactor name properties
@@ -56,8 +61,6 @@
 - [x] Fix enablePatches checker
 - [x] Fix @coaction/pinia multiple action in a single function
 - [x] Fix @coaction/mobx multiple action in a single function
-- [ ] namespace support
-- [ ] support for cross-store
 - [ ] Fix Pinia StoreProperties
 - [ ] Pinia does not support detecting changes without a action
 
@@ -66,7 +69,6 @@
   - [ ] handle computed properties
 
 - [ ] Undo/Redo(@coaction/history)
-
 - [ ] add more tests
 - [ ] add more examples
 - [ ] add more documentation
