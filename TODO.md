@@ -21,7 +21,7 @@
 - [ ] Persistence: Built-in support for state persistence
 - [ ] Scalable Architecture: Designed to scale from simple apps to complex, multiprocessing applications
 
-- [ ] implement coaction-react
+- [ ] implement coaction-react with alien-signals
 - [ ] implement coaction-vue
 - [ ] implement coaction for Redux Toolkit
 - [ ] implement coaction for Zustand
