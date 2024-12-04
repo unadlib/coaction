@@ -1,16 +1,11 @@
 import { useStore } from './store';
-import { createTransport } from 'data-transport';
 
 const worker = new SharedWorker(new URL('./store.ts', import.meta.url), {
   type: 'module'
 });
 
 const useWorkerStore = useStore({
-  transport: createTransport('SharedWorkerClient', {
-    worker,
-    verbose: true,
-    prefix: useStore.name
-  })
+  worker
 });
 
 console.log('create');
