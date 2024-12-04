@@ -1,9 +1,9 @@
 # TODO
 
-- [ ] Middleware Support: Supports state subscriptions and middleware for side effects and enhanced state handling, also supports Zustand middlewares and Redux middlewares
-- [ ] Namespace Support: Avoid key conflicts with namespaced slices
-- [ ] Multi-Store Workers: Run multiple stores within a single Web Worker
-- [ ] Multi-Transport Support: Use generic transports for state synchronization
+- [x] Middleware Support: Supports state subscriptions and middleware for side effects and enhanced state handling
+- [x] Namespace Support: Avoid key conflicts with namespaced slices
+- [x] Multi-Store Workers: Run multiple stores within a single Web Worker
+- [x] Multi-Transport Support: Use generic transports for state synchronization
 - [x] Slices Pattern: Easily combine multiple slices into a single store
 - [x] Cross-Framework Compatibility: Seamlessly works with React, Vue, Solid.js, Angular, and other modern web frameworks
 - [x] Shared Stores Across Workers: Use the same store definition across multiple Workers
@@ -20,6 +20,7 @@
 - [x] Developer Tools Integration: Easy debugging with integrated developer tools
 - [ ] Persistence: Built-in support for state persistence
 - [ ] Scalable Architecture: Designed to scale from simple apps to complex, multiprocessing applications
+- [ ] supports Zustand middlewares and Redux middlewares
 
 - [ ] implement coaction-react with alien-signals
 - [ ] implement coaction-vue
@@ -47,8 +48,7 @@
 
 ### TODOs
 
-- [ ] namespace support
-- [ ] support for cross-store
+- [x] namespace support
 - [x] handle error proxy action
 - [x] Middleware Support
 - [x] refactor name properties
@@ -63,6 +63,8 @@
 - [x] Fix @coaction/mobx multiple action in a single function
 - [ ] Fix Pinia StoreProperties
 - [ ] Pinia does not support detecting changes without a action
+
+- [ ] support for cross-store
 
   - [ ] handle $patch
   - [ ] handle $reset
