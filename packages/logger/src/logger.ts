@@ -26,7 +26,6 @@ export interface Logger {
   groupEnd: () => void;
 }
 
-// TODO: support custom loggers
 export const logger: (options?: {
   /**
    * Custom log function
@@ -65,7 +64,8 @@ export const logger: (options?: {
     store.apply = (state, patches) => {
       if (patches) {
         logger.log(
-          `%c [Store:${store.name}][Patches]`,
+          `%c[Share: ${store.share}]%c[Store:${store.name}][Patches]`,
+          'color: gray; font-weight: lighter;',
           'color: #BD67FB; font-weight: lighter;',
           serialized ? JSON.stringify(patches) : patches
         );
@@ -78,11 +78,13 @@ export const logger: (options?: {
         traceTimeMap.set(options.id, timer.now());
         logger.group(
           [
-            `%c ${date} `,
+            `%c${date} `,
+            `[Share: ${store.share}]`,
             `[Store: ${store.name}][Method: ${options.sliceKey ? `${options.sliceKey}.` : ''}${options.method}]`,
             ` [UUID: ${options.id}]`,
             ` Parameters:`
           ].join('%c'),
+          'color: gray; font-weight: lighter;',
           'color: gray; font-weight: lighter;',
           'color: #03A9F4; font-weight: bold;',
           'color: gray; font-weight: lighter;',
@@ -97,11 +99,13 @@ export const logger: (options?: {
         traceTimeMap.delete(options.id);
         logger.log(
           [
-            `%c ${date} `,
+            `%c${date} `,
+            `[Share: ${store.share}]`,
             `[Store: ${store.name}][Method: ${options.sliceKey ? `${options.sliceKey}.` : ''}${options.method}]`,
             ` [UUID: ${options.id}] (${(timer.now() - start).toFixed(3)} ms)`,
             ` Result:`
           ].join('%c'),
+          'color: gray; font-weight: lighter;',
           'color: gray; font-weight: lighter;',
           'color: #03A9F4;',
           'color: gray; font-weight: lighter;',
@@ -115,7 +119,12 @@ export const logger: (options?: {
     store.setState = (state, action) => {
       const date = formatTime(new Date());
       console[collapsed ? 'groupCollapsed' : 'group'](
-        [`%c ${date} `, `[Store: ${store.name}][Action]`].join('%c'),
+        [
+          `%c${date} `,
+          `[Share: ${store.share}]`,
+          `[Store: ${store.name}][Action]`
+        ].join('%c'),
+        'color: gray; font-weight: lighter;',
         'color: gray; font-weight: lighter;',
         'color: #4CAF50;'
       );
@@ -123,21 +132,23 @@ export const logger: (options?: {
         logger.trace('trace');
       }
       logger.log(
-        '[state]',
+        `[Share: ${store.share}][Store: ${store.name}][State]`,
         serialized ? JSON.stringify(store.getPureState()) : store.getPureState()
       );
       const now = timer.now();
       const result = setState(state, action);
       logger.log(
-        '[next state]',
+        `[Share: ${store.share}][Store: ${store.name}][Next State]`,
         serialized ? JSON.stringify(store.getPureState()) : store.getPureState()
       );
       logger.log(
         [
-          `%c ${date}`,
+          `%c${date} `,
+          `[Share: ${store.share}]`,
           `[Store: ${store.name}][Action]`,
           ` (${(timer.now() - now).toFixed(3)} ms)`
         ].join('%c'),
+        'color: gray; font-weight: lighter;',
         'color: gray; font-weight: lighter;',
         'color: #4CAF50;',
         'color: gray; font-weight: lighter;'
