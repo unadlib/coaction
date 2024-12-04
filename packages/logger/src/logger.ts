@@ -64,7 +64,11 @@ export const logger: (options?: {
     const apply = store.apply;
     store.apply = (state, patches) => {
       if (patches) {
-        logger.log('[patches]', serialized ? JSON.stringify(patches) : patches);
+        logger.log(
+          `%c [Store:${store.name}][Patches]`,
+          'color: #BD67FB; font-weight: lighter;',
+          serialized ? JSON.stringify(patches) : patches
+        );
       }
       return apply(state, patches);
     };
@@ -75,14 +79,14 @@ export const logger: (options?: {
         logger.group(
           [
             `%c ${date} `,
-            `method ${options.method}`,
-            ` [${options.id}]`,
-            ` [parameters]`
+            `[Store: ${store.name}][Method: ${options.method}]`,
+            ` [UUID: ${options.id}]`,
+            ` Parameters:`
           ].join('%c'),
           'color: gray; font-weight: lighter;',
           'color: #03A9F4; font-weight: bold;',
           'color: gray; font-weight: lighter;',
-          'color: gray; font-weight: lighter;',
+          'font-weight: lighter;',
           options.parameters
         );
         if (stackTrace) {
@@ -94,16 +98,14 @@ export const logger: (options?: {
         logger.log(
           [
             `%c ${date} `,
-            `method ${options.method}`,
-            ` (${(timer.now() - start).toFixed(3)} ms)`,
-            ` [${options.id}]`,
-            ` [result]`
+            `[Store: ${store.name}][Method: ${options.method}]`,
+            ` [UUID: ${options.id}]`,
+            ` Result:`
           ].join('%c'),
           'color: gray; font-weight: lighter;',
           'color: #03A9F4;',
           'color: gray; font-weight: lighter;',
-          'color: gray; font-weight: lighter;',
-          'color: gray; font-weight: lighter;',
+          'font-weight: lighter;',
           options.result
         );
         logger.groupEnd();
@@ -113,7 +115,7 @@ export const logger: (options?: {
     store.setState = (state, action) => {
       const date = formatTime(new Date());
       console[collapsed ? 'groupCollapsed' : 'group'](
-        [`%c ${date} `, 'action '].join('%c'),
+        [`%c ${date} `, `[Store: ${store.name}][Action]`].join('%c'),
         'color: gray; font-weight: lighter;',
         'color: #4CAF50;'
       );
@@ -133,7 +135,7 @@ export const logger: (options?: {
       logger.log(
         [
           `%c ${date}`,
-          ' action',
+          `[Store: ${store.name}][Action]`,
           ` (${(timer.now() - now).toFixed(3)} ms)`
         ].join('%c'),
         'color: gray; font-weight: lighter;',
