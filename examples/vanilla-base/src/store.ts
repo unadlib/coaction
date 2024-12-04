@@ -1,6 +1,6 @@
 import { create, Slices } from 'coaction';
 import { logger } from '@coaction/logger';
-
+import { createTransport } from 'data-transport';
 type Counter = Slices<
   {
     counter: {
@@ -21,11 +21,21 @@ const counter: Counter = (set, get, store) => ({
   }
 });
 
-export const useStore = create(
+export const useStore = create<{
+  counter: Counter;
+}>(
   {
     counter
   },
   {
+    name: 'test',
+    // @ts-ignore
+    transport: globalThis.SharedWorkerGlobalScope
+      ? createTransport('SharedWorkerInternal', {
+          verbose: true,
+          prefix: 'test'
+        })
+      : undefined,
     middlewares: [
       logger({
         collapsed: false
