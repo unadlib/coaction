@@ -19,6 +19,8 @@ import { handleState } from './handleState';
 import type { Internal } from './internal';
 import { applyMiddlewares } from './applyMiddlewares';
 
+const namespaceMap = new Map<string, boolean>();
+
 type Creator = {
   <T extends Record<string, Slice<any>>>(
     createState: T,
@@ -49,8 +51,14 @@ export const create: Creator = <T extends CreateState>(
       isBatching: false,
       listeners: new Set<Listener>()
     } as Internal<T>;
-    // TODO: check name is unique
     const name = options.name ?? defaultName;
+    // check if the store name is unique in the share mode
+    if (process.env.NODE_ENV === 'development' && share) {
+      if (namespaceMap.get(name)) {
+        throw new Error(`Store name '${name}' is not unique.`);
+      }
+      namespaceMap.set(name, true);
+    }
     const { setState, getState } = handleState(store, internal, options);
     const subscribe: Store<T>['subscribe'] = (listener) => {
       internal.listeners.add(listener);
