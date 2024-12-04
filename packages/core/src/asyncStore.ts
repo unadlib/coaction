@@ -115,10 +115,17 @@ export const emit = <T extends CreateState>(
 ) => {
   if (store.transport && patches?.length) {
     internal.sequence += 1;
-    store.transport.emit('update', {
-      patches: patches,
-      sequence: internal.sequence
-    });
+    // it is not necessary to respond to the update event
+    store.transport.emit(
+      {
+        name: 'update',
+        respond: false
+      },
+      {
+        patches: patches,
+        sequence: internal.sequence
+      }
+    );
   }
 };
 
