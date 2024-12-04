@@ -52,8 +52,8 @@ export const create: Creator = <T extends CreateState>(
       listeners: new Set<Listener>()
     } as Internal<T>;
     const name = options.name ?? defaultName;
-    // check if the store name is unique in the share mode
-    if (process.env.NODE_ENV === 'development' && share) {
+    // check if the store name is unique in main share mode
+    if (process.env.NODE_ENV === 'development' && share === 'main') {
       if (namespaceMap.get(name)) {
         throw new Error(`Store name '${name}' is not unique.`);
       }
