@@ -77,9 +77,19 @@ export const getRawState = <T extends CreateState>(
             let done: ((result: any) => void) | undefined;
             if (store.trace) {
               actionId = uuid();
-              store.trace({ method: key, parameters: args, id: actionId });
+              store.trace!({
+                method: key,
+                parameters: args,
+                id: actionId,
+                sliceKey
+              });
               done = (result: any) => {
-                store.trace?.({ method: key, id: actionId!, result });
+                store.trace!({
+                  method: key,
+                  id: actionId!,
+                  result,
+                  sliceKey
+                });
               };
             }
             const keys = sliceKey ? [sliceKey, key] : [key];
@@ -97,9 +107,19 @@ export const getRawState = <T extends CreateState>(
             let done: ((result: any) => void) | undefined;
             if (store.trace) {
               actionId = uuid();
-              store.trace({ method: key, parameters: args, id: actionId });
+              store.trace({
+                method: key,
+                parameters: args,
+                id: actionId,
+                sliceKey
+              });
               done = (result: any) => {
-                store.trace?.({ method: key, id: actionId!, result });
+                store.trace!({
+                  method: key,
+                  id: actionId!,
+                  result,
+                  sliceKey
+                });
               };
             }
             const enablePatches = store.transport ?? options.enablePatches;

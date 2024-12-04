@@ -84,8 +84,21 @@ export interface Store<T extends ISlices = ISlices> {
      * The id of the method.
      */
     id: string;
+    /**
+     * The method name.
+     */
     method: string;
+    /**
+     * The slice key.
+     */
+    sliceKey?: string;
+    /**
+     * The parameters of the method.
+     */
     parameters?: any[];
+    /**
+     * The result of the method.
+     */
     result?: any;
   }) => void;
 }

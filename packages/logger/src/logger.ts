@@ -79,7 +79,7 @@ export const logger: (options?: {
         logger.group(
           [
             `%c ${date} `,
-            `[Store: ${store.name}][Method: ${options.method}]`,
+            `[Store: ${store.name}][Method: ${options.sliceKey ? `${options.sliceKey}.` : ''}${options.method}]`,
             ` [UUID: ${options.id}]`,
             ` Parameters:`
           ].join('%c'),
@@ -98,8 +98,8 @@ export const logger: (options?: {
         logger.log(
           [
             `%c ${date} `,
-            `[Store: ${store.name}][Method: ${options.method}]`,
-            ` [UUID: ${options.id}]`,
+            `[Store: ${store.name}][Method: ${options.sliceKey ? `${options.sliceKey}.` : ''}${options.method}]`,
+            ` [UUID: ${options.id}] (${(timer.now() - start).toFixed(3)} ms)`,
             ` Result:`
           ].join('%c'),
           'color: gray; font-weight: lighter;',
