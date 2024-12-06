@@ -5,7 +5,6 @@ export interface Internal<T extends CreateState = CreateState> {
   module: T;
   rootState: T | Draft<T>;
   backupState: T | Draft<T>;
-  // TODO: fix the type of finalizeDraft
   finalizeDraft: () => [T, Patches, Patches];
   mutableInstance: any;
   sequence: number;

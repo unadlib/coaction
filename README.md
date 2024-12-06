@@ -27,9 +27,6 @@ npm install coaction
 - Async Action Support: Easily handle asynchronous state updates
 - Multi-Transport Support: Use generic transports for state synchronization
 - Immutable Updates: Ensures predictable state changes with immutable update patterns
-- Developer Tools Integration: Easy debugging with integrated developer tools
-- Persistence: Built-in support for state persistence
-- Scalable Architecture: Designed to scale from simple apps to complex, multiprocessing applications
 - Time Travel Debugging: Built-in support for time travel debugging
 
 ## Usage
