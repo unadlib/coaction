@@ -201,10 +201,8 @@ test('worker', async () => {
 }
 `);
   {
-    const useStore = create(counter, {
-      name: 'test'
-    });
-    const useClientStore = useStore({
+    const useClientStore = create(counter, {
+      name: 'test',
       transport: clientTransport,
       workerType: 'WorkerMain'
     });

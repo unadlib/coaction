@@ -5,7 +5,12 @@ import {
   Patches
 } from 'mutative';
 import { Computed, createSelectorWithArray } from './computed';
-import type { CreateState, Store, StoreOptions } from './interface';
+import type {
+  ClientStoreOptions,
+  CreateState,
+  Store,
+  StoreOptions
+} from './interface';
 import type { Internal } from './internal';
 import { handleDraft } from './asyncStore';
 import { uuid } from './utils';
@@ -14,7 +19,7 @@ export const getRawState = <T extends CreateState>(
   store: Store<T>,
   internal: Internal<T>,
   initialState: any,
-  options: StoreOptions<T>
+  options: StoreOptions<T> | ClientStoreOptions<T>
 ) => {
   const rawState = {} as Record<string, any>;
   const handle = (_rawState: any, _initialState: any, sliceKey?: string) => {
@@ -122,7 +127,8 @@ export const getRawState = <T extends CreateState>(
                 });
               };
             }
-            const enablePatches = store.transport ?? options.enablePatches;
+            const enablePatches =
+              store.transport ?? (options as StoreOptions<T>).enablePatches;
             if (
               internal.mutableInstance &&
               !internal.isBatching &&

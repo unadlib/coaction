@@ -4,7 +4,12 @@ import {
   isDraft,
   Patches
 } from 'mutative';
-import type { CreateState, Store, StoreOptions } from './interface';
+import type {
+  ClientStoreOptions,
+  CreateState,
+  Store,
+  StoreOptions
+} from './interface';
 import type { Internal } from './internal';
 import { mergeObject } from './utils';
 import { emit, handleDraft } from './asyncStore';
@@ -13,7 +18,7 @@ import { Computed } from './computed';
 export const handleState = <T extends CreateState>(
   store: Store<T>,
   internal: Internal<T>,
-  options: StoreOptions<T>
+  options: StoreOptions<T> | ClientStoreOptions<T>
 ): {
   setState: Store['setState'];
   getState: Store['getState'];
@@ -38,7 +43,8 @@ export const handleState = <T extends CreateState>(
               }
             }
           : merge;
-      const enablePatches = store.transport ?? options.enablePatches;
+      const enablePatches =
+        store.transport ?? (options as StoreOptions<T>).enablePatches;
       if (!enablePatches) {
         if (internal.mutableInstance) {
           if (store.act) {
