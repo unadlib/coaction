@@ -210,6 +210,14 @@ export type StoreOptions<T extends CreateState> = {
   enablePatches?: boolean;
 };
 
+export type ClientStoreOptions<T extends CreateState> = {
+  /**
+   * The name of the store.
+   */
+  name?: string;
+  middlewares?: Middleware<T>[];
+} & WorkerStoreOptions;
+
 type WorkerStoreOptions = {
   workerType?: 'WorkerMain';
   transport?: Transport<any>;
@@ -228,10 +236,10 @@ type Asyncify<T extends object, D extends true | false> = {
         };
 };
 
-type StoreWithAsyncFunction<T extends object, D extends true | false> = Store<
-  Asyncify<T, D>
-> &
-  (() => Asyncify<T, D>);
+export type StoreWithAsyncFunction<
+  T extends object,
+  D extends true | false = false
+> = Store<Asyncify<T, D>> & (() => Asyncify<T, D>);
 
 export type StoreReturn<
   T extends object,
