@@ -103,6 +103,7 @@ export const create: Creator = <T extends CreateState>(
     } as Store<T>);
     applyMiddlewares(store, options.middlewares ?? []);
     const initialState = getInitialState(store, createState);
+    store.getInitialState = () => initialState;
     internal.rootState = getRawState(
       store,
       internal,
