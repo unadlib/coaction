@@ -62,6 +62,10 @@ export interface Store<T extends ISlices = ISlices> {
    */
   getPureState: () => T;
   /**
+   * Get the initial state.
+   */
+  getInitialState: () => T;
+  /**
    * Get the raw instance via the initial state.
    */
   toRaw?: (key: any) => any;
