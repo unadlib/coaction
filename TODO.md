@@ -23,10 +23,15 @@
 - [ ] supports Zustand middlewares and Redux middlewares
 
 - [ ] implement coaction-react with alien-signals
-- [ ] implement coaction-vue
-- [ ] implement coaction for Redux Toolkit
 - [ ] implement coaction for Zustand
+
 - [x] implement coaction for MobX
+
+- [ ] implement coaction-vue
+- [ ] implement coaction-solid
+- [ ] implement coaction-angular
+- [ ] implement coaction-svelte
+- [ ] implement coaction for Redux Toolkit
 
   - no support for custom observables
   - no support for lazy observables
