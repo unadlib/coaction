@@ -8,7 +8,6 @@ describe('State Management Store Tests', () => {
   let initialState: any;
 
   beforeEach(() => {
-    // 初始化初始状态
     initialState = {
       counter: 0,
       text: 'hello',
@@ -16,8 +15,6 @@ describe('State Management Store Tests', () => {
         value: 42
       }
     };
-
-    // 创建存储
     store = create((set, get) => ({
       ...initialState,
       increment: () => set((state: any) => ({ counter: state.counter + 1 })),

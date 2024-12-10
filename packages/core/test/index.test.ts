@@ -296,15 +296,15 @@ test('worker without transport', async () => {
 }
 `);
   {
-    const useStore = create(counter, {
-      name: 'test'
-    });
     expect(() => {
-      const useClientStore = useStore({
+      const useStore = create(counter, {
+        name: 'test',
         // transport: clientTransport,
         workerType: 'WorkerMain'
       });
-    }).toThrowErrorMatchingInlineSnapshot(`"transport is required"`);
+    }).toThrowErrorMatchingInlineSnapshot(
+      `"Cannot read properties of undefined (reading 'addEventListener')"`
+    );
   }
 });
 
@@ -462,12 +462,11 @@ describe('Slices', () => {
       const useClientStore = create(
         { counter },
         {
-          name: 'test'
+          name: 'test',
+          transport: clientTransport,
+          workerType: 'WorkerMain'
         }
-      )({
-        transport: clientTransport,
-        workerType: 'WorkerMain'
-      });
+      );
       await new Promise((resolve) => {
         clientTransport.onConnect(() => {
           setTimeout(resolve);

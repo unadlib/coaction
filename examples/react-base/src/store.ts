@@ -5,6 +5,7 @@ export type Counter = Slices<
   {
     counter: {
       count: number;
+      double: number;
       increment: () => void;
     };
   },

@@ -228,7 +228,7 @@ type WorkerStoreOptions = {
   worker?: SharedWorker | Worker;
 };
 
-type Asyncify<T extends object, D extends true | false> = {
+export type Asyncify<T extends object, D extends true | false> = {
   [K in keyof T]: T[K] extends (...args: any[]) => any
     ? (...args: Parameters<T[K]>) => Promise<ReturnType<T[K]>>
     : D extends false
@@ -245,12 +245,25 @@ export type StoreWithAsyncFunction<
   D extends true | false = false
 > = Store<Asyncify<T, D>> & (() => Asyncify<T, D>);
 
-export type StoreReturn<
-  T extends object,
-  D extends true | false = false
-> = Store<T> &
-  (<O extends [WorkerStoreOptions] | []>(
-    ...args: O
-  ) => O extends [any, ...any[]] ? StoreWithAsyncFunction<T, D> : T);
+export type StoreReturn<T extends object> = Store<T> & ((...args: any[]) => T);
 
 export type CreateState = ISlices | Record<string, Slice<any>>;
+
+export type Creator = {
+  <T extends Record<string, Slice<any>>>(
+    createState: T,
+    options?: StoreOptions<T>
+  ): StoreReturn<SliceState<T>>;
+  <T extends ISlices>(
+    createState: Slice<T>,
+    options?: StoreOptions<T>
+  ): StoreReturn<T>;
+  <T extends Record<string, Slice<any>>>(
+    createState: T,
+    options?: ClientStoreOptions<T>
+  ): StoreWithAsyncFunction<SliceState<T>, true>;
+  <T extends ISlices>(
+    createState: Slice<T>,
+    options?: ClientStoreOptions<T>
+  ): StoreWithAsyncFunction<T>;
+};
