@@ -1,3 +1,0 @@
-# @coaction/zustand
-
-## Usage

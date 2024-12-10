@@ -1,5 +1,6 @@
 export { create } from './create';
 export { createBinder } from './binder';
+export { wrapStore } from './wrapStore';
 
 export type {
   Store,
@@ -7,5 +8,9 @@ export type {
   ISlices,
   Slice,
   Slices,
-  Middleware
+  Middleware,
+  ClientStoreOptions,
+  SliceState,
+  StoreWithAsyncFunction,
+  Asyncify
 } from './interface';

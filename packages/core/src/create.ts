@@ -1,17 +1,13 @@
 import { apply as applyWithMutative } from 'mutative';
 import { createTransport } from 'data-transport';
 import type {
-  ISlices,
   Listener,
   Slice,
-  SliceState,
   Store,
   StoreOptions,
-  StoreReturn,
-  AsyncStoreOption,
   CreateState,
   ClientStoreOptions,
-  StoreWithAsyncFunction
+  Creator
 } from './interface';
 import { defaultName, WorkerType } from './constant';
 import { createAsyncStore, handleMainTransport } from './asyncStore';
@@ -20,27 +16,9 @@ import { getRawState } from './getRawState';
 import { handleState } from './handleState';
 import type { Internal } from './internal';
 import { applyMiddlewares } from './applyMiddlewares';
+import { wrapStore } from './wrapStore';
 
 const namespaceMap = new Map<string, boolean>();
-
-type Creator = {
-  <T extends Record<string, Slice<any>>>(
-    createState: T,
-    options?: StoreOptions<T>
-  ): StoreReturn<SliceState<T>, true>;
-  <T extends ISlices>(
-    createState: Slice<T>,
-    options?: StoreOptions<T>
-  ): StoreReturn<T>;
-  <T extends Record<string, Slice<any>>>(
-    createState: T,
-    options?: ClientStoreOptions<T>
-  ): StoreWithAsyncFunction<SliceState<T>, true>;
-  <T extends ISlices>(
-    createState: Slice<T>,
-    options?: ClientStoreOptions<T>
-  ): StoreWithAsyncFunction<T>;
-};
 
 /**
  * Create a store
@@ -126,35 +104,18 @@ export const create: Creator = <T extends CreateState>(
     }
     return store;
   };
-  const getAsyncStore = (asyncStoreOption: AsyncStoreOption) => {
-    if (!asyncStoreOption) return store.getState();
-    if (checkEnablePatches) {
-      throw new Error(`enablePatches: true is required for the async store`);
-    }
-    return createAsyncStore(createStore, asyncStoreOption);
-  };
   if (
     (options as ClientStoreOptions<T>).worker ||
     options.workerType === 'WorkerMain'
   ) {
-    const store = getAsyncStore(options);
-    const { name, ..._store } = store;
-    return Object.assign(
-      {
-        [name]: () => store.getState()
-      }[name],
-      _store
-    ) as StoreReturn<any>;
+    if (checkEnablePatches) {
+      throw new Error(`enablePatches: true is required for the async store`);
+    }
+    const store = createAsyncStore(createStore, options);
+    return wrapStore(store);
   }
   const store = createStore({
     share
   });
-  const { name, ..._store } = store;
-  return Object.assign(
-    {
-      [name]: (asyncStoreOption: AsyncStoreOption) =>
-        getAsyncStore(asyncStoreOption)
-    }[name],
-    _store
-  ) as StoreReturn<any>;
+  return wrapStore(store);
 };
