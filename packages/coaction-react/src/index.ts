@@ -1,13 +1,12 @@
-import {
-  create as createVanilla,
-  wrapStore,
-  type Slice,
-  type Store,
-  type StoreOptions,
-  type ClientStoreOptions,
-  type SliceState,
-  type ISlices,
-  type Asyncify
+import { create as createVanilla, wrapStore } from 'coaction';
+import type {
+  Slice,
+  Store,
+  StoreOptions,
+  ClientStoreOptions,
+  SliceState,
+  ISlices,
+  Asyncify
 } from 'coaction';
 import { useSyncExternalStore } from 'use-sync-external-store/shim';
 
