@@ -97,7 +97,12 @@ export const handleMainTransport = <T extends CreateState>(
     if (process.env.NODE_ENV === 'development' && typeof base !== 'function') {
       throw new Error('The function is not found');
     }
-    return (base as Function)(...args);
+    try {
+      return (base as Function)(...args);
+    } catch (error: any) {
+      console.error(error);
+      return { $$Error: error.message };
+    }
   });
   transport.listen('fullSync', async () => {
     return {

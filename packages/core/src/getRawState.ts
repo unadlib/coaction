@@ -98,9 +98,14 @@ export const getRawState = <T extends CreateState>(
               };
             }
             const keys = sliceKey ? [sliceKey, key] : [key];
+            // emit the action to worker or main thread execute
             return store
               .transport!.emit('execute', keys, args)
-              .then((result) => {
+              .then((result: any) => {
+                if (result?.$$Error) {
+                  done?.(result);
+                  throw new Error(result.$$Error);
+                }
                 done?.(result);
                 return result;
               });
@@ -142,7 +147,6 @@ export const getRawState = <T extends CreateState>(
                   const [draft, finalize] = createWithMutative(
                     internal.rootState,
                     {
-                      // mark: () => 'immutable',
                       enablePatches: true
                     }
                   );
@@ -160,7 +164,6 @@ export const getRawState = <T extends CreateState>(
               }
               internal.backupState = internal.rootState;
               const [draft, finalize] = createWithMutative(internal.rootState, {
-                // mark: () => 'immutable',
                 enablePatches: true
               });
               internal.finalizeDraft = finalize as () => [T, Patches, Patches];
@@ -208,7 +211,6 @@ export const getRawState = <T extends CreateState>(
         }
       }
     });
-    // TODO: improve perf
     // it should be a immutable state
     const slice = Object.defineProperties({}, descriptors);
     return slice;
