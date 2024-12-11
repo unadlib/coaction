@@ -1,8 +1,8 @@
 import {
   create as createWithMutative,
-  Draft,
+  type Draft,
   isDraft,
-  Patches
+  type Patches
 } from 'mutative';
 import { Computed, createSelectorWithArray } from './computed';
 import type {
@@ -46,6 +46,7 @@ export const getRawState = <T extends CreateState>(
                 'Computed is not supported with mutable instance'
               );
             }
+            // manually handle computed property
             const { deps, fn } = descriptor.value as Computed;
             const depsCallbackSelector = createSelectorWithArray(
               () => [internal.rootState],

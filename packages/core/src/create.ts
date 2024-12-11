@@ -21,7 +21,7 @@ import { wrapStore } from './wrapStore';
 const namespaceMap = new Map<string, boolean>();
 
 /**
- * Create a store
+ * Create a simple store or a shared store. The shared store can be used in a worker or another thread.
  */
 export const create: Creator = <T extends CreateState>(
   createState: Slice<T> | T,
