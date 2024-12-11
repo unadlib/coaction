@@ -268,8 +268,7 @@ test('worker', async () => {
 `);
   {
     const useClientStore = create(counter, {
-      name: 'test'
-    })({
+      name: 'test',
       transport: clientTransport,
       workerType: 'WorkerMain'
     });
@@ -472,12 +471,11 @@ describe('Slices', () => {
       const useClientStore = create(
         { counter },
         {
-          name: 'test'
+          name: 'test',
+          transport: clientTransport,
+          workerType: 'WorkerMain'
         }
-      )({
-        transport: clientTransport,
-        workerType: 'WorkerMain'
-      });
+      );
       await new Promise((resolve) => {
         clientTransport.onConnect(() => {
           setTimeout(resolve);

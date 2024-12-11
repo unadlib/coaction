@@ -48,6 +48,8 @@
 
 ### TODOs
 
+- [ ] multi-transport
+- [ ] logger support verbose
 - [ ] Undo/Redo(@coaction/history)
 - [ ] add more tests
 - [ ] add more examples
@@ -60,7 +62,7 @@
 - [x] Fix @coaction/pinia type issue
 - [x] Fix @coaction/pinia name checker
 - [x] computed properties in @coaction/react
-- [x] multi-transport
+
 - [x] Fix @coaction/mobx type issue
 - [x] Support for multiple worker stores with same base store
 - [x] Fix enablePatches checker
