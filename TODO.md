@@ -1,4 +1,4 @@
-# TODO
+# Feature Roadmap
 
 - [x] Middleware Support: Supports state subscriptions and middleware for side effects and enhanced state handling
 - [x] Namespace Support: Avoid key conflicts with namespaced slices
@@ -20,41 +20,18 @@
 - [x] Developer Tools Integration: Easy debugging with integrated developer tools
 - [ ] Persistence: Built-in support for state persistence
 - [x] Scalable Architecture: Designed to scale from simple apps to complex, multiprocessing applications
-- [ ] supports Zustand middlewares and Redux middlewares
-- [ ] implement coaction-react with alien-signals
-- [ ] implement coaction for Zustand
-- [x] implement coaction for MobX
-- [ ] implement coaction-vue
-- [ ] implement coaction-solid
-- [ ] implement coaction-angular
-- [ ] implement coaction-svelte
-- [ ] implement coaction for Redux Toolkit
-  - no support for custom observables
-  - no support for lazy observables
-- [ ] implement coaction for Jotai
-- [ ] implement coaction for XState
-- [x] implement coaction for Pinia
-  - no support for async actions(it will be merged into main thread with a single patch for updating the state)
-    - It must be split into sync update action
-- [ ] implement coaction for Valtio
-- [ ] implement coaction for nanostores
-- [ ] implement coaction for @ngrx/store
-- [ ] implement coaction-angular
-- [ ] implement coaction-svelte
-- [ ] implement coaction-Solid
-- [x] fix slices checker
-- [x] fix type
-- [ ] add devtools support
 
 ### TODOs
 
 - [ ] multi-transport
 - [ ] logger support verbose
-- [ ] Undo/Redo(@coaction/history)
 - [ ] add more tests
 - [ ] add more examples
 - [ ] add more documentation
-
+- [ ] benchmark
+- [ ] Persist middleware
+- [ ] Undo/Redo(@coaction/history)
+- [ ] supports Zustand middlewares and Redux middlewares
 - [x] namespace support
 - [x] handle error proxy action
 - [x] Middleware Support
@@ -62,15 +39,36 @@
 - [x] Fix @coaction/pinia type issue
 - [x] Fix @coaction/pinia name checker
 - [x] computed properties in @coaction/react
-
 - [x] Fix @coaction/mobx type issue
 - [x] Support for multiple worker stores with same base store
 - [x] Fix enablePatches checker
 - [x] Fix @coaction/pinia multiple action in a single function
 - [x] Fix @coaction/mobx multiple action in a single function
-- [ ] Fix Pinia StoreProperties
-- [ ] Pinia does not support detecting changes without a action
 - [ ] support for cross-store
+- [ ] implement coaction-react with alien-signals
+- [ ] implement coaction for Zustand
+- [x] implement coaction for MobX
+  - no support for custom observables
+  - no support for lazy observables
+- [ ] implement coaction-vue
+- [ ] implement coaction-solid
+- [ ] implement coaction-angular
+- [ ] implement coaction-svelte
+- [ ] implement coaction for Redux Toolkit
+- [ ] implement coaction for Jotai
+- [ ] implement coaction for XState
+- [x] implement coaction for Pinia
+  - no support for async actions(it will be merged into main thread with a single patch for updating the state)
+    - It must be split into sync update action
   - [ ] handle $patch
   - [ ] handle $reset
   - [ ] handle computed properties
+  - [ ] Fix Pinia StoreProperties
+  - [ ] Pinia does not support detecting changes without a action
+- [ ] implement coaction for Valtio
+- [ ] implement coaction for nanostores
+- [ ] implement coaction for @ngrx/store
+- [ ] implement coaction-angular
+- [ ] implement coaction-svelte
+- [ ] implement coaction-Solid
+- [ ] add devtools support
