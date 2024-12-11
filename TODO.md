@@ -12,30 +12,25 @@
 - [x] Flexible Store Creation: Create multiple stores with unique names for better organization
 - [x] Worker Integration: Easy integration with Web Workers and Shared Worker for offloading computations
 - [x] Computed Properties: Support for derived state through getter functions
-- [ ] Performance Optimized: Efficient state updates and retrieval, even with deeply nested structures
-- [ ] Type-Safe: Full TypeScript support for enhanced developer experience
-- [ ] Reactive: Built-in subscription mechanism for efficient UI updates
+- [x] Performance Optimized: Efficient state updates and retrieval, even with deeply nested structures
+- [x] Type-Safe: Full TypeScript support for enhanced developer experience
+- [x] Reactive: Built-in subscription mechanism for efficient UI updates
 - [x] Async Action Support: Easily handle asynchronous state updates
 - [x] Immutable Updates: Ensures predictable state changes with immutable update patterns
 - [x] Developer Tools Integration: Easy debugging with integrated developer tools
 - [ ] Persistence: Built-in support for state persistence
-- [ ] Scalable Architecture: Designed to scale from simple apps to complex, multiprocessing applications
+- [x] Scalable Architecture: Designed to scale from simple apps to complex, multiprocessing applications
 - [ ] supports Zustand middlewares and Redux middlewares
-
 - [ ] implement coaction-react with alien-signals
 - [ ] implement coaction for Zustand
-
 - [x] implement coaction for MobX
-
 - [ ] implement coaction-vue
 - [ ] implement coaction-solid
 - [ ] implement coaction-angular
 - [ ] implement coaction-svelte
 - [ ] implement coaction for Redux Toolkit
-
   - no support for custom observables
   - no support for lazy observables
-
 - [ ] implement coaction for Jotai
 - [ ] implement coaction for XState
 - [x] implement coaction for Pinia
@@ -53,6 +48,11 @@
 
 ### TODOs
 
+- [ ] Undo/Redo(@coaction/history)
+- [ ] add more tests
+- [ ] add more examples
+- [ ] add more documentation
+
 - [x] namespace support
 - [x] handle error proxy action
 - [x] Middleware Support
@@ -68,14 +68,7 @@
 - [x] Fix @coaction/mobx multiple action in a single function
 - [ ] Fix Pinia StoreProperties
 - [ ] Pinia does not support detecting changes without a action
-
 - [ ] support for cross-store
-
   - [ ] handle $patch
   - [ ] handle $reset
   - [ ] handle computed properties
-
-- [ ] Undo/Redo(@coaction/history)
-- [ ] add more tests
-- [ ] add more examples
-- [ ] add more documentation
