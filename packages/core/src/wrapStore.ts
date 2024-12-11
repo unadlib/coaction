@@ -1,5 +1,8 @@
 import type { Store, StoreReturn } from './interface';
 
+/**
+ * wrapStore is a function to wrap the store and return function to get the state with store.
+ */
 export const wrapStore = (
   store: Store<any>,
   getState: (...args: any[]) => any = () => store.getState()

@@ -1,6 +1,9 @@
 import type { Store } from './interface';
 import { bindSymbol } from './constant';
 
+/**
+ * createBinder is a function to create a binder for the 3rd party store.
+ */
 export function createBinder<F = (...args: any[]) => any>({
   handleState,
   handleStore
