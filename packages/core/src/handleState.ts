@@ -85,7 +85,6 @@ export const handleState = <T extends CreateState>(
             return fn.apply(null);
           },
           {
-            // mark: () => 'immutable',
             enablePatches: true
           }
         );
@@ -122,7 +121,6 @@ export const handleState = <T extends CreateState>(
         const [draft, finalize] = createWithMutative(
           internal.rootState as any,
           {
-            // mark: () => 'immutable',
             enablePatches: true
           }
         );
