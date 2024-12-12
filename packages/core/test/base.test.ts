@@ -325,9 +325,9 @@ test('base - error handling and enablePatches', () => {
 
 test('worker', async () => {
   const ports = mockPorts();
-  const serverTransport = createTransport('WorkerInternal', ports.main);
+  const serverTransport = createTransport('WebWorkerInternal', ports.main);
   const clientTransport = createTransport(
-    'WorkerMain',
+    'WebWorkerClient',
     ports.create() as WorkerMainTransportOptions
   );
 
@@ -374,7 +374,7 @@ test('worker', async () => {
   {
     const useClientStore = create(counter, {
       transport: clientTransport,
-      workerType: 'WorkerMain'
+      workerType: 'WebWorkerClient'
     });
 
     await new Promise((resolve) => {
@@ -525,9 +525,9 @@ describe('Slices', () => {
   });
   test('worker', async () => {
     const ports = mockPorts();
-    const serverTransport = createTransport('WorkerInternal', ports.main);
+    const serverTransport = createTransport('WebWorkerInternal', ports.main);
     const clientTransport = createTransport(
-      'WorkerMain',
+      'WebWorkerClient',
       ports.create() as WorkerMainTransportOptions
     );
 
@@ -554,7 +554,7 @@ describe('Slices', () => {
       },
       {
         transport: serverTransport,
-        workerType: 'WorkerInternal'
+        workerType: 'WebWorkerInternal'
       }
     );
     const { count, increment } = useServerStore().counter;
@@ -588,7 +588,7 @@ describe('Slices', () => {
         { counter },
         {
           transport: clientTransport,
-          workerType: 'WorkerMain'
+          workerType: 'WebWorkerClient'
         }
       );
       await new Promise((resolve) => {

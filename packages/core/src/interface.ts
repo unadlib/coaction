@@ -115,7 +115,7 @@ export type WorkerOptions = {
   /**
    * The worker type is used to determine the type of worker.
    */
-  workerType?: 'SharedWorkerInternal' | 'WorkerInternal';
+  workerType?: 'SharedWorkerInternal' | 'WebWorkerInternal';
 };
 
 export type TransportOptions = {
@@ -206,7 +206,7 @@ export type StoreOptions<T extends CreateState> = {
   // TODO: remove this, it's only used in test
   transport?: Transport;
   // TODO: remove this, it's only used in test
-  workerType?: 'SharedWorkerInternal' | 'WorkerInternal';
+  workerType?: 'SharedWorkerInternal' | 'WebWorkerInternal';
   middlewares?: Middleware<T>[];
   /**
    * enable patches
@@ -223,7 +223,7 @@ export type ClientStoreOptions<T extends CreateState> = {
 } & WorkerStoreOptions;
 
 type WorkerStoreOptions = {
-  workerType?: 'WorkerMain' | 'SharedWorkerClient';
+  workerType?: 'WebWorkerClient' | 'SharedWorkerClient';
   transport?: Transport<any>;
   worker?: SharedWorker | Worker;
 };

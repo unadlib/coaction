@@ -3,7 +3,7 @@ import { global } from './global';
 export const WorkerType = global.SharedWorkerGlobalScope
   ? 'SharedWorkerInternal'
   : globalThis.WorkerGlobalScope
-    ? 'WorkerInternal'
+    ? 'WebWorkerInternal'
     : null;
 
 export const bindSymbol = Symbol('bind');

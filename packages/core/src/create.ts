@@ -106,7 +106,7 @@ export const create: Creator = <T extends CreateState>(
   };
   if (
     (options as ClientStoreOptions<T>).worker ||
-    options.workerType === 'WorkerMain'
+    options.workerType === 'WebWorkerClient'
   ) {
     if (checkEnablePatches) {
       throw new Error(`enablePatches: true is required for the async store`);

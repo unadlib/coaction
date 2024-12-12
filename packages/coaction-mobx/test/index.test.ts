@@ -135,9 +135,9 @@ test('base', () => {
 
 test('worker', async () => {
   const ports = mockPorts();
-  const serverTransport = createTransport('WorkerInternal', ports.main);
+  const serverTransport = createTransport('WebWorkerInternal', ports.main);
   const clientTransport = createTransport(
-    'WorkerMain',
+    'WebWorkerClient',
     ports.create() as WorkerMainTransportOptions
   );
 
@@ -184,7 +184,7 @@ test('worker', async () => {
   const useServerStore = create(counter, {
     name: 'test',
     transport: serverTransport,
-    workerType: 'WorkerInternal'
+    workerType: 'WebWorkerInternal'
   });
   const { count, increment } = useServerStore();
   expect(count).toBe(0);
@@ -225,7 +225,7 @@ test('worker', async () => {
     const useClientStore = create(counter, {
       name: 'test',
       transport: clientTransport,
-      workerType: 'WorkerMain'
+      workerType: 'WebWorkerClient'
     });
 
     await new Promise((resolve) => {
@@ -295,9 +295,9 @@ test('worker', async () => {
 
 test('worker - async', async () => {
   const ports = mockPorts();
-  const serverTransport = createTransport('WorkerInternal', ports.main);
+  const serverTransport = createTransport('WebWorkerInternal', ports.main);
   const clientTransport = createTransport(
-    'WorkerMain',
+    'WebWorkerClient',
     ports.create() as WorkerMainTransportOptions
   );
 
@@ -317,7 +317,7 @@ test('worker - async', async () => {
     );
   const useServerStore = create(counter, {
     transport: serverTransport,
-    workerType: 'WorkerInternal',
+    workerType: 'WebWorkerInternal',
     name: 'test'
   });
   const { count, increment } = useServerStore();
@@ -355,7 +355,7 @@ test('worker - async', async () => {
     const useClientStore = create(counter, {
       name: 'test',
       transport: clientTransport,
-      workerType: 'WorkerMain'
+      workerType: 'WebWorkerClient'
     });
 
     await new Promise((resolve) => {
@@ -472,9 +472,9 @@ describe('Slices', () => {
   });
   test('worker', async () => {
     const ports = mockPorts();
-    const serverTransport = createTransport('WorkerInternal', ports.main);
+    const serverTransport = createTransport('WebWorkerInternal', ports.main);
     const clientTransport = createTransport(
-      'WorkerMain',
+      'WebWorkerClient',
       ports.create() as WorkerMainTransportOptions
     );
 
@@ -500,7 +500,7 @@ describe('Slices', () => {
       {
         name: 'test',
         transport: serverTransport,
-        workerType: 'WorkerInternal'
+        workerType: 'WebWorkerInternal'
       }
     );
     const { count, increment } = useServerStore().counter;
@@ -535,7 +535,7 @@ describe('Slices', () => {
         {
           name: 'test',
           transport: clientTransport,
-          workerType: 'WorkerMain'
+          workerType: 'WebWorkerClient'
         }
       );
       await new Promise((resolve) => {
