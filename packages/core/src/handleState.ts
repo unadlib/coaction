@@ -12,7 +12,7 @@ import type {
 } from './interface';
 import type { Internal } from './internal';
 import { mergeObject } from './utils';
-import { emit, handleDraft } from './asyncStore';
+import { emit, handleDraft } from './asyncClientStore';
 import { Computed } from './computed';
 
 export const handleState = <T extends CreateState>(

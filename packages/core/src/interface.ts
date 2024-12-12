@@ -107,26 +107,6 @@ export interface Store<T extends ISlices = ISlices> {
   }) => void;
 }
 
-export type MainTransportOptions = {
-  /**
-   * The worker is used to execute the function in the worker or shared worker.
-   */
-  worker?: Worker | SharedWorker;
-  /**
-   * The worker type is used to determine the type of worker.
-   */
-  workerType?: 'SharedWorkerInternal' | 'WebWorkerInternal';
-};
-
-export type TransportOptions = {
-  /**
-   * The transport is used to communicate between the main thread and the worker or shared worker.
-   */
-  transport?: Transport;
-};
-
-export type AsyncStoreOption = MainTransportOptions | TransportOptions;
-
 export type InternalEvents = {
   /**
    * Update the state in the worker or shared worker.
@@ -222,11 +202,11 @@ export type ClientStoreOptions<T extends CreateState> = {
   middlewares?: Middleware<T>[];
 } & ClientTransportOptions;
 
-type ClientTransportOptions = {
+export interface ClientTransportOptions {
   workerType?: 'WebWorkerClient' | 'SharedWorkerClient';
   transport?: Transport<any>;
   worker?: SharedWorker | Worker;
-};
+}
 
 export type Asyncify<T extends object, D extends true | false> = {
   [K in keyof T]: T[K] extends (...args: any[]) => any
