@@ -53,7 +53,7 @@ export const logger: (options?: {
     collapsed = true,
     serialized = false,
     logger = console,
-    verbose = true // TODO: support verbose
+    verbose = false
   } = {}) =>
   (store) => {
     if (loggerStoreMap.has(store)) {
@@ -64,7 +64,9 @@ export const logger: (options?: {
     store.apply = (state, patches) => {
       if (patches) {
         logger.log(
-          `%c[Share: ${store.share}]%c[Store:${store.name}][Patches]`,
+          verbose
+            ? `%c[Share: ${store.share}]%c[Store:${store.name}][Patches]`
+            : '%c%c[Patches]',
           'color: gray; font-weight: lighter;',
           'color: #BD67FB; font-weight: lighter;',
           serialized ? JSON.stringify(patches) : patches
@@ -78,10 +80,10 @@ export const logger: (options?: {
         traceTimeMap.set(options.id, timer.now());
         logger.group(
           [
-            `%c${date} `,
-            `[Share: ${store.share}]`,
-            `[Store: ${store.name}][Method: ${options.sliceKey ? `${options.sliceKey}.` : ''}${options.method}]`,
-            ` [UUID: ${options.id}]`,
+            verbose ? `%c${date} ` : '%c',
+            verbose ? `[Share: ${store.share}]` : '',
+            `${verbose ? `[Store: ${store.name}]` : ''}[Method: ${options.sliceKey ? `${options.sliceKey}.` : ''}${options.method}]`,
+            verbose ? ` [UUID: ${options.id}]` : '',
             ` Parameters:`
           ].join('%c'),
           'color: gray; font-weight: lighter;',
@@ -99,10 +101,10 @@ export const logger: (options?: {
         traceTimeMap.delete(options.id);
         logger.log(
           [
-            `%c${date} `,
-            `[Share: ${store.share}]`,
-            `[Store: ${store.name}][Method: ${options.sliceKey ? `${options.sliceKey}.` : ''}${options.method}]`,
-            ` [UUID: ${options.id}] (${(timer.now() - start).toFixed(3)} ms)`,
+            verbose ? `%c${date} ` : '%c',
+            verbose ? `[Share: ${store.share}]` : '',
+            `${verbose ? `[Store: ${store.name}]` : ''}[Method: ${options.sliceKey ? `${options.sliceKey}.` : ''}${options.method}]`,
+            ` ${verbose ? `[UUID: ${options.id}] ` : ''}(${(timer.now() - start).toFixed(3)} ms)`,
             ` Result:`
           ].join('%c'),
           'color: gray; font-weight: lighter;',
@@ -120,9 +122,9 @@ export const logger: (options?: {
       const date = formatTime(new Date());
       console[collapsed ? 'groupCollapsed' : 'group'](
         [
-          `%c${date} `,
-          `[Share: ${store.share}]`,
-          `[Store: ${store.name}][Action]`
+          verbose ? `%c${date} ` : '%c',
+          verbose ? `[Share: ${store.share}]` : '',
+          `${verbose ? `[Store: ${store.name}]` : ''}[Action]`
         ].join('%c'),
         'color: gray; font-weight: lighter;',
         'color: gray; font-weight: lighter;',
@@ -132,20 +134,20 @@ export const logger: (options?: {
         logger.trace('trace');
       }
       logger.log(
-        `[Share: ${store.share}][Store: ${store.name}][State]`,
+        `${verbose ? `[Share: ${store.share}][Store: ${store.name}]` : ''}[State]`,
         serialized ? JSON.stringify(store.getPureState()) : store.getPureState()
       );
       const now = timer.now();
       const result = setState(state, action);
       logger.log(
-        `[Share: ${store.share}][Store: ${store.name}][Next State]`,
+        `${verbose ? `[Share: ${store.share}][Store: ${store.name}]` : ''}[Next State]`,
         serialized ? JSON.stringify(store.getPureState()) : store.getPureState()
       );
       logger.log(
         [
-          `%c${date} `,
-          `[Share: ${store.share}]`,
-          `[Store: ${store.name}][Action]`,
+          verbose ? `%c${date} ` : '%c',
+          verbose ? `[Share: ${store.share}]` : '',
+          `${verbose ? `[Store: ${store.name}]` : ''}[Action]`,
           ` (${(timer.now() - now).toFixed(3)} ms)`
         ].join('%c'),
         'color: gray; font-weight: lighter;',
