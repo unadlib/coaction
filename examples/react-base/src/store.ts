@@ -1,5 +1,6 @@
 import { create } from '@coaction/react';
 import { createTransport } from 'data-transport';
+import { logger } from '@coaction/logger';
 
 import { counter, type Counter } from './counter';
 
@@ -14,11 +15,15 @@ export const useStore = create<{
     counter
   },
   {
-    clientTransport: createTransport('SharedWorkerClient', {
-      worker
-    }),
-    workerType: 'SharedWorkerClient'
+    // clientTransport: createTransport('SharedWorkerClient', {
+    //   worker
+    // }),
+    // workerType: 'SharedWorkerClient',
+    worker,
+    middlewares: [
+      logger({
+        collapsed: false
+      })
+    ]
   }
 );
-
-globalThis.useStore = useStore;
