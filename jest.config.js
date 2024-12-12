@@ -8,14 +8,14 @@ module.exports = {
   setupFilesAfterEnv: [],
   transform: {
     [constants.DEFAULT_JS_PATTERN]: 'babel-jest',
-    '^.+\\.vue$': '@vue/vue3-jest',
-    '^.+\\.svelte$': [
-      'svelte-jester',
-      {
-        preprocess: true,
-        rootMode: 'upward'
-      }
-    ]
+    '^.+\\.vue$': '@vue/vue3-jest'
+    // '^.+\\.svelte$': [
+    //   'svelte-jester',
+    //   {
+    //     preprocess: true,
+    //     rootMode: 'upward'
+    //   }
+    // ]
   },
   resolver: '<rootDir>/scripts/jest-resolver.js',
   globals: {

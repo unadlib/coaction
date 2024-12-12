@@ -179,9 +179,9 @@ test('base', () => {
 
 test('worker', async () => {
   const ports = mockPorts();
-  const serverTransport = createTransport('WorkerInternal', ports.main);
+  const serverTransport = createTransport('WebWorkerInternal', ports.main);
   const clientTransport = createTransport(
-    'WorkerMain',
+    'WebWorkerClient',
     ports.create() as WorkerMainTransportOptions
   );
 
@@ -199,7 +199,7 @@ test('worker', async () => {
   expect(() => {
     const useServerStore = create(counter, {
       transport: serverTransport,
-      workerType: 'WorkerInternal',
+      workerType: 'WebWorkerInternal',
       name: 'test',
       enablePatches: false
     });

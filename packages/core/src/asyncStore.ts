@@ -33,7 +33,7 @@ export const createAsyncStore = <T extends CreateState>(
     ? createTransport(
         (asyncStoreOption as WorkerOptions).worker instanceof SharedWorker
           ? 'SharedWorkerClient'
-          : 'WorkerMain',
+          : 'WebWorkerClient',
         {
           worker: (asyncStoreOption as WorkerOptions).worker as SharedWorker,
           prefix: asyncStore.name
