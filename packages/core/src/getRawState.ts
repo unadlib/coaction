@@ -12,7 +12,7 @@ import type {
   StoreOptions
 } from './interface';
 import type { Internal } from './internal';
-import { handleDraft } from './asyncStore';
+import { handleDraft } from './asyncClientStore';
 import { uuid } from './utils';
 
 export const getRawState = <T extends CreateState>(

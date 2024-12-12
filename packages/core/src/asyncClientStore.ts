@@ -4,18 +4,16 @@ import type {
   ExternalEvents,
   InternalEvents,
   Store,
-  MainTransportOptions,
-  TransportOptions,
-  AsyncStoreOption,
+  ClientTransportOptions,
   CreateState
 } from './interface';
 import type { Internal } from './internal';
 
-export const createAsyncStore = <T extends CreateState>(
-  createStore: (options: { share?: 'client' | 'main' }) => Store<T>,
-  asyncStoreOption: AsyncStoreOption
+export const createAsyncClientStore = <T extends CreateState>(
+  createStore: (options: { share?: 'client' }) => Store<T>,
+  asyncStoreClientOption: ClientTransportOptions
 ) => {
-  const asyncStore = createStore({
+  const asyncClientStore = createStore({
     share: 'client'
   });
   // the transport is in the worker or shared worker, and the client is in the main thread.
@@ -29,27 +27,27 @@ export const createAsyncStore = <T extends CreateState>(
          */
         onConnect?: (fn: () => void) => void;
       })
-    | undefined = (asyncStoreOption as MainTransportOptions).worker
+    | undefined = (asyncStoreClientOption as ClientTransportOptions).worker
     ? createTransport(
-        (asyncStoreOption as MainTransportOptions).worker instanceof
+        (asyncStoreClientOption as ClientTransportOptions).worker instanceof
           SharedWorker
           ? 'SharedWorkerClient'
           : 'WebWorkerClient',
         {
-          worker: (asyncStoreOption as MainTransportOptions)
+          worker: (asyncStoreClientOption as ClientTransportOptions)
             .worker as SharedWorker,
-          prefix: asyncStore.name
+          prefix: asyncClientStore.name
         }
       )
-    : (asyncStoreOption as TransportOptions).transport;
+    : (asyncStoreClientOption as ClientTransportOptions).transport;
   if (!transport) {
     throw new Error('transport is required');
   }
-  asyncStore.transport = transport;
+  asyncClientStore.transport = transport;
   let sequence: number;
   const fullSync = async () => {
     const latest = await transport.emit('fullSync');
-    asyncStore.apply(JSON.parse(latest.state));
+    asyncClientStore.apply(JSON.parse(latest.state));
     sequence = latest.sequence;
   };
   if (typeof transport.onConnect !== 'function') {
@@ -64,15 +62,15 @@ export const createAsyncStore = <T extends CreateState>(
       options.sequence === sequence + 1
     ) {
       sequence = options.sequence;
-      asyncStore.apply(undefined, options.patches);
+      asyncClientStore.apply(undefined, options.patches);
     } else {
       await fullSync();
     }
   });
-  const { name, ..._store } = asyncStore;
+  const { name, ..._store } = asyncClientStore;
   return Object.assign(
     {
-      [name]: () => asyncStore.getState()
+      [name]: () => asyncClientStore.getState()
     }[name],
     _store
   );

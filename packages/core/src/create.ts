@@ -10,7 +10,10 @@ import type {
   Creator
 } from './interface';
 import { defaultName, WorkerType } from './constant';
-import { createAsyncStore, handleMainTransport } from './asyncStore';
+import {
+  createAsyncClientStore,
+  handleMainTransport
+} from './asyncClientStore';
 import { getInitialState } from './getInitialState';
 import { getRawState } from './getRawState';
 import { handleState } from './handleState';
@@ -111,7 +114,7 @@ export const create: Creator = <T extends CreateState>(
     if (checkEnablePatches) {
       throw new Error(`enablePatches: true is required for the async store`);
     }
-    const store = createAsyncStore(createStore, options);
+    const store = createAsyncClientStore(createStore, options);
     return wrapStore(store);
   }
   const store = createStore({
