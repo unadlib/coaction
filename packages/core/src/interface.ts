@@ -223,7 +223,7 @@ export type ClientStoreOptions<T extends CreateState> = {
 } & WorkerStoreOptions;
 
 type WorkerStoreOptions = {
-  workerType?: 'WorkerMain';
+  workerType?: 'WorkerMain' | 'SharedWorkerClient';
   transport?: Transport<any>;
   worker?: SharedWorker | Worker;
 };
