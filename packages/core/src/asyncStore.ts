@@ -4,7 +4,7 @@ import type {
   ExternalEvents,
   InternalEvents,
   Store,
-  WorkerOptions,
+  MainTransportOptions,
   TransportOptions,
   AsyncStoreOption,
   CreateState
@@ -29,13 +29,15 @@ export const createAsyncStore = <T extends CreateState>(
          */
         onConnect?: (fn: () => void) => void;
       })
-    | undefined = (asyncStoreOption as WorkerOptions).worker
+    | undefined = (asyncStoreOption as MainTransportOptions).worker
     ? createTransport(
-        (asyncStoreOption as WorkerOptions).worker instanceof SharedWorker
+        (asyncStoreOption as MainTransportOptions).worker instanceof
+          SharedWorker
           ? 'SharedWorkerClient'
           : 'WebWorkerClient',
         {
-          worker: (asyncStoreOption as WorkerOptions).worker as SharedWorker,
+          worker: (asyncStoreOption as MainTransportOptions)
+            .worker as SharedWorker,
           prefix: asyncStore.name
         }
       )

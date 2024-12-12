@@ -107,7 +107,7 @@ export interface Store<T extends ISlices = ISlices> {
   }) => void;
 }
 
-export type WorkerOptions = {
+export type MainTransportOptions = {
   /**
    * The worker is used to execute the function in the worker or shared worker.
    */
@@ -125,7 +125,7 @@ export type TransportOptions = {
   transport?: Transport;
 };
 
-export type AsyncStoreOption = WorkerOptions | TransportOptions;
+export type AsyncStoreOption = MainTransportOptions | TransportOptions;
 
 export type InternalEvents = {
   /**
@@ -220,9 +220,9 @@ export type ClientStoreOptions<T extends CreateState> = {
    */
   name?: string;
   middlewares?: Middleware<T>[];
-} & WorkerStoreOptions;
+} & ClientTransportOptions;
 
-type WorkerStoreOptions = {
+type ClientTransportOptions = {
   workerType?: 'WebWorkerClient' | 'SharedWorkerClient';
   transport?: Transport<any>;
   worker?: SharedWorker | Worker;
