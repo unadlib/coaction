@@ -14,9 +14,11 @@ export const useStore = create<{
     counter
   },
   {
-    transport: createTransport('SharedWorkerClient', {
+    clientTransport: createTransport('SharedWorkerClient', {
       worker
     }),
     workerType: 'SharedWorkerClient'
   }
 );
+
+globalThis.useStore = useStore;

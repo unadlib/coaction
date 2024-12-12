@@ -12,3 +12,4 @@ export const useStore = create<{
     transport: createTransport('SharedWorkerInternal', {})
   }
 );
+globalThis.useStore = useStore;

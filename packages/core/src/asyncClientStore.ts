@@ -39,7 +39,7 @@ export const createAsyncClientStore = <T extends CreateState>(
           prefix: asyncClientStore.name
         }
       )
-    : (asyncStoreClientOption as ClientTransportOptions).transport;
+    : (asyncStoreClientOption as ClientTransportOptions).clientTransport;
   if (!transport) {
     throw new Error('transport is required');
   }

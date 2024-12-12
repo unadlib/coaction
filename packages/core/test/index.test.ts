@@ -203,7 +203,7 @@ test('worker', async () => {
   {
     const useClientStore = create(counter, {
       name: 'test',
-      transport: clientTransport,
+      clientTransport,
       workerType: 'WebWorkerClient'
     });
 
@@ -299,12 +299,10 @@ test('worker without transport', async () => {
     expect(() => {
       const useStore = create(counter, {
         name: 'test',
-        // transport: clientTransport,
+        // clientTransport,
         workerType: 'WebWorkerClient'
       });
-    }).toThrowErrorMatchingInlineSnapshot(
-      `"Cannot read properties of undefined (reading 'addEventListener')"`
-    );
+    }).toThrowErrorMatchingInlineSnapshot(`"transport is required"`);
   }
 });
 
@@ -463,7 +461,7 @@ describe('Slices', () => {
         { counter },
         {
           name: 'test',
-          transport: clientTransport,
+          clientTransport,
           workerType: 'WebWorkerClient'
         }
       );

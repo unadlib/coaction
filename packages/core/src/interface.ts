@@ -204,7 +204,7 @@ export type ClientStoreOptions<T extends CreateState> = {
 
 export interface ClientTransportOptions {
   workerType?: 'WebWorkerClient' | 'SharedWorkerClient';
-  transport?: Transport<any>;
+  clientTransport?: Transport<any>;
   worker?: SharedWorker | Worker;
 }
 

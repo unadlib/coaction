@@ -373,7 +373,7 @@ test('worker', async () => {
 `);
   {
     const useClientStore = create(counter, {
-      transport: clientTransport,
+      clientTransport,
       workerType: 'WebWorkerClient'
     });
 
@@ -587,7 +587,7 @@ describe('Slices', () => {
       const useClientStore = create(
         { counter },
         {
-          transport: clientTransport,
+          clientTransport,
           workerType: 'WebWorkerClient'
         }
       );
