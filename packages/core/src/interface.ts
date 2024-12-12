@@ -247,3 +247,21 @@ export type Creator = {
     options?: ClientStoreOptions<T>
   ): StoreWithAsyncFunction<T>;
 };
+
+export type ClientTransport =
+  | (Transport<{ listen: InternalEvents; emit: ExternalEvents }> & {
+      /**
+       * onConnect is called when the transport is connected.
+       */
+      onConnect?: (fn: () => void) => void;
+    })
+  | undefined;
+
+export type StoreTransport =
+  | (Transport<{ listen: ExternalEvents; emit: InternalEvents }> & {
+      /**
+       * onConnect is called when the transport is connected.
+       */
+      onConnect?: (fn: () => void) => void;
+    })
+  | undefined;

@@ -23,12 +23,13 @@
 
 ### TODOs
 
-- [ ] multi-transport
+- [x] multi-transport
 - [x] logger support verbose
 - [ ] add more tests
 - [ ] add more examples
 - [ ] add more documentation
 - [ ] benchmark
+
 - [ ] Persist middleware
 - [ ] Undo/Redo(@coaction/history)
 - [ ] supports Zustand middlewares and Redux middlewares

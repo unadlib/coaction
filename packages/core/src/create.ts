@@ -7,7 +7,8 @@ import type {
   StoreOptions,
   CreateState,
   ClientStoreOptions,
-  Creator
+  Creator,
+  StoreTransport
 } from './interface';
 import { defaultName, WorkerType } from './constant';
 import {
@@ -114,7 +115,7 @@ export const create: Creator = <T extends CreateState>(
     ) as T;
     // store transport for server port
     // the store transport is responsible for transmitting the sync state to the client transport.
-    const storeTransport =
+    const storeTransport: StoreTransport =
       transport ??
       (workerType === 'SharedWorkerInternal' ||
       workerType === 'WebWorkerInternal'
@@ -123,6 +124,9 @@ export const create: Creator = <T extends CreateState>(
           })
         : undefined);
     if (storeTransport) {
+      if (typeof storeTransport.onConnect !== 'function') {
+        throw new Error('transport.onConnect is required');
+      }
       if (checkEnablePatches) {
         throw new Error(`enablePatches: true is required for the transport`);
       }
@@ -131,6 +135,7 @@ export const create: Creator = <T extends CreateState>(
     return store;
   };
   if (
+    (options as ClientStoreOptions<T>).clientTransport ||
     (options as ClientStoreOptions<T>).worker ||
     options.workerType === 'WebWorkerClient' ||
     options.workerType === 'SharedWorkerClient'

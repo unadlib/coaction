@@ -5,7 +5,8 @@ import type {
   InternalEvents,
   Store,
   ClientTransportOptions,
-  CreateState
+  CreateState,
+  ClientTransport
 } from './interface';
 import type { Internal } from './internal';
 
@@ -20,26 +21,17 @@ export const createAsyncClientStore = <T extends CreateState>(
   // This store can't be directly executed by any of the store's methods
   // its methods are proxied to the worker or share worker for execution.
   // and the executed patch is sent to the store to be applied to synchronize the state.
-  const transport:
-    | (Transport<{ listen: InternalEvents; emit: ExternalEvents }> & {
-        /**
-         * onConnect is called when the transport is connected.
-         */
-        onConnect?: (fn: () => void) => void;
-      })
-    | undefined = (asyncStoreClientOption as ClientTransportOptions).worker
+  const transport: ClientTransport = asyncStoreClientOption.worker
     ? createTransport(
-        (asyncStoreClientOption as ClientTransportOptions).worker instanceof
-          SharedWorker
+        asyncStoreClientOption.worker instanceof SharedWorker
           ? 'SharedWorkerClient'
           : 'WebWorkerClient',
         {
-          worker: (asyncStoreClientOption as ClientTransportOptions)
-            .worker as SharedWorker,
+          worker: asyncStoreClientOption.worker as SharedWorker,
           prefix: asyncClientStore.name
         }
       )
-    : (asyncStoreClientOption as ClientTransportOptions).clientTransport;
+    : asyncStoreClientOption.clientTransport;
   if (!transport) {
     throw new Error('transport is required');
   }
