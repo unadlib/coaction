@@ -24,7 +24,7 @@
 ### TODOs
 
 - [ ] multi-transport
-- [ ] logger support verbose
+- [x] logger support verbose
 - [ ] add more tests
 - [ ] add more examples
 - [ ] add more documentation
