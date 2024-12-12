@@ -1,5 +1,5 @@
 import { apply as applyWithMutative } from 'mutative';
-import { createTransport } from 'data-transport';
+import { createTransport, Transport } from 'data-transport';
 import type {
   Listener,
   Slice,
@@ -34,8 +34,29 @@ export const create: Creator = <T extends CreateState>(
     Object.hasOwnProperty.call(options, 'enablePatches') &&
     !(options as StoreOptions<T>).enablePatches;
   const workerType = options.workerType ?? WorkerType;
-  const share = workerType || options.transport ? 'main' : undefined;
-  const createStore = ({ share }: { share?: 'client' | 'main' }) => {
+  if (
+    process.env.NODE_ENV === 'development' &&
+    (options as StoreOptions<T>).transport &&
+    (options as ClientStoreOptions<T>).clientTransport
+  ) {
+    throw new Error(
+      `transport and clientTransport cannot be used together, please use one of them.`
+    );
+  }
+  const storeTransport = (options as StoreOptions<T>).transport;
+  const share =
+    workerType === 'WebWorkerInternal' ||
+    workerType === 'SharedWorkerInternal' ||
+    storeTransport
+      ? 'main'
+      : undefined;
+  const createStore = ({
+    share,
+    transport
+  }: {
+    share?: 'client' | 'main';
+    transport?: Transport;
+  }) => {
     const store = {} as Store<T>;
     const internal = {
       sequence: 0,
@@ -91,34 +112,41 @@ export const create: Creator = <T extends CreateState>(
       initialState,
       options
     ) as T;
-    // in worker, the transport is the worker itself
-    const transport =
-      options.transport ??
-      (workerType
+    // store transport for server port
+    // the store transport is responsible for transmitting the sync state to the client transport.
+    const storeTransport =
+      transport ??
+      (workerType === 'SharedWorkerInternal' ||
+      workerType === 'WebWorkerInternal'
         ? createTransport(workerType, {
             prefix: store.name
           })
-        : null);
-    if (transport) {
+        : undefined);
+    if (storeTransport) {
       if (checkEnablePatches) {
         throw new Error(`enablePatches: true is required for the transport`);
       }
-      handleMainTransport(store, transport, internal);
+      handleMainTransport(store, storeTransport, internal);
     }
     return store;
   };
   if (
     (options as ClientStoreOptions<T>).worker ||
-    options.workerType === 'WebWorkerClient'
+    options.workerType === 'WebWorkerClient' ||
+    options.workerType === 'SharedWorkerClient'
   ) {
     if (checkEnablePatches) {
       throw new Error(`enablePatches: true is required for the async store`);
     }
-    const store = createAsyncClientStore(createStore, options);
+    const store = createAsyncClientStore(
+      createStore,
+      options as ClientStoreOptions<T>
+    );
     return wrapStore(store);
   }
   const store = createStore({
-    share
+    share,
+    transport: storeTransport
   });
   return wrapStore(store);
 };
