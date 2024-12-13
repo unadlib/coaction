@@ -25,6 +25,11 @@
 
 - [x] multi-transport
 - [x] logger support verbose
+
+- [ ] share true
+- [x] setState check share
+- [ ] react auto selector
+
 - [ ] add more tests
 - [ ] add more examples
 - [ ] add more documentation

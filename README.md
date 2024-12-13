@@ -24,7 +24,7 @@ Key features include:
 
 - **Multiprocessing Sync**: Supports sharing state between webpage processes and the main process. With `data-transport` for generic communication, developers can avoid the complexities of message passing and serialization logic.
 - **Immutable State with Optional Mutability**: Powered by the [Mutative](https://github.com/unadlib/mutative) library, the core provides an immutable state transition process while allowing performance optimization with mutable instances when needed.
-- **Patch-Based Updates**: Enables efficient incremental state changes through patch-based synchronization, simplifying its use in CRDT applications.
+- **Patch-Based Updates**: Enables efficient incremental state changes through patch-based synchronization, simplifying its use in CRDTs applications.
 - **Built-in Computed Data**: Supports derived properties based on state dependencies, making it easier to manage and retrieve computed data from core states.
 - **Slices Pattern**: Easily combine multiple slices into a store.
 - **Extensible Middleware**: Allows for middleware to enhance the store’s behavior, such as logging, time-travel debugging, or integration with third-party tools.
@@ -105,16 +105,11 @@ import { create } from '@coaction/react';
 
 const useStore = create((set, get) => ({
   count: 0,
-  // computed properties
   doubleCount: get(
     (state) => [state.count],
     (count) => count * 2
   ),
-  increment() {
-    set(() => {
-      this.count += 1;
-    });
-  }
+  increment: () => set((state) => state.count++)
 }));
 
 const CounterComponent = () => {
@@ -122,8 +117,8 @@ const CounterComponent = () => {
   return (
     <div>
       <p>Count: {store.count}</p>
+      <p>Double Count: {store.doubleCount}</p>
       <button onClick={store.increment}>Increment</button>
-      <button onClick={store.decrement}>Decrement</button>
     </div>
   );
 };
@@ -133,20 +128,25 @@ const CounterComponent = () => {
 
 `store.js`:
 
-```ts
+```js
 import { create } from 'coaction';
 
-const useStore = create((set) => ({
-  count: 0,
-  increment() {
-    set(() => {
-      this.count += 1;
-    });
+const useStore = create(
+  (set) => ({
+    count: 0,
+    increment() {
+      set(() => {
+        this.count += 1;
+      });
+    }
+  }),
+  {
+    share: true
   }
-}));
+);
 ```
 
-```tsx
+```jsx
 import { useStore } from './store';
 
 const worker = new Worker(new URL('./store.js', import.meta.url));
