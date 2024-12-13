@@ -2,19 +2,33 @@
 
 A sleek JavaScript library designed for building high-performance, multiprocessing web applications.
 
+## Motivation
+
+Modern web applications are becoming increasingly complex, pushing the boundaries of what's possible in the browser. Single-threaded JavaScript, while powerful, often struggles to keep up with the demands of sophisticated UIs, real-time interactions, and data-intensive computations. This bottleneck leads to performance issues, janky interfaces, and ultimately, a compromised user experience.
+
+While Web Workers offer a path towards concurrency and improved performance, they introduce a new set of challenges. Managing state across processes, synchronizing data efficiently, and maintaining a coherent application logic can quickly become a daunting task. Existing state management solutions often fall short in addressing these specific needs, either by being too tightly coupled to the main process or by introducing complex abstractions that hinder developer productivity.
+
+**`Coaction` was created out of the need for a state management solution that truly embraces the multi-process nature of modern web applications.** It recognizes that performance and developer experience shouldn't be mutually exclusive. By leveraging the power of Web Workers and Shared Workers, `Coaction` allows developers to offload computationally intensive tasks and state management logic from the main process, resulting in a more responsive and fluid user interface.
+
+**More than just performance, `Coaction` is about enabling a more scalable and maintainable architecture for complex applications.** The library's intuitive API, inspired by popular state management solutions, ensures a smooth learning curve and a productive development workflow. Its support for Slices, namespaces, and computed properties promotes modularity and code organization, making it easier to manage large and evolving codebases.
+
+**`Coaction`'s integration with `data-transport` unlocks a new level of flexibility in state synchronization.** By supporting generic transport protocols, it opens up possibilities for various communication patterns and architectures, catering to the unique needs of different applications.
+
+**In essence, `Coaction` empowers developers to build the next generation of web applications without sacrificing performance, developer experience, or architectural integrity.** It bridges the gap between the increasing complexity of web applications and the need for efficient, maintainable, and performant state management across processes. It's a tool designed for developers who strive to create exceptional user experiences in a world where concurrency and responsiveness are no longer optional, but essential. It also supports remote synchronization, making it suitable for building any CRDTs application as well.
+
 ## Concepts and Features
 
 This library aims to provide a secure and efficient solution for sharing and synchronizing state in multi-process environments (such as Web Workers, Shared Workers, or even across processes and devices) in web applications.
 
 Key features include:
 
-- Multiprocessing Sync: Supports sharing state between webpage processes and the main process. With `data-transport` for generic communication, developers can avoid the complexities of message passing and serialization logic.
-- Immutable State with Optional Mutability: Powered by the `mutative` library, the core provides an immutable state transition process while allowing performance optimization with mutable instances when needed.
-- Patch-Based Updates: Enables efficient incremental state changes through patch-based synchronization, simplifying its use in CRDT applications.
-- Built-in Computed Data: Supports derived properties based on state dependencies, making it easier to manage and retrieve computed data from core states.
-- Slices Pattern: Easily combine multiple slices into a store.
-- Extensible Middleware: Allows for middleware to enhance the store’s behavior, such as logging, time-travel debugging, or integration with third-party tools.
-- Integration with 3rd-Party Libraries: Supports popular frameworks like React, Angular, Vue, Svelte, and Solid, as well as state management libraries such as Redux, Zustand, and MobX.
+- **Multiprocessing Sync**: Supports sharing state between webpage processes and the main process. With `data-transport` for generic communication, developers can avoid the complexities of message passing and serialization logic.
+- **Immutable State with Optional Mutability**: Powered by the `mutative` library, the core provides an immutable state transition process while allowing performance optimization with mutable instances when needed.
+- **Patch-Based Updates**: Enables efficient incremental state changes through patch-based synchronization, simplifying its use in CRDT applications.
+- **Built-in Computed Data**: Supports derived properties based on state dependencies, making it easier to manage and retrieve computed data from core states.
+- **Slices Pattern**: Easily combine multiple slices into a store.
+- **Extensible Middleware**: Allows for middleware to enhance the store’s behavior, such as logging, time-travel debugging, or integration with third-party tools.
+- **Integration with 3rd-Party Libraries**: Supports popular frameworks like React, Angular, Vue, Svelte, and Solid, as well as state management libraries such as Redux, Zustand, and MobX.
 
 ## Operating Modes and Fundamentals
 
@@ -26,6 +40,10 @@ This library operates in two primary modes:
    - Webpage processes act as clients, accessing and manipulating the state asynchronously through a store.
 
 In multi-process mode, the library automatically determines the execution context based on the transport parameters, handling the synchronization processes seamlessly.
+
+## Performance
+
+TBD
 
 ## Installation
 
@@ -51,9 +69,7 @@ pnpm add coaction
 
 ## Usage
 
-### Basic Usage
-
-#### Base Store
+### Base Store
 
 ```jsx
 import { create } from '@coaction/react';
@@ -83,7 +99,7 @@ const CounterComponent = () => {
 };
 ```
 
-#### Worker Store
+### Worker Store
 
 `store.js`:
 
