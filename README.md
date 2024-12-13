@@ -76,9 +76,10 @@ import { create } from '@coaction/react';
 
 const useStore = create((set, get) => ({
   count: 0,
-  doubleCount: computed(
+  // computed properties
+  doubleCount: get(
     (state) => [state.count],
-    () => get().count * 2
+    (count) => count * 2
   ),
   increment() {
     set(() => {
@@ -107,11 +108,7 @@ const CounterComponent = () => {
 import { create } from 'coaction';
 
 const useStore = create((set) => ({
-  name: 'counter',
   count: 0,
-  get countSquared() {
-    return this.count ** 2;
-  },
   increment() {
     set(() => {
       this.count += 1;
@@ -121,6 +118,8 @@ const useStore = create((set) => ({
 ```
 
 ```tsx
+import { useStore } from './store';
+
 const worker = new Worker(new URL('./store.js', import.meta.url));
 const useWorkerStore = useStore({
   name: 'WorkerCounter',
@@ -156,19 +155,6 @@ const counter = (set) => ({
 const useStore = create({
   counter
 });
-
-const CounterComponent = () => {
-  const count = useStore((state) => state.counter.count);
-  const increment = useStore((state) => state.counter.increment);
-  const decrement = useStore((state) => state.counter.decrement);
-  return (
-    <div>
-      <p>Count in Worker: {count}</p>
-      <button onClick={increment}>Increment</button>
-      <button onClick={decrement}>Decrement</button>
-    </div>
-  );
-};
 ```
 
 ## Integration
