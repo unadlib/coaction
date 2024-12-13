@@ -34,7 +34,7 @@ Key features include:
 
 This library operates in two primary modes:
 
-1. Single-Process Local Mode:
+1. Single-Process Standard Mode:
    - In a standard webpage environment, the store is managed entirely within the webpage process.
 2. Multi-Process Shared Mode:
    - The main process serves as the primary source of the shared state, utilizing transport for synchronization.
@@ -42,7 +42,7 @@ This library operates in two primary modes:
 
 In multi-process mode, the library automatically determines the execution context based on the transport parameters, handling the synchronization processes seamlessly.
 
-### Multi-Process Mode Sequence Diagram
+### Multi-Process Shared Mode - Sequence Diagram
 
 ```mermaid
 sequenceDiagram
@@ -98,7 +98,7 @@ pnpm add coaction
 
 ## Usage
 
-### Base Store
+### Standard Mode Store
 
 ```jsx
 import { create } from '@coaction/react';
@@ -119,7 +119,7 @@ const CounterComponent = () => {
 };
 ```
 
-### Worker Store
+### Shared Mode Store
 
 `counter.js`:
 
