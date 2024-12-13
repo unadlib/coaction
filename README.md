@@ -34,11 +34,11 @@ Key features include:
 
 This library operates in two primary modes:
 
-1. Single-Process Standard Mode:
-   - In a standard webpage environment, the store is managed entirely within the webpage process.
-2. Multi-Process Shared Mode:
-   - The main process serves as the primary source of the shared state, utilizing transport for synchronization.
-   - Webpage processes act as clients, accessing and manipulating the state asynchronously through a store.
+- Single-Process Standard Mode
+  - In a standard webpage environment, the store is managed entirely within the webpage process.
+- Multi-Process Shared Mode
+  - The main process serves as the primary source of the shared state, utilizing transport for synchronization.
+  - Webpage processes act as clients, accessing and manipulating the state asynchronously through a store.
 
 In multi-process mode, the library automatically determines the execution context based on the transport parameters, handling the synchronization processes seamlessly.
 
@@ -203,6 +203,10 @@ Coaction is designed to be compatible with a wide range of libraries and framewo
 - [ ] Jotai
 - [ ] XState
 - [ ] Valtio
+
+## Difference between Coaction and Zustand
+
+TBD
 
 ## Credits
 
