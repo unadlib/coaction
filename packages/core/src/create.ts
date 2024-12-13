@@ -95,7 +95,7 @@ export const create: Creator = <T extends CreateState>(
     const isSliceStore = typeof createState === 'object';
     Object.assign(store, {
       name,
-      share,
+      share: share ?? false,
       setState,
       getState,
       subscribe,

@@ -42,9 +42,9 @@ export interface Store<T extends ISlices = ISlices> {
    */
   destroy: () => void;
   /**
-   * The store is shared in the worker or shared worker.
+   * The store is shared in the web worker, shared worker, or other process.
    */
-  share?: 'main' | 'client' | void;
+  share?: 'main' | 'client' | false;
   /**
    * The transport is used to communicate between the main thread and the worker or shared worker.
    */

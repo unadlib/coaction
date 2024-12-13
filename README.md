@@ -173,8 +173,8 @@ Coaction is designed to be compatible with a wide range of libraries and framewo
 
 - [x] MobX
 - [x] Pinia
-- [ ] Redux Toolkit
 - [ ] Zustand
+- [ ] Redux Toolkit
 - [ ] Jotai
 - [ ] XState
 - [ ] Valtio
