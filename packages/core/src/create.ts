@@ -1,5 +1,4 @@
 import { apply as applyWithMutative } from 'mutative';
-import { createTransport, Transport } from 'data-transport';
 import type {
   Listener,
   Slice,
@@ -7,20 +6,17 @@ import type {
   StoreOptions,
   CreateState,
   ClientStoreOptions,
-  Creator,
-  StoreTransport
+  Creator
 } from './interface';
 import { defaultName, WorkerType } from './constant';
-import {
-  createAsyncClientStore,
-  handleMainTransport
-} from './asyncClientStore';
+import { createAsyncClientStore } from './asyncClientStore';
 import { getInitialState } from './getInitialState';
 import { getRawState } from './getRawState';
 import { handleState } from './handleState';
 import type { Internal } from './internal';
 import { applyMiddlewares } from './applyMiddlewares';
 import { wrapStore } from './wrapStore';
+import { handleMainTransport } from './handleMainTransport';
 
 const namespaceMap = new Map<string, boolean>();
 
@@ -127,23 +123,12 @@ export const create: Creator = <T extends CreateState>(
   const { store, internal } = createStore({
     share
   });
-  // store transport for server port
-  // the store transport is responsible for transmitting the sync state to the client transport.
-  const transport: StoreTransport | undefined =
-    storeTransport ??
-    (workerType === 'SharedWorkerInternal' || workerType === 'WebWorkerInternal'
-      ? createTransport(workerType, {
-          prefix: store.name
-        })
-      : undefined);
-  if (transport) {
-    if (typeof transport.onConnect !== 'function') {
-      throw new Error('transport.onConnect is required');
-    }
-    if (checkEnablePatches) {
-      throw new Error(`enablePatches: true is required for the transport`);
-    }
-    handleMainTransport(store, transport, internal);
-  }
+  handleMainTransport(
+    store,
+    internal,
+    storeTransport,
+    workerType,
+    checkEnablePatches
+  );
   return wrapStore(store);
 };
