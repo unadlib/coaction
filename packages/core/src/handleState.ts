@@ -105,6 +105,11 @@ export const handleState = <T extends CreateState>(
       return [internal.rootState as any, patches, inversePatches];
     }
   ) => {
+    if (store.share === 'client') {
+      throw new Error(
+        `setState() cannot be called in the client store. To update the state, please trigger a store method with setState() instead.`
+      );
+    }
     if (internal.isBatching) {
       throw new Error('setState cannot be called within the updater');
     }
