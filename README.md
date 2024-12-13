@@ -23,7 +23,7 @@ This library aims to provide a secure and efficient solution for sharing and syn
 Key features include:
 
 - **Multiprocessing Sync**: Supports sharing state between webpage processes and the main process. With `data-transport` for generic communication, developers can avoid the complexities of message passing and serialization logic.
-- **Immutable State with Optional Mutability**: Powered by the `mutative` library, the core provides an immutable state transition process while allowing performance optimization with mutable instances when needed.
+- **Immutable State with Optional Mutability**: Powered by the [Mutative](https://github.com/unadlib/mutative) library, the core provides an immutable state transition process while allowing performance optimization with mutable instances when needed.
 - **Patch-Based Updates**: Enables efficient incremental state changes through patch-based synchronization, simplifying its use in CRDT applications.
 - **Built-in Computed Data**: Supports derived properties based on state dependencies, making it easier to manage and retrieve computed data from core states.
 - **Slices Pattern**: Easily combine multiple slices into a store.
@@ -40,6 +40,34 @@ This library operates in two primary modes:
    - Webpage processes act as clients, accessing and manipulating the state asynchronously through a store.
 
 In multi-process mode, the library automatically determines the execution context based on the transport parameters, handling the synchronization processes seamlessly.
+
+### Multi-Process Mode Sequence Diagram
+
+```mermaid
+sequenceDiagram
+    participant Client as Webpage (Client)
+    participant Main as Main Process (Worker)
+
+    activate Client
+    Note over Client: Start Worker process
+    activate Main
+
+    Client ->> Main: Trigger fullSync event after startup
+    activate Main
+    Main -->> Client: Synchronize data (full state)
+    deactivate Main
+
+    Note over Client: User triggers a UI event
+    Client ->> Main: Send Store method and parameters
+    activate Main
+    Main ->> Main: Execute the corresponding method
+    Main -->> Client: Synchronize state (patches)
+    Note over Client: Render new state
+
+    Main -->> Client: Asynchronously respond with method execution result
+    deactivate Main
+    deactivate Client
+```
 
 ## Performance
 
