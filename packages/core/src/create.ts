@@ -51,13 +51,7 @@ export const create: Creator = <T extends CreateState>(
     storeTransport
       ? 'main'
       : undefined;
-  const createStore = ({
-    share,
-    transport
-  }: {
-    share?: 'client' | 'main';
-    transport?: Transport;
-  }) => {
+  const createStore = ({ share }: { share?: 'client' | 'main' }) => {
     const store = {} as Store<T>;
     const internal = {
       sequence: 0,
@@ -113,26 +107,7 @@ export const create: Creator = <T extends CreateState>(
       initialState,
       options
     ) as T;
-    // store transport for server port
-    // the store transport is responsible for transmitting the sync state to the client transport.
-    const storeTransport: StoreTransport =
-      transport ??
-      (workerType === 'SharedWorkerInternal' ||
-      workerType === 'WebWorkerInternal'
-        ? createTransport(workerType, {
-            prefix: store.name
-          })
-        : undefined);
-    if (storeTransport) {
-      if (typeof storeTransport.onConnect !== 'function') {
-        throw new Error('transport.onConnect is required');
-      }
-      if (checkEnablePatches) {
-        throw new Error(`enablePatches: true is required for the transport`);
-      }
-      handleMainTransport(store, storeTransport, internal);
-    }
-    return store;
+    return { store, internal };
   };
   if (
     (options as ClientStoreOptions<T>).clientTransport ||
@@ -149,9 +124,26 @@ export const create: Creator = <T extends CreateState>(
     );
     return wrapStore(store);
   }
-  const store = createStore({
-    share,
-    transport: storeTransport
+  const { store, internal } = createStore({
+    share
   });
+  // store transport for server port
+  // the store transport is responsible for transmitting the sync state to the client transport.
+  const transport: StoreTransport | undefined =
+    storeTransport ??
+    (workerType === 'SharedWorkerInternal' || workerType === 'WebWorkerInternal'
+      ? createTransport(workerType, {
+          prefix: store.name
+        })
+      : undefined);
+  if (transport) {
+    if (typeof transport.onConnect !== 'function') {
+      throw new Error('transport.onConnect is required');
+    }
+    if (checkEnablePatches) {
+      throw new Error(`enablePatches: true is required for the transport`);
+    }
+    handleMainTransport(store, transport, internal);
+  }
   return wrapStore(store);
 };

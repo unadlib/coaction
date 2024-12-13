@@ -11,10 +11,13 @@ import type {
 import type { Internal } from './internal';
 
 export const createAsyncClientStore = <T extends CreateState>(
-  createStore: (options: { share?: 'client' }) => Store<T>,
+  createStore: (options: { share?: 'client' }) => {
+    store: Store<T>;
+    internal: Internal<T>;
+  },
   asyncStoreClientOption: ClientTransportOptions
 ) => {
-  const asyncClientStore = createStore({
+  const { store: asyncClientStore } = createStore({
     share: 'client'
   });
   // the transport is in the worker or shared worker, and the client is in the main thread.
