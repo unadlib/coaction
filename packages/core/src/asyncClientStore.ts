@@ -1,8 +1,6 @@
-import { createTransport, type Transport } from 'data-transport';
+import { createTransport } from 'data-transport';
 import type { Patches } from 'mutative';
 import type {
-  ExternalEvents,
-  InternalEvents,
   Store,
   ClientTransportOptions,
   CreateState,
@@ -69,43 +67,6 @@ export const createAsyncClientStore = <T extends CreateState>(
     }[name],
     _store
   );
-};
-
-export const handleMainTransport = <T extends CreateState>(
-  store: Store<T>,
-  transport: Transport<{
-    emit: InternalEvents;
-    listen: ExternalEvents;
-  }>,
-  internal: Internal<T>
-) => {
-  transport.listen('execute', async (keys, args) => {
-    let base = store.getState();
-    let obj = base;
-    for (const key of keys) {
-      base = base[key];
-      if (typeof base === 'function') {
-        base = base.bind(obj);
-      }
-      obj = base;
-    }
-    if (process.env.NODE_ENV === 'development' && typeof base !== 'function') {
-      throw new Error('The function is not found');
-    }
-    try {
-      return (base as Function)(...args);
-    } catch (error: any) {
-      console.error(error);
-      return { $$Error: error.message };
-    }
-  });
-  transport.listen('fullSync', async () => {
-    return {
-      state: JSON.stringify(internal.rootState),
-      sequence: internal.sequence
-    };
-  });
-  store.transport = transport;
 };
 
 export const emit = <T extends CreateState>(
