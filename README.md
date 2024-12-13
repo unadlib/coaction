@@ -18,7 +18,7 @@ While Web Workers offer a path towards concurrency and improved performance, the
 
 ## Concepts and Features
 
-This library aims to provide a secure and efficient solution for sharing and synchronizing state in multi-process environments (such as Web Workers, Shared Workers, or even across processes and devices) in web applications.
+`Coaction` aims to provide a secure and efficient solution for sharing and synchronizing state in multi-process environments (such as Web Workers, Shared Workers, or even across processes and devices) in web applications.
 
 Key features include:
 
