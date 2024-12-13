@@ -34,7 +34,8 @@ Key features include:
 
 This library operates in two primary modes:
 
-1. Single-Process Local Mode: In a standard webpage environment, the store is managed entirely within the webpage process.
+1. Single-Process Local Mode:
+   - In a standard webpage environment, the store is managed entirely within the webpage process.
 2. Multi-Process Shared Mode:
    - The main process serves as the primary source of the shared state, utilizing transport for synchronization.
    - Webpage processes act as clients, accessing and manipulating the state asynchronously through a store.
@@ -75,7 +76,7 @@ TBD
 
 ## Installation
 
-You can install the library via npm, yarn, or pnpm.
+You can install the library for React application via npm, yarn, or pnpm.
 
 ```bash
 npm install @coaction/react
