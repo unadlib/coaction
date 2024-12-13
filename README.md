@@ -105,10 +105,6 @@ import { create } from '@coaction/react';
 
 const useStore = create((set, get) => ({
   count: 0,
-  doubleCount: get(
-    (state) => [state.count],
-    (count) => count * 2
-  ),
   increment: () => set((state) => state.count++)
 }));
 
@@ -117,7 +113,6 @@ const CounterComponent = () => {
   return (
     <div>
       <p>Count: {store.count}</p>
-      <p>Double Count: {store.doubleCount}</p>
       <button onClick={store.increment}>Increment</button>
     </div>
   );
@@ -126,54 +121,55 @@ const CounterComponent = () => {
 
 ### Worker Store
 
-`store.js`:
+`counter.js`:
 
 ```js
-import { create } from 'coaction';
+import { create } from '@coaction/react';
 
-const useStore = create(
-  (set) => ({
-    count: 0,
-    increment() {
-      set(() => {
-        this.count += 1;
-      });
-    }
-  }),
-  {
-    share: true
-  }
-);
+export const counter = (set) => ({
+  count: 0,
+  increment: () => set((state) => state.count++)
+});
+```
+
+`worker.js`:
+
+```js
+import { create } from '@coaction/react';
+import { counter } from './counter';
+
+const useStore = create(counter);
 ```
 
 ```jsx
-import { useStore } from './store';
+import { create } from 'coaction';
 
-const worker = new Worker(new URL('./store.js', import.meta.url));
-const useWorkerStore = useStore({
-  name: 'WorkerCounter',
-  worker
-});
+const worker = new Worker(new URL('./worker.js', import.meta.url));
+const useStore = create(counter, { worker });
 
 const CounterComponent = () => {
-  const workerStore = useWorkerStore();
+  const store = useStore();
   return (
     <div>
-      <p>Count in Worker: {workerStore.count}</p>
-      <button onClick={workerStore.increment}>Increment</button>
-      <button onClick={workerStore.decrement}>Decrement</button>
+      <p>Count in Worker: {store.count}</p>
+      <button onClick={store.increment}>Increment</button>
     </div>
   );
 };
 ```
 
-### Slices Pattern
+### Slices Pattern And Derived Data
 
 ```jsx
 import { create } from '@coaction/react';
 
 const counter = (set) => ({
   count: 0,
+  // derived data
+  doubleCount: get(
+    (state) => [state.counter.count],
+    (count) => count * 2
+  ),
   increment() {
     set(() => {
       this.count += 1;
