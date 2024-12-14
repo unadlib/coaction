@@ -1,6 +1,6 @@
 # Coaction
 
-<a href="https://github.com/unadlib/coaction" target="_blank"><img src="https://raw.githubusercontent.com/unadlib/coaction/main/logo.png" height="120" alt="Coaction Logo" /></a>
+<a href="https://github.com/unadlib/coaction" target="_blank"><img src="./logo.png" height="120" alt="Coaction Logo" /></a>
 
 ![Node CI](https://github.com/unadlib/coaction/workflows/Node%20CI/badge.svg)
 [![Coverage Status](https://coveralls.io/repos/github/unadlib/coaction/badge.svg?branch=main)](https://coveralls.io/github/unadlib/coaction?branch=main)
