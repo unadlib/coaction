@@ -210,6 +210,7 @@ Coaction is designed to be compatible with a wide range of libraries and framewo
 - support computed properties for derived data
 - support namespace slice
 - support auto selector for getter state
+- support multiple stores selector
 
 ## Credits
 
