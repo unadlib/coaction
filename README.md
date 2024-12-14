@@ -214,6 +214,7 @@ Coaction is designed to be compatible with a wide range of libraries and framewo
 - [ ] Jotai
 - [ ] XState
 - [ ] Valtio
+- [ ] alien-signals
 
 ## Difference between Coaction and Zustand
 
