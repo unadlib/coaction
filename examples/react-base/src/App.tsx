@@ -5,9 +5,7 @@ import './App.css';
 import { useStore } from './store';
 
 function App() {
-  const count = useStore((state) => state.counter.count);
-  const double = useStore((state) => state.counter.double);
-  const increment = useStore((state) => state.counter.increment);
+  const { count, double, increment } = useStore();
 
   return (
     <>

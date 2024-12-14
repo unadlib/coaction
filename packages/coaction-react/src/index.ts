@@ -81,15 +81,20 @@ export const create: Creator = (createState: any, options: any) => {
   }
   const useStore = wrapStore(store, (selector: any) => {
     // support auto-selector with useStore({ autoSelector: true })
-    return typeof selector === 'function'
-      ? useSyncExternalStore(
-          store.subscribe,
-          () => selector(store.getState()),
-          () => selector(store.getInitialState())
-        )
-      : selector.autoSelector
-        ? storeWithAutoSelector
-        : store;
+    if (typeof selector === 'function') {
+      return useSyncExternalStore(
+        store.subscribe,
+        () => selector(store.getState()),
+        () => selector(store.getInitialState())
+      );
+    }
+    if (selector?.autoSelector) return storeWithAutoSelector;
+    useSyncExternalStore(
+      store.subscribe,
+      () => store.getPureState(),
+      () => store.getInitialState()
+    );
+    return store.getState();
   });
   return useStore;
 };
