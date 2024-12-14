@@ -422,8 +422,11 @@ describe('Slices', () => {
     const useStore = create({
       counter: ((set, get, store) => ({
         count: 0,
+        get count1() {
+          return this.count;
+        },
         double: get(
-          (state) => [state.counter.count],
+          (state) => [state.counter.count1],
           (count) => count * 2
         ),
         increment1() {
@@ -464,6 +467,7 @@ describe('Slices', () => {
         {
           counter: {
             count: number;
+            readonly count1: number;
             readonly double: number;
             increment1: () => void;
             increment: () => void;
@@ -480,6 +484,7 @@ describe('Slices', () => {
 {
   "counter": {
     "count": 0,
+    "count1": 0,
     "double": 0,
     "increment": [Function],
     "increment1": [Function],
@@ -493,6 +498,7 @@ describe('Slices', () => {
 {
   "counter": {
     "count": 1,
+    "count1": 1,
     "double": 2,
     "increment": [Function],
     "increment1": [Function],
@@ -504,6 +510,7 @@ describe('Slices', () => {
 {
   "counter": {
     "count": 2,
+    "count1": 2,
     "double": 4,
     "increment": [Function],
     "increment1": [Function],
@@ -516,6 +523,7 @@ describe('Slices', () => {
 {
   "counter": {
     "count": 3,
+    "count1": 3,
     "double": 6,
     "increment": [Function],
     "increment1": [Function],
