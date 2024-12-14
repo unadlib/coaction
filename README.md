@@ -8,7 +8,7 @@ Modern web applications are becoming increasingly complex, pushing the boundarie
 
 While Web Workers offer a path towards parallelism and improved performance, they introduce a new set of challenges. Managing state across threads, synchronizing data efficiently, and maintaining coherent application logic can quickly become a daunting task. Existing state management solutions often fall short in addressing these specific needs, either by being too tightly coupled to the worker thread or by introducing complex abstractions that hinder developer productivity.
 
-![Coaction Idea](./coaction-idea.svg)
+![Coaction Concept](./coaction-concept.svg)
 
 **`Coaction` was created out of the need for a state management solution that truly embraces the multithreading nature of modern web applications.** It recognizes that performance and developer experience shouldn't be mutually exclusive. By leveraging the power of Web Workers and Shared Workers, `Coaction` allows developers to offload computationally intensive tasks and state management logic from the worker thread, resulting in a more responsive and fluid user interface.
 
@@ -219,7 +219,8 @@ Coaction is designed to be compatible with a wide range of libraries and framewo
 
 ## Credits
 
-Coaction API is inspired by [Zustand](https://zustand.docs.pmnd.rs/).
+- Coaction's concept is inspired by [Partytown](https://partytown.qwik.dev/).
+- Coaction's API is inspired by [Zustand](https://zustand.docs.pmnd.rs/).
 
 ## License
 
