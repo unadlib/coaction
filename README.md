@@ -209,13 +209,16 @@ Coaction is designed to be compatible with a wide range of libraries and framewo
 
 ## Difference between Coaction and Zustand
 
-- support getter accessor
-- support computed properties for derived data
-- support namespace slice
-- support auto selector for getter state
-- support multiple stores selector
-- easy to implement middleware
-- support `this` in getter and action
+| Feature                           | Coaction | Zustand |
+| --------------------------------- | -------- | ------- |
+| Built-in multithreading           | ✅       | ❌      |
+| Support getter accessor           | ✅       | ❌      |
+| Built-in computed properties      | ✅       | ❌      |
+| Built-in namespace Slice          | ✅       | ❌      |
+| Built-in auto selector for state  | ✅       | ❌      |
+| Built-in multiple stores selector | ✅       | ❌      |
+| Easy to implement middleware      | ✅       | ❌      |
+| Support `this` in getter/action   | ✅       | ❌      |
 
 ## Credits
 
