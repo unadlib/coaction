@@ -172,6 +172,7 @@ const counter = (set) => ({
   ),
   increment() {
     set(() => {
+      // you can use `this` to access the slice state
       this.count += 1;
     });
   }
@@ -211,6 +212,8 @@ Coaction is designed to be compatible with a wide range of libraries and framewo
 - support namespace slice
 - support auto selector for getter state
 - support multiple stores selector
+- easy to implement middleware
+- support `this` in getter and action
 
 ## Credits
 

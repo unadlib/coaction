@@ -28,6 +28,7 @@
 
 - [x] setState check share
 - [x] react auto selector
+- [ ] persist
 
 - [ ] add more tests
 - [ ] add more examples
