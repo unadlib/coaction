@@ -1,7 +1,7 @@
 {
   "name": "coaction-monorepo",
   "private": true,
-  "description": "A sleek JavaScript library designed for high-performance and multithreading web apps.",
+  "description": "An efficient and flexible state management library for building high-performance, multithreading web applications.",
   "workspaces": [
     "packages/*"
   ],

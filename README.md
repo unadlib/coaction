@@ -1,6 +1,14 @@
-# coaction
+# Coaction
 
-A sleek and flexible JavaScript library designed for building high-performance, multithreading web applications.
+<a href="https://github.com/unadlib/coaction" target="_blank"><img src="https://raw.githubusercontent.com/unadlib/coaction/main/logo.png" height="120" alt="Coaction Logo" /></a>
+
+![Node CI](https://github.com/unadlib/coaction/workflows/Node%20CI/badge.svg)
+[![Coverage Status](https://coveralls.io/repos/github/unadlib/coaction/badge.svg?branch=main)](https://coveralls.io/github/unadlib/coaction?branch=main)
+[![npm](https://img.shields.io/npm/v/coaction.svg)](https://www.npmjs.com/package/coaction)
+[![NPM Downloads](https://img.shields.io/npm/dm/coaction)](https://npmtrends.com/coaction)
+![license](https://img.shields.io/npm/l/coaction)
+
+An efficient and flexible state management library for building high-performance, multithreading web applications.
 
 ## Motivation
 
@@ -12,7 +20,7 @@ While Web Workers offer a path towards parallelism and improved performance, the
 
 **`Coaction` was created out of the need for a state management solution that truly embraces the multithreading nature of modern web applications.** It recognizes that performance and developer experience shouldn't be mutually exclusive. By leveraging the power of Web Workers and Shared Workers, `Coaction` allows developers to offload computationally intensive tasks and state management logic from the worker thread, resulting in a more responsive and fluid user interface.
 
-**More than just performance, `Coaction` is about enabling a more scalable and maintainable architecture for complex applications.** The library's intuitive API, inspired by popular state management solutions, ensures a smooth learning curve and a productive development workflow. Its support for Slices, namespaces, and computed properties promotes modularity and code organization, making it easier to manage large and evolving codebases.
+**More than just performance, `Coaction` is about enabling a more scalable and maintainable architecture for complex applications.** The library's intuitive API, inspired by Zustand, ensures a smooth learning curve and a productive development workflow. Its support for Slices, namespaces, and computed properties promotes modularity and code organization, making it easier to manage large and evolving codebases.
 
 **`Coaction`'s integration with `data-transport` unlocks a new level of flexibility in state synchronization.** By supporting generic transport protocols, it opens up possibilities for various communication patterns and architectures, catering to the unique needs of different applications.
 
