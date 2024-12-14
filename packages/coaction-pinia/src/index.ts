@@ -8,6 +8,8 @@ import type {
   StoreDefinition
 } from 'pinia';
 
+export * from 'pinia';
+
 const instancesMap = new WeakMap<object, unknown>();
 
 type StoreWithSubscriptions = Store<object> & {
@@ -65,7 +67,6 @@ const handleStore = (store: StoreWithSubscriptions, state: object) => {
       store._destroyers = undefined;
     };
     store.apply = (state = store.getState(), patches) => {
-      // console.log('apply', state, patches);
       if (!patches) {
         if (state === store.getState()) return;
         if (store.isSliceStore) {
