@@ -51,7 +51,7 @@ export const getRawState = <T extends CreateState>(
             const depsCallbackSelector = createSelectorWithArray(
               () => [internal.rootState],
               () => {
-                return deps(internal.rootState as Store<T>['getState']);
+                return deps(internal.module as Store<T>['getState']);
               }
             );
             const selector = createSelectorWithArray(
