@@ -7,7 +7,7 @@
 - [x] Slices Pattern: Easily combine multiple slices into a single store
 - [x] Cross-Framework Compatibility: Seamlessly works with React, Vue, Solid.js, Angular, and other modern web frameworks
 - [x] Shared Stores Across Workers: Use the same store definition across multiple Workers
-- [x] Multiprocessing State Management: Effortlessly manage state across main thread and Workers
+- [x] multithreading State Management: Effortlessly manage state across main thread and Workers
 - [x] Intuitive API Design: Simple and expressive API inspired by popular state management libraries
 - [x] Flexible Store Creation: Create multiple stores with unique names for better organization
 - [x] Worker Integration: Easy integration with Web Workers and Shared Worker for offloading computations
@@ -19,7 +19,7 @@
 - [x] Immutable Updates: Ensures predictable state changes with immutable update patterns
 - [x] Developer Tools Integration: Easy debugging with integrated developer tools
 - [ ] Persistence: Built-in support for state persistence
-- [x] Scalable Architecture: Designed to scale from simple apps to complex, multiprocessing applications
+- [x] Scalable Architecture: Designed to scale from simple apps to complex, multithreading applications
 
 ### TODOs
 
