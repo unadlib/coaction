@@ -1,0 +1,55 @@
+<svg width="800" height="400" xmlns="http://www.w3.org/2000/svg">
+  <defs>
+    <marker id="arrowhead" markerWidth="10" markerHeight="7" refX="0" refY="3.5" orient="auto">
+      <polygon points="0 0, 10 3.5, 0 7" fill="#666" />
+    </marker>
+  </defs>
+  <rect width="800" height="400" fill="#365947" />
+
+  <!-- Without Coaction -->
+  <g transform="translate(100, 50)">
+    <text x="100" y="-20" font-size="16" font-weight="bold" text-anchor="middle" fill="white">Without Coaction</text>
+    <path d="M25,0 L175,0 L130,175 L70,175 Z" fill="#ddd" stroke="#666" />
+    <circle cx="65" cy="30" r="10" fill="#2978B5" />
+    <circle cx="100" cy="50" r="10" fill="#2978B5" />
+    <circle cx="75" cy="80" r="10" fill="#E88834" />
+    <circle cx="125" cy="110" r="10" fill="#2978B5" />
+    <circle cx="90" cy="120" r="10" fill="#E88834" />
+    <circle cx="110" cy="70" r="10" fill="#E88834" />
+    <circle cx="130" cy="30" r="10" fill="#2978B5" />
+    <circle cx="100" cy="160" r="10" fill="#E88834" />
+        <text x="99.067" y="261.71" font-size="14" text-anchor="middle" fill="white" style="white-space: pre; font-size: 14px;">State management and UI rendering</text>
+    <text x="99.067" y="281.71" font-size="14" text-anchor="middle" fill="white" style="white-space: pre; font-size: 14px;">compete for Webpage thread resources.</text>
+    <text x="-40" y="75" font-size="14" text-anchor="middle" fill="white" transform="rotate(-90 -40,75)">Webpage thread</text>
+  </g>
+
+  <!-- With Coaction -->
+  <g transform="translate(450, 50)">
+    <text x="100" y="-20" font-size="16" font-weight="bold" text-anchor="middle" fill="white">With Coaction</text>
+      <path d="M20,0 L100,0 L100,175 L20,175 Z" fill="#ddd" stroke="#666" />
+      <path d="M180,0 L260,0 L260,175 L180,175 Z" fill="#ddd" stroke="#666" />
+
+    <circle cx="60" cy="30" r="10" fill="#E88834" />
+    <circle cx="60" cy="60" r="10" fill="#E88834" />
+    <circle cx="60" cy="90" r="10" fill="#E88834" />
+    <circle cx="60" cy="120" r="10" fill="#E88834" />
+    <circle cx="60" cy="150" r="10" fill="#E88834" />
+
+    <circle cx="220" cy="30" r="10" fill="#2978B5" />
+    <circle cx="220" cy="60" r="10" fill="#2978B5" />
+    <circle cx="220" cy="90" r="10" fill="#2978B5" />
+    <circle cx="220" cy="120" r="10" fill="#2978B5" />
+    <circle cx="220" cy="150" r="10" fill="#2978B5" />
+
+    <text x="60" y="220" font-size="14" text-anchor="middle" fill="white">UI Render/Events</text>
+    <text x="220" y="220" font-size="14" text-anchor="middle" fill="white">State/Data</text>
+
+    <text x="-20" y="75" font-size="14" text-anchor="middle" fill="white" transform="rotate(-90 -20,75)" style="white-space: pre;">Webpage thread</text>
+    <text x="300" y="75" font-size="14" text-anchor="middle" fill="white" transform="rotate(-90 300,75)" style="white-space: pre;">Worker thread</text>
+    <text x="160" y="260" font-size="14" text-anchor="middle" fill="white" style="white-space: pre; font-size: 14px;">Move state management to a Worker</text>
+    <text x="160" y="280" font-size="14" text-anchor="middle" fill="white" style="white-space: pre; font-size: 14px;">for a more responsive UI.</text>
+     <line x1="110" y1="85" x2="170" y2="85" stroke="#ccc" stroke-width="2" stroke-dasharray="5,5" marker-end="url(#arrowhead)"/>
+     <circle cx="140" cy="85" r="5" fill="white" />
+      <text x="140" y="75" font-size="14" text-anchor="middle" fill="white">Coaction</text>
+  </g>
+</svg>
