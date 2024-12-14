@@ -14,7 +14,7 @@ export * from 'coaction';
 
 export type StoreReturn<T extends object> = Store<T> & {
   <P>(selector: (state: T) => P): P;
-  (): T;
+  (options?: { autoSelector?: boolean }): T;
 };
 
 export type StoreWithAsyncFunction<
@@ -22,7 +22,7 @@ export type StoreWithAsyncFunction<
   D extends true | false = false
 > = Store<Asyncify<T, D>> & {
   <P>(selector: (state: Asyncify<T, D>) => P): P;
-  (): Asyncify<T, D>;
+  (options?: { autoSelector?: boolean }): Asyncify<T, D>;
 };
 
 export type CreateState = ISlices | Record<string, Slice<any>>;
@@ -48,14 +48,48 @@ export type Creator = {
 
 export const create: Creator = (createState: any, options: any) => {
   const store = createVanilla(createState, options);
-  return wrapStore(store, (selector: any) => {
-    const result = useSyncExternalStore(
-      store.subscribe,
-      () => (selector ? selector(store.getState()) : store.getPureState()),
-      () =>
-        selector ? selector(store.getInitialState()) : store.getPureState()
-    );
-    // support auto-selector with useStore()
-    return selector ? result : store.getState();
+  const state = store.getState();
+  const storeWithAutoSelector = {} as Record<string, any>;
+  if (store.isSliceStore) {
+    if (typeof state === 'object' && state !== null) {
+      for (const key in state) {
+        const sliceState = state[key];
+        const descriptors = Object.getOwnPropertyDescriptors(sliceState);
+        if (typeof sliceState === 'object' && sliceState !== null) {
+          const slice = {};
+          for (const subKey in descriptors) {
+            const descriptor = descriptors[subKey];
+            if (typeof descriptor.get === 'function') {
+              descriptor.get = () =>
+                useStore(() => store.getState()[key][subKey]);
+            }
+          }
+          Object.defineProperties(slice, descriptors);
+          storeWithAutoSelector[key] = slice;
+        }
+      }
+    }
+  } else {
+    const descriptors = Object.getOwnPropertyDescriptors(state);
+    for (const key in descriptors) {
+      const descriptor = descriptors[key];
+      if (typeof descriptor.get === 'function') {
+        descriptor.get = () => useStore(() => store.getState()[key]);
+      }
+    }
+    Object.defineProperties(storeWithAutoSelector, descriptors);
+  }
+  const useStore = wrapStore(store, (selector: any) => {
+    // support auto-selector with useStore({ autoSelector: true })
+    return typeof selector === 'function'
+      ? useSyncExternalStore(
+          store.subscribe,
+          () => selector(store.getState()),
+          () => selector(store.getInitialState())
+        )
+      : selector.autoSelector
+        ? storeWithAutoSelector
+        : store;
   });
+  return useStore;
 };

@@ -206,7 +206,10 @@ Coaction is designed to be compatible with a wide range of libraries and framewo
 
 ## Difference between Coaction and Zustand
 
-TBD
+- support getter accessor
+- support computed properties for derived data
+- support namespace slice
+- support auto selector for getter state
 
 ## Credits
 
