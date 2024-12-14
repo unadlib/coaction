@@ -1,19 +1,27 @@
-import { useStore } from './store';
+import { create } from 'coaction';
+import { logger } from '@coaction/logger';
 
-const worker = new SharedWorker(new URL('./store.ts', import.meta.url), {
+import { type Counter, counter } from './store';
+
+const worker = new SharedWorker(new URL('./worker.ts', import.meta.url), {
   type: 'module'
 });
 
-const useWorkerStore = useStore({
-  worker
-});
-
-globalThis.useWorkerStore = useWorkerStore;
-
-globalThis.useStore = useStore;
+export const useStore = create<{ counter: Counter }>(
+  {
+    counter
+  },
+  {
+    worker,
+    middlewares: [
+      logger({
+        collapsed: false
+      })
+    ]
+  }
+);
 
 export function setupCounter(element: HTMLButtonElement) {
-  const useStore = useWorkerStore;
   useStore.subscribe(() => {
     element.innerHTML = `count is ${useStore.getState().counter.count}`;
   });

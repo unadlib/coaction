@@ -1,8 +1,8 @@
-import { create, Slices } from 'coaction';
+import { type Slices } from 'coaction';
 import { bindMobx } from '@coaction/mobx';
 import { makeAutoObservable } from 'mobx';
 
-type Counter = Slices<
+export type Counter = Slices<
   {
     counter: {
       count: number;
@@ -13,10 +13,9 @@ type Counter = Slices<
   'counter'
 >;
 
-const counter: Counter = (set) =>
+export const counter: Counter = (set) =>
   makeAutoObservable(
     bindMobx({
-      name: 'test',
       count: 0,
       get double() {
         return this.count * 2;
@@ -43,12 +42,3 @@ const counter: Counter = (set) =>
       }
     })
   );
-
-export const useStore = create(
-  {
-    counter
-  },
-  {
-    enablePatches: true
-  }
-);
