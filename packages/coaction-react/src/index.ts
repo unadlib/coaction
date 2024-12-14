@@ -93,3 +93,39 @@ export const create: Creator = (createState: any, options: any) => {
   });
   return useStore;
 };
+
+type ExtractState<T extends StoreReturn<any>[]> = {
+  [K in keyof T]: ReturnType<T[K]['getState']>;
+};
+
+interface CreateSelector {
+  <T extends StoreReturn<any>[]>(
+    ...stores: T
+  ): <P>(selector: (...args: ExtractState<T>) => P) => P;
+}
+
+/**
+ * create selector for multiple stores
+ */
+export const createSelector: CreateSelector = (
+  ...stores: StoreReturn<any>[]
+) => {
+  return (selector: (...args: any[]) => any) => {
+    return useSyncExternalStore(
+      (callback) => {
+        const callbacks = stores.map((store) => store.subscribe(callback));
+        return () => callbacks.forEach((cb) => cb());
+      },
+      () =>
+        selector.apply(
+          null,
+          stores.map((store) => store.getState())
+        ),
+      () =>
+        selector.apply(
+          null,
+          stores.map((store) => store.getInitialState())
+        )
+    );
+  };
+};
