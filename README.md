@@ -27,9 +27,9 @@ Key features include:
 - **Multithreading Sync**: Supports sharing state between webpage thread and the worker thread. With `data-transport` for generic communication, developers can avoid the complexities of message passing and serialization logic.
 - **Immutable State with Optional Mutability**: Powered by the [Mutative](https://github.com/unadlib/mutative) library, the core provides an immutable state transition process while allowing performance optimization with mutable instances when needed.
 - **Patch-Based Updates**: Enables efficient incremental state changes through patch-based synchronization, simplifying its use in CRDTs applications.
-- **Built-in Computed Data**: Supports derived properties based on state dependencies, making it easier to manage and retrieve computed data from core states.
-- **Slices Pattern**: Easily combine multiple slices into a store.
-- **Extensible Middleware**: Allows for middleware to enhance the store’s behavior, such as logging, time-travel debugging, or integration with third-party tools.
+- **Built-in Computed**: Supports derived properties based on state dependencies, making it easier to manage and retrieve computed data from core states.
+- **Slices Pattern**: Easily combine multiple slices into a store with namespace.
+- **Extensible Middleware**: Allows for middleware to enhance the store's behavior, such as logging, time-travel debugging, or integration with third-party tools.
 - **Integration with 3rd-Party Libraries**: Supports popular frameworks like React, Angular, Vue, Svelte, and Solid, as well as state management libraries such as Redux, Zustand, and MobX.
 
 ## Operating Modes and Fundamentals
@@ -37,7 +37,7 @@ Key features include:
 This library operates in two primary modes:
 
 - Standard Mode
-  - In a standard webpage environment, the store is managed entirely within the webpage thread.
+  - In a standard webpage environment, the store is managed entirely within the webpage thread. Patch updates are disabled by default to ensure optimal performance in standard mode.
 - Shared Mode
   - The worker thread serves as the primary source of the shared state, utilizing transport for synchronization.
   - Webpage thread act as clients, accessing and manipulating the state asynchronously through a store.
