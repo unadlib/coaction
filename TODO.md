@@ -27,7 +27,7 @@
 - [x] logger support verbose
 
 - [x] setState check share
-- [ ] react auto selector
+- [x] react auto selector
 
 - [ ] add more tests
 - [ ] add more examples
