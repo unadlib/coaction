@@ -1,6 +1,6 @@
 {
   "name": "@coaction/logger",
-  "version": "0.1.2",
+  "version": "0.1.3",
   "description": "A logger middleware for Coaction.",
   "keywords": [
     "coaction"
