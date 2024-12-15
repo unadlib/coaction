@@ -1,10 +1,22 @@
 # @coaction/logger
 
-A logger middleware for coaction.
+![Node CI](https://github.com/unadlib/coaction/workflows/Node%20CI/badge.svg)
+[![npm](https://img.shields.io/npm/v/@coaction/logger.svg)](https://www.npmjs.com/package/@coaction/logger)
+![license](https://img.shields.io/npm/l/@coaction/logger)
+
+A logger middleware for Coaction.
+
+## Installation
+
+You can install it via npm, yarn or pnpm.
+
+```sh
+npm install @coaction/logger
+```
 
 ## Usage
 
-```ts
+```js
 import { create } from 'coaction';
 import { logger } from '@coaction/logger';
 

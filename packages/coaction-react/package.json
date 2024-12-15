@@ -1,7 +1,7 @@
 {
   "name": "@coaction/react",
   "version": "0.1.0",
-  "description": "Coaction tools for React",
+  "description": "A Coaction integration tool for React",
   "keywords": [
     "state",
     "coaction",
