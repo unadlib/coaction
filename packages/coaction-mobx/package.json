@@ -1,6 +1,6 @@
 {
   "name": "@coaction/mobx",
-  "version": "0.1.1",
+  "version": "0.1.2",
   "description": "A Coaction integration tool for MobX",
   "keywords": [
     "state",
@@ -47,7 +47,7 @@
     ]
   },
   "peerDependencies": {
-    "coaction": "^0.1.0",
+    "coaction": "^0.1.2",
     "mobx": "^6.13.2",
     "mutative": "^1.1.0",
     "react": "^16.8.0 || ^17.0.0 || ^18.0.0"
@@ -63,7 +63,7 @@
     "@types/react": "^17.0.43",
     "@types/react-dom": "^17.0.14",
     "@types/use-sync-external-store": "^0.0.3",
-    "coaction": "*",
+    "coaction": "^0.1.2",
     "jsdom": "^25.0.1",
     "jsdom-global": "^3.0.2",
     "mobx": "^6.13.2",

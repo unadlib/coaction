@@ -1,6 +1,6 @@
 {
   "name": "@coaction/pinia",
-  "version": "0.1.1",
+  "version": "0.1.2",
   "description": "A Coaction integration tool for Pinia",
   "keywords": [
     "state",
@@ -47,7 +47,7 @@
     ]
   },
   "peerDependencies": {
-    "coaction": "^0.1.0",
+    "coaction": "^0.1.2",
     "mutative": "^1.1.0",
     "pinia": "^2.0"
   },
@@ -57,7 +57,7 @@
     }
   },
   "devDependencies": {
-    "coaction": "*",
+    "coaction": "^0.1.2",
     "mutative": "^1.1.0",
     "pinia": "^2.2.4"
   },

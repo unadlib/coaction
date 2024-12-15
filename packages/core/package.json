@@ -1,6 +1,6 @@
 {
   "name": "coaction",
-  "version": "0.1.1",
+  "version": "0.1.2",
   "description": "A sleek JavaScript library designed for high-performance and multithreading web apps.",
   "keywords": [
     "coaction"
@@ -37,7 +37,6 @@
   "bugs": {
     "url": "https://github.com/unadlib/coaction/issues"
   },
-  "devDependencies": {},
   "preconstruct": {
     "umdName": "Coaction",
     "entrypoints": [
