@@ -38,8 +38,8 @@
     "test:coverage": "jest --coverage",
     "commit": "cz",
     "changeset": "changeset",
-    "release": "changeset publish",
     "version": "changeset version && node ./scripts/bump-peer-dep-ranges.js",
+    "publish": "lerna exec --no-private --no-bail -- npm publish",
     "update:version": "lerna version --amend --no-git-tag-version"
   },
   "authors": [
