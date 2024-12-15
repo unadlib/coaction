@@ -1,7 +1,7 @@
 {
   "name": "@coaction/mobx",
-  "version": "0.0.1",
-  "description": "Coaction tools for MobX",
+  "version": "0.1.0",
+  "description": "A Coaction integration tool for MobX",
   "keywords": [
     "state",
     "coaction",

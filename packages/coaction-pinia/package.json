@@ -1,7 +1,7 @@
 {
   "name": "@coaction/pinia",
   "version": "0.1.0",
-  "description": "Coaction tools for Pinia",
+  "description": "A Coaction integration tool for Pinia",
   "keywords": [
     "state",
     "coaction",
