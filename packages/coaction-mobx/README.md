@@ -11,7 +11,7 @@ A Coaction integration tool for MobX
 You can install it via npm, yarn or pnpm.
 
 ```sh
-npm install @coaction/mobx
+npm install coaction @coaction/mobx
 ```
 
 ## Usage

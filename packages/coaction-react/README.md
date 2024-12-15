@@ -11,7 +11,7 @@ A Coaction integration tool for React
 You can install it via npm, yarn or pnpm.
 
 ```sh
-npm install @coaction/react
+npm install coaction @coaction/react
 ```
 
 ## Usage
