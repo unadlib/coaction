@@ -14,7 +14,7 @@ An efficient and flexible state management library for building high-performance
 
 Modern web applications are becoming increasingly complex, pushing the boundaries of what's possible in the browser. Single-threaded JavaScript, while powerful, often struggles to keep up with the demands of sophisticated UIs, real-time interactions, and data-intensive computations. This bottleneck leads to performance issues, laggy or unresponsive interfaces, limitations in request connections, and ultimately, a compromised user experience.
 
-While Web Workers offer a path towards parallelism and improved performance, they introduce a new set of challenges. Managing state across threads, synchronizing data efficiently, and maintaining coherent application logic can quickly become a daunting task. Existing state management solutions often fall short in addressing these specific needs, either by being too tightly coupled to the worker thread or by introducing complex abstractions that hinder developer productivity.
+While Web Workers (or SharedWorker) offer a path towards parallelism and improved performance, they introduce a new set of challenges. Managing state across threads, synchronizing data efficiently, and maintaining coherent application logic can quickly become a daunting task. Existing state management solutions often fall short in addressing these specific needs, either by being too tightly coupled to the worker thread or by introducing complex abstractions that hinder developer productivity.
 
 ![Coaction Concept](./coaction-concept.svg)
 
@@ -92,7 +92,7 @@ TBD
 
 ## Installation
 
-You can install the library for React application via npm, yarn, or pnpm.
+You can install `@coaction/react` for React application via npm, yarn, or pnpm.
 
 ```bash
 npm install @coaction/react
@@ -102,7 +102,7 @@ yarn add @coaction/react
 pnpm add @coaction/react
 ```
 
-If you want to use the core library without any framework, you can install it via npm, yarn, or pnpm.
+If you want to use the core library without any framework, you can install `coaction` via npm, yarn, or pnpm.
 
 ```bash
 npm install coaction
@@ -224,7 +224,7 @@ Coaction is designed to be compatible with a wide range of libraries and framewo
 
 ## Middlewares
 
-- [ ] logger
+- [x] logger
 - [ ] persist
 - [ ] undoRedo
 
