@@ -11,7 +11,7 @@ A Coaction integration tool for Pinia
 You can install it via npm, yarn or pnpm.
 
 ```sh
-npm install @coaction/pinia
+npm install coaction @coaction/pinia
 ```
 
 ## Usage
