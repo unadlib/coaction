@@ -52,6 +52,12 @@ This library operates in two primary modes:
 
 In shared mode, the library automatically determines the execution context based on the transport parameters, handling the synchronization thread seamlessly.
 
+You can easily use `Coaction` in your application to support multiple tabs, multithreading, or multiprocessing.
+
+For example, for a [3D scene](./examples/3d-scene/src/windowsManager.ts) shared across several tabs, you can effortlessly handle their state management using `Coaction`.
+
+https://github.com/user-attachments/assets/9eb9f4f8-8d47-433a-8eb2-85f044d6d8fa
+
 ### Shared Mode - Sequence Diagram
 
 ```mermaid
@@ -79,10 +85,6 @@ sequenceDiagram
     deactivate Main
     deactivate Client
 ```
-
-You can easily use `Coaction` in your application to support multiple tabs, multithreading, or multiprocessing. For example, for a [3D scene](./examples/3d-scene/src/windowsManager.ts) shared across several tabs, you can effortlessly handle their state management using `Coaction`.
-
-https://raw.githubusercontent.com/unadlib/coaction/main/coaction-example.mp4
 
 ## Performance
 
