@@ -1,6 +1,6 @@
 {
   "name": "coaction",
-  "version": "0.1.3",
+  "version": "0.1.4",
   "description": "A sleek JavaScript library designed for high-performance and multithreading web apps.",
   "keywords": [
     "coaction"
