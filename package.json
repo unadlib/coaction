@@ -39,7 +39,8 @@
     "commit": "cz",
     "changeset": "changeset",
     "release": "changeset publish",
-    "version": "changeset version && node ./scripts/bump-peer-dep-ranges.js"
+    "version": "changeset version && node ./scripts/bump-peer-dep-ranges.js",
+    "update:version": "lerna version --amend --no-git-tag-version"
   },
   "authors": [
     "Michael Lin <unadlib@gmail.com> (https://github.com/unadlib)"
