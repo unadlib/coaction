@@ -1,18 +1,18 @@
 import type { Slice } from 'coaction';
 
-interface WindowShape {
+export interface WindowShape {
   x: number;
   y: number;
   w: number;
   h: number;
 }
 
-interface WindowMetaData {
+export interface WindowMetaData {
   // example metadata
   foo: string;
 }
 
-interface WindowInfo {
+export interface WindowInfo {
   id: number;
   shape: WindowShape;
   metaData: WindowMetaData;
