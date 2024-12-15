@@ -158,7 +158,7 @@ const useStore = create(counter);
 ```
 
 ```jsx
-import { create } from 'coaction';
+import { create } from '@coaction/react';
 
 const worker = new Worker(new URL('./worker.js', import.meta.url));
 const useStore = create(counter, { worker });
