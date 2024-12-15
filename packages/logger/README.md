@@ -38,7 +38,6 @@ const useStore = create(
 );
 ```
 
-## TODO
+## Documentation
 
-- [x] support verbose mode
-- [ ] support custom transformer
+You can find the documentation [here](https://github.com/unadlib/coaction).
