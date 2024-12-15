@@ -1,26 +1,12 @@
 import { create, type AsyncStore } from 'coaction';
 import * as THREE from 'three';
-import { windowsManager, WindowsManager } from './windowsManager';
-
-// -----------------------------------
-// interfaces
-// -----------------------------------
-interface WindowShape {
-  x: number;
-  y: number;
-  w: number;
-  h: number;
-}
-
-interface WindowMetaData {
-  foo: string;
-}
-
-interface WindowInfo {
-  id: number;
-  shape: WindowShape;
-  metaData: WindowMetaData;
-}
+import {
+  windowsManager,
+  WindowsManager,
+  type WindowInfo,
+  type WindowMetaData,
+  type WindowShape
+} from './windowsManager';
 
 type Callback = () => void;
 
