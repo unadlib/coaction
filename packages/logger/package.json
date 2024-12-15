@@ -1,6 +1,6 @@
 {
   "name": "@coaction/logger",
-  "version": "0.0.1",
+  "version": "0.1.0",
   "description": "A logger middleware for Coaction.",
   "keywords": [
     "coaction"
@@ -48,7 +48,7 @@
     ]
   },
   "peerDependencies": {
-    "coaction": "^0.0.1",
+    "coaction": "^0.1.0",
     "mutative": "^1.1.0"
   },
   "peerDependenciesMeta": {

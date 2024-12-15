@@ -28,5 +28,5 @@ const useStore = create(
 
 ## TODO
 
-- [ ] support verbose mode
+- [x] support verbose mode
 - [ ] support custom transformer
