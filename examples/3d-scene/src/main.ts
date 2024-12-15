@@ -1,4 +1,6 @@
+import { create, type AsyncStore } from 'coaction';
 import * as THREE from 'three';
+import { windowsManager, WindowsManager } from './windowsManager';
 
 // -----------------------------------
 // interfaces
@@ -26,54 +28,41 @@ type Callback = () => void;
 // WindowManager use Shared Worker
 // -----------------------------------
 class WindowManager {
-  private workerPort: MessagePort;
   private id: number = -1;
   private winData: WindowInfo | null = null;
 
   private winShapeChangeCallback?: Callback;
   private winChangeCallback?: Callback;
-  private windows: WindowInfo[] = [];
+  private store: AsyncStore<WindowsManager>;
 
   constructor() {
-    const sharedWorker = new SharedWorker(
-      new URL('./worker.ts', import.meta.url),
-      {
-        type: 'module'
+    const worker = new SharedWorker(new URL('./worker.ts', import.meta.url), {
+      type: 'module'
+    });
+    this.store = create<WindowsManager>(windowsManager, {
+      worker
+    });
+    this.store.subscribe(() => {
+      if (this.winChangeCallback) {
+        this.winChangeCallback();
       }
-    );
-    this.workerPort = sharedWorker.port;
-    this.workerPort.start();
-
-    this.workerPort.onmessage = (event: MessageEvent) => {
-      const msg = event.data;
-      if (msg.type === 'WINDOWS_UPDATE') {
-        this.windows = msg.payload;
-        if (this.winChangeCallback) {
-          this.winChangeCallback();
-        }
-      } else if (msg.type === 'INIT_DONE') {
-        this.id = msg.payload.id;
-        if (this.winData) {
-          this.winData.id = this.id;
-        }
-      }
-    };
-
-    window.addEventListener('beforeunload', () => {
+    });
+    window.addEventListener('beforeunload', async () => {
       if (this.id !== -1) {
-        this.workerPort.postMessage({
-          type: 'REMOVE_WINDOW',
-          payload: { id: this.id }
-        });
+        await this.store.getState().remove({ id: this.id });
       }
     });
   }
 
-  init(metaData: WindowMetaData) {
+  get windows(): WindowInfo[] {
+    return this.store.getState().windows;
+  }
+
+  async init(metaData: WindowMetaData) {
     const shape = this.getWinShape();
-    this.workerPort.postMessage({ type: 'INIT', payload: { shape, metaData } });
-    // temporary store the data
     this.winData = { id: this.id, shape, metaData };
+    this.id = await this.store.getState().init({ shape, metaData });
+    this.winData.id = this.id;
   }
 
   update() {
@@ -88,10 +77,7 @@ class WindowManager {
       winShape.h !== oldShape.h
     ) {
       this.winData.shape = winShape;
-      this.workerPort.postMessage({
-        type: 'UPDATE_SHAPE',
-        payload: { id: this.id, shape: winShape }
-      });
+      this.store.getState().update({ id: this.id, shape: winShape });
       if (this.winShapeChangeCallback) this.winShapeChangeCallback();
     }
   }

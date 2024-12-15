@@ -11,5 +11,6 @@ export type {
   Middleware,
   ClientStoreOptions,
   SliceState,
-  Asyncify
+  Asyncify,
+  StoreWithAsyncFunction as AsyncStore
 } from './interface';
