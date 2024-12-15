@@ -80,6 +80,12 @@ sequenceDiagram
     deactivate Client
 ```
 
+You can easily use `Coaction` in your application to support multiple tabs, multithreading, or multiprocessing. For example, for a [3D scene](./examples/3d-scene/src/windowsManager.ts) shared across several tabs, you can effortlessly handle their state management using `Coaction`.
+
+<video src="./coaction-example.mp4" controls="controls" style="max-width: 100%;">
+  Your browser does not support the video tag.
+</video>
+
 ## Performance
 
 TBD
