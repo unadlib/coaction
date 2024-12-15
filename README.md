@@ -216,6 +216,12 @@ Coaction is designed to be compatible with a wide range of libraries and framewo
 - [ ] Valtio
 - [ ] alien-signals
 
+## Middlewares
+
+- [ ] logger
+- [ ] persist
+- [ ] undoRedo
+
 ## Difference between Coaction and Zustand
 
 | Feature                           | Coaction | Zustand |
