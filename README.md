@@ -181,7 +181,11 @@ import { create } from '@coaction/react';
 
 const counter = (set) => ({
   count: 0,
-  // derived data
+  // derived data without cache
+  get tripleCount() {
+    return this.count * 3;
+  },
+  // derived data with cache
   doubleCount: get(
     (state) => [state.counter.count],
     (count) => count * 2
