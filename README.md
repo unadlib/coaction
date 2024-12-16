@@ -88,7 +88,36 @@ sequenceDiagram
 
 ## Performance
 
-TBD
+![Benchmark](benchmark.jpg)
+
+Measure(ops/sec) to update 10K arrays, bigger is better([view source](https://github.com/unadlib/mutative/blob/main/test/performance/benchmark.ts)).
+
+| Library        | Test Name                       | Ops/sec |
+| -------------- | ------------------------------- | ------- |
+| @coaction/mobx | bigInitWithoutRefsWithoutAssign | 37.07   |
+| mobx           | bigInitWithoutRefsWithoutAssign | 37.50   |
+| **coaction**   | bigInitWithoutRefsWithoutAssign | 19,910  |
+| mobx-keystone  | bigInitWithoutRefsWithoutAssign | 7.88    |
+| @coaction/mobx | bigInitWithoutRefsWithAssign    | 1.53    |
+| mobx           | bigInitWithoutRefsWithAssign    | 10.77   |
+| **coaction**   | bigInitWithoutRefsWithAssign    | 3.01    |
+| mobx-keystone  | bigInitWithoutRefsWithAssign    | 0.13    |
+| @coaction/mobx | bigInitWithRefsWithoutAssign    | 14.66   |
+| mobx           | bigInitWithRefsWithoutAssign    | 16.11   |
+| **coaction**   | bigInitWithRefsWithoutAssign    | 152     |
+| mobx-keystone  | bigInitWithRefsWithoutAssign    | 2.44    |
+| @coaction/mobx | bigInitWithRefsWithAssign       | 0.98    |
+| mobx           | bigInitWithRefsWithAssign       | 8.81    |
+| **coaction**   | bigInitWithRefsWithAssign       | 3.83    |
+| mobx-keystone  | bigInitWithRefsWithAssign       | 0.11    |
+| @coaction/mobx | init                            | 37.34   |
+| mobx           | init                            | 42.98   |
+| **coaction**   | init                            | 3,524   |
+| mobx-keystone  | init                            | 40.48   |
+
+This table benchmarks various state management libraries on large initialization tasks. Coaction stands out dramatically, performing at least hundreds of times faster in certain scenarios. For example, in the “bigInitWithoutRefsWithoutAssign” test, Coaction achieves about 19,910 ops/sec compared to Mobx’s 37.5 ops/sec—over 500 times faster. Similarly, in the “init” test, Coaction reaches around 3,524 ops/sec versus Mobx’s 42.98 ops/sec—an increase of roughly 80 times. These results highlight Coaction’s exceptional efficiency in handling large-scale data initialization.
+
+> We will also provide more complete benchmarking.
 
 ## Installation
 
@@ -233,16 +262,16 @@ Coaction is designed to be compatible with a wide range of libraries and framewo
 
 ## Difference between Coaction and Zustand
 
-| Feature                           | Coaction | Zustand |
-| --------------------------------- | -------- | ------- |
-| Built-in multithreading           | ✅       | ❌      |
-| Support getter accessor           | ✅       | ❌      |
-| Built-in computed properties      | ✅       | ❌      |
-| Built-in namespace Slice          | ✅       | ❌      |
-| Built-in auto selector for state  | ✅       | ❌      |
-| Built-in multiple stores selector | ✅       | ❌      |
-| Easy to implement middleware      | ✅       | ❌      |
-| Support `this` in getter/action   | ✅       | ❌      |
+| Feature                           | **coaction** | Zustand |
+| --------------------------------- | ------------ | ------- |
+| Built-in multithreading           | ✅           | ❌      |
+| Support getter accessor           | ✅           | ❌      |
+| Built-in computed properties      | ✅           | ❌      |
+| Built-in namespace Slice          | ✅           | ❌      |
+| Built-in auto selector for state  | ✅           | ❌      |
+| Built-in multiple stores selector | ✅           | ❌      |
+| Easy to implement middleware      | ✅           | ❌      |
+| Support `this` in getter/action   | ✅           | ❌      |
 
 ## Credits
 
