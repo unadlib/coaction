@@ -209,28 +209,35 @@ Coaction is designed to be compatible with a wide range of libraries and framewo
 
 ### Supported Libraries and Frameworks
 
-- [x] React
-- [ ] Vue
-- [ ] Angular
-- [ ] Svelte
-- [ ] Solid
+| Framework | Package          | Status  |
+| --------- | ---------------- | ------- |
+| React     | @coaction/react  | ✅Done  |
+| Vue       | @coaction/vue    | Ongoing |
+| Angular   | @coaction/ng     |         |
+| Svelte    | @coaction/svelte |         |
+| Solid     | @coaction/solid  |         |
+| Yjs       | @coaction/yjs    |         |
 
 ### State Management Libraries
 
-- [x] MobX
-- [x] Pinia
-- [ ] Zustand
-- [ ] Redux Toolkit
-- [ ] Jotai
-- [ ] XState
-- [ ] Valtio
-- [ ] alien-signals
+| State Management | Package           | Status  |
+| ---------------- | ----------------- | ------- |
+| MobX             | @coaction/mobx    | ✅ Done |
+| Pinia            | @coaction/pinia   | ✅ Done |
+| Zustand          | @coaction/zustand | Ongoing |
+| Redux Toolkit    | @coaction/redux   |         |
+| Jotai            | @coaction/jotai   |         |
+| XState           | @coaction/xstate  |         |
+| Valtio           | @coaction/valtio  |         |
+| alien-signals    | @coaction/alien   |         |
 
 ## Middlewares
 
-- [x] logger
-- [ ] persist
-- [ ] undoRedo
+| Feature   | Package           | Status  |
+| --------- | ----------------- | ------- |
+| Logger    | @coaction/logger  | ✅ Done |
+| Persist   | @coaction/persist |         |
+| Undo/Redo | @coaction/history |         |
 
 ## Difference between Coaction and Zustand
 
