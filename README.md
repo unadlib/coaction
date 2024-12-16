@@ -115,7 +115,7 @@ Measure(ops/sec) to update 10K arrays, bigger is better([view source](https://gi
 | **coaction**   | init                            | 3,524   |
 | mobx-keystone  | init                            | 40.48   |
 
-This table benchmarks various state management libraries on large initialization tasks. Coaction stands out dramatically, performing at least hundreds of times faster in certain scenarios. For example, in the “bigInitWithoutRefsWithoutAssign” test, Coaction achieves about 19,910 ops/sec compared to Mobx’s 37.5 ops/sec—over 500 times faster. Similarly, in the “init” test, Coaction reaches around 3,524 ops/sec versus Mobx’s 42.98 ops/sec—an increase of roughly 80 times. These results highlight Coaction’s exceptional efficiency in handling large-scale data initialization.
+This table benchmarks various state management libraries on large initialization tasks. Coaction stands out dramatically, performing at least hundreds of times faster in certain scenarios. For example, in the "bigInitWithoutRefsWithoutAssign" test, Coaction achieves about 19,910 ops/sec compared to Mobx’s 37.5 ops/sec—over 500 times faster. Similarly, in the "init" test, Coaction reaches around 3,524 ops/sec versus Mobx's 42.98 ops/sec—an increase of roughly 80 times. These results highlight Coaction's exceptional efficiency in handling large-scale data initialization.
 
 > We will also provide more complete benchmarking.
 
