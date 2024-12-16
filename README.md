@@ -95,21 +95,13 @@ TBD
 You can install `@coaction/react` for React application via npm, yarn, or pnpm.
 
 ```bash
-npm install @coaction/react
-# or
-yarn add @coaction/react
-# or
-pnpm add @coaction/react
+npm install coaction @coaction/react
 ```
 
 If you want to use the core library without any framework, you can install `coaction` via npm, yarn, or pnpm.
 
 ```bash
 npm install coaction
-# or
-yarn add coaction
-# or
-pnpm add coaction
 ```
 
 ## Usage
@@ -211,7 +203,7 @@ Coaction is designed to be compatible with a wide range of libraries and framewo
 
 | Framework | Package          | Status  |
 | --------- | ---------------- | ------- |
-| React     | @coaction/react  | ✅Done  |
+| React     | @coaction/react  | ✅ Done |
 | Vue       | @coaction/vue    | Ongoing |
 | Angular   | @coaction/ng     |         |
 | Svelte    | @coaction/svelte |         |
@@ -229,15 +221,15 @@ Coaction is designed to be compatible with a wide range of libraries and framewo
 | Jotai            | @coaction/jotai   |         |
 | XState           | @coaction/xstate  |         |
 | Valtio           | @coaction/valtio  |         |
-| alien-signals    | @coaction/alien   |         |
+| alien-signals    | @coaction/alien   | Ongoing |
 
 ## Middlewares
 
 | Feature   | Package           | Status  |
 | --------- | ----------------- | ------- |
 | Logger    | @coaction/logger  | ✅ Done |
-| Persist   | @coaction/persist |         |
-| Undo/Redo | @coaction/history |         |
+| Persist   | @coaction/persist | Ongoing |
+| Undo/Redo | @coaction/history | Ongoing |
 
 ## Difference between Coaction and Zustand
 
