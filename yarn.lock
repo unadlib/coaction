@@ -8110,16 +8110,6 @@ mkdirp@^1.0.3:
   resolved "https://registry.yarnpkg.com/mkdirp/-/mkdirp-1.0.4.tgz#3eb5ed62622756d79a5f0e2a221dfebad75c2f7e"
   integrity sha512-vVqVZQyf3WLx2Shd0qJ9xuvqgAyKPLAiqITEtqW0oIUjzo3PePDd6fW9iFz30ef7Ysp/oiWqbhszeGWW2T6Gzw==
 
-mobx-keystone@^1.11.1:
-  version "1.11.1"
-  resolved "https://registry.yarnpkg.com/mobx-keystone/-/mobx-keystone-1.11.1.tgz#1d21752ea91d6ffbafb910b88afde33d78bfd5b7"
-  integrity sha512-gflAO++K1DKVIoGbHLvpozbIbIA2qQlm2LpQnB+qbpN59xGgK0FHzhqkCU6nPXpb+EQFBzwESxqvOIrWpHvJUQ==
-  dependencies:
-    fast-deep-equal "^3.1.3"
-    nanoid "^3.3.7"
-    ts-toolbelt "^9.6.0"
-    tslib "^2.7.0"
-
 mobx@^6.13.2:
   version "6.13.2"
   resolved "https://registry.yarnpkg.com/mobx/-/mobx-6.13.2.tgz#e4514c983c41611d7008ac4cd21c7f3d1be3180d"
@@ -10565,11 +10555,6 @@ ts-node@^10.9.2:
     make-error "^1.1.1"
     v8-compile-cache-lib "^3.0.1"
     yn "3.1.1"
-
-ts-toolbelt@^9.6.0:
-  version "9.6.0"
-  resolved "https://registry.yarnpkg.com/ts-toolbelt/-/ts-toolbelt-9.6.0.tgz#50a25426cfed500d4a09bd1b3afb6f28879edfd5"
-  integrity sha512-nsZd8ZeNUzukXPlJmTBwUAuABDe/9qtVDelJeT/qW0ow3ZS3BsQJtNkan1802aM9Uf68/Y8ljw86Hu0h5IUW3w==
 
 tsconfig-paths@^4.1.2:
   version "4.2.0"
