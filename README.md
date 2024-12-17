@@ -140,7 +140,7 @@ npm install coaction
 ```jsx
 import { create } from '@coaction/react';
 
-const useStore = create((set, get) => ({
+const useStore = create((set) => ({
   count: 0,
   increment: () => set((state) => state.count++)
 }));
@@ -161,8 +161,6 @@ const CounterComponent = () => {
 `counter.js`:
 
 ```js
-import { create } from '@coaction/react';
-
 export const counter = (set) => ({
   count: 0,
   increment: () => set((state) => state.count++)
@@ -175,13 +173,16 @@ export const counter = (set) => ({
 import { create } from '@coaction/react';
 import { counter } from './counter';
 
-const useStore = create(counter);
+create(counter);
 ```
 
 ```jsx
 import { create } from '@coaction/react';
+import { counter } from './counter';
 
-const worker = new Worker(new URL('./worker.js', import.meta.url));
+const worker = new Worker(new URL('./worker.js', import.meta.url), {
+  type: 'module'
+});
 const useStore = create(counter, { worker });
 
 const CounterComponent = () => {
@@ -189,7 +190,7 @@ const CounterComponent = () => {
   return (
     <div>
       <p>Count in Worker: {store.count}</p>
-      <button onClick={store.increment}>Increment</button>
+      <button onClick={() => store.increment()}>Increment</button>
     </div>
   );
 };
