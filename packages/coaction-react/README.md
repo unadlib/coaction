@@ -19,7 +19,7 @@ npm install coaction @coaction/react
 ```jsx
 import { create } from '@coaction/react';
 
-const useStore = create((set, get) => ({
+const useStore = create((set) => ({
   count: 0,
   increment: () => set((state) => state.count++)
 }));
