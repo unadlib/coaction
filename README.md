@@ -200,7 +200,7 @@ const CounterComponent = () => {
 ```jsx
 import { create } from '@coaction/react';
 
-const counter = (set) => ({
+const counter = (set, get) => ({
   count: 0,
   // derived data without cache
   get tripleCount() {
@@ -230,31 +230,31 @@ Coaction is designed to be compatible with a wide range of libraries and framewo
 
 ### Supported Libraries and Frameworks
 
-| Framework | Package          | Status  |
-| --------- | ---------------- | ------- |
-| React     | @coaction/react  | ✅ Done |
-| Vue       | @coaction/vue    | Ongoing |
-| Angular   | @coaction/ng     |         |
-| Svelte    | @coaction/svelte |         |
-| Solid     | @coaction/solid  |         |
-| Yjs       | @coaction/yjs    |         |
+|         | Package          | Status  |
+| ------- | ---------------- | ------- |
+| React   | @coaction/react  | ✅ Done |
+| Vue     | @coaction/vue    | Ongoing |
+| Angular | @coaction/ng     |         |
+| Svelte  | @coaction/svelte |         |
+| Solid   | @coaction/solid  |         |
+| Yjs     | @coaction/yjs    |         |
 
 ### State Management Libraries
 
-| State Management | Package           | Status  |
-| ---------------- | ----------------- | ------- |
-| MobX             | @coaction/mobx    | ✅ Done |
-| Pinia            | @coaction/pinia   | ✅ Done |
-| Zustand          | @coaction/zustand | Ongoing |
-| Redux Toolkit    | @coaction/redux   |         |
-| Jotai            | @coaction/jotai   |         |
-| XState           | @coaction/xstate  |         |
-| Valtio           | @coaction/valtio  |         |
-| alien-signals    | @coaction/alien   | Ongoing |
+|               | Package           | Status  |
+| ------------- | ----------------- | ------- |
+| MobX          | @coaction/mobx    | ✅ Done |
+| Pinia         | @coaction/pinia   | ✅ Done |
+| Zustand       | @coaction/zustand | Ongoing |
+| Redux Toolkit | @coaction/redux   |         |
+| Jotai         | @coaction/jotai   |         |
+| XState        | @coaction/xstate  |         |
+| Valtio        | @coaction/valtio  |         |
+| alien-signals | @coaction/alien   | Ongoing |
 
 ## Middlewares
 
-| Feature   | Package           | Status  |
+|           | Package           | Status  |
 | --------- | ----------------- | ------- |
 | Logger    | @coaction/logger  | ✅ Done |
 | Persist   | @coaction/persist | Ongoing |
@@ -262,16 +262,16 @@ Coaction is designed to be compatible with a wide range of libraries and framewo
 
 ## Difference between Coaction and Zustand
 
-| Feature                           | **coaction** | Zustand |
-| --------------------------------- | ------------ | ------- |
-| Built-in multithreading           | ✅           | ❌      |
-| Support getter accessor           | ✅           | ❌      |
-| Built-in computed properties      | ✅           | ❌      |
-| Built-in namespace Slice          | ✅           | ❌      |
-| Built-in auto selector for state  | ✅           | ❌      |
-| Built-in multiple stores selector | ✅           | ❌      |
-| Easy to implement middleware      | ✅           | ❌      |
-| Support `this` in getter/action   | ✅           | ❌      |
+|                                   | `coaction` | Zustand |
+| --------------------------------- | ---------- | ------- |
+| Built-in multithreading           | ✅         | ❌      |
+| Support getter accessor           | ✅         | ❌      |
+| Built-in computed properties      | ✅         | ❌      |
+| Built-in namespace Slice          | ✅         | ❌      |
+| Built-in auto selector for state  | ✅         | ❌      |
+| Built-in multiple stores selector | ✅         | ❌      |
+| Easy to implement middleware      | ✅         | ❌      |
+| Support `this` in getter/action   | ✅         | ❌      |
 
 ## Credits
 
