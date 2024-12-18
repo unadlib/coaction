@@ -54,6 +54,12 @@
   "peerDependenciesMeta": {
     "coaction": {
       "optional": true
+    },
+    "mutative": {
+      "optional": true
+    },
+    "pinia": {
+      "optional": true
     }
   },
   "devDependencies": {
