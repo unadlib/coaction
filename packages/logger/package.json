@@ -54,6 +54,9 @@
   "peerDependenciesMeta": {
     "coaction": {
       "optional": true
+    },
+    "mutative": {
+      "optional": true
     }
   }
 }

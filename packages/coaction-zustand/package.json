@@ -1,33 +1,33 @@
 {
-  "name": "@coaction/react",
+  "name": "@coaction/zustand",
   "version": "0.1.4",
-  "description": "A Coaction integration tool for React",
+  "description": "A Coaction integration tool for Zustand",
   "keywords": [
     "state",
     "coaction",
-    "react",
+    "zustand",
     "hook"
   ],
   "authors": [
     "Michael Lin <unadlib@gmail.com> (https://github.com/unadlib)"
   ],
-  "homepage": "https://github.com/unadlib/coaction/tree/main/packages/coaction-react#readme",
+  "homepage": "https://github.com/unadlib/coaction/tree/main/packages/coaction-zustand#readme",
   "license": "MIT",
-  "main": "dist/coaction-react.cjs.js",
-  "module": "dist/coaction-react.esm.js",
+  "main": "dist/coaction-zustand.cjs.js",
+  "module": "dist/coaction-zustand.esm.js",
   "exports": {
     ".": {
       "types": {
-        "import": "./dist/coaction-react.cjs.mjs",
-        "default": "./dist/coaction-react.cjs.js"
+        "import": "./dist/coaction-zustand.cjs.mjs",
+        "default": "./dist/coaction-zustand.cjs.js"
       },
-      "module": "./dist/coaction-react.esm.js",
-      "import": "./dist/coaction-react.cjs.mjs",
-      "default": "./dist/coaction-react.cjs.js"
+      "module": "./dist/coaction-zustand.esm.js",
+      "import": "./dist/coaction-zustand.cjs.mjs",
+      "default": "./dist/coaction-zustand.cjs.js"
     },
     "./package.json": "./package.json"
   },
-  "types": "dist/coaction-react.cjs.d.ts",
+  "types": "dist/coaction-zustand.cjs.d.ts",
   "sideEffects": false,
   "files": [
     "dist"
@@ -41,7 +41,7 @@
     "url": "https://github.com/unadlib/coaction/issues"
   },
   "preconstruct": {
-    "umdName": "CoactionReact",
+    "umdName": "CoactionZustand",
     "entrypoints": [
       "./index.ts"
     ]
@@ -49,15 +49,26 @@
   "peerDependencies": {
     "@types/react": "^17.0.0 || ^18.0.0 || ^19.0.0",
     "coaction": "^0.1.4",
-    "react": "^17.0.0 || ^18.0.0 || ^19.0.0"
+    "react": "^17.0.0 || ^18.0.0 || ^19.0.0",
+    "use-sync-external-store": ">=1.2.0",
+    "zustand": "^4.0.0 || ^5.0.0"
   },
   "peerDependenciesMeta": {
+    "@types/react": {
+      "optional": true
+    },
     "coaction": {
       "optional": true
+    },
+    "react": {
+      "optional": true
+    },
+    "zustand": {
+      "optional": true
+    },
+    "use-sync-external-store": {
+      "optional": true
     }
-  },
-  "dependencies": {
-    "use-sync-external-store": "^1.4.0"
   },
   "devDependencies": {
     "@testing-library/react": "^14.2.1",
@@ -69,6 +80,8 @@
     "jsdom": "^25.0.1",
     "jsdom-global": "^3.0.2",
     "react": "^18.0.0",
-    "react-dom": "^18.0.0"
+    "react-dom": "^18.0.0",
+    "use-sync-external-store": "^1.4.0",
+    "zustand": "^5.0.2"
   }
 }
