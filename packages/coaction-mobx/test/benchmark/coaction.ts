@@ -34,12 +34,13 @@ export const createCoactionStore = () => {
       },
 
       bigInitWithoutRefsWithAssign() {
+        const todos = [];
+        for (let i = 0; i < 10_000; i++) {
+          todos.push({ text: '', done: false });
+        }
+        const newTodos = [...this.todos, ...todos];
         set(() => {
-          const todos = [];
-          for (let i = 0; i < 10_000; i++) {
-            todos.push({ text: '', done: false });
-          }
-          this.todos = [...this.todos, ...todos];
+          this.todos = newTodos;
         });
       },
 
@@ -55,15 +56,18 @@ export const createCoactionStore = () => {
       },
 
       bigInitWithRefsWithAssign() {
+        const category = { id: this.categories.length, text: 'category' };
         set(() => {
-          const category = { id: this.categories.length, text: 'category' };
           this.categories.push(category);
+        });
 
-          const todos = [];
-          for (let i = 0; i < 10_000; i++) {
-            todos.push({ text: '', done: false, category });
-          }
-          this.todos = [...this.todos, ...todos];
+        const todos = [];
+        for (let i = 0; i < 10_000; i++) {
+          todos.push({ text: '', done: false, category });
+        }
+        const newTodos = [...this.todos, ...todos];
+        set(() => {
+          this.todos = newTodos;
         });
       },
 
