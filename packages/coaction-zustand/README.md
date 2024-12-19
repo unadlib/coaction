@@ -19,14 +19,14 @@ npm install coaction @coaction/zustand
 ```jsx
 import { create } from 'coaction';
 import { bindZustand } from '@coaction/zustand';
-import { createWithZustand } from 'zustand';
+import { create as createWithZustand } from 'zustand';
 
 const useStore = create(() =>
-  createWithZustand((set) =>
-    bindZustand({
+  createWithZustand(
+    bindZustand((set) => ({
       count: 1,
       inc: () => set((state) => ({ count: state.count + 1 }))
-    })
+    }))
   )
 );
 ```
