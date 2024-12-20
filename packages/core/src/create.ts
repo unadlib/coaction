@@ -78,7 +78,11 @@ export const create: Creator = <T extends CreateState>(
       internal.rootState = patches
         ? (applyWithMutative(state, patches) as T)
         : state;
-      internal.listeners.forEach((listener) => listener());
+      if (internal.updateImmutable) {
+        internal.updateImmutable(internal.rootState as T);
+      } else {
+        internal.listeners.forEach((listener) => listener());
+      }
     };
     const getPureState: Store<T>['getPureState'] = () =>
       internal.rootState as T;

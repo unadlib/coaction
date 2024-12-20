@@ -71,7 +71,11 @@ export const handleState = <T extends CreateState>(
           internal.rootState = internal.backupState;
           throw error;
         }
-        internal.listeners.forEach((listener) => listener());
+        if (internal.updateImmutable) {
+          internal.updateImmutable(internal.rootState as T);
+        } else {
+          internal.listeners.forEach((listener) => listener());
+        }
         return [];
       }
       internal.backupState = internal.rootState;
@@ -99,7 +103,11 @@ export const handleState = <T extends CreateState>(
       if (finalPatches.patches.length) {
         store.apply(internal.rootState as T, finalPatches.patches);
         if (!internal.mutableInstance) {
-          internal.listeners.forEach((listener) => listener());
+          if (internal.updateImmutable) {
+            internal.updateImmutable(internal.rootState as T);
+          } else {
+            internal.listeners.forEach((listener) => listener());
+          }
         }
       }
       return [internal.rootState as any, patches, inversePatches];

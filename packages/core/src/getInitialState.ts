@@ -13,9 +13,10 @@ export const getInitialState = <T extends CreateState>(
       throw new Error('createState should be a function');
     }
     let state = fn(store.setState, store.getState, store);
-    // support 3rd party library store like zustand, pinia
+    // support 3rd party library store like zustand, redux
     if (state.getState) {
       state = state.getState();
+      // support 3rd party library store like pinia
     } else if (typeof state === 'function') {
       state = state();
     }
@@ -23,6 +24,7 @@ export const getInitialState = <T extends CreateState>(
     if (state[bindSymbol]) {
       const rawState = state[bindSymbol].bind(state);
       state[bindSymbol].handleStore(store, rawState, state, internal);
+      delete state[bindSymbol];
       return rawState;
     }
     return state;
