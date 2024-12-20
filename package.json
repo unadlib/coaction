@@ -39,7 +39,7 @@
     "commit": "cz",
     "changeset": "changeset",
     "version": "changeset version && node ./scripts/bump-peer-dep-ranges.js",
-    "publish": "lerna exec --no-private --no-bail -- npm publish",
+    "publish": "lerna exec --no-private --no-bail -- npm publish --access=public",
     "update:version": "lerna version --amend --no-git-tag-version",
     "benchmark": "tsx ./packages/coaction-mobx/test/benchmark/index.ts"
   },
