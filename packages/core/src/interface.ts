@@ -66,10 +66,6 @@ export interface Store<T extends ISlices = ISlices> {
    */
   getInitialState: () => T;
   /**
-   * Get the raw instance via the initial state.
-   */
-  toRaw?: (key: any) => any;
-  /**
    * The patch is used to update the state.
    */
   patch?: (option: { patches: Patches; inversePatches: Patches }) => {

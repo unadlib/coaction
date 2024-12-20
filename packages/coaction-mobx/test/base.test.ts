@@ -125,12 +125,12 @@ test('base - error handling', () => {
   expect(() => useStore.getState().increment()).toThrow('test');
   expect(fn).toHaveBeenCalledTimes(1);
   expect(useStore.getState()).toMatchInlineSnapshot(`
-  {
-    "count": 1,
-    "double": 2,
-    "increment": [Function],
-  }
-  `);
+{
+  "count": 1,
+  "double": 2,
+  "increment": [Function],
+}
+`);
 });
 
 test('base enablePatches - error handling', () => {

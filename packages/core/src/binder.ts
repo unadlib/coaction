@@ -1,5 +1,6 @@
 import type { Store } from './interface';
 import { bindSymbol } from './constant';
+import { Internal } from './internal';
 
 /**
  * createBinder is a function to create a binder for the 3rd party store.
@@ -30,7 +31,12 @@ export function createBinder<F = (...args: any[]) => any>({
   /**
    * handleStore is a function to handle the store object.
    */
-  handleStore: (store: Store<object>, rawState: object, state: object) => void;
+  handleStore: (
+    store: Store<object>,
+    rawState: object,
+    state: object,
+    internal: Internal<object>
+  ) => void;
 }) {
   return (<S extends object>(state: S): S => {
     const { copyState, key, bind } = handleState(state);

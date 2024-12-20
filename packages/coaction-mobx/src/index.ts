@@ -4,9 +4,14 @@ import { autorun, runInAction } from 'mobx';
 
 const instancesMap = new WeakMap<object, object>();
 
-const handleStore = (store: Store<object>) => {
-  if (store.toRaw) return;
-  store.toRaw = (key: object) => instancesMap.get(key);
+const handleStore = (
+  store: Store<object>,
+  rawState: object,
+  state: object,
+  internal: any
+) => {
+  if (internal.toRaw) return;
+  internal.toRaw = (key: object) => instancesMap.get(key);
   Object.assign(store, {
     subscribe: autorun
   });
