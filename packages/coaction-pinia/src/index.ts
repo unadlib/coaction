@@ -53,8 +53,8 @@ const handleStore = (
   _: object,
   internal: any
 ) => {
-  if (!internal.toRaw) {
-    internal.toRaw = (key: any) => instancesMap.get(key);
+  if (!internal.toMutableRaw) {
+    internal.toMutableRaw = (key: any) => instancesMap.get(key);
     Object.assign(store, {
       subscribe: (callback: any) => {
         store._subscriptions!.add(callback);
@@ -92,9 +92,11 @@ const handleStore = (
       apply(state, patches);
     };
   }
-  const stopWatch = internal.toRaw(state).$subscribe((...args: unknown[]) => {
-    store._subscriptions!.forEach((callback) => callback(...args));
-  });
+  const stopWatch = internal
+    .toMutableRaw(state)
+    .$subscribe((...args: unknown[]) => {
+      store._subscriptions!.forEach((callback) => callback(...args));
+    });
   const destroy = () => {
     instancesMap.delete(state);
     stopWatch();

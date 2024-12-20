@@ -10,8 +10,8 @@ const handleStore = (
   state: object,
   internal: any
 ) => {
-  if (internal.toRaw) return;
-  internal.toRaw = (key: object) => instancesMap.get(key);
+  if (internal.toMutableRaw) return;
+  internal.toMutableRaw = (key: object) => instancesMap.get(key);
   Object.assign(store, {
     subscribe: autorun
   });
