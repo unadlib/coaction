@@ -23,7 +23,7 @@ export const getRawState = <T extends CreateState>(
 ) => {
   const rawState = {} as Record<string, any>;
   const handle = (_rawState: any, _initialState: any, sliceKey?: string) => {
-    internal.mutableInstance = store.toRaw?.(_initialState);
+    internal.mutableInstance = internal.toRaw?.(_initialState);
     const descriptors = Object.getOwnPropertyDescriptors(_initialState);
     Object.entries(descriptors).forEach(([key, descriptor]) => {
       if (Object.prototype.hasOwnProperty.call(descriptor, 'value')) {

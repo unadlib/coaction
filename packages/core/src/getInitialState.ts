@@ -1,9 +1,11 @@
 import { bindSymbol } from './constant';
 import type { CreateState, ISlices, Slice, Store } from './interface';
+import { Internal } from './internal';
 
 export const getInitialState = <T extends CreateState>(
   store: Store<T>,
-  createState: any
+  createState: any,
+  internal: Internal<T>
 ) => {
   const makeState = (fn: (...args: any[]) => any) => {
     // make sure createState is a function
@@ -11,12 +13,16 @@ export const getInitialState = <T extends CreateState>(
       throw new Error('createState should be a function');
     }
     let state = fn(store.setState, store.getState, store);
-    if (typeof state === 'function') {
+    // support 3rd party library store like zustand, pinia
+    if (state.getState) {
+      state = state.getState();
+    } else if (typeof state === 'function') {
       state = state();
     }
+    // support bind store like mobx
     if (state[bindSymbol]) {
       const rawState = state[bindSymbol].bind(state);
-      state[bindSymbol].handleStore(store, rawState, state);
+      state[bindSymbol].handleStore(store, rawState, state, internal);
       return rawState;
     }
     return state;

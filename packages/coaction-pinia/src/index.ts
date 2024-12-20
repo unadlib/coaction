@@ -47,9 +47,14 @@ export type IStore<T extends object> = [
   Pick<T, FunctionKeys<T>>
 ];
 
-const handleStore = (store: StoreWithSubscriptions, state: object) => {
-  if (!store.toRaw) {
-    store.toRaw = (key: any) => instancesMap.get(key);
+const handleStore = (
+  store: StoreWithSubscriptions,
+  state: object,
+  _: object,
+  internal: any
+) => {
+  if (!internal.toRaw) {
+    internal.toRaw = (key: any) => instancesMap.get(key);
     Object.assign(store, {
       subscribe: (callback: any) => {
         store._subscriptions!.add(callback);
@@ -87,7 +92,7 @@ const handleStore = (store: StoreWithSubscriptions, state: object) => {
       apply(state, patches);
     };
   }
-  const stopWatch = store.toRaw(state).$subscribe((...args: unknown[]) => {
+  const stopWatch = internal.toRaw(state).$subscribe((...args: unknown[]) => {
     store._subscriptions!.forEach((callback) => callback(...args));
   });
   const destroy = () => {
