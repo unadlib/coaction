@@ -42,4 +42,8 @@ export interface Internal<T extends CreateState = CreateState> {
    * Get the mutable raw instance via the initial state.
    */
   toMutableRaw?: (key: any) => any;
+  /**
+   * The update immutable function.
+   */
+  updateImmutable?: (state: T) => void;
 }

@@ -65,6 +65,7 @@ export interface Store<T extends ISlices = ISlices> {
    * Get the initial state.
    */
   getInitialState: () => T;
+  // TODO: remove this
   /**
    * The patch is used to update the state.
    */
@@ -72,6 +73,7 @@ export interface Store<T extends ISlices = ISlices> {
     patches: Patches;
     inversePatches: Patches;
   };
+  // TODO: remove this
   /**
    * The trace is used to trace the action
    */
