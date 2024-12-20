@@ -14,13 +14,27 @@ export const bindZustand = ((initializer: StateCreator<any, [], []>) =>
     const internalBindZustand = createBinder<BindZustand>({
       handleStore: (store, rawState, state, internal) => {
         if (zustandStore.getState() === internal.rootState) return;
+        let isCoactionUpdated = false;
         internal.rootState = zustandStore.getState() as object;
         coactionStore = store;
         zustandStore.subscribe(() => {
+          if (!isCoactionUpdated) {
+            internal.rootState = zustandStore.getState() as object;
+            if (coactionStore.share === 'client') {
+              throw new Error('client zustand store cannot be updated');
+            } else if (coactionStore.share === 'main') {
+              // TODO: emit to all clients
+            }
+          }
           internal.listeners.forEach((listener) => listener());
         });
         internal.updateImmutable = (state: any) => {
-          zustandStore.setState(state, true);
+          isCoactionUpdated = true;
+          try {
+            zustandStore.setState(state, true);
+          } finally {
+            isCoactionUpdated = false;
+          }
         };
       },
       handleState: (externalState) => {
