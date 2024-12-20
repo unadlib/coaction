@@ -34,7 +34,7 @@ export interface Store<T extends ISlices = ISlices> {
    */
   getState: () => T;
   /**
-   * Subscribe to the state changes.
+   * Subscribe to the state changes, and return the unsubscribe function.
    */
   subscribe: (listener: Listener) => () => void;
   /**
@@ -72,10 +72,6 @@ export interface Store<T extends ISlices = ISlices> {
     patches: Patches;
     inversePatches: Patches;
   };
-  /**
-   * The act is used to run the function in the action.
-   */
-  act?: <T extends () => any>(fn: T) => ReturnType<T>;
   /**
    * The trace is used to trace the action
    */

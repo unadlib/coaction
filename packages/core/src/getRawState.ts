@@ -192,8 +192,8 @@ export const getRawState = <T extends CreateState>(
               done?.(result);
               return result;
             }
-            if (internal.mutableInstance && store.act) {
-              const result = store.act(() => {
+            if (internal.mutableInstance && internal.actMutable) {
+              const result = internal.actMutable(() => {
                 return fn.apply(
                   sliceKey ? store.getState()[sliceKey] : store.getState(),
                   args

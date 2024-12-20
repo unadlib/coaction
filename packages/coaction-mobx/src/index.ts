@@ -15,7 +15,7 @@ const handleStore = (
   Object.assign(store, {
     subscribe: autorun
   });
-  store.act = runInAction;
+  internal.actMutable = runInAction;
   store.apply = (state = store.getState(), patches) => {
     if (!patches) {
       if (store.isSliceStore) {

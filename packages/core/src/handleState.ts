@@ -47,8 +47,8 @@ export const handleState = <T extends CreateState>(
         store.transport ?? (options as StoreOptions<T>).enablePatches;
       if (!enablePatches) {
         if (internal.mutableInstance) {
-          if (store.act) {
-            store.act(() => {
+          if (internal.actMutable) {
+            internal.actMutable(() => {
               fn.apply(null);
             });
             return [];
