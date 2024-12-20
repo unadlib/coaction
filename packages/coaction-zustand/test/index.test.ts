@@ -4,28 +4,27 @@ import {
   mockPorts,
   WorkerMainTransportOptions
 } from 'data-transport';
-import { create as createWithZustand } from 'zustand';
-import { bindZustand } from '../src';
+import { create as createWithZustand, StateCreator } from 'zustand';
+import { bindZustand, adapt } from '../src';
 
 test('base', () => {
   const stateFn = jest.fn();
   const getterFn = jest.fn();
-  const useStore = create<{
-    count: number;
-    readonly double: number;
-    increment: () => void;
-  }>(
-    () =>
-      createWithZustand(
-        bindZustand((set, get, store) => ({
-          count: 0,
-          increment() {
-            set((state) => ({ count: state.count + 1 }));
-            // stateFn(get().count, this.count);
-            // getterFn(get().double, this.double);
-          }
-        }))
-      ),
+  const counter: StateCreator<
+    {
+      count: number;
+      increment: () => void;
+    },
+    [],
+    []
+  > = (set) => ({
+    count: 0,
+    increment() {
+      set((state) => ({ count: state.count + 1 }));
+    }
+  });
+  const useStore = create(
+    () => adapt(createWithZustand(bindZustand(counter))),
     {
       name: 'test'
     }
@@ -70,20 +69,27 @@ test('worker', async () => {
     ports.create() as WorkerMainTransportOptions
   );
 
-  const counter: Slice<{
-    count: number;
-    increment: () => void;
-  }> = (set) => ({
+  const counter: StateCreator<
+    {
+      count: number;
+      increment: () => void;
+    },
+    [],
+    []
+  > = (set) => ({
     count: 0,
     increment() {
       set((state) => ({ count: state.count + 1 }));
     }
   });
-  const useServerStore = create(() => createWithZustand(bindZustand(counter)), {
-    transport: serverTransport,
-    workerType: 'WebWorkerInternal',
-    name: 'test'
-  });
+  const useServerStore = create(
+    () => adapt(createWithZustand(bindZustand(counter))),
+    {
+      transport: serverTransport,
+      workerType: 'WebWorkerInternal',
+      name: 'test'
+    }
+  );
   const { count, increment } = useServerStore();
   expect(count).toBe(0);
   expect(increment).toBeInstanceOf(Function);
@@ -112,7 +118,7 @@ test('worker', async () => {
 `);
   {
     const useClientStore = create(
-      () => createWithZustand(bindZustand(counter)),
+      () => adapt(createWithZustand(bindZustand(counter))),
       {
         name: 'test',
         clientTransport,
