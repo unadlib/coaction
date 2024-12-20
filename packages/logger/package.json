@@ -1,6 +1,6 @@
 {
   "name": "@coaction/logger",
-  "version": "0.1.4",
+  "version": "0.1.5",
   "description": "A logger middleware for Coaction.",
   "keywords": [
     "coaction"
@@ -38,7 +38,7 @@
     "url": "https://github.com/unadlib/coaction/issues"
   },
   "devDependencies": {
-    "coaction": "^0.1.4",
+    "coaction": "^0.1.5",
     "mutative": "^1.1.0"
   },
   "preconstruct": {
@@ -48,7 +48,7 @@
     ]
   },
   "peerDependencies": {
-    "coaction": "^0.1.4",
+    "coaction": "^0.1.5",
     "mutative": "^1.1.0"
   },
   "peerDependenciesMeta": {
