@@ -5,7 +5,6 @@ import QuickChart from 'quickchart-js';
 import { create as createWithCoaction } from 'coaction';
 import { create as createWithZustand } from 'zustand';
 import { immer } from 'zustand/middleware/immer';
-import { mutative } from 'zustand-mutative';
 
 const labels: string[] = [];
 const result = [
@@ -20,18 +19,13 @@ const result = [
     data: []
   },
   {
-    label: 'Zustand with Immer',
-    backgroundColor: 'rgba(255, 0, 0, 0.5)',
-    data: []
-  },
-  {
-    label: 'Zustand with Mutative',
+    label: 'Coaction with Mutative',
     backgroundColor: 'rgba(255, 0, 217, 0.5)',
     data: []
   },
   {
-    label: 'Coaction with Mutative',
-    backgroundColor: 'rgba(255, 120, 120, 0.5)',
+    label: 'Zustand with Immer',
+    backgroundColor: 'rgba(255, 0, 0, 0.5)',
     data: []
   }
 ];
@@ -165,30 +159,6 @@ suite
       }
     }
   )
-  .add(
-    'Zustand with Mutative',
-    () => {
-      store.getState().update();
-    },
-    {
-      onStart: () => {
-        i = Math.random();
-        baseState = getData();
-        store = createWithZustand(
-          mutative<Store>((set) => ({
-            arr: baseState.arr,
-            map: baseState.map,
-            update: () => {
-              set((state) => {
-                state.arr.push(i);
-                state.map[i] = { i };
-              });
-            }
-          }))
-        );
-      }
-    }
-  )
   .on('cycle', (event: any) => {
     console.log(String(event.target));
     const [name, field = 'Update'] = event.target.name.split(' - ');
@@ -212,7 +182,7 @@ try {
     options: {
       title: {
         display: true,
-        text: 'Coaction vs Zustand vs Zustand with Immer Performance'
+        text: 'Coaction vs Zustand Performance'
       },
       legend: {
         position: 'bottom'

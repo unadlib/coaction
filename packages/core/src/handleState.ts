@@ -110,7 +110,7 @@ export const handleState = <T extends CreateState>(
           internal.rootState = createWithMutative(
             internal.rootState,
             (draft) => {
-              internal.rootState = draft as Draft<any>;
+              internal.rootState = draft as Draft<T>;
               return next(internal.module);
             }
           );
