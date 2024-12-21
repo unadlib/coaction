@@ -103,11 +103,13 @@ The fastest method is Coaction,Zustand
 
 According to the provided performance data, Coaction's performance is comparable to Zustand's performance. However, Coaction with Mutative demonstrates a significant performance advantage compared to Zustand with Immer.
 
-While standard Coaction achieves approximately 5,272 (ops/sec) and standard Zustand reaches around 5,233 (ops/sec), the most striking difference is observed with Zustand with Immer, which drastically drops to a mere 253 ops/sec. Furthermore, Coaction with Mutative achieves around 4,626 ops/sec. This means Coaction with Mutative is approximately 18.3 faster than Zustand with Immer (4626 / 253 ≈ 18.3). The data clearly indicates that Coaction offers superior performance characteristics compared to Zustand, and this advantage is especially pronounced when contrasted with Zustand's Immer implementation.
+While standard Coaction achieves approximately 5,272 (ops/sec) and standard Zustand reaches around 5,233 (ops/sec), the most striking difference is observed with Zustand with Immer, which drastically drops to a mere 253 (ops/sec). Furthermore, Coaction with Mutative achieves around 4,626 (ops/sec). This means Coaction with Mutative is approximately 18.3X faster than Zustand with Immer (4626 / 253 ≈ 18.3). The data clearly indicates that Coaction offers superior performance characteristics compared to Zustand, and this advantage is especially pronounced when contrasted with Zustand's Immer implementation.
 
 > We will also provide more complete benchmarking.
 
 ## Difference between Coaction and Zustand
+
+Coaction's design philosophy is to provide a necessary and sufficiently simple API, making it easy for developers to use. Therefore, Coaction inherits the advantages of Zustand's API design and includes built-in support for features that Zustand does not offer.
 
 |                                   | `coaction` | Zustand |
 | --------------------------------- | ---------- | ------- |
