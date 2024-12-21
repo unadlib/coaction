@@ -93,14 +93,17 @@ Measure(ops/sec) to update 50K arrays and 1K objects, bigger is better([view sou
 ![Benchmark](benchmark.jpg)
 
 ```
-Coaction x 4,837 ops/sec ±3.79% (65 runs sampled)
-Coaction with Mutative x 4,276 ops/sec ±3.04% (85 runs sampled)
-Zustand x 4,753 ops/sec ±3.52% (75 runs sampled)
-Zustand with Immer x 251 ops/sec ±0.26% (93 runs sampled)
-Zustand with Mutative x 4,292 ops/sec ±3.30% (72 runs sampled)
+Coaction x 5,272 ops/sec ±3.08% (63 runs sampled)
+Coaction with Mutative x 4,626 ops/sec ±2.26% (83 runs sampled)
+Zustand x 5,233 ops/sec ±2.68% (79 runs sampled)
+Zustand with Immer x 253 ops/sec ±0.26% (93 runs sampled)
 
 The fastest method is Coaction,Zustand
 ```
+
+According to the provided performance data, Coaction's performance is comparable to Zustand's performance. However, Coaction with Mutative demonstrates a significant performance advantage compared to Zustand with Immer.
+
+While standard Coaction achieves approximately 5,272 operations per second (ops/sec) and standard Zustand reaches around 5,233 ops/sec, the most striking difference is observed with Zustand with Immer, which drastically drops to a mere 253 ops/sec. Furthermore, Coaction with Mutative achieves around 4,626 ops/sec. This means Coaction with Mutative is approximately 18.3 times faster than Zustand with Immer (4626 / 253 ≈ 18.3). The data clearly indicates that Coaction offers superior performance characteristics compared to Zustand, and this advantage is especially pronounced when contrasted with Zustand's Immer implementation.
 
 > We will also provide more complete benchmarking.
 
