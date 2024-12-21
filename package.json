@@ -41,7 +41,8 @@
     "version": "changeset version && node ./scripts/bump-peer-dep-ranges.js",
     "publish": "lerna exec --no-private --no-bail -- npm publish --access=public",
     "update:version": "lerna version --amend --no-git-tag-version",
-    "benchmark": "tsx ./packages/coaction-mobx/test/benchmark/index.ts"
+    "benchmark:mobx": "tsx ./packages/coaction-mobx/test/benchmark/index.ts",
+    "benchmark": "NODE_ENV='production' tsx ./scripts/benchmark.ts"
   },
   "authors": [
     "Michael Lin <unadlib@gmail.com> (https://github.com/unadlib)"
@@ -80,6 +81,7 @@
     "commitizen": "^4.3.0",
     "cz-conventional-changelog": "^3.3.0",
     "husky": "^3.1.0",
+    "immer": "^10.1.1",
     "jest": "^29.7.0",
     "jest-config": "^29.7.0",
     "jest-environment-jsdom": "^29.7.0",
@@ -95,7 +97,8 @@
     "tsx": "^4.19.2",
     "typescript": "^5.6.3",
     "vue": "^3.0.11",
-    "webpack-dev-middleware": "^3.6.0"
+    "webpack-dev-middleware": "^3.6.0",
+    "zustand-mutative": "^1.2.0"
   },
   "config": {
     "commitizen": {

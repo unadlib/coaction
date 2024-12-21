@@ -1,5 +1,6 @@
 import fs from 'fs';
 import https from 'https';
+import path from 'path';
 import { Suite } from 'benchmark';
 import QuickChart from 'quickchart-js';
 import { createCoactionMobxStore } from './coaction-mobx';
@@ -316,7 +317,9 @@ try {
   const chart = new QuickChart();
   chart.setConfig(config);
   console.log('config:', JSON.stringify(config));
-  const file = fs.createWriteStream('benchmark.jpg');
+  const file = fs.createWriteStream(
+    path.resolve(__dirname, '../../benchmark.jpg')
+  );
   https.get(chart.getUrl(), (response) => {
     response.pipe(file);
     file.on('finish', () => {
