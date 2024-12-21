@@ -23,7 +23,8 @@ export const bindZustand = ((initializer: StateCreator<any, [], []>) =>
             if (coactionStore.share === 'client') {
               throw new Error('client zustand store cannot be updated');
             } else if (coactionStore.share === 'main') {
-              // TODO: emit to all clients
+              // emit to all clients
+              coactionStore.setState(zustandStore.getState()!);
             }
           }
           internal.listeners.forEach((listener) => listener());
