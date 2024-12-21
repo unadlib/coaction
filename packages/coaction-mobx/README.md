@@ -24,7 +24,6 @@ import { makeAutoObservable } from 'mobx';
 const useStore = create(() =>
   makeAutoObservable(
     bindMobx({
-      name: 'test',
       count: 0,
       get double() {
         return this.count * 2;
@@ -35,6 +34,21 @@ const useStore = create(() =>
     })
   )
 );
+```
+
+### setState()
+
+- It is recommended to update state through store methods, instead of directly updating the state.
+- Any direct mutations to the state outside of methods should be wrapped in setState()
+
+```js
+// ❌ it will not be triggered state update
+store.getState().counter.count += 1;
+
+// ✅ it will be triggered state update
+store.setState(() => {
+  store.getState().counter.count += 1;
+});
 ```
 
 ## Documentation
