@@ -15,3 +15,5 @@ export const useStore = create(
     ]
   }
 );
+
+globalThis.useStore = useStore;
