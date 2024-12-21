@@ -78,42 +78,42 @@ test('base', () => {
 ]
 `);
   expect(stateFn.mock.calls).toMatchInlineSnapshot(`
+[
   [
-    [
-      1,
-      1,
-      1,
-      1,
-    ],
-    [
-      1,
-      1,
-      1,
-    ],
-  ]
-  `);
+    1,
+    1,
+    1,
+    1,
+  ],
+  [
+    1,
+    1,
+    1,
+  ],
+]
+`);
   expect(getterFn.mock.calls).toMatchInlineSnapshot(`
+[
   [
-    [
-      2,
-      2,
-      2,
-      2,
-    ],
-    [
-      2,
-      2,
-      2,
-    ],
-  ]
-  `);
+    2,
+    2,
+    2,
+    2,
+  ],
+  [
+    2,
+    2,
+    2,
+  ],
+]
+`);
   expect(useStore.getState()).toMatchInlineSnapshot(`
-  {
-    "count": 1,
-    "double": 2,
-    "increment": [Function],
-  }
-  `);
+{
+  "count": 1,
+  "double": 2,
+  "increment": [Function],
+}
+`);
   increment();
   expect(logFn.mock.calls).toMatchInlineSnapshot(`
 [
@@ -136,62 +136,62 @@ test('base', () => {
 ]
 `);
   expect(stateFn.mock.calls).toMatchInlineSnapshot(`
+[
   [
-    [
-      1,
-      1,
-      1,
-      1,
-    ],
-    [
-      1,
-      1,
-      1,
-    ],
-    [
-      2,
-      2,
-      2,
-      2,
-    ],
-    [
-      2,
-      2,
-      2,
-    ],
-  ]
-  `);
+    1,
+    1,
+    1,
+    1,
+  ],
+  [
+    1,
+    1,
+    1,
+  ],
+  [
+    2,
+    2,
+    2,
+    2,
+  ],
+  [
+    2,
+    2,
+    2,
+  ],
+]
+`);
   expect(getterFn.mock.calls).toMatchInlineSnapshot(`
+[
   [
-    [
-      2,
-      2,
-      2,
-      2,
-    ],
-    [
-      2,
-      2,
-      2,
-    ],
-    [
-      4,
-      4,
-      4,
-      4,
-    ],
-    [
-      4,
-      4,
-      4,
-    ],
-  ]
-  `);
+    2,
+    2,
+    2,
+    2,
+  ],
+  [
+    2,
+    2,
+    2,
+  ],
+  [
+    4,
+    4,
+    4,
+    4,
+  ],
+  [
+    4,
+    4,
+    4,
+  ],
+]
+`);
   expect(useStore.getState()).toMatchInlineSnapshot(`
-  {
-    "count": 2,
-    "double": 4,
-    "increment": [Function],
-  }
-  `);
+{
+  "count": 2,
+  "double": 4,
+  "increment": [Function],
+}
+`);
 });

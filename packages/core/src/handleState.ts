@@ -45,37 +45,14 @@ export const handleState = <T extends CreateState>(
           : merge;
       const enablePatches =
         store.transport ?? (options as StoreOptions<T>).enablePatches;
-      if (!enablePatches) {
-        if (internal.mutableInstance) {
-          if (internal.actMutable) {
-            internal.actMutable(() => {
-              fn.apply(null);
-            });
-            return [];
-          }
-          fn.apply(null);
+      if (!enablePatches && internal.mutableInstance) {
+        if (internal.actMutable) {
+          internal.actMutable(() => {
+            fn.apply(null);
+          });
           return [];
         }
-        // best performance by default for immutable state
-        // TODO: supporting nested set functions?
-        try {
-          internal.backupState = internal.rootState;
-          internal.rootState = createWithMutative(
-            internal.rootState,
-            (draft) => {
-              internal.rootState = draft as Draft<any>;
-              return fn.apply(null);
-            }
-          );
-        } catch (error) {
-          internal.rootState = internal.backupState;
-          throw error;
-        }
-        if (internal.updateImmutable) {
-          internal.updateImmutable(internal.rootState as T);
-        } else {
-          internal.listeners.forEach((listener) => listener());
-        }
+        fn.apply(null);
         return [];
       }
       internal.backupState = internal.rootState;
@@ -122,6 +99,45 @@ export const handleState = <T extends CreateState>(
       throw new Error('setState cannot be called within the updater');
     }
     internal.isBatching = true;
+    if (
+      !store.share &&
+      !(options as StoreOptions<T>).enablePatches &&
+      !internal.mutableInstance
+    ) {
+      if (typeof next === 'function') {
+        try {
+          internal.backupState = internal.rootState;
+          internal.rootState = createWithMutative(
+            internal.rootState,
+            (draft) => {
+              internal.rootState = draft as Draft<any>;
+              return next(internal.module);
+            }
+          );
+        } catch (error) {
+          internal.rootState = internal.backupState;
+          internal.isBatching = false;
+          throw error;
+        }
+      } else {
+        const copy = {} as T;
+        const rootState = internal.rootState as T;
+        for (const key of Object.keys(rootState)) {
+          copy[key] = rootState[key];
+        }
+        for (const key of Object.keys(next!)) {
+          copy[key] = next![key];
+        }
+        internal.rootState = copy;
+      }
+      if (internal.updateImmutable) {
+        internal.updateImmutable(internal.rootState as T);
+      } else {
+        internal.listeners.forEach((listener) => listener());
+      }
+      internal.isBatching = false;
+      return [];
+    }
     let result: void | [] | [any, Patches, Patches];
     try {
       const isDrafted = internal.mutableInstance && isDraft(internal.rootState);
