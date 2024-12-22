@@ -111,16 +111,18 @@ While standard Coaction achieves approximately 5,272 (ops/sec) and standard Zust
 
 Coaction's design philosophy is to provide a necessary and sufficiently simple API, making it easy for developers to use. Therefore, Coaction inherits the advantages of Zustand's API design and includes built-in support for features that Zustand does not offer.
 
-|                                   | `coaction` | Zustand |
-| --------------------------------- | ---------- | ------- |
-| Built-in multithreading           | ✅         | ❌      |
-| Support getter accessor           | ✅         | ❌      |
-| Built-in computed properties      | ✅         | ❌      |
-| Built-in namespace Slice          | ✅         | ❌      |
-| Built-in auto selector for state  | ✅         | ❌      |
-| Built-in multiple stores selector | ✅         | ❌      |
-| Easy to implement middleware      | ✅         | ❌      |
-| Support `this` in getter/action   | ✅         | ❌      |
+|                                   | Coaction | Zustand |
+| --------------------------------- | -------- | ------- |
+| Built-in multithreading           | ✅       | ❌      |
+| Support getter accessor           | ✅       | ❌      |
+| Built-in computed properties      | ✅       | ❌      |
+| Built-in namespace Slice          | ✅       | ❌      |
+| Built-in auto selector for state  | ✅       | ❌      |
+| Built-in multiple stores selector | ✅       | ❌      |
+| Easy to implement middleware      | ✅       | ❌      |
+| Support `this` in getter/action   | ✅       | ❌      |
+
+> Some of these features may already have corresponding solutions in the Zustand community; however, Coaction opts for a more unified and streamlined API, better suited to the development needs of modern web applications.
 
 ## Installation
 
