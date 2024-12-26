@@ -230,6 +230,30 @@ const useStore = create({
 });
 ```
 
+### Reusable Store
+
+You can refactor a general store into a multi-thread reusable store like this. This means you can use this store source code on a webpage and also on a worker. The key difference is that the references to these two stores are isolated, but their state is synchronized.
+
+`store.js`:
+
+```diff
++ const worker = globalThis.SharedWorker ? new SharedWorker(new URL('./store.js', import.meta.url), { type: 'module' }) : undefined;
+
+export const store = create(
+  (set) => ({
+    count: 0,
+    increment() {
+      set((draft) => {
+        draft.count += 1;
+      });
+    }
+  }),
++  { worker }
+);
+```
+
+> If you use TypeScript, then you should be aware of the difference between the two different store types. In the webpage context, it's AsyncStore (because its methods will become asynchronous, and these methods will be proxied to the worker for execution). In the worker context, it's Store. You can see [the reusable store example](examples/vanilla-base/src/store.ts).
+
 ## Integration
 
 Coaction is designed to be compatible with a wide range of libraries and frameworks.
