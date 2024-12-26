@@ -248,8 +248,8 @@ export const store = create(
       });
     }
   }),
-+  { worker }
-);
++ { worker }
+ );
 ```
 
 > If you use TypeScript, then you should be aware of the difference between the two different store types. In the webpage context, it's AsyncStore (because its methods will become asynchronous, and these methods will be proxied to the worker for execution). In the worker context, it's Store. You can see [the reusable store example](examples/vanilla-base/src/store.ts).
