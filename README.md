@@ -290,6 +290,28 @@ Coaction is designed to be compatible with a wide range of libraries and framewo
 | Persist   | @coaction/persist | Ongoing |
 | Undo/Redo | @coaction/history | Ongoing |
 
+## FAQs
+
+- Can I use Coaction without using multithreading?
+
+Absolutely, Coaction also supports single-threaded mode. Its API is designed to be usable in both multithreaded and single-threaded environments. It's powerful, simple, and offers high performance. In its default single-threaded mode, it doesn't use patch updates to ensure optimal performance.
+
+- Why is Coaction faster than Zustand?
+
+Coaction utilizes the Mutative library, which offers a faster state update mechanism. The Mutative library allows for the use of mutable instances for performance optimization when needed, whereas Zustand uses the Immer library, which is an immutable library and can potentially lead to performance slowdowns.
+
+- Why can Coaction integrate with both observable and immutable state libraries?
+
+Coaction is based on the Mutative library, so it can be used regardless of whether the state is immutable or not. No matter the nature of the state library, Coaction can integrate with it effectively. It can first bind to the existing state object and then, through proxy execution, obtain patches for modifying the state. Finally, it applies these patches to the third-party state library to update the state.
+
+- Does Coaction support CRDTs?
+
+Yes, Coaction supports CRDTs. It can achieve remote synchronization through the `data-transport` library, making Coaction well-suited for building any CRDTs application.
+
+- Does Coaction support multiple tabs?
+
+Yes, Coaction supports multiple tabs. It can achieve state synchronization between multiple tabs through the `data-transport` library. You might consider using SharedWorker for support, which allows sharing state between multiple tabs.
+
 ## Credits
 
 - Coaction's concept is inspired by [Partytown](https://partytown.qwik.dev/).
