@@ -276,7 +276,7 @@ Coaction is designed to be compatible with a wide range of libraries and framewo
 | MobX          | @coaction/mobx    | ✅ Done |
 | Pinia         | @coaction/pinia   | ✅ Done |
 | Zustand       | @coaction/zustand | ✅ Done |
-| Redux Toolkit | @coaction/redux   | Ongoing |
+| Redux Toolkit | @coaction/redux   |         |
 | Jotai         | @coaction/jotai   |         |
 | XState        | @coaction/xstate  |         |
 | Valtio        | @coaction/valtio  |         |
