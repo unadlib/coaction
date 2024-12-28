@@ -296,7 +296,7 @@ Coaction is designed to be compatible with a wide range of libraries and framewo
 
 Absolutely, Coaction also supports single-threaded mode. Its API is designed to be usable in both multithreaded and single-threaded environments. It's powerful, simple, and offers high performance. In its default single-threaded mode, it doesn't use patch updates to ensure optimal performance.
 
-- Why is Coaction faster than Zustand?
+- Why is Coaction faster than Zustand with Immer?
 
 Coaction utilizes the Mutative library, which offers a faster state update mechanism. The Mutative library allows for the use of mutable instances for performance optimization when needed, whereas Zustand uses the Immer library, which is an immutable library and can potentially lead to performance slowdowns.
 
