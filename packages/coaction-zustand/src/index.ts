@@ -17,6 +17,7 @@ export const bindZustand = ((initializer: StateCreator<any, [], []>) =>
         let isCoactionUpdated = false;
         internal.rootState = zustandStore.getState() as object;
         coactionStore = store;
+        // TODO: check Slice Zustand store
         zustandStore.subscribe(() => {
           if (!isCoactionUpdated) {
             internal.rootState = zustandStore.getState() as object;
