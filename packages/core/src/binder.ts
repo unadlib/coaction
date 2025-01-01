@@ -32,10 +32,26 @@ export function createBinder<F = (...args: any[]) => any>({
    * handleStore is a function to handle the store object.
    */
   handleStore: (
+    /**
+     * Coaction store
+     */
     store: Store<object>,
+    /**
+     * The raw state object from 3rd party library.
+     */
     rawState: object,
+    /**
+     * 3rd party library state object to Coaction state object.
+     */
     state: object,
-    internal: Internal<object>
+    /**
+     * internal Coaction API.
+     */
+    internal: Internal<object>,
+    /**
+     * the key of the slice state object.
+     */
+    key?: string
   ) => void;
 }) {
   return (<S extends object>(state: S): S => {
