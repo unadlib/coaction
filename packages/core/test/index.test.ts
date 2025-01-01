@@ -420,9 +420,47 @@ describe('Slices', () => {
       }
     });
 
-    const useServerStore = create(
+    const counter1: Slices<
       {
-        counter
+        counter1: {
+          count: number;
+          increment: () => void;
+        };
+      },
+      'counter1'
+    > = (set) => ({
+      count: 0,
+      increment() {
+        set((draft) => {
+          draft.counter1.count += 1;
+        });
+      }
+    });
+
+    // TODO: improve type for slices
+    const useServerStore = create<{
+      counter: Slices<
+        {
+          counter: {
+            count: number;
+            increment: () => void;
+          };
+        },
+        'counter'
+      >;
+      counter1: Slices<
+        {
+          counter1: {
+            count: number;
+            increment: () => void;
+          };
+        },
+        'counter1'
+      >;
+    }>(
+      {
+        counter,
+        counter1
       },
       {
         name: 'test',
