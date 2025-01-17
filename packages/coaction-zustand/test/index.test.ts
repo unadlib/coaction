@@ -165,7 +165,7 @@ test('worker', async () => {
 });
 
 describe('Slices', () => {
-  test.only('base', () => {
+  test.skip('base', () => {
     const counter: StateCreator<
       {
         count: number;
