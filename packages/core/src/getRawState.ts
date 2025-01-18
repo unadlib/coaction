@@ -49,6 +49,7 @@ export const getRawState = <T extends CreateState>(
             // manually handle computed property
             const { deps, fn } = descriptor.value as Computed;
             const depsCallbackSelector = createSelectorWithArray(
+              // the root state should be updated, and the computed property will be updated.
               () => [internal.rootState],
               () => {
                 return deps(internal.module as Store<T>['getState']);
