@@ -260,35 +260,35 @@ Coaction is designed to be compatible with a wide range of libraries and framewo
 
 ### Supported Libraries and Frameworks
 
-|         | Package          | Status  |
-| ------- | ---------------- | ------- |
-| React   | @coaction/react  | ✅ Done |
-| Vue     | @coaction/vue    | Ongoing |
-| Angular | @coaction/ng     |         |
-| Svelte  | @coaction/svelte |         |
-| Solid   | @coaction/solid  |         |
-| Yjs     | @coaction/yjs    |         |
+|         | Package          | Status |
+| ------- | ---------------- | ------ |
+| React   | @coaction/react  | ✅     |
+| Vue     | @coaction/vue    | 🔶     |
+| Angular | @coaction/ng     |        |
+| Svelte  | @coaction/svelte |        |
+| Solid   | @coaction/solid  |        |
+| Yjs     | @coaction/yjs    |        |
 
 ### State Management Libraries
 
-|               | Package           | Status  |
-| ------------- | ----------------- | ------- |
-| MobX          | @coaction/mobx    | ✅ Done |
-| Pinia         | @coaction/pinia   | ✅ Done |
-| Zustand       | @coaction/zustand | ✅ Done |
-| Redux Toolkit | @coaction/redux   |         |
-| Jotai         | @coaction/jotai   |         |
-| XState        | @coaction/xstate  |         |
-| Valtio        | @coaction/valtio  |         |
-| alien-signals | @coaction/alien   | Ongoing |
+|               | Package                 | Status |
+| ------------- | ----------------------- | ------ |
+| MobX          | @coaction/mobx          | ✅     |
+| Pinia         | @coaction/pinia         | ✅     |
+| Zustand       | @coaction/zustand       | ✅     |
+| Redux Toolkit | @coaction/redux         |        |
+| Jotai         | @coaction/jotai         |        |
+| XState        | @coaction/xstate        |        |
+| Valtio        | @coaction/valtio        |        |
+| alien-signals | @coaction/alien-signals | 🔶     |
 
 ## Middlewares
 
-|           | Package           | Status  |
-| --------- | ----------------- | ------- |
-| Logger    | @coaction/logger  | ✅ Done |
-| Persist   | @coaction/persist | Ongoing |
-| Undo/Redo | @coaction/history | Ongoing |
+|           | Package           | Status |
+| --------- | ----------------- | ------ |
+| Logger    | @coaction/logger  | ✅     |
+| Persist   | @coaction/persist | 🔶     |
+| Undo/Redo | @coaction/history | 🔶     |
 
 ## FAQs
 
