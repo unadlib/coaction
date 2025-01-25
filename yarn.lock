@@ -3028,6 +3028,11 @@ ajv@^8.11.0:
     require-from-string "^2.0.2"
     uri-js "^4.4.1"
 
+alien-signals@^1.0.1:
+  version "1.0.1"
+  resolved "https://registry.yarnpkg.com/alien-signals/-/alien-signals-1.0.1.tgz#2de3b216e52e28db44efb42c1941a09a025ec7d7"
+  integrity sha512-oOo4M4xdTUCFK2oG2shusk7FR4hmpg0OJGlGEeLwQYctoJ+6UWOpHtU6Y6rBuFUaR34mgLpakcCFKeGFaoeJ0A==
+
 ansi-colors@^3.0.0:
   version "3.2.4"
   resolved "https://registry.yarnpkg.com/ansi-colors/-/ansi-colors-3.2.4.tgz#e3a3da4bfbae6c86a9c285625de124a234026fbf"
