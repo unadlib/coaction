@@ -1,28 +1,31 @@
-# coaction
+# @coaction/vue
 
 ![Node CI](https://github.com/unadlib/coaction/workflows/Node%20CI/badge.svg)
-[![npm](https://img.shields.io/npm/v/coaction.svg)](https://www.npmjs.com/package/coaction)
-![license](https://img.shields.io/npm/l/coaction)
+[![npm](https://img.shields.io/npm/v/@coaction/vue.svg)](https://www.npmjs.com/package/@coaction/vue)
+![license](https://img.shields.io/npm/l/@coaction/vue)
 
-An efficient and flexible state management library for building high-performance, multithreading web applications.
+A Coaction integration tool for Vue
 
 ## Installation
 
 You can install it via npm, yarn or pnpm.
 
 ```sh
-npm install coaction
+npm install coaction @coaction/vue
 ```
 
 ## Usage
 
 ```jsx
 import { create } from 'coaction';
+import { bindVue } from '@coaction/vue';
 
-const useStore = create((set) => ({
-  count: 0,
-  increment: () => set((state) => state.count++)
-}));
+const useStore = create((set) =>
+  bindVue((set) => ({
+    count: 0,
+    increment: () => set((state) => state.count++)
+  }))
+);
 ```
 
 ## Documentation
