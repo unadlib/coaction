@@ -1,5 +1,6 @@
 ## TODO
 
+- [ ] remove 3rd party slices pattern
 - [ ] fix `@coaction/zustand` slice issue
 - [ ] refactor `core`
 - [ ] add `core` testing
