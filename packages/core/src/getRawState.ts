@@ -101,16 +101,37 @@ export const getRawState = <T extends CreateState>(
             }
             const keys = sliceKey ? [sliceKey, key] : [key];
             // emit the action to worker or main thread execute
-            return store
-              .transport!.emit('execute', keys, args)
-              .then((result: any) => {
-                if (result?.$$Error) {
-                  done?.(result);
-                  throw new Error(result.$$Error);
-                }
-                done?.(result);
-                return result;
-              });
+            return (
+              store
+                .transport!.emit('execute', keys, args)
+                // @ts-ignore
+                .then(([result, sequence]: [any, number]) => {
+                  if (internal.sequence >= sequence) {
+                    if (result?.$$Error) {
+                      done?.(result);
+                      throw new Error(result.$$Error);
+                    }
+                    done?.(result);
+                    return result;
+                  }
+                  if (process.env.NODE_ENV === 'development') {
+                    console.warn(
+                      `The sequence of the action is not consistent.`,
+                      sequence,
+                      internal.sequence
+                    );
+                  }
+                  return new Promise((resolve) => {
+                    const unsubscribe = store.subscribe(() => {
+                      if (internal.sequence >= sequence) {
+                        unsubscribe();
+                        done?.(result);
+                        resolve(result);
+                      }
+                    });
+                  });
+                })
+            );
           };
         } else {
           const fn = descriptor.value;

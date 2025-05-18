@@ -15,7 +15,7 @@ export const createAsyncClientStore = <T extends CreateState>(
   },
   asyncStoreClientOption: ClientTransportOptions
 ) => {
-  const { store: asyncClientStore } = createStore({
+  const { store: asyncClientStore, internal } = createStore({
     share: 'client'
   });
   // the transport is in the worker or shared worker, and the client is in the main thread.
@@ -37,11 +37,10 @@ export const createAsyncClientStore = <T extends CreateState>(
     throw new Error('transport is required');
   }
   asyncClientStore.transport = transport;
-  let sequence: number;
   const fullSync = async () => {
     const latest = await transport.emit('fullSync');
     asyncClientStore.apply(JSON.parse(latest.state));
-    sequence = latest.sequence;
+    internal.sequence = latest.sequence;
   };
   if (typeof transport.onConnect !== 'function') {
     throw new Error('transport.onConnect is required');
@@ -52,9 +51,9 @@ export const createAsyncClientStore = <T extends CreateState>(
   transport.listen('update', async (options) => {
     if (
       typeof options.sequence === 'number' &&
-      options.sequence === sequence + 1
+      options.sequence === internal.sequence + 1
     ) {
-      sequence = options.sequence;
+      internal.sequence = options.sequence;
       asyncClientStore.apply(undefined, options.patches);
     } else {
       await fullSync();

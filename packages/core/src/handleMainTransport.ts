@@ -53,10 +53,10 @@ export const handleMainTransport = <T extends CreateState>(
       throw new Error('The function is not found');
     }
     try {
-      return (base as Function)(...args);
+      return [(base as Function)(...args), internal.sequence];
     } catch (error: any) {
       console.error(error);
-      return { $$Error: error.message };
+      return [{ $$Error: error.message }, internal.sequence];
     }
   });
   transport.listen('fullSync', async () => {
