@@ -86,7 +86,20 @@ export const create: Creator = <T extends CreateState>(
     };
     const getPureState: Store<T>['getPureState'] = () =>
       internal.rootState as T;
-    const isSliceStore = typeof createState === 'object';
+    let isSliceStore = false;
+    if (
+      typeof createState === 'object' &&
+      createState !== null
+    ) {
+      const values = Object.values(createState);
+      if (values.length > 0 && values.every((value) => typeof value === 'function')) {
+        isSliceStore = true;
+      }
+      // If values.length is 0 (empty object), or not all values are functions,
+      // and createState is an object, isSliceStore remains false.
+      // This means it's treated as a plain object state or an empty object.
+    }
+    // If createState is a function (not an object), isSliceStore also remains false.
     Object.assign(store, {
       name,
       share: share ?? false,
