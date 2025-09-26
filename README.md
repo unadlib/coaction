@@ -271,16 +271,15 @@ Coaction is designed to be compatible with a wide range of libraries and framewo
 
 ### State Management Libraries
 
-|               | Package                 | Status |
-| ------------- | ----------------------- | ------ |
-| MobX          | @coaction/mobx          | ✅     |
-| Pinia         | @coaction/pinia         | ✅     |
-| Zustand       | @coaction/zustand       | ✅     |
-| Redux Toolkit | @coaction/redux         |        |
-| Jotai         | @coaction/jotai         |        |
-| XState        | @coaction/xstate        |        |
-| Valtio        | @coaction/valtio        |        |
-| alien-signals | @coaction/alien-signals | 🔶     |
+|               | Package           | Status |
+| ------------- | ----------------- | ------ |
+| MobX          | @coaction/mobx    | ✅     |
+| Pinia         | @coaction/pinia   | ✅     |
+| Zustand       | @coaction/zustand | ✅     |
+| Redux Toolkit | @coaction/redux   |        |
+| Jotai         | @coaction/jotai   |        |
+| XState        | @coaction/xstate  |        |
+| Valtio        | @coaction/valtio  |        |
 
 ## Middlewares
 
