@@ -51,14 +51,8 @@ const handleStore = (
   store: StoreWithSubscriptions,
   state: object,
   _: object,
-  internal: any,
-  key?: string
+  internal: any
 ) => {
-  if (key) {
-    throw new Error(
-      '@coaction/pinia does not support Slices mode. Please inject a whole Pinia store instead.'
-    );
-  }
   if (!internal.toMutableRaw) {
     internal.toMutableRaw = (key: any) => instancesMap.get(key);
     Object.assign(store, {
@@ -80,19 +74,7 @@ const handleStore = (
     store.apply = (state = store.getState(), patches) => {
       if (!patches) {
         if (state === store.getState()) return;
-        if (store.isSliceStore) {
-          if (typeof state === 'object' && state !== null) {
-            for (const key in state) {
-              const _key = key as keyof typeof state;
-              const _state = state[_key];
-              if (typeof _state === 'object' && _state !== null) {
-                Object.assign(store.getState()[_key], _state);
-              }
-            }
-          }
-        } else {
-          Object.assign(store.getState(), state);
-        }
+        Object.assign(store.getState(), state);
         return;
       }
       apply(state, patches);

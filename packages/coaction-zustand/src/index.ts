@@ -12,13 +12,8 @@ export const bindZustand = ((initializer: StateCreator<any, [], []>) =>
   (set, get, zustandStore) => {
     let coactionStore: Store<object>;
     const internalBindZustand = createBinder<BindZustand>({
-      handleStore: (store, rawState, state, internal, key) => {
+      handleStore: (store, rawState, state, internal) => {
         coactionStore = store;
-        if (key) {
-          throw new Error(
-            '@coaction/zustand does not support Slices mode. Please inject a whole Zustand store instead.'
-          );
-        }
         if (zustandStore.getState() === internal.rootState) return;
         let isCoactionUpdated = false;
         internal.rootState = zustandStore.getState() as object;
