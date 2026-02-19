@@ -71,6 +71,6 @@ module.exports = {
   ],
   plugins: [
     stripSymbolObservableMethodPlugin,
-    '@babel/proposal-class-properties'
+    '@babel/plugin-transform-class-properties'
   ]
 };
