@@ -33,7 +33,10 @@
     "type": "git",
     "url": "git+ssh://git@github.com/unadlib/coaction.git"
   },
-  "scripts": {},
+  "scripts": {
+    "clean": "rm -rf dist",
+    "test": "jest --config ../../jest.config.js packages/core/test"
+  },
   "bugs": {
     "url": "https://github.com/unadlib/coaction/issues"
   },

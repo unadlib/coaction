@@ -5,25 +5,24 @@ permissions:
   contents: read
   pull-requests: write
 jobs:
-
   build:
     name: Build
     runs-on: ubuntu-latest
     steps:
-
-    - uses: actions/checkout@v1
-
-    - name: Use Node.js 22.x
-      uses: actions/setup-node@v1
-      with:
-        node-version: 22.x
-
-    - name: yarn install, yarn test:coverage
-      run: |
-        yarn install
-        yarn test --coverage
-
-    - name: Coverage
-      uses: romeovs/lcov-reporter-action@v0.4.0
-      with:
-        lcov-file: ./coverage/lcov.info
+      - uses: actions/checkout@v4
+      - uses: pnpm/action-setup@v4
+        with:
+          version: 10
+      - name: Use Node.js 22.x
+        uses: actions/setup-node@v4
+        with:
+          node-version: 22.x
+          cache: pnpm
+      - name: Install and test coverage
+        run: |
+          pnpm install --frozen-lockfile
+          pnpm test:coverage
+      - name: Coverage
+        uses: romeovs/lcov-reporter-action@v0.4.0
+        with:
+          lcov-file: ./coverage/lcov.info
