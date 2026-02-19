@@ -8,14 +8,8 @@ const handleStore = (
   store: Store<object>,
   rawState: object,
   state: object,
-  internal: any,
-  key?: string
+  internal: any
 ) => {
-  if (key) {
-    throw new Error(
-      '@coaction/mobx does not support Slices mode. Please inject a whole MobX store instead.'
-    );
-  }
   if (internal.toMutableRaw) return;
   internal.toMutableRaw = (key: object) => instancesMap.get(key);
   Object.assign(store, {
@@ -24,23 +18,9 @@ const handleStore = (
   internal.actMutable = runInAction;
   store.apply = (state = store.getState(), patches) => {
     if (!patches) {
-      if (store.isSliceStore) {
-        if (typeof state === 'object' && state !== null) {
-          runInAction(() => {
-            for (const key in state) {
-              const _key = key as keyof typeof state;
-              const _state = state[_key];
-              if (typeof _state === 'object' && _state !== null) {
-                Object.assign(store.getState()[_key], _state);
-              }
-            }
-          });
-        }
-      } else {
-        runInAction(() => {
-          Object.assign(store.getState(), state);
-        });
-      }
+      runInAction(() => {
+        Object.assign(store.getState(), state);
+      });
       return;
     }
     runInAction(() => {
