@@ -196,6 +196,12 @@ importers:
         specifier: ^0.1.5
         version: 0.1.5
 
+  packages/coaction-persist:
+    devDependencies:
+      coaction:
+        specifier: ^0.1.5
+        version: 0.1.5
+
   packages/coaction-pinia:
     dependencies:
       mutability:
