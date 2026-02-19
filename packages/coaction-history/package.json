@@ -1,0 +1,65 @@
+{
+  "name": "@coaction/history",
+  "version": "0.1.5",
+  "description": "A undo/redo middleware for Coaction",
+  "keywords": [
+    "state",
+    "coaction",
+    "middleware",
+    "history",
+    "undo",
+    "redo"
+  ],
+  "authors": [
+    "Michael Lin <unadlib@gmail.com> (https://github.com/unadlib)"
+  ],
+  "homepage": "https://github.com/unadlib/coaction/tree/main/packages/coaction-history#readme",
+  "license": "MIT",
+  "main": "dist/coaction-history.cjs.js",
+  "module": "dist/coaction-history.esm.js",
+  "exports": {
+    ".": {
+      "types": {
+        "import": "./dist/coaction-history.cjs.mjs",
+        "default": "./dist/coaction-history.cjs.js"
+      },
+      "module": "./dist/coaction-history.esm.js",
+      "import": "./dist/coaction-history.cjs.mjs",
+      "default": "./dist/coaction-history.cjs.js"
+    },
+    "./package.json": "./package.json"
+  },
+  "types": "dist/coaction-history.cjs.d.ts",
+  "sideEffects": false,
+  "files": [
+    "dist"
+  ],
+  "repository": {
+    "type": "git",
+    "url": "git+ssh://git@github.com/unadlib/coaction.git"
+  },
+  "scripts": {
+    "clean": "rm -rf dist",
+    "test": "vitest run test"
+  },
+  "bugs": {
+    "url": "https://github.com/unadlib/coaction/issues"
+  },
+  "preconstruct": {
+    "umdName": "CoactionHistory",
+    "entrypoints": [
+      "./index.ts"
+    ]
+  },
+  "peerDependencies": {
+    "coaction": "^0.1.5"
+  },
+  "peerDependenciesMeta": {
+    "coaction": {
+      "optional": true
+    }
+  },
+  "devDependencies": {
+    "coaction": "^0.1.5"
+  }
+}
