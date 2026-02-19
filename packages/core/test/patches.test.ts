@@ -203,9 +203,7 @@ test('worker', async () => {
       name: 'test',
       enablePatches: false
     });
-  }).toThrowErrorMatchingInlineSnapshot(
-    `"enablePatches: true is required for the transport"`
-  );
+  }).toThrowError('enablePatches: true is required for the transport');
 });
 
 describe('Slices', () => {

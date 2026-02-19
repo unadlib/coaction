@@ -39,7 +39,7 @@
   },
   "scripts": {
     "clean": "rm -rf dist",
-    "test": "jest --config ../../jest.config.js packages/coaction-vue/test"
+    "test": "vitest run test"
   },
   "bugs": {
     "url": "https://github.com/unadlib/coaction/issues"
