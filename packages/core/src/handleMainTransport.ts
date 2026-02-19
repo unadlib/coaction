@@ -49,17 +49,17 @@ export const handleMainTransport = <T extends CreateState>(
   transport.listen('execute', async (keys, args) => {
     let base = store.getState();
     let obj = base;
-    for (const key of keys) {
-      base = base[key];
-      if (typeof base === 'function') {
-        base = base.bind(obj);
-      }
-      obj = base;
-    }
-    if (process.env.NODE_ENV === 'development' && typeof base !== 'function') {
-      throw new Error('The function is not found');
-    }
     try {
+      for (const key of keys) {
+        base = base[key];
+        if (typeof base === 'function') {
+          base = base.bind(obj);
+        }
+        obj = base;
+      }
+      if (typeof base !== 'function') {
+        throw new Error('The function is not found');
+      }
       return [(base as Function)(...args), internal.sequence];
     } catch (error: unknown) {
       console.error(error);
