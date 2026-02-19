@@ -230,6 +230,38 @@ const useStore = create({
 });
 ```
 
+### Store Shape Mode (`sliceMode`)
+
+`create()` infers store shape from `createState` by default (`sliceMode: 'auto'`).
+
+- Use `sliceMode: 'single'` when you want an object to be treated as a single store, even if all values are functions.
+- Use `sliceMode: 'slices'` when you want strict slices mode with validation.
+
+```ts
+const singleStore = create(
+  {
+    ping() {
+      return 'pong';
+    }
+  },
+  { sliceMode: 'single' }
+);
+
+const slicesStore = create(
+  {
+    counter: (set) => ({
+      count: 0,
+      increment() {
+        set((draft) => {
+          draft.counter.count += 1;
+        });
+      }
+    })
+  },
+  { sliceMode: 'slices' }
+);
+```
+
 ### Reusable Store
 
 You can refactor a general store into a multi-thread reusable store like this. This means you can use this store source code on a webpage and also on a worker. The key difference is that the references to these two stores are isolated, but their state is synchronized.

@@ -25,6 +25,18 @@ const useStore = create((set) => ({
 }));
 ```
 
+### Store Shape Mode (`sliceMode`)
+
+`create()` uses `sliceMode: 'auto'` by default. You can force behavior explicitly:
+
+- `sliceMode: 'single'`: treat object input as a single store.
+- `sliceMode: 'slices'`: require object-of-slice-functions input.
+
+```ts
+create({ ping: () => 'pong' }, { sliceMode: 'single' });
+create({ counter: (set) => ({ count: 0 }) }, { sliceMode: 'slices' });
+```
+
 ## Documentation
 
 You can find the documentation [here](https://github.com/unadlib/coaction).
