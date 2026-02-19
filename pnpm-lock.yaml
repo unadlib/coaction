@@ -132,6 +132,12 @@ importers:
         specifier: ^0.1.5
         version: 0.1.5
 
+  packages/coaction-history:
+    devDependencies:
+      coaction:
+        specifier: ^0.1.5
+        version: 0.1.5
+
   packages/coaction-jotai:
     devDependencies:
       coaction:
