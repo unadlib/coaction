@@ -195,3 +195,37 @@ test('base', () => {
 }
 `);
 });
+
+test('middleware can return a replaced store object', () => {
+  const calls: string[] = [];
+  const replaceStoreMiddleware: Middleware<{
+    count: number;
+  }> = (store) => {
+    const baseSetState = store.setState;
+    return {
+      ...store,
+      setState(next, updater) {
+        calls.push('before');
+        const result = baseSetState(next, updater);
+        calls.push('after');
+        return result;
+      }
+    };
+  };
+  const useStore = create<{ count: number }>(
+    () => ({
+      count: 0
+    }),
+    {
+      middlewares: [replaceStoreMiddleware]
+    }
+  );
+  useStore.setState({ count: 1 });
+  expect(calls).toMatchInlineSnapshot(`
+[
+  "before",
+  "after",
+]
+`);
+  expect(useStore.getState().count).toBe(1);
+});
