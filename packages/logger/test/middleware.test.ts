@@ -149,3 +149,38 @@ test('base', () => {
 }
 `);
 });
+
+test('should use custom logger group methods in setState', () => {
+  const customLogger = {
+    log: jest.fn(),
+    group: jest.fn(),
+    groupCollapsed: jest.fn(),
+    trace: jest.fn(),
+    groupEnd: jest.fn()
+  };
+  const useStore = create<{
+    count: number;
+    increment: () => void;
+  }>(
+    (set) => ({
+      count: 0,
+      increment() {
+        set((draft) => {
+          draft.count += 1;
+        });
+      }
+    }),
+    {
+      middlewares: [
+        logger({
+          logger: customLogger,
+          collapsed: false
+        })
+      ]
+    }
+  );
+  useStore.getState().increment();
+  expect(customLogger.group).toHaveBeenCalledTimes(2);
+  expect(customLogger.groupCollapsed).toHaveBeenCalledTimes(0);
+  expect(customLogger.groupEnd).toHaveBeenCalledTimes(2);
+});
