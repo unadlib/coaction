@@ -329,6 +329,67 @@ test('3rd-party binding does not support slices mode', () => {
   expect(handleStore).toHaveBeenCalledTimes(0);
 });
 
+describe('Store Name Lifecycle', () => {
+  const NODE_ENV = process.env.NODE_ENV;
+
+  beforeEach(() => {
+    process.env.NODE_ENV = 'development';
+  });
+
+  afterEach(() => {
+    process.env.NODE_ENV = NODE_ENV;
+  });
+
+  const createMainStore = (
+    name: string,
+    createState: Slice<{ count: number; increment: () => void }> = (set) => ({
+      count: 0,
+      increment() {
+        set((draft) => {
+          draft.count += 1;
+        });
+      }
+    })
+  ) => {
+    const ports = mockPorts();
+    const transport = createTransport('WebWorkerInternal', ports.main);
+    return create(createState, {
+      name,
+      transport,
+      workerType: 'WebWorkerInternal'
+    });
+  };
+
+  test('name can be reused after destroy in main share mode', () => {
+    const useStore = createMainStore('name-reusable');
+    expect(() =>
+      createMainStore('name-reusable')
+    ).toThrowErrorMatchingInlineSnapshot(
+      `"Store name 'name-reusable' is not unique."`
+    );
+    useStore.destroy();
+    let recreatedStore: ReturnType<typeof create> | undefined;
+    expect(() => {
+      recreatedStore = createMainStore('name-reusable');
+    }).not.toThrow();
+    recreatedStore!.destroy();
+  });
+
+  test('name is released when create throws in main share mode', () => {
+    expect(() =>
+      createMainStore('name-released-on-error', () => {
+        throw new Error('init failed');
+      })
+    ).toThrowErrorMatchingInlineSnapshot(`"init failed"`);
+
+    let useStore: ReturnType<typeof create> | undefined;
+    expect(() => {
+      useStore = createMainStore('name-released-on-error');
+    }).not.toThrow();
+    useStore!.destroy();
+  });
+});
+
 describe('Slices', () => {
   test('base', () => {
     const stateFn = jest.fn();

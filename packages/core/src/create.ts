@@ -55,72 +55,85 @@ export const create: Creator = <T extends CreateState>(
       listeners: new Set<Listener>()
     } as Internal<T>;
     const name = options.name ?? defaultName;
+    const shouldTrackName =
+      process.env.NODE_ENV === 'development' && share === 'main';
+    const releaseStoreName = () => {
+      if (shouldTrackName) {
+        namespaceMap.delete(name);
+      }
+    };
     // check if the store name is unique in main share mode
-    if (process.env.NODE_ENV === 'development' && share === 'main') {
+    if (shouldTrackName) {
       if (namespaceMap.get(name)) {
         throw new Error(`Store name '${name}' is not unique.`);
       }
       namespaceMap.set(name, true);
     }
-    const { setState, getState } = handleState(store, internal, options);
-    const subscribe: Store<T>['subscribe'] = (listener) => {
-      internal.listeners.add(listener);
-      return () => internal.listeners.delete(listener);
-    };
-    const destroy: Store<T>['destroy'] = () => {
-      internal.listeners.clear();
-      store.transport?.dispose();
-    };
-    const apply: Store<T>['apply'] = (
-      state = internal.rootState as T,
-      patches
-    ) => {
-      internal.rootState = patches
-        ? (applyWithMutative(state, patches) as T)
-        : state;
-      if (internal.updateImmutable) {
-        internal.updateImmutable(internal.rootState as T);
-      } else {
-        internal.listeners.forEach((listener) => listener());
+    try {
+      const { setState, getState } = handleState(store, internal, options);
+      const subscribe: Store<T>['subscribe'] = (listener) => {
+        internal.listeners.add(listener);
+        return () => internal.listeners.delete(listener);
+      };
+      const destroy: Store<T>['destroy'] = () => {
+        internal.listeners.clear();
+        store.transport?.dispose();
+        releaseStoreName();
+      };
+      const apply: Store<T>['apply'] = (
+        state = internal.rootState as T,
+        patches
+      ) => {
+        internal.rootState = patches
+          ? (applyWithMutative(state, patches) as T)
+          : state;
+        if (internal.updateImmutable) {
+          internal.updateImmutable(internal.rootState as T);
+        } else {
+          internal.listeners.forEach((listener) => listener());
+        }
+      };
+      const getPureState: Store<T>['getPureState'] = () =>
+        internal.rootState as T;
+      let isSliceStore = false;
+      if (typeof createState === 'object' && createState !== null) {
+        const values = Object.values(createState);
+        if (
+          values.length > 0 &&
+          values.every((value) => typeof value === 'function')
+        ) {
+          isSliceStore = true;
+        }
+        // If values.length is 0 (empty object), or not all values are functions,
+        // and createState is an object, isSliceStore remains false.
+        // This means it's treated as a plain object state or an empty object.
       }
-    };
-    const getPureState: Store<T>['getPureState'] = () =>
-      internal.rootState as T;
-    let isSliceStore = false;
-    if (
-      typeof createState === 'object' &&
-      createState !== null
-    ) {
-      const values = Object.values(createState);
-      if (values.length > 0 && values.every((value) => typeof value === 'function')) {
-        isSliceStore = true;
-      }
-      // If values.length is 0 (empty object), or not all values are functions,
-      // and createState is an object, isSliceStore remains false.
-      // This means it's treated as a plain object state or an empty object.
+      // If createState is a function (not an object), isSliceStore also remains false.
+      Object.assign(store, {
+        name,
+        share: share ?? false,
+        setState,
+        getState,
+        subscribe,
+        destroy,
+        apply,
+        isSliceStore,
+        getPureState
+      } as Store<T>);
+      applyMiddlewares(store, options.middlewares ?? []);
+      const initialState = getInitialState(store, createState, internal);
+      store.getInitialState = () => initialState;
+      internal.rootState = getRawState(
+        store,
+        internal,
+        initialState,
+        options
+      ) as T;
+      return { store, internal };
+    } catch (error) {
+      releaseStoreName();
+      throw error;
     }
-    // If createState is a function (not an object), isSliceStore also remains false.
-    Object.assign(store, {
-      name,
-      share: share ?? false,
-      setState,
-      getState,
-      subscribe,
-      destroy,
-      apply,
-      isSliceStore,
-      getPureState
-    } as Store<T>);
-    applyMiddlewares(store, options.middlewares ?? []);
-    const initialState = getInitialState(store, createState, internal);
-    store.getInitialState = () => initialState;
-    internal.rootState = getRawState(
-      store,
-      internal,
-      initialState,
-      options
-    ) as T;
-    return { store, internal };
   };
   if (
     (options as ClientStoreOptions<T>).clientTransport ||
