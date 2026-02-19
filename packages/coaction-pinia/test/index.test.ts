@@ -311,98 +311,50 @@ test('worker', async () => {
 });
 
 describe('Slices', () => {
-  test('base', () => {
-    const stateFn = jest.fn();
-    const getterFn = jest.fn();
-    const useStore = create(
-      {
-        counter: ((set, get, store) =>
-          adapt(
-            defineStore(
-              'test',
-              bindPinia({
-                state: () => ({ count: 0 }),
-                getters: {
-                  double: (state) => {
-                    return state.count * 2;
+  test('base - unsupported', () => {
+    expect(() => {
+      create(
+        {
+          counter: (() =>
+            adapt(
+              defineStore(
+                'test',
+                bindPinia({
+                  state: () => ({ count: 0 }),
+                  getters: {
+                    double: (state) => {
+                      return state.count * 2;
+                    }
+                  },
+                  actions: {
+                    increment() {
+                      this.count += 1;
+                    }
                   }
-                },
-                actions: {
-                  increment() {
-                    this.count += 1;
-                    stateFn(
-                      get().counter.count,
-                      store.getState().counter.count,
-                      this.count
-                    );
-                    getterFn(
-                      get().counter.double,
-                      store.getState().counter.double,
-                      this.double
-                    );
-                  }
-                }
-              })
-            )
-          )) satisfies Slices<
-          {
-            counter: {
-              count: number;
-              readonly double: number;
-              increment: () => void;
-            };
-          },
-          'counter'
-        >
-      },
-      {
-        name: 'test'
-      }
+                })
+              )
+            )) satisfies Slices<
+            {
+              counter: {
+                count: number;
+                readonly double: number;
+                increment: () => void;
+              };
+            },
+            'counter'
+          >
+        },
+        {
+          name: 'test'
+        }
+      );
+    }).toThrowErrorMatchingInlineSnapshot(
+      `"@coaction/pinia does not support Slices mode. Please inject a whole Pinia store instead."`
     );
-    const { count, increment } = useStore().counter;
-    expect(count).toBe(0);
-    expect(increment).toBeInstanceOf(Function);
-    expect(useStore.name).toBe('test');
-    expect(useStore.getState()).toMatchInlineSnapshot(`
-{
-  "counter": {
-    "count": 0,
-    "increment": [Function],
-    "name": undefined,
-  },
-}
-`);
-    const fn = jest.fn();
-    useStore.subscribe(fn);
-    useStore.getState().counter.increment();
-    expect(useStore.getState()).toMatchInlineSnapshot(`
-{
-  "counter": {
-    "count": 1,
-    "increment": [Function],
-    "name": undefined,
-  },
-}
-`);
-    increment();
-    expect(useStore.getState()).toMatchInlineSnapshot(`
-{
-  "counter": {
-    "count": 2,
-    "increment": [Function],
-    "name": undefined,
-  },
-}
-`);
   });
-  test('worker', async () => {
+  test('worker - unsupported', () => {
     const ports = mockPorts();
     const serverTransport = createTransport('WebWorkerInternal', ports.main);
-    const clientTransport = createTransport(
-      'WebWorkerClient',
-      ports.create() as WorkerMainTransportOptions
-    );
-
     const counter: Slices<
       {
         counter: {
@@ -430,88 +382,17 @@ describe('Slices', () => {
           })
         )
       );
-    const useServerStore = create(
-      { counter },
-      {
-        name: 'test',
-        transport: serverTransport,
-        workerType: 'WebWorkerInternal'
-      }
-    );
-    const { count, increment } = useServerStore().counter;
-    expect(count).toBe(0);
-    expect(increment).toBeInstanceOf(Function);
-    expect(useServerStore.name).toBe('test');
-    expect(useServerStore.getState().counter).toMatchInlineSnapshot(`
-{
-  "count": 0,
-  "increment": [Function],
-  "name": undefined,
-}
-`);
-    const fn = jest.fn();
-    useServerStore.subscribe(fn);
-    useServerStore.getState().counter.increment();
-    expect(useServerStore.getState().counter).toMatchInlineSnapshot(`
-{
-  "count": 1,
-  "increment": [Function],
-  "name": undefined,
-}
-`);
-    increment();
-    expect(useServerStore.getState().counter).toMatchInlineSnapshot(`
-{
-  "count": 2,
-  "increment": [Function],
-  "name": undefined,
-}
-`);
-    {
-      const useClientStore = create(
+    expect(() => {
+      create(
         { counter },
         {
           name: 'test',
-          clientTransport,
-          workerType: 'WebWorkerClient'
+          transport: serverTransport,
+          workerType: 'WebWorkerInternal'
         }
       );
-      await new Promise((resolve) => {
-        clientTransport.onConnect(() => {
-          setTimeout(resolve);
-        });
-      });
-      const { count, increment } = useClientStore().counter;
-      expect(count).toBe(2);
-      expect(increment).toBeInstanceOf(Function);
-      expect(useClientStore.name).toBe('test');
-      expect(useClientStore.getState()).toMatchInlineSnapshot(`
-{
-  "counter": {
-    "count": 2,
-    "increment": [Function],
-    "name": undefined,
-  },
-}
-`);
-      const fn = jest.fn();
-      useClientStore.subscribe(fn);
-      useClientStore.getState().counter.increment();
-      expect(useClientStore.getState().counter).toMatchInlineSnapshot(`
-{
-  "count": 3,
-  "increment": [Function],
-  "name": undefined,
-}
-`);
-      increment();
-      expect(useClientStore.getState().counter).toMatchInlineSnapshot(`
-{
-  "count": 4,
-  "increment": [Function],
-  "name": undefined,
-}
-`);
-    }
+    }).toThrowErrorMatchingInlineSnapshot(
+      `"@coaction/pinia does not support Slices mode. Please inject a whole Pinia store instead."`
+    );
   });
 });
