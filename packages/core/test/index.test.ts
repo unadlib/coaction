@@ -306,6 +306,43 @@ test('worker without transport', async () => {
   }
 });
 
+test('worker execute returns $$Error for missing method', async () => {
+  const ports = mockPorts();
+  const serverTransport = createTransport('WebWorkerInternal', ports.main);
+  const clientTransport = createTransport(
+    'WebWorkerClient',
+    ports.create() as WorkerMainTransportOptions
+  );
+  const counter: Slice<{
+    count: number;
+    increment: () => void;
+  }> = (set) => ({
+    count: 0,
+    increment() {
+      set((draft) => {
+        draft.count += 1;
+      });
+    }
+  });
+  const useServerStore = create(counter, {
+    transport: serverTransport,
+    workerType: 'WebWorkerInternal',
+    name: 'worker-missing-method'
+  });
+  await new Promise((resolve) => {
+    clientTransport.onConnect(() => {
+      setTimeout(resolve);
+    });
+  });
+  const errorSpy = jest.spyOn(console, 'error').mockImplementation(() => {});
+  const [result] = await clientTransport.emit('execute', ['missingMethod'], []);
+  errorSpy.mockRestore();
+  expect(result).toEqual({
+    $$Error: 'The function is not found'
+  });
+  useServerStore.destroy();
+});
+
 test('3rd-party binding does not support slices mode', () => {
   const handleStore = jest.fn();
   const bindThirdParty = createBinder({
