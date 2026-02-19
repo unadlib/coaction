@@ -120,7 +120,7 @@ export const logger: (options?: {
     const setState = store.setState;
     store.setState = (state, action) => {
       const date = formatTime(new Date());
-      console[collapsed ? 'groupCollapsed' : 'group'](
+      (collapsed ? logger.groupCollapsed : logger.group)(
         [
           verbose ? `%c${date} ` : '%c',
           verbose ? `[Share: ${store.share}]` : '',
