@@ -390,6 +390,38 @@ describe('Store Name Lifecycle', () => {
   });
 });
 
+describe('sliceMode', () => {
+  test('single mode treats function maps as a plain store', () => {
+    const useStore = create(
+      {
+        ping() {
+          return 'pong';
+        }
+      },
+      {
+        sliceMode: 'single'
+      }
+    );
+    expect(useStore.isSliceStore).toBe(false);
+    expect(useStore.getState().ping()).toBe('pong');
+  });
+
+  test('slices mode validates createState shape', () => {
+    expect(() =>
+      create(
+        {
+          count: 0
+        } as any,
+        {
+          sliceMode: 'slices'
+        }
+      )
+    ).toThrowErrorMatchingInlineSnapshot(
+      `"sliceMode: 'slices' requires createState to be an object of slice functions."`
+    );
+  });
+});
+
 describe('Slices', () => {
   test('base', () => {
     const stateFn = jest.fn();

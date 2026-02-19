@@ -95,20 +95,42 @@ export const create: Creator = <T extends CreateState>(
       };
       const getPureState: Store<T>['getPureState'] = () =>
         internal.rootState as T;
-      let isSliceStore = false;
-      if (typeof createState === 'object' && createState !== null) {
+      const inferSliceStore = () => {
+        if (typeof createState === 'object' && createState !== null) {
+          const values = Object.values(createState);
+          return (
+            values.length > 0 &&
+            values.every((value) => typeof value === 'function')
+          );
+        }
+        return false;
+      };
+      const isValidSliceObject = () => {
+        if (typeof createState !== 'object' || createState === null) {
+          return false;
+        }
         const values = Object.values(createState);
-        if (
+        return (
           values.length > 0 &&
           values.every((value) => typeof value === 'function')
-        ) {
-          isSliceStore = true;
+        );
+      };
+      const getIsSliceStore = () => {
+        const sliceMode = options.sliceMode ?? 'auto';
+        if (sliceMode === 'single') {
+          return false;
         }
-        // If values.length is 0 (empty object), or not all values are functions,
-        // and createState is an object, isSliceStore remains false.
-        // This means it's treated as a plain object state or an empty object.
-      }
-      // If createState is a function (not an object), isSliceStore also remains false.
+        if (sliceMode === 'slices') {
+          if (!isValidSliceObject()) {
+            throw new Error(
+              `sliceMode: 'slices' requires createState to be an object of slice functions.`
+            );
+          }
+          return true;
+        }
+        return inferSliceStore();
+      };
+      const isSliceStore = getIsSliceStore();
       Object.assign(store, {
         name,
         share: share ?? false,
