@@ -12,9 +12,19 @@ export * from 'pinia';
 
 const instancesMap = new WeakMap<object, unknown>();
 
+type SubscriptionCallback = (...args: unknown[]) => void;
+
+type PiniaStoreInstance = {
+  $id: string;
+  $subscribe: (callback: SubscriptionCallback) => () => void;
+};
+
+type PiniaInternal = {
+  toMutableRaw?: (key: object) => PiniaStoreInstance | undefined;
+};
+
 type StoreWithSubscriptions = Store<object> & {
-  // TODO: fix type
-  _subscriptions?: Set<(...args: any) => void>;
+  _subscriptions?: Set<SubscriptionCallback>;
   _destroyers?: Set<() => void>;
 };
 
@@ -51,17 +61,18 @@ const handleStore = (
   store: StoreWithSubscriptions,
   state: object,
   _: object,
-  internal: any
+  internal: PiniaInternal
 ) => {
   if (!internal.toMutableRaw) {
-    internal.toMutableRaw = (key: any) => instancesMap.get(key);
+    internal.toMutableRaw = (key: object) =>
+      instancesMap.get(key) as PiniaStoreInstance | undefined;
     Object.assign(store, {
-      subscribe: (callback: any) => {
+      subscribe: (callback: SubscriptionCallback) => {
         store._subscriptions!.add(callback);
         return () => store._subscriptions!.delete(callback);
       }
     });
-    store._subscriptions = new Set<() => void>();
+    store._subscriptions = new Set<SubscriptionCallback>();
     store._destroyers = new Set<() => void>();
     const baseDestroy = store.destroy;
     store.destroy = () => {
@@ -80,11 +91,13 @@ const handleStore = (
       apply(state, patches);
     };
   }
-  const stopWatch = internal
-    .toMutableRaw(state)
-    .$subscribe((...args: unknown[]) => {
-      store._subscriptions!.forEach((callback) => callback(...args));
-    });
+  const mutableStore = internal.toMutableRaw(state);
+  if (!mutableStore) {
+    throw new Error('Pinia store instance is not found');
+  }
+  const stopWatch = mutableStore.$subscribe((...args: unknown[]) => {
+    store._subscriptions!.forEach((callback) => callback(...args));
+  });
   const destroy = () => {
     instancesMap.delete(state);
     stopWatch();
