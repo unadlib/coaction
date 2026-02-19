@@ -2,22 +2,55 @@ import { bindSymbol } from './constant';
 import type { CreateState, ISlices, Slice, Store } from './interface';
 import { Internal } from './internal';
 
+type StateFactory<T extends CreateState> = (
+  setState: Store<T>['setState'],
+  getState: Store<T>['getState'],
+  store: Store<T>
+) => unknown;
+
+type StoreWithGetState = {
+  getState: () => unknown;
+};
+
+type BoundState = {
+  [bindSymbol]?: {
+    bind: (state: object) => object;
+    handleStore: (
+      store: Store<object>,
+      rawState: object,
+      state: object,
+      internal: Internal<object>,
+      key?: string
+    ) => void;
+  };
+};
+
+const isObject = (value: unknown): value is object =>
+  typeof value === 'object' && value !== null;
+
+const isStateFactory = <T extends CreateState>(
+  value: unknown
+): value is StateFactory<T> => typeof value === 'function';
+
+const hasGetState = (value: unknown): value is StoreWithGetState =>
+  (typeof value === 'object' || typeof value === 'function') &&
+  value !== null &&
+  typeof (value as StoreWithGetState).getState === 'function';
+
+const hasBindState = (value: unknown): value is object & BoundState =>
+  isObject(value) && !!(value as BoundState)[bindSymbol];
+
 export const getInitialState = <T extends CreateState>(
   store: Store<T>,
-  createState: any,
+  createState: Slice<T> | T,
   internal: Internal<T>
 ) => {
-  const makeState = (
-    stateOrFn:
-      | ((setState: any, getState: any, store: Store<T>) => any)
-      | object,
-    key?: string
-  ) => {
-    let state: any; // Initialize state
-    if (typeof stateOrFn === 'function') {
+  const makeState = (stateOrFn: StateFactory<T> | object, key?: string) => {
+    let state: unknown;
+    if (isStateFactory<T>(stateOrFn)) {
       // It's a slice creator function or a function returning state
       state = stateOrFn(store.setState, store.getState, store);
-    } else if (typeof stateOrFn === 'object' && stateOrFn !== null) {
+    } else if (isObject(stateOrFn)) {
       // It's a pre-existing object, potentially a third-party store instance or plain data
       state = stateOrFn;
     } else {
@@ -31,8 +64,7 @@ export const getInitialState = <T extends CreateState>(
 
     // Preserve existing logic for unwrapping/handling state:
     // support 3rd party library store like zustand, redux
-    if (state && typeof state.getState === 'function') {
-      // Add null/undefined check for state
+    if (hasGetState(state)) {
       state = state.getState();
       // support 3rd party library store like pinia
     } else if (typeof state === 'function') {
@@ -41,19 +73,24 @@ export const getInitialState = <T extends CreateState>(
       state = state();
     }
     // support bind store like mobx
-    if (state && state[bindSymbol]) {
-      // Add null/undefined check for state
+    if (hasBindState(state)) {
       if (store.isSliceStore) {
         throw new Error(
           'Third-party state binding does not support Slices mode. Please inject a whole store instead.'
         );
       }
       const rawState = state[bindSymbol].bind(state);
-      state[bindSymbol].handleStore(store, rawState, state, internal, key);
+      state[bindSymbol].handleStore(
+        store as unknown as Store<object>,
+        rawState,
+        state,
+        internal as unknown as Internal<object>,
+        key
+      );
       delete state[bindSymbol];
       return rawState;
     }
-    return state;
+    return state as object;
   };
   return store.isSliceStore
     ? Object.entries(createState).reduce(
