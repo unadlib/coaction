@@ -1,6 +1,30 @@
 import { create } from 'coaction';
 import { logger } from '../src';
 
+let groupSpy: jest.SpyInstance;
+let groupCollapsedSpy: jest.SpyInstance;
+let logSpy: jest.SpyInstance;
+let traceSpy: jest.SpyInstance;
+let groupEndSpy: jest.SpyInstance;
+
+beforeEach(() => {
+  groupSpy = jest.spyOn(console, 'group').mockImplementation(() => {});
+  groupCollapsedSpy = jest
+    .spyOn(console, 'groupCollapsed')
+    .mockImplementation(() => {});
+  logSpy = jest.spyOn(console, 'log').mockImplementation(() => {});
+  traceSpy = jest.spyOn(console, 'trace').mockImplementation(() => {});
+  groupEndSpy = jest.spyOn(console, 'groupEnd').mockImplementation(() => {});
+});
+
+afterEach(() => {
+  groupSpy.mockRestore();
+  groupCollapsedSpy.mockRestore();
+  logSpy.mockRestore();
+  traceSpy.mockRestore();
+  groupEndSpy.mockRestore();
+});
+
 test('base', () => {
   const stateFn = jest.fn();
   const getterFn = jest.fn();
