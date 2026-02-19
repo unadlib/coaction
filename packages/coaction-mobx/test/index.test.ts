@@ -424,7 +424,7 @@ describe('Slices', () => {
         }
       );
     }).toThrowErrorMatchingInlineSnapshot(
-      `"@coaction/mobx does not support Slices mode. Please inject a whole MobX store instead."`
+      `"Third-party state binding does not support Slices mode. Please inject a whole store instead."`
     );
   });
   test('worker - unsupported', () => {
@@ -457,7 +457,7 @@ describe('Slices', () => {
         }
       );
     }).toThrowErrorMatchingInlineSnapshot(
-      `"@coaction/mobx does not support Slices mode. Please inject a whole MobX store instead."`
+      `"Third-party state binding does not support Slices mode. Please inject a whole store instead."`
     );
   });
 });

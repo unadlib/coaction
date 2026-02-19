@@ -8,7 +8,9 @@ export const getInitialState = <T extends CreateState>(
   internal: Internal<T>
 ) => {
   const makeState = (
-    stateOrFn: ((setState: any, getState: any, store: Store<T>) => any) | object,
+    stateOrFn:
+      | ((setState: any, getState: any, store: Store<T>) => any)
+      | object,
     key?: string
   ) => {
     let state: any; // Initialize state
@@ -29,7 +31,8 @@ export const getInitialState = <T extends CreateState>(
 
     // Preserve existing logic for unwrapping/handling state:
     // support 3rd party library store like zustand, redux
-    if (state && typeof state.getState === 'function') { // Add null/undefined check for state
+    if (state && typeof state.getState === 'function') {
+      // Add null/undefined check for state
       state = state.getState();
       // support 3rd party library store like pinia
     } else if (typeof state === 'function') {
@@ -38,7 +41,13 @@ export const getInitialState = <T extends CreateState>(
       state = state();
     }
     // support bind store like mobx
-    if (state && state[bindSymbol]) { // Add null/undefined check for state
+    if (state && state[bindSymbol]) {
+      // Add null/undefined check for state
+      if (store.isSliceStore) {
+        throw new Error(
+          'Third-party state binding does not support Slices mode. Please inject a whole store instead.'
+        );
+      }
       const rawState = state[bindSymbol].bind(state);
       state[bindSymbol].handleStore(store, rawState, state, internal, key);
       delete state[bindSymbol];
