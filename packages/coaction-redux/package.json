@@ -1,0 +1,68 @@
+{
+  "name": "@coaction/redux",
+  "version": "0.1.5",
+  "description": "A Coaction integration tool for Redux Toolkit",
+  "keywords": [
+    "state",
+    "coaction",
+    "redux",
+    "redux-toolkit"
+  ],
+  "authors": [
+    "Michael Lin <unadlib@gmail.com> (https://github.com/unadlib)"
+  ],
+  "homepage": "https://github.com/unadlib/coaction/tree/main/packages/coaction-redux#readme",
+  "license": "MIT",
+  "main": "dist/coaction-redux.cjs.js",
+  "module": "dist/coaction-redux.esm.js",
+  "exports": {
+    ".": {
+      "types": {
+        "import": "./dist/coaction-redux.cjs.mjs",
+        "default": "./dist/coaction-redux.cjs.js"
+      },
+      "module": "./dist/coaction-redux.esm.js",
+      "import": "./dist/coaction-redux.cjs.mjs",
+      "default": "./dist/coaction-redux.cjs.js"
+    },
+    "./package.json": "./package.json"
+  },
+  "types": "dist/coaction-redux.cjs.d.ts",
+  "sideEffects": false,
+  "files": [
+    "dist"
+  ],
+  "repository": {
+    "type": "git",
+    "url": "git+ssh://git@github.com/unadlib/coaction.git"
+  },
+  "scripts": {
+    "clean": "rm -rf dist",
+    "test": "vitest run test"
+  },
+  "bugs": {
+    "url": "https://github.com/unadlib/coaction/issues"
+  },
+  "preconstruct": {
+    "umdName": "CoactionRedux",
+    "entrypoints": [
+      "./index.ts"
+    ]
+  },
+  "peerDependencies": {
+    "@reduxjs/toolkit": "^2.0.0",
+    "coaction": "^0.1.5"
+  },
+  "peerDependenciesMeta": {
+    "coaction": {
+      "optional": true
+    },
+    "@reduxjs/toolkit": {
+      "optional": true
+    }
+  },
+  "devDependencies": {
+    "@reduxjs/toolkit": "^2.10.1",
+    "coaction": "^0.1.5"
+  }
+}
