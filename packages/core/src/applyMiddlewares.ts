@@ -1,4 +1,4 @@
-import type { CreateState, ISlices, Middleware, Store } from './interface';
+import type { CreateState, Middleware, Store } from './interface';
 
 const isStoreLike = (value: unknown): value is Store<any> => {
   if (!value || typeof value !== 'object') {
