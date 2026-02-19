@@ -52,7 +52,7 @@
   "peerDependencies": {
     "coaction": "^0.1.5",
     "mutative": "^1.1.0",
-    "pinia": "^2.0"
+    "pinia": "^2.0 || ^3.0.0"
   },
   "peerDependenciesMeta": {
     "coaction": {
@@ -67,10 +67,10 @@
   },
   "devDependencies": {
     "coaction": "^0.1.5",
-    "mutative": "^1.1.0",
-    "pinia": "^2.2.4"
+    "mutative": "^1.3.0",
+    "pinia": "^3.0.4"
   },
   "dependencies": {
-    "mutability": "^1.1.1"
+    "mutability": "^1.2.1"
   }
 }
