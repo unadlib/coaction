@@ -1,5 +1,20 @@
 import type { CreateState, ISlices, Middleware, Store } from './interface';
 
+const isStoreLike = (value: unknown): value is Store<any> => {
+  if (!value || typeof value !== 'object') {
+    return false;
+  }
+  const candidate = value as Partial<Store<any>>;
+  return (
+    typeof candidate.setState === 'function' &&
+    typeof candidate.getState === 'function' &&
+    typeof candidate.subscribe === 'function' &&
+    typeof candidate.destroy === 'function' &&
+    typeof candidate.apply === 'function' &&
+    typeof candidate.getPureState === 'function'
+  );
+};
+
 export const applyMiddlewares = <T extends CreateState>(
   store: Store<T>,
   middlewares: Middleware<T>[]
@@ -12,8 +27,10 @@ export const applyMiddlewares = <T extends CreateState>(
     }
     const nextStore = middleware(store);
     if (process.env.NODE_ENV === 'development') {
-      if (!nextStore || typeof nextStore !== 'object') {
-        throw new Error(`middlewares[${index}] should return a store object`);
+      if (!isStoreLike(nextStore)) {
+        throw new Error(
+          `middlewares[${index}] should return a store-like object`
+        );
       }
     }
     return nextStore;
