@@ -62,7 +62,9 @@ export const handleMainTransport = <T extends CreateState>(
       }
       return [(base as Function)(...args), internal.sequence];
     } catch (error: unknown) {
-      console.error(error);
+      if (process.env.NODE_ENV === 'development') {
+        console.error(error);
+      }
       return [{ $$Error: getErrorMessage(error) }, internal.sequence];
     }
   });
