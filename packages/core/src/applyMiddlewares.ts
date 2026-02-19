@@ -10,6 +10,12 @@ export const applyMiddlewares = <T extends CreateState>(
         throw new Error(`middlewares[${index}] should be a function`);
       }
     }
-    return middleware(store);
+    const nextStore = middleware(store);
+    if (process.env.NODE_ENV === 'development') {
+      if (!nextStore || typeof nextStore !== 'object') {
+        throw new Error(`middlewares[${index}] should return a store object`);
+      }
+    }
+    return nextStore;
   }, store);
 };

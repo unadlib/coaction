@@ -120,7 +120,13 @@ export const create: Creator = <T extends CreateState>(
         isSliceStore,
         getPureState
       } as Store<T>);
-      applyMiddlewares(store, options.middlewares ?? []);
+      const middlewareStore = applyMiddlewares(
+        store,
+        options.middlewares ?? []
+      );
+      if (middlewareStore !== store) {
+        Object.assign(store, middlewareStore);
+      }
       const initialState = getInitialState(store, createState, internal);
       store.getInitialState = () => initialState;
       internal.rootState = getRawState(
