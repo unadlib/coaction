@@ -1,0 +1,68 @@
+{
+  "name": "@coaction/svelte",
+  "version": "0.1.5",
+  "description": "A Coaction integration tool for Svelte",
+  "keywords": [
+    "state",
+    "coaction",
+    "svelte",
+    "store"
+  ],
+  "authors": [
+    "Michael Lin <unadlib@gmail.com> (https://github.com/unadlib)"
+  ],
+  "homepage": "https://github.com/unadlib/coaction/tree/main/packages/coaction-svelte#readme",
+  "license": "MIT",
+  "main": "dist/coaction-svelte.cjs.js",
+  "module": "dist/coaction-svelte.esm.js",
+  "exports": {
+    ".": {
+      "types": {
+        "import": "./dist/coaction-svelte.cjs.mjs",
+        "default": "./dist/coaction-svelte.cjs.js"
+      },
+      "module": "./dist/coaction-svelte.esm.js",
+      "import": "./dist/coaction-svelte.cjs.mjs",
+      "default": "./dist/coaction-svelte.cjs.js"
+    },
+    "./package.json": "./package.json"
+  },
+  "types": "dist/coaction-svelte.cjs.d.ts",
+  "sideEffects": false,
+  "files": [
+    "dist"
+  ],
+  "repository": {
+    "type": "git",
+    "url": "git+ssh://git@github.com/unadlib/coaction.git"
+  },
+  "scripts": {
+    "clean": "rm -rf dist",
+    "test": "vitest run test"
+  },
+  "bugs": {
+    "url": "https://github.com/unadlib/coaction/issues"
+  },
+  "preconstruct": {
+    "umdName": "CoactionSvelte",
+    "entrypoints": [
+      "./index.ts"
+    ]
+  },
+  "peerDependencies": {
+    "coaction": "^0.1.5",
+    "svelte": "^4.0.0 || ^5.0.0"
+  },
+  "peerDependenciesMeta": {
+    "coaction": {
+      "optional": true
+    },
+    "svelte": {
+      "optional": true
+    }
+  },
+  "devDependencies": {
+    "coaction": "^0.1.5",
+    "svelte": "^5.43.11"
+  }
+}
