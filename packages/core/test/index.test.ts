@@ -425,6 +425,19 @@ describe('Store Name Lifecycle', () => {
     }).not.toThrow();
     useStore!.destroy();
   });
+
+  test('destroy is idempotent in main share mode', () => {
+    const useStore = createMainStore('destroy-idempotent');
+    expect(() => {
+      useStore.destroy();
+      useStore.destroy();
+    }).not.toThrow();
+    let recreatedStore: ReturnType<typeof create> | undefined;
+    expect(() => {
+      recreatedStore = createMainStore('destroy-idempotent');
+    }).not.toThrow();
+    recreatedStore!.destroy();
+  });
 });
 
 describe('sliceMode', () => {
