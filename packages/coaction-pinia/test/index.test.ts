@@ -349,7 +349,7 @@ describe('Slices', () => {
         }
       );
     }).toThrowErrorMatchingInlineSnapshot(
-      `"@coaction/pinia does not support Slices mode. Please inject a whole Pinia store instead."`
+      `"Third-party state binding does not support Slices mode. Please inject a whole store instead."`
     );
   });
   test('worker - unsupported', () => {
@@ -392,7 +392,7 @@ describe('Slices', () => {
         }
       );
     }).toThrowErrorMatchingInlineSnapshot(
-      `"@coaction/pinia does not support Slices mode. Please inject a whole Pinia store instead."`
+      `"Third-party state binding does not support Slices mode. Please inject a whole store instead."`
     );
   });
 });

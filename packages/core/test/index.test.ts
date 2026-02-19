@@ -3,7 +3,7 @@ import {
   mockPorts,
   WorkerMainTransportOptions
 } from 'data-transport';
-import { create, type Slice, type Slices } from '../src';
+import { create, createBinder, type Slice, type Slices } from '../src';
 
 test('base', () => {
   const stateFn = jest.fn();
@@ -304,6 +304,29 @@ test('worker without transport', async () => {
       });
     }).toThrowErrorMatchingInlineSnapshot(`"transport is required"`);
   }
+});
+
+test('3rd-party binding does not support slices mode', () => {
+  const handleStore = jest.fn();
+  const bindThirdParty = createBinder({
+    handleStore,
+    handleState: (state: { count: number; increment: () => void }) => ({
+      copyState: state,
+      bind: (next) => next
+    })
+  });
+  expect(() => {
+    create({
+      counter: () =>
+        bindThirdParty({
+          count: 0,
+          increment() {}
+        })
+    });
+  }).toThrowErrorMatchingInlineSnapshot(
+    `"Third-party state binding does not support Slices mode. Please inject a whole store instead."`
+  );
+  expect(handleStore).toHaveBeenCalledTimes(0);
 });
 
 describe('Slices', () => {
