@@ -1,7 +1,7 @@
 {
-  "name": "coaction-vue",
+  "name": "@coaction/vue",
   "version": "0.1.5",
-  "description": "Coaction tools for Vue",
+  "description": "A Coaction integration tool for Vue",
   "keywords": [
     "coaction",
     "vue",
@@ -29,6 +29,7 @@
     },
     "./package.json": "./package.json"
   },
+  "types": "dist/coaction-vue.cjs.d.ts",
   "sideEffects": false,
   "files": [
     "dist"
