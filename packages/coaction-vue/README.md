@@ -17,15 +17,35 @@ npm install coaction @coaction/vue
 ## Usage
 
 ```jsx
-import { create } from 'coaction';
-import { bindVue } from '@coaction/vue';
+import { create } from '@coaction/vue';
 
-const useStore = create((set) =>
-  bindVue((set) => ({
-    count: 0,
-    increment: () => set((state) => state.count++)
-  }))
-);
+const useStore = create((set) => ({
+  count: 0,
+  increment() {
+    set((draft) => {
+      draft.count += 1;
+    });
+  }
+}));
+
+export default {
+  setup() {
+    const state = useStore();
+    const count = useStore((current) => current.count);
+    return {
+      state,
+      count
+    };
+  }
+};
+```
+
+Use `autoSelector` to receive computed refs for each field:
+
+```tsx
+const selectors = useStore({ autoSelector: true });
+selectors.increment();
+console.log(selectors.count.value);
 ```
 
 ## Documentation
