@@ -423,8 +423,8 @@ describe('Slices', () => {
           name: 'test'
         }
       );
-    }).toThrowErrorMatchingInlineSnapshot(
-      `"Third-party state binding does not support Slices mode. Please inject a whole store instead."`
+    }).toThrowError(
+      'Third-party state binding does not support Slices mode. Please inject a whole store instead.'
     );
   });
   test('worker - unsupported', () => {
@@ -456,8 +456,8 @@ describe('Slices', () => {
           workerType: 'WebWorkerInternal'
         }
       );
-    }).toThrowErrorMatchingInlineSnapshot(
-      `"Third-party state binding does not support Slices mode. Please inject a whole store instead."`
+    }).toThrowError(
+      'Third-party state binding does not support Slices mode. Please inject a whole store instead.'
     );
   });
 });
