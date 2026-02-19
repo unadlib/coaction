@@ -8,6 +8,13 @@ import type {
 } from './interface';
 import type { Internal } from './internal';
 
+const getErrorMessage = (error: unknown) => {
+  if (error instanceof Error) {
+    return error.message;
+  }
+  return String(error);
+};
+
 export const handleMainTransport = <T extends CreateState>(
   store: Store<T>,
   internal: Internal<T>,
@@ -54,9 +61,9 @@ export const handleMainTransport = <T extends CreateState>(
     }
     try {
       return [(base as Function)(...args), internal.sequence];
-    } catch (error: any) {
+    } catch (error: unknown) {
       console.error(error);
-      return [{ $$Error: error.message }, internal.sequence];
+      return [{ $$Error: getErrorMessage(error) }, internal.sequence];
     }
   });
   transport.listen('fullSync', async () => {
