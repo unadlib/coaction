@@ -295,33 +295,34 @@ Coaction is designed to be compatible with a wide range of libraries and framewo
 |         | Package          | Status |
 | ------- | ---------------- | ------ |
 | React   | @coaction/react  | ✅     |
-| Vue     | @coaction/vue    | 🔶     |
-| Angular | @coaction/ng     |        |
-| Svelte  | @coaction/svelte |        |
-| Solid   | @coaction/solid  |        |
-| Yjs     | @coaction/yjs    |        |
+| Vue     | @coaction/vue    | ✅     |
+| Angular | @coaction/ng     | ✅     |
+| Svelte  | @coaction/svelte | ✅     |
+| Solid   | @coaction/solid  | ✅     |
+| Yjs     | @coaction/yjs    | ✅     |
 
 ### State Management Libraries
 
-|               | Package           | Status |
-| ------------- | ----------------- | ------ |
-| MobX          | @coaction/mobx    | ✅     |
-| Pinia         | @coaction/pinia   | ✅     |
-| Zustand       | @coaction/zustand | ✅     |
-| Redux Toolkit | @coaction/redux   |        |
-| Jotai         | @coaction/jotai   |        |
-| XState        | @coaction/xstate  |        |
-| Valtio        | @coaction/valtio  |        |
+|               | Package                 | Status |
+| ------------- | ----------------------- | ------ |
+| MobX          | @coaction/mobx          | ✅     |
+| Pinia         | @coaction/pinia         | ✅     |
+| Zustand       | @coaction/zustand       | ✅     |
+| Redux Toolkit | @coaction/redux         | ✅     |
+| Jotai         | @coaction/jotai         | ✅     |
+| XState        | @coaction/xstate        | ✅     |
+| Valtio        | @coaction/valtio        | ✅     |
+| alien-signals | @coaction/alien-signals | ✅     |
 
-> Note: `Slices` mode is a core `coaction` feature. Third-party state adapters (`@coaction/mobx`, `@coaction/pinia`, `@coaction/zustand`) only support whole-store binding.
+> Note: `Slices` mode is a core `coaction` feature. Third-party state adapters (`@coaction/mobx`, `@coaction/pinia`, `@coaction/zustand`, `@coaction/redux`, `@coaction/jotai`, `@coaction/xstate`, `@coaction/valtio`) only support whole-store binding.
 
 ## Middlewares
 
 |           | Package           | Status |
 | --------- | ----------------- | ------ |
 | Logger    | @coaction/logger  | ✅     |
-| Persist   | @coaction/persist | 🔶     |
-| Undo/Redo | @coaction/history | 🔶     |
+| Persist   | @coaction/persist | ✅     |
+| Undo/Redo | @coaction/history | ✅     |
 
 ## FAQs
 
