@@ -186,6 +186,13 @@ export type StoreOptions<T extends CreateState> = {
    * enable patches
    */
   enablePatches?: boolean;
+  /**
+   * control how createState should be interpreted.
+   * - auto: infer from createState shape.
+   * - slices: force slices mode.
+   * - single: force single-store mode.
+   */
+  sliceMode?: 'auto' | 'slices' | 'single';
 };
 
 export type ClientStoreOptions<T extends CreateState> = {
@@ -194,6 +201,13 @@ export type ClientStoreOptions<T extends CreateState> = {
    */
   name?: string;
   middlewares?: Middleware<T>[];
+  /**
+   * control how createState should be interpreted.
+   * - auto: infer from createState shape.
+   * - slices: force slices mode.
+   * - single: force single-store mode.
+   */
+  sliceMode?: 'auto' | 'slices' | 'single';
 } & ClientTransportOptions;
 
 export interface ClientTransportOptions {
