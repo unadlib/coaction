@@ -229,3 +229,28 @@ test('middleware can return a replaced store object', () => {
 `);
   expect(useStore.getState().count).toBe(1);
 });
+
+test('middleware should return a store-like object in development', () => {
+  const NODE_ENV = process.env.NODE_ENV;
+  process.env.NODE_ENV = 'development';
+  try {
+    expect(() =>
+      create(
+        () => ({
+          count: 0
+        }),
+        {
+          middlewares: [
+            (() => ({ not: 'a-store' })) as unknown as Middleware<{
+              count: number;
+            }>
+          ]
+        }
+      )
+    ).toThrowErrorMatchingInlineSnapshot(
+      `"middlewares[0] should return a store-like object"`
+    );
+  } finally {
+    process.env.NODE_ENV = NODE_ENV;
+  }
+});
