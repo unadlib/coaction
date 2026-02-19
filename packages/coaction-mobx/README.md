@@ -36,6 +36,11 @@ const useStore = create(() =>
 );
 ```
 
+## Limitations
+
+- `@coaction/mobx` only supports binding a whole MobX store.
+- Coaction `Slices` mode is not supported in this adapter.
+
 ### setState()
 
 - It is recommended to update state through store methods, instead of directly updating the state.

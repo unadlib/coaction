@@ -39,6 +39,11 @@ const useStore = create(() =>
 );
 ```
 
+## Limitations
+
+- `@coaction/pinia` only supports binding a whole Pinia store.
+- Coaction `Slices` mode is not supported in this adapter.
+
 ## Documentation
 
 You can find the documentation [here](https://github.com/unadlib/coaction).

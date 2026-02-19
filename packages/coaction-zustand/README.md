@@ -31,6 +31,11 @@ const useStore = create(() =>
 );
 ```
 
+## Limitations
+
+- `@coaction/zustand` only supports binding a whole Zustand store.
+- Coaction `Slices` mode is not supported in this adapter.
+
 ## Documentation
 
 You can find the documentation [here](https://github.com/unadlib/coaction).
