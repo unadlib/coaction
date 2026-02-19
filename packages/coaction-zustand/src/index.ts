@@ -5,8 +5,6 @@ type BindZustand = <T>(
   initializer: StateCreator<T, [], []>
 ) => StateCreator<T, [], []>;
 
-const storeMap = new Map<string, StoreApi<any>>();
-
 /**
  * Bind a store to Zustand
  */
@@ -17,44 +15,13 @@ export const bindZustand = ((initializer: StateCreator<any, [], []>) =>
       handleStore: (store, rawState, state, internal, key) => {
         coactionStore = store;
         if (key) {
-          if (zustandStore.getState() === (internal.rootState as any)[key])
-            return;
-          (internal.rootState as any)[key] = zustandStore.getState();
-          storeMap.set(key, zustandStore);
-          let isCoactionUpdated = false;
-          zustandStore.subscribe(() => {
-            if (!isCoactionUpdated) {
-              (internal.rootState as any)[key] =
-                zustandStore.getState() as object;
-              if (coactionStore.share === 'client') {
-                throw new Error('client zustand store cannot be updated');
-              } else if (coactionStore.share === 'main') {
-                // emit to all clients
-                coactionStore.setState({
-                  [key]: zustandStore.getState()
-                });
-              }
-            }
-            internal.listeners.forEach((listener) => listener());
-          });
-          if (internal.updateImmutable) return;
-          internal.updateImmutable = (state: any) => {
-            isCoactionUpdated = true;
-            try {
-              for (const _key of Object.keys(state)) {
-                const zustandStore = storeMap.get(_key)!;
-                zustandStore.setState(state[_key], true);
-              }
-            } finally {
-              isCoactionUpdated = false;
-            }
-          };
-          return;
+          throw new Error(
+            '@coaction/zustand does not support Slices mode. Please inject a whole Zustand store instead.'
+          );
         }
         if (zustandStore.getState() === internal.rootState) return;
         let isCoactionUpdated = false;
         internal.rootState = zustandStore.getState() as object;
-        // TODO: check Slice Zustand store
         zustandStore.subscribe(() => {
           if (!isCoactionUpdated) {
             internal.rootState = zustandStore.getState() as object;
