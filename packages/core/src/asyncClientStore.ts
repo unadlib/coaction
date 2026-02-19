@@ -7,6 +7,7 @@ import type {
   ClientTransport
 } from './interface';
 import type { Internal } from './internal';
+import { wrapStore } from './wrapStore';
 
 export const createAsyncClientStore = <T extends CreateState>(
   createStore: (options: { share?: 'client' }) => {
@@ -59,13 +60,7 @@ export const createAsyncClientStore = <T extends CreateState>(
       await fullSync();
     }
   });
-  const { name, ..._store } = asyncClientStore;
-  return Object.assign(
-    {
-      [name]: () => asyncClientStore.getState()
-    }[name],
-    _store
-  );
+  return wrapStore(asyncClientStore, () => asyncClientStore.getState());
 };
 
 export const emit = <T extends CreateState>(
