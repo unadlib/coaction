@@ -1,19 +1,15 @@
-import { type Slices } from 'coaction';
+import type { Slice } from 'coaction';
 import { bindMobx } from '@coaction/mobx';
 import { makeAutoObservable } from 'mobx';
 
-export type Counter = Slices<
-  {
-    counter: {
-      count: number;
-      increment1: () => void;
-      increment: () => Promise<void>;
-    };
-  },
-  'counter'
->;
+export type Counter = {
+  count: number;
+  readonly double: number;
+  increment1: () => void;
+  increment: () => Promise<void>;
+};
 
-export const counter: Counter = (set) =>
+export const counter: Slice<Counter> = (set) =>
   makeAutoObservable(
     bindMobx({
       count: 0,
@@ -37,7 +33,7 @@ export const counter: Counter = (set) =>
           this.increment1();
         });
         set((state) => {
-          state.counter.increment1();
+          state.increment1();
         });
       }
     })

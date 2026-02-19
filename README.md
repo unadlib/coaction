@@ -281,6 +281,8 @@ Coaction is designed to be compatible with a wide range of libraries and framewo
 | XState        | @coaction/xstate  |        |
 | Valtio        | @coaction/valtio  |        |
 
+> Note: `Slices` mode is a core `coaction` feature. Third-party state adapters (`@coaction/mobx`, `@coaction/pinia`, `@coaction/zustand`) only support whole-store binding.
+
 ## Middlewares
 
 |           | Package           | Status |
