@@ -37,7 +37,8 @@
     "version": "changeset version && node ./scripts/bump-peer-dep-ranges.js",
     "publish": "pnpm -r --filter './packages/*' publish --access=public --no-git-checks",
     "benchmark:mobx": "tsx ./packages/coaction-mobx/test/benchmark/index.ts",
-    "benchmark": "NODE_ENV='production' tsx ./scripts/benchmark.ts"
+    "benchmark": "NODE_ENV='production' tsx ./scripts/benchmark.ts",
+    "prepare": "husky"
   },
   "authors": [
     "Michael Lin <unadlib@gmail.com> (https://github.com/unadlib)"
@@ -54,11 +55,6 @@
   "config": {
     "commitizen": {
       "path": "cz-conventional-changelog"
-    }
-  },
-  "husky": {
-    "hooks": {
-      "pre-commit": "lint-staged"
     }
   },
   "lint-staged": {
