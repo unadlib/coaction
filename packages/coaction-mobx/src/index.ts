@@ -4,11 +4,16 @@ import { autorun, runInAction } from 'mobx';
 
 const instancesMap = new WeakMap<object, object>();
 
+type MobxInternal = {
+  toMutableRaw?: (key: object) => object | undefined;
+  actMutable?: typeof runInAction;
+};
+
 const handleStore = (
   store: Store<object>,
   rawState: object,
   state: object,
-  internal: any
+  internal: MobxInternal
 ) => {
   if (internal.toMutableRaw) return;
   internal.toMutableRaw = (key: object) => instancesMap.get(key);
