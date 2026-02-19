@@ -393,91 +393,43 @@ test('worker - async', async () => {
 });
 
 describe('Slices', () => {
-  test('base', () => {
-    const stateFn = jest.fn();
-    const getterFn = jest.fn();
-    const useStore = create(
-      {
-        counter: ((set, get, store) =>
-          makeAutoObservable(
-            bindMobx({
-              count: 0,
-              get double() {
-                return this.count * 2;
-              },
-              increment() {
-                this.count += 1;
-                stateFn(
-                  get().counter.count,
-                  store.getState().counter.count,
-                  this.count
-                );
-                getterFn(
-                  get().counter.double,
-                  store.getState().counter.double,
-                  this.double
-                );
-              }
-            })
-          )) satisfies Slices<
-          {
-            counter: {
-              count: number;
-              readonly double: number;
-              increment: () => void;
-            };
-          },
-          'counter'
-        >
-      },
-      {
-        name: 'test'
-      }
+  test('base - unsupported', () => {
+    expect(() => {
+      create(
+        {
+          counter: ((set, get, store) =>
+            makeAutoObservable(
+              bindMobx({
+                count: 0,
+                get double() {
+                  return this.count * 2;
+                },
+                increment() {
+                  this.count += 1;
+                }
+              })
+            )) satisfies Slices<
+            {
+              counter: {
+                count: number;
+                readonly double: number;
+                increment: () => void;
+              };
+            },
+            'counter'
+          >
+        },
+        {
+          name: 'test'
+        }
+      );
+    }).toThrowErrorMatchingInlineSnapshot(
+      `"@coaction/mobx does not support Slices mode. Please inject a whole MobX store instead."`
     );
-    const { count, increment } = useStore().counter;
-    expect(count).toBe(0);
-    expect(increment).toBeInstanceOf(Function);
-    expect(useStore.name).toBe('test');
-    expect(useStore.getState()).toMatchInlineSnapshot(`
-{
-  "counter": {
-    "count": 0,
-    "double": 0,
-    "increment": [Function],
-  },
-}
-`);
-    const fn = jest.fn();
-    useStore.subscribe(fn);
-    useStore.getState().counter.increment();
-    expect(useStore.getState()).toMatchInlineSnapshot(`
-{
-  "counter": {
-    "count": 1,
-    "double": 2,
-    "increment": [Function],
-  },
-}
-`);
-    increment();
-    expect(useStore.getState()).toMatchInlineSnapshot(`
-{
-  "counter": {
-    "count": 2,
-    "double": 4,
-    "increment": [Function],
-  },
-}
-`);
   });
-  test('worker', async () => {
+  test('worker - unsupported', () => {
     const ports = mockPorts();
     const serverTransport = createTransport('WebWorkerInternal', ports.main);
-    const clientTransport = createTransport(
-      'WebWorkerClient',
-      ports.create() as WorkerMainTransportOptions
-    );
-
     const counter: Slices<
       {
         counter: {
@@ -495,82 +447,17 @@ describe('Slices', () => {
           }
         })
       );
-    const useServerStore = create(
-      { counter },
-      {
-        name: 'test',
-        transport: serverTransport,
-        workerType: 'WebWorkerInternal'
-      }
-    );
-    const { count, increment } = useServerStore().counter;
-    expect(count).toBe(0);
-    expect(increment).toBeInstanceOf(Function);
-    expect(useServerStore.name).toBe('test');
-    expect(useServerStore.getState().counter).toMatchInlineSnapshot(`
-  {
-    "count": 0,
-    "increment": [Function],
-  }
-  `);
-    const fn = jest.fn();
-    useServerStore.subscribe(fn);
-    useServerStore.getState().counter.increment();
-    expect(useServerStore.getState().counter).toMatchInlineSnapshot(`
-{
-  "count": 1,
-  "increment": [Function],
-}
-`);
-    increment();
-    expect(useServerStore.getState().counter).toMatchInlineSnapshot(`
-{
-  "count": 2,
-  "increment": [Function],
-}
-`);
-    {
-      const useClientStore = create(
+    expect(() => {
+      create(
         { counter },
         {
           name: 'test',
-          clientTransport,
-          workerType: 'WebWorkerClient'
+          transport: serverTransport,
+          workerType: 'WebWorkerInternal'
         }
       );
-      await new Promise((resolve) => {
-        clientTransport.onConnect(() => {
-          setTimeout(resolve);
-        });
-      });
-      const { count, increment } = useClientStore().counter;
-      expect(count).toBe(2);
-      expect(increment).toBeInstanceOf(Function);
-      expect(useClientStore.name).toBe('test');
-      expect(useClientStore.getState()).toMatchInlineSnapshot(`
-{
-  "counter": {
-    "count": 2,
-    "increment": [Function],
-  },
-}
-`);
-      const fn = jest.fn();
-      useClientStore.subscribe(fn);
-      useClientStore.getState().counter.increment();
-      expect(useClientStore.getState().counter).toMatchInlineSnapshot(`
-{
-  "count": 3,
-  "increment": [Function],
-}
-`);
-      increment();
-      expect(useClientStore.getState().counter).toMatchInlineSnapshot(`
-{
-  "count": 4,
-  "increment": [Function],
-}
-`);
-    }
+    }).toThrowErrorMatchingInlineSnapshot(
+      `"@coaction/mobx does not support Slices mode. Please inject a whole MobX store instead."`
+    );
   });
 });
