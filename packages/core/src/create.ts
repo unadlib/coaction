@@ -75,7 +75,12 @@ export const create: Creator = <T extends CreateState>(
         internal.listeners.add(listener);
         return () => internal.listeners.delete(listener);
       };
+      let isDestroyed = false;
       const destroy: Store<T>['destroy'] = () => {
+        if (isDestroyed) {
+          return;
+        }
+        isDestroyed = true;
         internal.listeners.clear();
         store.transport?.dispose();
         releaseStoreName();
