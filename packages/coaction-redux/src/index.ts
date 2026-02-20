@@ -48,9 +48,11 @@ type BoundReduxStore<S extends object, A extends AnyAction> = ReduxStore<
   S,
   A
 > & {
-  getState: () => S & {
-    dispatch: ReduxStore<S, A>['dispatch'];
-  };
+  getState: () => BoundReduxState<S, A>;
+};
+
+type BoundReduxState<S extends object, A extends AnyAction> = S & {
+  dispatch: ReduxStore<S, A>['dispatch'];
 };
 
 /**
@@ -84,13 +86,13 @@ export const bindRedux = <S extends object, A extends AnyAction = AnyAction>(
         }
         isCoactionUpdating = true;
         try {
-          reduxStore.dispatch(replaceStateAction(nextState) as A);
+          reduxStore.dispatch(replaceStateAction(nextState) as unknown as A);
         } finally {
           isCoactionUpdating = false;
         }
       };
     },
-    handleState: (state) => {
+    handleState: ((state: S) => {
       const copyState = Object.defineProperties(
         {},
         {
@@ -105,9 +107,9 @@ export const bindRedux = <S extends object, A extends AnyAction = AnyAction>(
       ) as S;
       return {
         copyState,
-        bind: (rawState) => rawState
+        bind: (rawState: S) => rawState
       };
-    }
+    }) as any
   });
   const store = reduxStore as BoundReduxStore<S, A>;
   store.getState = () =>
@@ -120,5 +122,10 @@ export const bindRedux = <S extends object, A extends AnyAction = AnyAction>(
 /**
  * Adapt a redux store type to state type.
  */
-export const adapt = <T extends object>(store: ReduxStore<T>) =>
-  store as unknown as T;
+export function adapt<T extends object, A extends AnyAction = AnyAction>(
+  store: BoundReduxStore<T, A>
+): BoundReduxState<T, A>;
+export function adapt<T extends object>(store: ReduxStore<T>): T;
+export function adapt(store: ReduxStore<any>) {
+  return store as any;
+}

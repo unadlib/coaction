@@ -79,8 +79,9 @@ export const getInitialState = <T extends CreateState>(
           'Third-party state binding does not support Slices mode. Please inject a whole store instead.'
         );
       }
-      const rawState = state[bindSymbol].bind(state);
-      state[bindSymbol].handleStore(
+      const binder = state[bindSymbol]!;
+      const rawState = binder.bind(state);
+      binder.handleStore(
         store as unknown as Store<object>,
         rawState,
         state,

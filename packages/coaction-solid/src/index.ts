@@ -16,8 +16,19 @@ type SelectorOptions = {
   autoSelector?: boolean;
 };
 
+type AutoSelector<T> = {
+  [K in keyof T]: T[K] extends (...args: any[]) => any
+    ? T[K]
+    : T[K] extends readonly any[]
+      ? Accessor<T[K]>
+      : T[K] extends object
+        ? AutoSelector<T[K]>
+        : Accessor<T[K]>;
+};
+
 export type StoreReturn<T extends object> = Store<T> & {
   <P>(selector: (state: T) => P): Accessor<P>;
+  (options: { autoSelector: true }): AutoSelector<T>;
   (options?: SelectorOptions): Accessor<T>;
 };
 
@@ -26,6 +37,7 @@ export type StoreWithAsyncFunction<
   D extends true | false = false
 > = Store<Asyncify<T, D>> & {
   <P>(selector: (state: Asyncify<T, D>) => P): Accessor<P>;
+  (options: { autoSelector: true }): AutoSelector<Asyncify<T, D>>;
   (options?: SelectorOptions): Accessor<Asyncify<T, D>>;
 };
 

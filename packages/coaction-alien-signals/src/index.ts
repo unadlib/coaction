@@ -18,9 +18,19 @@ type SelectorOptions = {
 };
 
 type SignalAccessor<T> = () => T;
+type AutoSelector<T> = {
+  [K in keyof T]: T[K] extends (...args: any[]) => any
+    ? T[K]
+    : T[K] extends readonly any[]
+      ? SignalAccessor<T[K]>
+      : T[K] extends object
+        ? AutoSelector<T[K]>
+        : SignalAccessor<T[K]>;
+};
 
 export type StoreReturn<T extends object> = Store<T> & {
   <P>(selector: (state: T) => P): SignalAccessor<P>;
+  (options: { autoSelector: true }): AutoSelector<T>;
   (options?: SelectorOptions): T;
 };
 
@@ -29,6 +39,7 @@ export type StoreWithAsyncFunction<
   D extends true | false = false
 > = Store<Asyncify<T, D>> & {
   <P>(selector: (state: Asyncify<T, D>) => P): SignalAccessor<P>;
+  (options: { autoSelector: true }): AutoSelector<Asyncify<T, D>>;
   (options?: SelectorOptions): Asyncify<T, D>;
 };
 
