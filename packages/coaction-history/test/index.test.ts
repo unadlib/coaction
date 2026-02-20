@@ -28,6 +28,9 @@ test('undo and redo', () => {
   expect(api.canRedo()).toBeTruthy();
   expect(api.redo()).toBeTruthy();
   expect(useStore.getState().count).toBe(1);
+  expect(api.redo()).toBeTruthy();
+  expect(useStore.getState().count).toBe(2);
+  expect(api.redo()).toBeFalsy();
 });
 
 test('respects history limit', () => {
@@ -96,4 +99,74 @@ test('clear history and partialize', () => {
   expect(api.canUndo()).toBeFalsy();
   expect(api.getPast()).toHaveLength(0);
   expect(api.getFuture()).toHaveLength(0);
+});
+
+test('snapshot strips functions and keeps array structure', () => {
+  const useStore = create(
+    (set) => ({
+      items: [
+        {
+          value: 0,
+          fn() {
+            return this.value;
+          }
+        }
+      ],
+      update() {
+        set({
+          items: [
+            {
+              value: 1,
+              fn() {
+                return this.value;
+              }
+            }
+          ]
+        } as any);
+      }
+    }),
+    {
+      middlewares: [history()]
+    }
+  );
+  const api = (useStore as any).history;
+  useStore.getState().update();
+  expect(api.getPast()).toMatchInlineSnapshot(`
+[
+  {
+    "items": [
+      {
+        "value": 0,
+      },
+    ],
+  },
+]
+`);
+});
+
+test('time traveling setState does not clear redo stack', () => {
+  let state = {
+    count: 0
+  };
+  const store = {
+    getPureState: () => state,
+    setState(next: any) {
+      state = next;
+      if (state.count === 0) {
+        store.setState({
+          count: 999
+        });
+      }
+      return [];
+    }
+  } as any;
+  history()(store);
+  const api = store.history;
+  store.setState({
+    count: 1
+  });
+  expect(api.canUndo()).toBeTruthy();
+  expect(api.undo()).toBeTruthy();
+  expect(state.count).toBe(999);
+  expect(api.canRedo()).toBeTruthy();
 });
