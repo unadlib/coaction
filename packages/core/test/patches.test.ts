@@ -203,7 +203,7 @@ test('worker', async () => {
       name: 'test',
       enablePatches: false
     });
-  }).toThrowError('enablePatches: true is required for the transport');
+  }).toThrow('enablePatches: true is required for the transport');
 });
 
 describe('Slices', () => {

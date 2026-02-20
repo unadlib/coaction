@@ -1,9 +1,10 @@
 import { createBinder, type Store } from 'coaction';
-import type { PrimitiveAtom, Store as JotaiStore } from 'jotai/vanilla';
+import { createStore, type PrimitiveAtom } from 'jotai/vanilla';
 
 export * from 'jotai/vanilla';
 
 type AtomMap = Record<string, PrimitiveAtom<any>>;
+type JotaiStore = ReturnType<typeof createStore>;
 
 type InferAtomValues<TAtoms extends AtomMap> = {
   [K in keyof TAtoms]: TAtoms[K] extends PrimitiveAtom<infer TValue>
@@ -22,7 +23,7 @@ type JotaiContext<
 > = {
   store: JotaiStore;
   atoms: TAtoms;
-  atomKeys: (keyof TAtoms)[];
+  atomKeys: (keyof TAtoms & string)[];
   actions: TActions;
 };
 
@@ -58,7 +59,7 @@ export const bindJotai = <
   const context: JotaiContext<TAtoms, TActions> = {
     store,
     atoms,
-    atomKeys: Object.keys(atoms),
+    atomKeys: Object.keys(atoms) as (keyof TAtoms & string)[],
     actions: (actions?.({
       store,
       atoms
@@ -86,15 +87,16 @@ export const bindJotai = <
         unsubscriptions.forEach((unsubscribe) => unsubscribe());
         baseDestroy();
       };
-      internal.updateImmutable = (nextState: Record<string, unknown>) => {
+      internal.updateImmutable = (nextState: object) => {
+        const nextStateRecord = nextState as Record<string, unknown>;
         if (isJotaiUpdating) {
           return;
         }
         isCoactionUpdating = true;
         try {
           for (const key of context.atomKeys) {
-            if (Object.prototype.hasOwnProperty.call(nextState, key)) {
-              context.store.set(context.atoms[key], nextState[key]);
+            if (Object.prototype.hasOwnProperty.call(nextStateRecord, key)) {
+              context.store.set(context.atoms[key], nextStateRecord[key]);
             }
           }
         } finally {
@@ -102,7 +104,7 @@ export const bindJotai = <
         }
       };
     },
-    handleState: () => {
+    handleState: (() => {
       const stateWithActions = Object.assign(
         {},
         getAtomState(context),
@@ -115,7 +117,7 @@ export const bindJotai = <
         copyState,
         bind: () => rawState
       };
-    }
+    }) as any
   });
   return bindStore({} as any) as InferAtomValues<TAtoms> & TActions;
 };

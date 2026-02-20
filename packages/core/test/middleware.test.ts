@@ -247,7 +247,7 @@ test('middleware should return a store-like object in development', () => {
           ]
         }
       )
-    ).toThrowError('middlewares[0] should return a store-like object');
+    ).toThrow('middlewares[0] should return a store-like object');
   } finally {
     process.env.NODE_ENV = NODE_ENV;
   }

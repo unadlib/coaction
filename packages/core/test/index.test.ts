@@ -302,7 +302,7 @@ test('worker without transport', async () => {
         // clientTransport,
         workerType: 'WebWorkerClient'
       });
-    }).toThrowError('transport is required');
+    }).toThrow('transport is required');
   }
 });
 
@@ -360,7 +360,7 @@ test('3rd-party binding does not support slices mode', () => {
           increment() {}
         })
     });
-  }).toThrowError(
+  }).toThrow(
     'Third-party state binding does not support Slices mode. Please inject a whole store instead.'
   );
   expect(handleStore).toHaveBeenCalledTimes(0);
@@ -399,7 +399,7 @@ describe('Store Name Lifecycle', () => {
 
   test('name can be reused after destroy in main share mode', () => {
     const useStore = createMainStore('name-reusable');
-    expect(() => createMainStore('name-reusable')).toThrowError(
+    expect(() => createMainStore('name-reusable')).toThrow(
       "Store name 'name-reusable' is not unique."
     );
     useStore.destroy();
@@ -415,7 +415,7 @@ describe('Store Name Lifecycle', () => {
       createMainStore('name-released-on-error', () => {
         throw new Error('init failed');
       })
-    ).toThrowError('init failed');
+    ).toThrow('init failed');
 
     let useStore: ReturnType<typeof create> | undefined;
     expect(() => {
@@ -464,7 +464,7 @@ describe('sliceMode', () => {
           sliceMode: 'slices'
         }
       )
-    ).toThrowError(
+    ).toThrow(
       "sliceMode: 'slices' requires createState to be an object of slice functions."
     );
   });

@@ -2,8 +2,8 @@
   "compilerOptions": {
     "target": "esnext",
     "isolatedModules": true,
-    "moduleResolution": "node16",
-    "module": "node16",
+    "moduleResolution": "bundler",
+    "module": "esnext",
     "allowImportingTsExtensions": true,
     "noEmit": true,
     "skipLibCheck": true,
@@ -13,5 +13,12 @@
     "strict": true,
     "stripInternal": true
   },
-  "exclude": ["examples", "templates"]
+  "exclude": [
+    "examples",
+    "templates",
+    "**/dist/**",
+    "**/.turbo/**",
+    "**/test/**",
+    "packages/**/benchmark/**"
+  ]
 }

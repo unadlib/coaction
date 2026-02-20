@@ -14,7 +14,7 @@ test('supports svelte subscribe contract', () => {
   }));
 
   const calls: number[] = [];
-  const unsubscribe = store.subscribe((state) => {
+  const unsubscribe = store.subscribe((state: { count: number }) => {
     calls.push(state.count);
   });
 

@@ -37,7 +37,7 @@ test('base', () => {
     useStore.setState({
       count: 100
     })
-  ).toThrowError(
+  ).toThrow(
     'setState is not supported with xstate binding. Please use actor events.'
   );
 });
@@ -77,7 +77,7 @@ describe('Slices', () => {
           name: 'test'
         }
       );
-    }).toThrowError(
+    }).toThrow(
       'Third-party state binding does not support Slices mode. Please inject a whole store instead.'
     );
   });

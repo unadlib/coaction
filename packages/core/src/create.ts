@@ -154,7 +154,7 @@ export const create: Creator = <T extends CreateState>(
       if (middlewareStore !== store) {
         Object.assign(store, middlewareStore);
       }
-      const initialState = getInitialState(store, createState, internal);
+      const initialState = getInitialState(store, createState, internal) as T;
       store.getInitialState = () => initialState;
       internal.rootState = getRawState(
         store,

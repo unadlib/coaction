@@ -55,7 +55,7 @@ export const bindXState = createBinder<
       baseDestroy();
     };
   },
-  handleState: (actor) => {
+  handleState: ((actor: XStateActor<any, any>) => {
     const snapshot = actor.getSnapshot();
     const state = Object.assign({}, snapshot.context, {
       send: actor.send.bind(actor)
@@ -68,8 +68,14 @@ export const bindXState = createBinder<
       copyState,
       bind: () => rawState
     };
-  }
-});
+  }) as any
+}) as <TContext extends object, TEvent>(
+  actor: XStateActor<TContext, TEvent>
+) => {
+  [K in keyof TContext]: TContext[K];
+} & {
+  send: (event: TEvent) => void;
+};
 
 /**
  * Adapt a state type for Coaction create function.

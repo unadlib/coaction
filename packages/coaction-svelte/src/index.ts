@@ -3,7 +3,6 @@ import type {
   Asyncify,
   ClientStoreOptions,
   ISlices,
-  Listener,
   Slice,
   SliceState,
   Store,
@@ -13,6 +12,7 @@ import type {
 export * from 'coaction';
 
 type Unsubscriber = () => void;
+type Listener = () => void;
 
 type Readable<T> = {
   subscribe: (
