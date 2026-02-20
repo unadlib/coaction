@@ -40,6 +40,52 @@ test('base', () => {
   expect(jotaiStore.get(countAtom)).toBe(8);
 });
 
+test('destroy unsubscribes atom listeners', () => {
+  const countAtom = atom(0);
+  const jotaiStore = createStore();
+  const useStore = create(
+    () =>
+      adapt(
+        bindJotai({
+          store: jotaiStore,
+          atoms: {
+            count: countAtom
+          }
+        })
+      ),
+    {
+      name: 'test-destroy'
+    }
+  );
+  expect(useStore.getState().count).toBe(0);
+  useStore.destroy();
+  jotaiStore.set(countAtom, 10);
+  expect(useStore.getState().count).toBe(0);
+});
+
+test('ignores non-atom keys when syncing from coaction to jotai', () => {
+  const countAtom = atom(0);
+  const jotaiStore = createStore();
+  const useStore = create(
+    () =>
+      adapt(
+        bindJotai({
+          store: jotaiStore,
+          atoms: {
+            count: countAtom
+          }
+        })
+      ),
+    {
+      name: 'test-ignore-non-atom'
+    }
+  );
+  useStore.apply({
+    other: 123
+  } as any);
+  expect(jotaiStore.get(countAtom)).toBe(0);
+});
+
 describe('Slices', () => {
   test('base - unsupported', () => {
     const countAtom = atom(0);
