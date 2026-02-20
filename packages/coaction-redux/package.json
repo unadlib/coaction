@@ -13,21 +13,18 @@
   ],
   "homepage": "https://github.com/unadlib/coaction/tree/main/packages/coaction-redux#readme",
   "license": "MIT",
-  "main": "dist/coaction-redux.cjs.js",
-  "module": "dist/coaction-redux.esm.js",
+  "main": "dist/index.js",
+  "module": "dist/index.mjs",
   "exports": {
     ".": {
-      "types": {
-        "import": "./dist/coaction-redux.cjs.mjs",
-        "default": "./dist/coaction-redux.cjs.js"
-      },
-      "module": "./dist/coaction-redux.esm.js",
-      "import": "./dist/coaction-redux.cjs.mjs",
-      "default": "./dist/coaction-redux.cjs.js"
+      "types": "./dist/index.d.ts",
+      "import": "./dist/index.mjs",
+      "require": "./dist/index.js",
+      "default": "./dist/index.mjs"
     },
     "./package.json": "./package.json"
   },
-  "types": "dist/coaction-redux.cjs.d.ts",
+  "types": "dist/index.d.ts",
   "sideEffects": false,
   "files": [
     "dist"
@@ -39,16 +36,12 @@
   },
   "scripts": {
     "clean": "rm -rf dist",
-    "test": "vitest run test"
+    "test": "vitest run test",
+    "build": "tsup index.ts --format cjs,esm --dts --clean --out-dir dist",
+    "dev": "tsup index.ts --format cjs,esm --dts --watch --out-dir dist"
   },
   "bugs": {
     "url": "https://github.com/unadlib/coaction/issues"
-  },
-  "preconstruct": {
-    "umdName": "CoactionRedux",
-    "entrypoints": [
-      "./index.ts"
-    ]
   },
   "peerDependencies": {
     "@reduxjs/toolkit": "^2.0.0",
