@@ -64,5 +64,9 @@
   "devDependencies": {
     "coaction": "^0.1.5",
     "solid-js": "^1.9.10"
+  },
+  "publishConfig": {
+    "access": "public",
+    "provenance": true
   }
 }

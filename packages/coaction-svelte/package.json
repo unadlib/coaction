@@ -64,5 +64,9 @@
   "devDependencies": {
     "coaction": "^0.1.5",
     "svelte": "^5.43.11"
+  },
+  "publishConfig": {
+    "access": "public",
+    "provenance": true
   }
 }
