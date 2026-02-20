@@ -68,7 +68,7 @@ test('supports actor-driven updates and unsubscribes on destroy', async () => {
   const { copyState, bind } = capturedHandleState(actor);
   const rawState = bind(copyState);
   let hasReentered = false;
-  const baseSetState = vi.fn(() => {
+  const baseSetState = vi.fn((_next: { count: number }) => {
     if (!hasReentered) {
       hasReentered = true;
       store.setState({
@@ -77,7 +77,7 @@ test('supports actor-driven updates and unsubscribes on destroy', async () => {
     }
   });
   const baseDestroy = vi.fn();
-  const store = {
+  const store: any = {
     setState: baseSetState,
     destroy: baseDestroy
   };

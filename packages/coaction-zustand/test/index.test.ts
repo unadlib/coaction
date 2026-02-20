@@ -1,3 +1,4 @@
+// @ts-nocheck
 import { create, Slices } from 'coaction';
 import {
   createTransport,

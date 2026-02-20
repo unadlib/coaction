@@ -447,7 +447,8 @@ test('handleMainTransport validates onConnect and normalizes non-Error throws', 
       null,
       false
     );
-    const [result] = (await executeHandler?.(['bad'], [])) as [any, number];
+    expect(executeHandler).not.toBeNull();
+    const [result] = await executeHandler!(['bad'], []);
     expect(result).toEqual({
       $$Error: '123'
     });

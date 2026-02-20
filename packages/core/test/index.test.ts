@@ -335,7 +335,11 @@ test('worker execute returns $$Error for missing method', async () => {
     });
   });
   const errorSpy = jest.spyOn(console, 'error').mockImplementation(() => {});
-  const [result] = await clientTransport.emit('execute', ['missingMethod'], []);
+  const [result] = (await clientTransport.emit(
+    'execute',
+    ['missingMethod'],
+    []
+  )) as [any, number];
   errorSpy.mockRestore();
   expect(result).toEqual({
     $$Error: 'The function is not found'
@@ -347,10 +351,10 @@ test('3rd-party binding does not support slices mode', () => {
   const handleStore = jest.fn();
   const bindThirdParty = createBinder({
     handleStore,
-    handleState: (state: { count: number; increment: () => void }) => ({
+    handleState: ((state: { count: number; increment: () => void }) => ({
       copyState: state,
-      bind: (next) => next
-    })
+      bind: (next: { count: number; increment: () => void }) => next
+    })) as any
   });
   expect(() => {
     create({
@@ -403,7 +407,7 @@ describe('Store Name Lifecycle', () => {
       "Store name 'name-reusable' is not unique."
     );
     useStore.destroy();
-    let recreatedStore: ReturnType<typeof create> | undefined;
+    let recreatedStore: any;
     expect(() => {
       recreatedStore = createMainStore('name-reusable');
     }).not.toThrow();
@@ -417,7 +421,7 @@ describe('Store Name Lifecycle', () => {
       })
     ).toThrow('init failed');
 
-    let useStore: ReturnType<typeof create> | undefined;
+    let useStore: any;
     expect(() => {
       useStore = createMainStore('name-released-on-error');
     }).not.toThrow();
@@ -430,7 +434,7 @@ describe('Store Name Lifecycle', () => {
       useStore.destroy();
       useStore.destroy();
     }).not.toThrow();
-    let recreatedStore: ReturnType<typeof create> | undefined;
+    let recreatedStore: any;
     expect(() => {
       recreatedStore = createMainStore('destroy-idempotent');
     }).not.toThrow();
@@ -451,7 +455,7 @@ describe('sliceMode', () => {
       }
     );
     expect(useStore.isSliceStore).toBe(false);
-    expect(useStore.getState().ping()).toBe('pong');
+    expect((useStore.getState() as any).ping()).toBe('pong');
   });
 
   test('slices mode validates createState shape', () => {
