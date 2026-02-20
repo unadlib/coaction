@@ -1,6 +1,6 @@
 {
   "name": "@coaction/history",
-  "version": "0.1.5",
+  "version": "1.0.0",
   "description": "A undo/redo middleware for Coaction",
   "keywords": [
     "state",
@@ -53,7 +53,7 @@
     ]
   },
   "peerDependencies": {
-    "coaction": "^0.1.5"
+    "coaction": "^0.2.0"
   },
   "peerDependenciesMeta": {
     "coaction": {
@@ -61,7 +61,7 @@
     }
   },
   "devDependencies": {
-    "coaction": "^0.1.5"
+    "coaction": "^0.2.0"
   },
   "publishConfig": {
     "access": "public",
