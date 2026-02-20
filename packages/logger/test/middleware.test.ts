@@ -208,3 +208,80 @@ test('should use custom logger group methods in setState', () => {
   expect(customLogger.groupCollapsed).toHaveBeenCalledTimes(0);
   expect(customLogger.groupEnd).toHaveBeenCalledTimes(2);
 });
+
+test('should avoid duplicate logger wrapping for the same store', () => {
+  const customLogger = {
+    log: jest.fn(),
+    group: jest.fn(),
+    groupCollapsed: jest.fn(),
+    trace: jest.fn(),
+    groupEnd: jest.fn()
+  };
+  const useStore = create<{
+    count: number;
+    increment: () => void;
+  }>(
+    (set) => ({
+      count: 0,
+      increment() {
+        set((draft) => {
+          draft.count += 1;
+        });
+      }
+    }),
+    {
+      middlewares: [
+        logger({
+          logger: customLogger
+        }),
+        logger({
+          logger: customLogger
+        })
+      ]
+    }
+  );
+  useStore.getState().increment();
+  expect(customLogger.groupCollapsed).toHaveBeenCalledTimes(1);
+});
+
+test('should log patches and stack traces when enabled', () => {
+  const customLogger = {
+    log: jest.fn(),
+    group: jest.fn(),
+    groupCollapsed: jest.fn(),
+    trace: jest.fn(),
+    groupEnd: jest.fn()
+  };
+  const useStore = create<{
+    count: number;
+    increment: () => void;
+  }>(
+    (set) => ({
+      count: 0,
+      increment() {
+        set((draft) => {
+          draft.count += 1;
+        });
+      }
+    }),
+    {
+      name: 'trace',
+      enablePatches: true,
+      middlewares: [
+        logger({
+          logger: customLogger,
+          stackTrace: true,
+          serialized: true,
+          verbose: true
+        })
+      ]
+    }
+  );
+  useStore.getState().increment();
+  const patchLog = customLogger.log.mock.calls.find(
+    (call) => typeof call[0] === 'string' && call[0].includes('[Patches]')
+  );
+  expect(patchLog).toBeDefined();
+  expect(typeof patchLog?.[3]).toBe('string');
+  expect(customLogger.trace).toHaveBeenCalled();
+});
