@@ -83,3 +83,56 @@ test('supports selector readable', () => {
 ]
 `);
 });
+
+test('calls invalidate callback for svelte subscribe signature', () => {
+  const store = create<{
+    count: number;
+    increment: () => void;
+  }>((set) => ({
+    count: 0,
+    increment() {
+      set((draft) => {
+        draft.count += 1;
+      });
+    }
+  }));
+
+  const values: number[] = [];
+  const invalidates: number[] = [];
+  const unsubscribe = store.subscribe(
+    (state: { count: number }) => {
+      values.push(state.count);
+    },
+    () => {
+      invalidates.push(1);
+    }
+  );
+
+  store.getState().increment();
+  unsubscribe();
+
+  expect(values).toMatchInlineSnapshot(`
+[
+  0,
+  1,
+]
+`);
+  expect(invalidates).toMatchInlineSnapshot(`
+[
+  1,
+]
+`);
+});
+
+test('returns plain state when called without selector', () => {
+  const store = create<{
+    count: number;
+  }>(() => ({
+    count: 3
+  }));
+  expect(store()).toMatchInlineSnapshot(`
+{
+  "count": 3,
+}
+`);
+});
