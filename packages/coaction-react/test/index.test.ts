@@ -31,7 +31,7 @@ test('updates component with selector and full-state access', () => {
     );
   };
 
-  render(React.createElement(Counter));
+  render(React.createElement(Counter) as any);
   expect(screen.getByTestId('count').textContent).toBe('0');
   expect(screen.getByTestId('double').textContent).toBe('0');
   fireEvent.click(screen.getByText('inc'));
@@ -67,7 +67,7 @@ test('supports autoSelector', () => {
     );
   };
 
-  render(React.createElement(Counter));
+  render(React.createElement(Counter) as any);
   expect(screen.getByTestId('count').textContent).toBe('0');
   expect(screen.getByTestId('double').textContent).toBe('0');
   fireEvent.click(screen.getByText('inc'));
@@ -109,7 +109,7 @@ test('supports slices autoSelector', () => {
     );
   };
 
-  render(React.createElement(Counter));
+  render(React.createElement(Counter) as any);
   expect(screen.getByTestId('count').textContent).toBe('0');
   expect(screen.getByTestId('double').textContent).toBe('0');
   fireEvent.click(screen.getByText('inc'));
@@ -143,7 +143,7 @@ test('createSelector combines multiple stores', () => {
     return React.createElement('span', { 'data-testid': 'total' }, total);
   };
 
-  render(React.createElement(Counter));
+  render(React.createElement(Counter) as any);
   expect(screen.getByTestId('total').textContent).toBe('2');
   act(() => {
     useCounter.getState().increment();

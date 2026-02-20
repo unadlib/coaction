@@ -29,7 +29,7 @@
     "clean": "turbo run clean",
     "watch": "preconstruct watch",
     "fix": "manypkg fix",
-    "typecheck": "tsc",
+    "typecheck": "tsc --noEmit",
     "test": "turbo run test",
     "test:coverage": "vitest run --coverage",
     "commit": "cz",
