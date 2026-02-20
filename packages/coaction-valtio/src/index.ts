@@ -18,8 +18,10 @@ const handleStore = (
 ) => {
   if (!internal.toMutableRaw) {
     internal.toMutableRaw = (key: object) => instancesMap.get(key);
+    const getMutableState = () => internal.toMutableRaw?.(rawState) ?? rawState;
     Object.assign(store, {
-      subscribe: (listener: () => void) => subscribe(store.getState(), listener)
+      subscribe: (listener: () => void) =>
+        subscribe(getMutableState(), listener)
     });
     store.apply = (state = store.getState(), patches) => {
       if (!patches) {
