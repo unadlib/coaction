@@ -1,6 +1,6 @@
 {
   "name": "@coaction/alien-signals",
-  "version": "1.0.0",
+  "version": "1.0.1",
   "description": "A Coaction integration tool for alien-signals",
   "keywords": [
     "state",
