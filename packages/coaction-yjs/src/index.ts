@@ -5,12 +5,12 @@ export * from 'yjs';
 
 const ORIGIN = Symbol('coaction-yjs');
 
-const clone = <T>(value: T): T => {
+function clone<T>(value: T): T {
   if (typeof structuredClone === 'function') {
     return structuredClone(value);
   }
   return JSON.parse(JSON.stringify(value));
-};
+}
 
 export type YjsBindingOptions = {
   doc?: Y.Doc;

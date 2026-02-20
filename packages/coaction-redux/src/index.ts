@@ -5,7 +5,7 @@ export * from '@reduxjs/toolkit';
 
 export const COACTION_REDUX_REPLACE = '@@coaction/redux/replace';
 
-const stripFunctions = <T>(value: T): T => {
+function stripFunctions<T>(value: T): T {
   if (Array.isArray(value)) {
     return value.map((item) => stripFunctions(item)) as T;
   }
@@ -21,17 +21,19 @@ const stripFunctions = <T>(value: T): T => {
     return next as T;
   }
   return value;
-};
+}
 
 export type ReplaceStateAction<S> = {
   type: typeof COACTION_REDUX_REPLACE;
   payload: S;
 };
 
-export const replaceStateAction = <S>(payload: S): ReplaceStateAction<S> => ({
-  type: COACTION_REDUX_REPLACE,
-  payload
-});
+export function replaceStateAction<S>(payload: S): ReplaceStateAction<S> {
+  return {
+    type: COACTION_REDUX_REPLACE,
+    payload
+  };
+}
 
 export const withCoactionReducer =
   <S, A extends AnyAction = AnyAction>(
