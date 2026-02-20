@@ -146,3 +146,76 @@ test('createJSONStorage', () => {
   storage.removeItem('name');
   expect(storage.getItem('name')).toBeNull();
 });
+
+test('calls onRehydrateStorage for empty storage and deserialize errors', async () => {
+  const emptyStorage = createMemoryStorage();
+  const emptyCallback = jest.fn();
+  const emptyStore = create(
+    () => ({
+      count: 0
+    }),
+    {
+      middlewares: [
+        persist({
+          name: 'empty',
+          storage: emptyStorage,
+          onRehydrateStorage: emptyCallback
+        })
+      ]
+    }
+  );
+  await nextTick();
+  expect(emptyStore.getState().count).toBe(0);
+  expect(emptyCallback).toHaveBeenCalledWith(
+    expect.objectContaining({
+      count: 0
+    })
+  );
+
+  const invalidStorage = createMemoryStorage();
+  invalidStorage.setItem('invalid', '{bad-json');
+  const errorCallback = jest.fn();
+  create(
+    () => ({
+      count: 0
+    }),
+    {
+      middlewares: [
+        persist({
+          name: 'invalid',
+          storage: invalidStorage,
+          onRehydrateStorage: errorCallback
+        })
+      ]
+    }
+  );
+  await nextTick();
+  expect(errorCallback).toHaveBeenCalledWith(
+    undefined,
+    expect.any(SyntaxError)
+  );
+});
+
+test('supports noop storage fallback when storage is nullish', async () => {
+  const useStore = create(
+    (set) => ({
+      count: 0,
+      increment() {
+        set((draft) => {
+          draft.count += 1;
+        });
+      }
+    }),
+    {
+      middlewares: [
+        persist({
+          name: 'noop',
+          storage: null as unknown as PersistStorage
+        })
+      ]
+    }
+  );
+  useStore.getState().increment();
+  await nextTick();
+  expect(useStore.getState().count).toBe(1);
+});
