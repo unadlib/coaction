@@ -83,8 +83,9 @@ const createReadable = <T extends object, P>(
 export const create: Creator = (createState: any, options: any) => {
   const store = createVanilla(createState, options);
   const baseSubscribe = store.subscribe.bind(store);
-  const select = <P>(selector: (state: any) => P) =>
-    createReadable(store as Store<any>, selector);
+  function select<P>(selector: (state: any) => P) {
+    return createReadable(store as Store<any>, selector);
+  }
   const subscribe = ((listener: any, invalidate?: any) => {
     if (typeof invalidate === 'function') {
       invalidate();

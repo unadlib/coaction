@@ -46,7 +46,7 @@ export type Creator = {
   ): StoreWithAsyncFunction<T>;
 };
 
-const attachSignals = <T extends object>(store: Store<T>) => {
+function attachSignals<T extends object>(store: Store<T>) {
   const version = signal(0);
   const unsubscribe = store.subscribe(() => {
     version.update((value) => value + 1);
@@ -60,16 +60,17 @@ const attachSignals = <T extends object>(store: Store<T>) => {
     version();
     return store.getState();
   });
-  const select = <P>(selector: (currentState: T) => P) =>
-    computed(() => {
+  function select<P>(selector: (currentState: T) => P) {
+    return computed(() => {
       version();
       return selector(store.getState());
     });
+  }
   return Object.assign(store, {
     state,
     select
   });
-};
+}
 
 export const create: Creator = (createState: any, options: any) => {
   const store = createVanilla(createState, options);
