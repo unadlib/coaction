@@ -1,4 +1,4 @@
-import { createAsyncClientStore } from '../src/asyncClientStore';
+import { createAsyncClientStore, handleDraft } from '../src/asyncClientStore';
 import { applyMiddlewares } from '../src/applyMiddlewares';
 import { create } from '../src/create';
 import { getInitialState } from '../src/getInitialState';
@@ -180,6 +180,47 @@ test('createAsyncClientStore performs fullSync on sequence mismatch', async () =
   expect(apply).toHaveBeenCalledWith({
     count: 1
   });
+});
+
+test('handleDraft uses patch hook before applying patches', () => {
+  const patch = vi.fn(({ patches, inversePatches }) => ({
+    patches,
+    inversePatches
+  }));
+  const apply = vi.fn();
+  handleDraft(
+    {
+      patch,
+      apply
+    } as any,
+    {
+      rootState: {
+        count: 0
+      },
+      backupState: {
+        count: 0
+      },
+      finalizeDraft: () => [
+        undefined,
+        [
+          {
+            op: 'replace',
+            path: ['count'],
+            value: 1
+          }
+        ],
+        [
+          {
+            op: 'replace',
+            path: ['count'],
+            value: 0
+          }
+        ]
+      ]
+    } as any
+  );
+  expect(patch).toHaveBeenCalledTimes(1);
+  expect(apply).toHaveBeenCalledTimes(1);
 });
 
 test('WorkerType chooses shared worker global first', async () => {
