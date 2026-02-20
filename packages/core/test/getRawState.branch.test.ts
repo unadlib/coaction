@@ -91,6 +91,96 @@ test('client action waits for sequence catch-up and warns in development', async
   }
 });
 
+test('client action mismatch path works without development warning', async () => {
+  const { store, internal, trigger } = createClientStoreContext(async () => [
+    'ok',
+    2
+  ]);
+  const warnSpy = vi.spyOn(console, 'warn').mockImplementation(() => {});
+  const prev = process.env.NODE_ENV;
+  process.env.NODE_ENV = 'test';
+  try {
+    const pending = store.getState().increment(1);
+    await Promise.resolve();
+    trigger();
+    internal.sequence = 2;
+    trigger();
+    await expect(pending).resolves.toBe('ok');
+    expect(warnSpy).not.toHaveBeenCalled();
+  } finally {
+    process.env.NODE_ENV = prev;
+    warnSpy.mockRestore();
+  }
+});
+
+const createMutableSliceContext = ({
+  enablePatches,
+  actMutable
+}: {
+  enablePatches?: boolean;
+  actMutable?: (updater: () => any) => any;
+}) => {
+  const sourceCounter = {
+    count: 0,
+    increment(step = 1) {
+      this.count += step;
+      return this.count;
+    }
+  };
+  const mutableCounter = {
+    count: 0
+  };
+  const internal = {
+    toMutableRaw: (state: object) =>
+      state === sourceCounter ? mutableCounter : undefined,
+    actMutable,
+    sequence: 0,
+    listeners: new Set(),
+    isBatching: false
+  } as any;
+  const store = {
+    share: false,
+    isSliceStore: true,
+    getState: () => internal.module,
+    apply: vi.fn((state: any) => {
+      internal.rootState = state;
+    })
+  } as any;
+  const rawState = getRawState(
+    store,
+    internal,
+    {
+      counter: sourceCounter
+    },
+    {
+      enablePatches
+    } as any
+  );
+  internal.rootState = rawState;
+  return {
+    internal,
+    store
+  };
+};
+
+test('mutable slice action uses sliceKey branch in patch-enabled flow', () => {
+  const { store } = createMutableSliceContext({
+    enablePatches: true
+  });
+  const result = store.getState().counter.increment(2);
+  expect(result).toBe(2);
+  expect(store.apply).toHaveBeenCalled();
+});
+
+test('mutable slice action uses sliceKey branch in actMutable flow', () => {
+  const { store } = createMutableSliceContext({
+    enablePatches: false,
+    actMutable: (updater) => updater()
+  });
+  const result = store.getState().counter.increment(3);
+  expect(result).toBe(3);
+});
+
 test('throws when computed is used with mutable instance', () => {
   const internal = {
     toMutableRaw: () => ({})
