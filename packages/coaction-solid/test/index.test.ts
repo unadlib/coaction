@@ -50,6 +50,8 @@ test('autoSelector', () => {
   }));
   createRoot((dispose) => {
     const selectors = useStore({ autoSelector: true });
+    const cachedSelectors = useStore({ autoSelector: true });
+    expect(cachedSelectors).toBe(selectors);
     expect(selectors.count()).toBe(0);
     expect(selectors.double()).toBe(0);
     selectors.increment();
@@ -80,6 +82,35 @@ test('slices autoSelector', () => {
     selectors.counter.increment();
     expect(selectors.counter.count()).toBe(1);
     expect(selectors.counter.double()).toBe(2);
+    dispose();
+  });
+});
+
+test('destroy unsubscribes solid listener lifecycle', () => {
+  const useStore = create<{
+    count: number;
+  }>(() => ({
+    count: 0
+  }));
+  createRoot((dispose) => {
+    const state = useStore();
+    expect(state().count).toBe(0);
+    useStore.destroy();
+    dispose();
+  });
+});
+
+test('slices autoSelector skips non-object state entries', () => {
+  const useStore = create({
+    counter: () => ({
+      count: 0
+    })
+  });
+  (useStore.getState() as any).meta = 1;
+  createRoot((dispose) => {
+    const selectors = useStore({ autoSelector: true }) as any;
+    expect(selectors.counter.count()).toBe(0);
+    expect(selectors.meta).toBeUndefined();
     dispose();
   });
 });
