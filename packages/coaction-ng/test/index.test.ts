@@ -53,3 +53,13 @@ test('slices', () => {
   expect(store.state().counter.count).toBe(1);
   expect(count()).toBe(1);
 });
+
+test('destroy disposes attached signal subscription', () => {
+  const store = create<{
+    count: number;
+  }>(() => ({
+    count: 0
+  }));
+  expect(store.state().count).toBe(0);
+  store.destroy();
+});
