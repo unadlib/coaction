@@ -30,3 +30,81 @@ describe('_global', () => {
     }
   });
 });
+
+const getDescriptor = (key: 'window' | 'global' | 'self') =>
+  Object.getOwnPropertyDescriptor(globalThis, key);
+
+const restoreGlobalKey = (
+  key: 'window' | 'global' | 'self',
+  descriptor?: PropertyDescriptor
+) => {
+  if (!descriptor) {
+    delete (globalThis as any)[key];
+    return;
+  }
+  Object.defineProperty(globalThis, key, descriptor);
+};
+
+describe('getGlobal environment branches', () => {
+  test('falls back to global when window is unavailable', () => {
+    const windowDescriptor = getDescriptor('window');
+    const globalDescriptor = getDescriptor('global');
+    const selfDescriptor = getDescriptor('self');
+    const globalRef = {
+      marker: 'global'
+    };
+    try {
+      delete (globalThis as any).window;
+      Object.defineProperty(globalThis, 'global', {
+        value: globalRef,
+        configurable: true,
+        writable: true
+      });
+      delete (globalThis as any).self;
+      expect(getGlobal()).toBe(globalRef);
+    } finally {
+      restoreGlobalKey('window', windowDescriptor);
+      restoreGlobalKey('global', globalDescriptor);
+      restoreGlobalKey('self', selfDescriptor);
+    }
+  });
+
+  test('falls back to self when window/global are unavailable', () => {
+    const windowDescriptor = getDescriptor('window');
+    const globalDescriptor = getDescriptor('global');
+    const selfDescriptor = getDescriptor('self');
+    const selfRef = {
+      marker: 'self'
+    };
+    try {
+      delete (globalThis as any).window;
+      delete (globalThis as any).global;
+      Object.defineProperty(globalThis, 'self', {
+        value: selfRef,
+        configurable: true,
+        writable: true
+      });
+      expect(getGlobal()).toBe(selfRef);
+    } finally {
+      restoreGlobalKey('window', windowDescriptor);
+      restoreGlobalKey('global', globalDescriptor);
+      restoreGlobalKey('self', selfDescriptor);
+    }
+  });
+
+  test('falls back to empty object when no global targets exist', () => {
+    const windowDescriptor = getDescriptor('window');
+    const globalDescriptor = getDescriptor('global');
+    const selfDescriptor = getDescriptor('self');
+    try {
+      delete (globalThis as any).window;
+      delete (globalThis as any).global;
+      delete (globalThis as any).self;
+      expect(getGlobal()).toEqual({});
+    } finally {
+      restoreGlobalKey('window', windowDescriptor);
+      restoreGlobalKey('global', globalDescriptor);
+      restoreGlobalKey('self', selfDescriptor);
+    }
+  });
+});
