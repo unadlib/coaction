@@ -52,6 +52,57 @@ test('applyMiddlewares validates null middleware return in development', () => {
   }
 });
 
+test('applyMiddlewares accepts valid store-like middleware return in development', () => {
+  const prev = process.env.NODE_ENV;
+  process.env.NODE_ENV = 'development';
+  try {
+    const nextStore = createStoreLike();
+    const result = applyMiddlewares(createStoreLike() as any, [
+      () => nextStore as any
+    ]);
+    expect(result).toBe(nextStore);
+  } finally {
+    process.env.NODE_ENV = prev;
+  }
+});
+
+test('applyMiddlewares validates each required store-like method in development', () => {
+  const prev = process.env.NODE_ENV;
+  process.env.NODE_ENV = 'development';
+  try {
+    const invalidStores = [
+      {
+        ...createStoreLike(),
+        getState: undefined
+      },
+      {
+        ...createStoreLike(),
+        subscribe: undefined
+      },
+      {
+        ...createStoreLike(),
+        destroy: undefined
+      },
+      {
+        ...createStoreLike(),
+        apply: undefined
+      },
+      {
+        ...createStoreLike(),
+        getPureState: undefined
+      }
+    ];
+
+    invalidStores.forEach((nextStore) => {
+      expect(() => {
+        applyMiddlewares(createStoreLike() as any, [() => nextStore as any]);
+      }).toThrow('middlewares[0] should return a store-like object');
+    });
+  } finally {
+    process.env.NODE_ENV = prev;
+  }
+});
+
 test('createAsyncClientStore requires transport.onConnect', () => {
   expect(() => {
     createAsyncClientStore(
@@ -282,6 +333,26 @@ test('getInitialState handles invalid state values in development and production
   } finally {
     process.env.NODE_ENV = prev;
   }
+});
+
+test('getInitialState invalid slice value includes the slice key in error', () => {
+  const fakeStore = {
+    isSliceStore: true,
+    setState: vi.fn(),
+    getState: vi.fn()
+  } as any;
+
+  expect(() => {
+    getInitialState(
+      fakeStore,
+      {
+        counter: 1 as any
+      } as any,
+      {} as any
+    );
+  }).toThrow(
+    'Invalid state value encountered in makeState: for key counter, number'
+  );
 });
 
 test('handleMainTransport validates onConnect and normalizes non-Error throws', async () => {
