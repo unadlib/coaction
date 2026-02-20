@@ -1,6 +1,6 @@
 {
   "name": "@coaction/history",
-  "version": "1.0.0",
+  "version": "1.0.1",
   "description": "A undo/redo middleware for Coaction",
   "keywords": [
     "state",

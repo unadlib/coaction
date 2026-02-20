@@ -1,5 +1,11 @@
 # @coaction/xstate
 
+## 1.0.1
+
+### Patch Changes
+
+- Bump all @coaction/\* subpackages to v1.0.1.
+
 ## 1.0.0
 
 ### Minor Changes
