@@ -1,4 +1,5 @@
 import { create } from 'coaction';
+import { vi } from 'vitest';
 import { createJSONStorage, persist, PersistStorage } from '../src';
 
 const nextTick = async () => {
@@ -217,5 +218,84 @@ test('supports noop storage fallback when storage is nullish', async () => {
   );
   useStore.getState().increment();
   await nextTick();
+  await (useStore as any).persist.clearStorage();
+  useStore.destroy();
   expect(useStore.getState().count).toBe(1);
+});
+
+test('uses default storage when localStorage is unavailable', async () => {
+  vi.stubGlobal('localStorage', undefined);
+  expect(typeof localStorage).toBe('undefined');
+  try {
+    const useStore = create(
+      (set) => ({
+        count: 0,
+        increment() {
+          set((draft) => {
+            draft.count += 1;
+          });
+        }
+      }),
+      {
+        middlewares: [
+          persist({
+            name: 'default-storage',
+            skipHydration: true
+          })
+        ]
+      }
+    );
+    useStore.getState().increment();
+    await nextTick();
+    await (useStore as any).persist.clearStorage();
+    useStore.destroy();
+    expect(useStore.getState().count).toBe(1);
+  } finally {
+    vi.unstubAllGlobals();
+  }
+});
+
+test('uses default localStorage when available', async () => {
+  const map = new Map<string, string>();
+  vi.stubGlobal('localStorage', {
+    getItem: (name: string) => map.get(name) ?? null,
+    setItem: (name: string, value: string) => {
+      map.set(name, value);
+    },
+    removeItem: (name: string) => {
+      map.delete(name);
+    },
+    clear: () => map.clear(),
+    key: () => null,
+    get length() {
+      return map.size;
+    }
+  } as Storage);
+  try {
+    const useStore = create(
+      (set) => ({
+        count: 0,
+        increment() {
+          set((draft) => {
+            draft.count += 1;
+          });
+        }
+      }),
+      {
+        middlewares: [
+          persist({
+            name: 'browser-storage',
+            skipHydration: true
+          })
+        ]
+      }
+    );
+    useStore.getState().increment();
+    await nextTick();
+    expect(map.get('browser-storage')).toContain('"count":1');
+    await (useStore as any).persist.clearStorage();
+    expect(map.has('browser-storage')).toBeFalsy();
+  } finally {
+    vi.unstubAllGlobals();
+  }
 });
