@@ -1,6 +1,11 @@
 import { create, Slices } from 'coaction';
 import { configureStore, createSlice } from '@reduxjs/toolkit';
-import { adapt, bindRedux, withCoactionReducer } from '../src';
+import {
+  adapt,
+  bindRedux,
+  replaceStateAction,
+  withCoactionReducer
+} from '../src';
 
 test('base', () => {
   const counterSlice = createSlice({
@@ -35,6 +40,42 @@ test('base', () => {
   });
   expect(useStore.getState().count).toBe(10);
   expect(reduxStore.getState().count).toBe(10);
+});
+
+test('replace action strips nested functions from payload', () => {
+  const reducer = withCoactionReducer((state = {} as any) => state);
+  const next = reducer(
+    undefined,
+    replaceStateAction({
+      items: [
+        {
+          count: 1,
+          toText() {
+            return String(this.count);
+          }
+        }
+      ],
+      nested: {
+        value: 2,
+        fn() {
+          return this.value;
+        }
+      },
+      callback: () => {}
+    } as any)
+  ) as any;
+  expect(next).toMatchInlineSnapshot(`
+{
+  "items": [
+    {
+      "count": 1,
+    },
+  ],
+  "nested": {
+    "value": 2,
+  },
+}
+`);
 });
 
 describe('Slices', () => {
