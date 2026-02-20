@@ -52,6 +52,8 @@ test('autoSelector', () => {
   const scope = effectScope();
   scope.run(() => {
     const selectors = useStore({ autoSelector: true });
+    const cachedSelectors = useStore({ autoSelector: true });
+    expect(cachedSelectors).toBe(selectors);
     expect(selectors.count.value).toBe(0);
     expect(selectors.double.value).toBe(0);
     selectors.increment();
@@ -85,4 +87,38 @@ test('slices autoSelector', () => {
     expect(selectors.counter.double.value).toBe(2);
   });
   scope.stop();
+});
+
+test('state proxy supports reflection traps and destroy lifecycle', () => {
+  const useStore = create<{
+    count: number;
+    increment: () => void;
+  }>((set) => ({
+    count: 0,
+    increment() {
+      set((draft) => {
+        draft.count += 1;
+      });
+    }
+  }));
+  const state = useStore();
+  expect('count' in state).toBe(true);
+  expect(Reflect.ownKeys(state)).toContain('count');
+  expect(Object.getOwnPropertyDescriptor(state, 'count')?.configurable).toBe(
+    true
+  );
+  expect(Object.getOwnPropertyDescriptor(state, 'missing')).toBeUndefined();
+  useStore.destroy();
+});
+
+test('slices autoSelector skips non-object slice values', () => {
+  const useStore = create({
+    counter: () => ({
+      count: 0
+    })
+  });
+  (useStore.getState() as any).meta = 1;
+  const selectors = useStore({ autoSelector: true }) as any;
+  expect(selectors.counter.count.value).toBe(0);
+  expect(selectors.meta).toBeUndefined();
 });
