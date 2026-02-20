@@ -10,7 +10,8 @@
       "react": "React",
       "mutative": "Mutative",
       "mobx": "Mobx",
-      "pinia": "Pinia"
+      "pinia": "Pinia",
+      "vue": "Vue"
     },
     "exports": {
       "importConditionDefaultExport": "default"
