@@ -43,7 +43,7 @@
     "url": "https://github.com/unadlib/coaction/issues"
   },
   "peerDependencies": {
-    "coaction": "^0.2.0",
+    "coaction": "^1.0.1",
     "mobx": "^6.13.2",
     "mutative": "^1.1.0",
     "react": "^17.0.0 || ^18.0.0 || ^19.0.0"
@@ -68,7 +68,7 @@
     "@types/react": "^19.2.14",
     "@types/react-dom": "^19.2.3",
     "@types/use-sync-external-store": "^1.5.0",
-    "coaction": "^0.2.0",
+    "coaction": "^1.0.1",
     "data-transport": "^5.0.3",
     "jsdom": "^28.1.0",
     "jsdom-global": "^3.0.2",

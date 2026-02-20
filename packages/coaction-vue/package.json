@@ -45,7 +45,7 @@
     "url": "https://github.com/unadlib/coaction/issues"
   },
   "peerDependencies": {
-    "coaction": "^0.2.0",
+    "coaction": "^1.0.1",
     "vue": "^3.0.0"
   },
   "peerDependenciesMeta": {
@@ -55,7 +55,7 @@
   },
   "devDependencies": {
     "@testing-library/vue": "^8.1.0",
-    "coaction": "^0.2.0",
+    "coaction": "^1.0.1",
     "vue": "^3.5.28"
   },
   "publishConfig": {

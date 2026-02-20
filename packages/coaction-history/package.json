@@ -46,7 +46,7 @@
     "url": "https://github.com/unadlib/coaction/issues"
   },
   "peerDependencies": {
-    "coaction": "^0.2.0"
+    "coaction": "^1.0.1"
   },
   "peerDependenciesMeta": {
     "coaction": {
@@ -54,7 +54,7 @@
     }
   },
   "devDependencies": {
-    "coaction": "^0.2.0"
+    "coaction": "^1.0.1"
   },
   "publishConfig": {
     "access": "public",
