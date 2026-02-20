@@ -72,5 +72,9 @@
   },
   "dependencies": {
     "mutability": "^1.2.1"
+  },
+  "publishConfig": {
+    "access": "public",
+    "provenance": true
   }
 }

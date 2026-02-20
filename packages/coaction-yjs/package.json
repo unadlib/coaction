@@ -64,5 +64,9 @@
   "devDependencies": {
     "coaction": "^0.1.5",
     "yjs": "^13.6.27"
+  },
+  "publishConfig": {
+    "access": "public",
+    "provenance": true
   }
 }

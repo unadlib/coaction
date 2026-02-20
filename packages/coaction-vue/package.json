@@ -64,5 +64,9 @@
     "@testing-library/vue": "^8.1.0",
     "coaction": "^0.1.5",
     "vue": "^3.5.28"
+  },
+  "publishConfig": {
+    "access": "public",
+    "provenance": true
   }
 }

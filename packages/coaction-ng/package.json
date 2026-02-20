@@ -61,5 +61,9 @@
   "devDependencies": {
     "@angular/core": "^20.3.1",
     "coaction": "^0.1.5"
+  },
+  "publishConfig": {
+    "access": "public",
+    "provenance": true
   }
 }

@@ -64,5 +64,9 @@
   "devDependencies": {
     "@reduxjs/toolkit": "^2.10.1",
     "coaction": "^0.1.5"
+  },
+  "publishConfig": {
+    "access": "public",
+    "provenance": true
   }
 }
