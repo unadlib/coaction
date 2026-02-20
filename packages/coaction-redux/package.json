@@ -45,7 +45,7 @@
   },
   "peerDependencies": {
     "@reduxjs/toolkit": "^2.0.0",
-    "coaction": "^0.2.0"
+    "coaction": "^1.0.1"
   },
   "peerDependenciesMeta": {
     "coaction": {
@@ -57,7 +57,7 @@
   },
   "devDependencies": {
     "@reduxjs/toolkit": "^2.10.1",
-    "coaction": "^0.2.0"
+    "coaction": "^1.0.1"
   },
   "publishConfig": {
     "access": "public",
