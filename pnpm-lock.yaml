@@ -129,20 +129,20 @@ importers:
         specifier: ^3.1.2
         version: 3.1.2
       coaction:
-        specifier: ^0.1.5
-        version: 0.1.5
+        specifier: ^0.2.0
+        version: link:../core
 
   packages/coaction-history:
     devDependencies:
       coaction:
-        specifier: ^0.1.5
-        version: 0.1.5
+        specifier: ^0.2.0
+        version: link:../core
 
   packages/coaction-jotai:
     devDependencies:
       coaction:
-        specifier: ^0.1.5
-        version: 0.1.5
+        specifier: ^0.2.0
+        version: link:../core
       jotai:
         specifier: ^2.15.1
         version: 2.18.0(@babel/core@7.29.0)(@babel/template@7.28.6)(@types/react@19.2.14)(react@19.2.4)
@@ -169,8 +169,8 @@ importers:
         specifier: ^1.5.0
         version: 1.5.0
       coaction:
-        specifier: ^0.1.5
-        version: 0.1.5
+        specifier: ^0.2.0
+        version: link:../core
       data-transport:
         specifier: ^5.0.3
         version: 5.0.3
@@ -199,14 +199,14 @@ importers:
         specifier: ^20.3.1
         version: 20.3.16(rxjs@7.8.2)
       coaction:
-        specifier: ^0.1.5
-        version: 0.1.5
+        specifier: ^0.2.0
+        version: link:../core
 
   packages/coaction-persist:
     devDependencies:
       coaction:
-        specifier: ^0.1.5
-        version: 0.1.5
+        specifier: ^0.2.0
+        version: link:../core
 
   packages/coaction-pinia:
     dependencies:
@@ -215,8 +215,8 @@ importers:
         version: 1.2.1(mutative@1.3.0)
     devDependencies:
       coaction:
-        specifier: ^0.1.5
-        version: 0.1.5
+        specifier: ^0.2.0
+        version: link:../core
       data-transport:
         specifier: ^5.0.3
         version: 5.0.3
@@ -249,8 +249,8 @@ importers:
         specifier: ^1.5.0
         version: 1.5.0
       coaction:
-        specifier: ^0.1.5
-        version: 0.1.5
+        specifier: ^0.2.0
+        version: link:../core
       jsdom:
         specifier: ^28.1.0
         version: 28.1.0
@@ -270,14 +270,14 @@ importers:
         specifier: ^2.10.1
         version: 2.11.2(react@19.2.4)
       coaction:
-        specifier: ^0.1.5
-        version: 0.1.5
+        specifier: ^0.2.0
+        version: link:../core
 
   packages/coaction-solid:
     devDependencies:
       coaction:
-        specifier: ^0.1.5
-        version: 0.1.5
+        specifier: ^0.2.0
+        version: link:../core
       solid-js:
         specifier: ^1.9.10
         version: 1.9.11
@@ -285,8 +285,8 @@ importers:
   packages/coaction-svelte:
     devDependencies:
       coaction:
-        specifier: ^0.1.5
-        version: 0.1.5
+        specifier: ^0.2.0
+        version: link:../core
       svelte:
         specifier: ^5.43.11
         version: 5.53.0
@@ -298,8 +298,8 @@ importers:
         version: 1.2.1(mutative@1.3.0)
     devDependencies:
       coaction:
-        specifier: ^0.1.5
-        version: 0.1.5
+        specifier: ^0.2.0
+        version: link:../core
       mutative:
         specifier: ^1.3.0
         version: 1.3.0
@@ -313,8 +313,8 @@ importers:
         specifier: ^8.1.0
         version: 8.1.0(@vue/compiler-sfc@3.5.28)(vue@3.5.28(typescript@5.9.3))
       coaction:
-        specifier: ^0.1.5
-        version: 0.1.5
+        specifier: ^0.2.0
+        version: link:../core
       vue:
         specifier: ^3.5.28
         version: 3.5.28(typescript@5.9.3)
@@ -322,8 +322,8 @@ importers:
   packages/coaction-xstate:
     devDependencies:
       coaction:
-        specifier: ^0.1.5
-        version: 0.1.5
+        specifier: ^0.2.0
+        version: link:../core
       xstate:
         specifier: ^5.23.0
         version: 5.28.0
@@ -331,8 +331,8 @@ importers:
   packages/coaction-yjs:
     devDependencies:
       coaction:
-        specifier: ^0.1.5
-        version: 0.1.5
+        specifier: ^0.2.0
+        version: link:../core
       yjs:
         specifier: ^13.6.27
         version: 13.6.29
@@ -355,8 +355,8 @@ importers:
         specifier: ^1.5.0
         version: 1.5.0
       coaction:
-        specifier: ^0.1.5
-        version: 0.1.5
+        specifier: ^0.2.0
+        version: link:../core
       data-transport:
         specifier: ^5.0.3
         version: 5.0.3
@@ -391,8 +391,8 @@ importers:
   packages/logger:
     devDependencies:
       coaction:
-        specifier: ^0.1.5
-        version: 0.1.5
+        specifier: ^0.2.0
+        version: link:../core
       mutative:
         specifier: ^1.3.0
         version: 1.3.0
@@ -2247,9 +2247,6 @@ packages:
     resolution: {integrity: sha512-eYm0QWBtUrBWZWG0d386OGAw16Z995PiOVo2B7bjWSbHedGl5e0ZWaq65kOGgUSNesEIDkB9ISbTg/JK9dhCZA==}
     engines: {node: '>=6'}
 
-  coaction@0.1.5:
-    resolution: {integrity: sha512-09Rct5AGp22xqdc7+uDjbeoRLeIBDQCT9PWEFwe8rnhcKcrzjBz+NCoKLj0093kitlZolXQ5MqyZH5lrt2+qPg==}
-
   color-convert@1.9.3:
     resolution: {integrity: sha512-QfAUtd+vFdAtFQcC8CCyYt1fYWxSqAiK2cSD6zDB8N3cpsEBAvRxp9zOGg6G/SHHJYAT88/az/IuDGALsNVbGg==}
 
@@ -2350,9 +2347,6 @@ packages:
   cz-conventional-changelog@3.3.0:
     resolution: {integrity: sha512-U466fIzU5U22eES5lTNiNbZ+d8dfcHcssH4o7QsdWaCcRs/feIPCxKYSWkYBNs5mny7MvEfwpTLWjvbm94hecw==}
     engines: {node: '>= 10'}
-
-  data-transport@4.5.3:
-    resolution: {integrity: sha512-+jjojjDm7dZdNtcgNTuiVkdhkvZERhkalN1kVm3ExpEv3b+A5+HpPmQ8y82t8y3jz3M26qamMlf36ho+eWJwOw==}
 
   data-transport@5.0.3:
     resolution: {integrity: sha512-AncLCdUPeovpoN5dB76E3O8l9kS3rNkTfJmJenyXu8AdSOPs9jAd97DBauZS17YfPOGLDS/mbDBXUavRpKiwJA==}
@@ -6586,11 +6580,6 @@ snapshots:
 
   clsx@2.1.1: {}
 
-  coaction@0.1.5:
-    dependencies:
-      data-transport: 4.5.3
-      mutative: 1.3.0
-
   color-convert@1.9.3:
     dependencies:
       color-name: 1.1.3
@@ -6716,10 +6705,6 @@ snapshots:
     transitivePeerDependencies:
       - '@types/node'
       - typescript
-
-  data-transport@4.5.3:
-    dependencies:
-      uuid: 9.0.1
 
   data-transport@5.0.3:
     dependencies:
