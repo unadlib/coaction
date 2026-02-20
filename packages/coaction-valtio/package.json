@@ -34,7 +34,8 @@
   ],
   "repository": {
     "type": "git",
-    "url": "git+ssh://git@github.com/unadlib/coaction.git"
+    "url": "https://github.com/unadlib/coaction.git",
+    "directory": "packages/coaction-valtio"
   },
   "scripts": {
     "clean": "rm -rf dist",
@@ -76,5 +77,6 @@
   "publishConfig": {
     "access": "public",
     "provenance": true
-  }
+  },
+  "author": "unadlib"
 }
