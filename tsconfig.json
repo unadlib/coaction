@@ -4,6 +4,10 @@
     "isolatedModules": true,
     "moduleResolution": "bundler",
     "module": "esnext",
+    "baseUrl": ".",
+    "paths": {
+      "coaction": ["packages/core/index.ts"]
+    },
     "allowImportingTsExtensions": true,
     "noEmit": true,
     "skipLibCheck": true,

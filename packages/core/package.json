@@ -10,18 +10,14 @@
   ],
   "homepage": "https://github.com/unadlib/coaction/tree/main/packages/core#readme",
   "license": "MIT",
-  "main": "dist/coaction.cjs.js",
-  "module": "dist/coaction.esm.js",
-  "umd:main": "dist/coaction.umd.min.js",
+  "main": "dist/index.js",
+  "module": "dist/index.mjs",
   "exports": {
     ".": {
-      "types": {
-        "import": "./dist/coaction.cjs.mjs",
-        "default": "./dist/coaction.cjs.js"
-      },
-      "module": "./dist/coaction.esm.js",
-      "import": "./dist/coaction.cjs.mjs",
-      "default": "./dist/coaction.cjs.js"
+      "types": "./dist/index.d.ts",
+      "import": "./dist/index.mjs",
+      "require": "./dist/index.js",
+      "default": "./dist/index.mjs"
     },
     "./package.json": "./package.json"
   },
@@ -36,16 +32,12 @@
   },
   "scripts": {
     "clean": "rm -rf dist",
-    "test": "vitest run test"
+    "test": "vitest run test",
+    "build": "tsup index.ts --format cjs,esm --dts --clean --out-dir dist",
+    "dev": "tsup index.ts --format cjs,esm --dts --watch --out-dir dist"
   },
   "bugs": {
     "url": "https://github.com/unadlib/coaction/issues"
-  },
-  "preconstruct": {
-    "umdName": "Coaction",
-    "entrypoints": [
-      "./index.ts"
-    ]
   },
   "dependencies": {
     "data-transport": "^5.0.3",
@@ -55,5 +47,6 @@
     "access": "public",
     "provenance": true
   },
-  "author": "unadlib"
+  "author": "unadlib",
+  "types": "dist/index.d.ts"
 }

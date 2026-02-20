@@ -12,22 +12,18 @@
   ],
   "homepage": "https://github.com/unadlib/coaction/tree/main/packages/coaction-pinia#readme",
   "license": "MIT",
-  "main": "dist/coaction-pinia.cjs.js",
-  "module": "dist/coaction-pinia.esm.js",
-  "umd:main": "dist/coaction-pinia.umd.min.js",
+  "main": "dist/index.js",
+  "module": "dist/index.mjs",
   "exports": {
     ".": {
-      "types": {
-        "import": "./dist/coaction-pinia.cjs.mjs",
-        "default": "./dist/coaction-pinia.cjs.js"
-      },
-      "module": "./dist/coaction-pinia.esm.js",
-      "import": "./dist/coaction-pinia.cjs.mjs",
-      "default": "./dist/coaction-pinia.cjs.js"
+      "types": "./dist/index.d.ts",
+      "import": "./dist/index.mjs",
+      "require": "./dist/index.js",
+      "default": "./dist/index.mjs"
     },
     "./package.json": "./package.json"
   },
-  "types": "dist/coaction-pinia.cjs.d.ts",
+  "types": "dist/index.d.ts",
   "sideEffects": false,
   "files": [
     "dist"
@@ -39,16 +35,12 @@
   },
   "scripts": {
     "clean": "rm -rf dist",
-    "test": "vitest run test"
+    "test": "vitest run test",
+    "build": "tsup index.ts --format cjs,esm --dts --clean --out-dir dist",
+    "dev": "tsup index.ts --format cjs,esm --dts --watch --out-dir dist"
   },
   "bugs": {
     "url": "https://github.com/unadlib/coaction/issues"
-  },
-  "preconstruct": {
-    "umdName": "CoactionPinia",
-    "entrypoints": [
-      "./index.ts"
-    ]
   },
   "peerDependencies": {
     "coaction": "^0.2.0",
