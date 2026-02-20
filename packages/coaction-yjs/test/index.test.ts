@@ -184,3 +184,22 @@ test('falls back to JSON cloning without structuredClone', () => {
     (globalThis as any).structuredClone = originalStructuredClone;
   }
 });
+
+test('ignores external updates that do not change state key', () => {
+  const doc = new Y.Doc();
+  const store = create((set) => ({
+    count: 0
+  }));
+  const binding = bindYjs(store, {
+    doc,
+    key: 'counter'
+  });
+  const map = doc.getMap<any>('counter');
+  doc.transact(() => {
+    map.set('meta', {
+      synced: true
+    });
+  }, 'external');
+  expect(store.getState().count).toBe(0);
+  binding.destroy();
+});
