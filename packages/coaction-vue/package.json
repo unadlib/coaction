@@ -1,6 +1,6 @@
 {
   "name": "@coaction/vue",
-  "version": "0.1.5",
+  "version": "1.0.0",
   "description": "A Coaction integration tool for Vue",
   "keywords": [
     "coaction",
@@ -53,7 +53,7 @@
     ]
   },
   "peerDependencies": {
-    "coaction": "^0.1.5",
+    "coaction": "^0.2.0",
     "vue": "^3.0.0"
   },
   "peerDependenciesMeta": {
@@ -63,7 +63,7 @@
   },
   "devDependencies": {
     "@testing-library/vue": "^8.1.0",
-    "coaction": "^0.1.5",
+    "coaction": "^0.2.0",
     "vue": "^3.5.28"
   },
   "publishConfig": {

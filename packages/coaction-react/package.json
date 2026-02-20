@@ -1,6 +1,6 @@
 {
   "name": "@coaction/react",
-  "version": "0.1.5",
+  "version": "1.0.0",
   "description": "A Coaction integration tool for React",
   "keywords": [
     "state",
@@ -52,7 +52,7 @@
   },
   "peerDependencies": {
     "@types/react": "^17.0.0 || ^18.0.0 || ^19.0.0",
-    "coaction": "^0.1.5",
+    "coaction": "^0.2.0",
     "react": "^17.0.0 || ^18.0.0 || ^19.0.0"
   },
   "peerDependenciesMeta": {
@@ -69,7 +69,7 @@
     "@types/react": "^19.2.14",
     "@types/react-dom": "^19.2.3",
     "@types/use-sync-external-store": "^1.5.0",
-    "coaction": "^0.1.5",
+    "coaction": "^0.2.0",
     "jsdom": "^28.1.0",
     "jsdom-global": "^3.0.2",
     "react": "^19.2.4",

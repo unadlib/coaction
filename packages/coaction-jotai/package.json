@@ -1,6 +1,6 @@
 {
   "name": "@coaction/jotai",
-  "version": "0.1.5",
+  "version": "1.0.0",
   "description": "A Coaction integration tool for Jotai",
   "keywords": [
     "state",
@@ -51,7 +51,7 @@
     ]
   },
   "peerDependencies": {
-    "coaction": "^0.1.5",
+    "coaction": "^0.2.0",
     "jotai": "^2.0.0"
   },
   "peerDependenciesMeta": {
@@ -63,7 +63,7 @@
     }
   },
   "devDependencies": {
-    "coaction": "^0.1.5",
+    "coaction": "^0.2.0",
     "jotai": "^2.15.1"
   },
   "publishConfig": {
