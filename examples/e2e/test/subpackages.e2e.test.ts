@@ -1,5 +1,5 @@
 import { runExample as runCoreExample } from '../../subpackages/core';
-import { runExample as runLoggerExample } from '../../subpackages/logger';
+import { runExample as runLoggerExample } from '../../subpackages/coaction-logger';
 import { runExample as runHistoryExample } from '../../subpackages/coaction-history';
 import { runExample as runPersistExample } from '../../subpackages/coaction-persist';
 import { runExample as runJotaiExample } from '../../subpackages/coaction-jotai';
