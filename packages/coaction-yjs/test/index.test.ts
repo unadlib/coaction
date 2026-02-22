@@ -860,6 +860,72 @@ test('throws when operation apply fails with non-reentry error', () => {
   }
 });
 
+test('ignores stale delete paths after parent array replacement', async () => {
+  const doc = new Y.Doc();
+  const store = create((set) => ({
+    items: [
+      {
+        done: true
+      }
+    ]
+  }));
+  const binding = bindYjs(store, {
+    doc,
+    key: 'counter'
+  });
+  const stateMap = doc.getMap<any>('counter').get('state') as Y.Map<any>;
+  const items = stateMap.get('items') as Y.Array<any>;
+  const first = items.get(0) as Y.Map<any>;
+  doc.transact(() => {
+    first.delete('done');
+  }, 'external');
+  doc.transact(() => {
+    items.delete(0, 1);
+  }, 'external');
+  await waitFor(() => {
+    expect(store.getState().items).toEqual([]);
+  });
+  binding.destroy();
+});
+
+test('ignores unsupported deep events that yield no operations', async () => {
+  const originalStructuredClone = globalThis.structuredClone;
+  (globalThis as any).structuredClone = undefined;
+  try {
+    const doc = new Y.Doc();
+    const store = create((set) => ({
+      count: 0
+    }));
+    const binding = bindYjs(store, {
+      doc,
+      key: 'counter'
+    });
+    const originalSetState = store.setState.bind(store);
+    let setStateCalls = 0;
+    store.setState = ((next, updater) => {
+      setStateCalls += 1;
+      return originalSetState(next as any, updater as any);
+    }) as typeof store.setState;
+    const stateMap = doc.getMap<any>('counter').get('state') as Y.Map<any>;
+    const text = new Y.Text('a');
+    doc.transact(() => {
+      stateMap.set('rich', text);
+    }, 'external');
+    await waitFor(() => {
+      expect((store.getState() as any).rich).toBe('a');
+      expect(setStateCalls).toBe(1);
+    });
+    doc.transact(() => {
+      text.insert(1, 'b');
+    }, 'external');
+    await wait(20);
+    expect(setStateCalls).toBe(1);
+    binding.destroy();
+  } finally {
+    (globalThis as any).structuredClone = originalStructuredClone;
+  }
+});
+
 test('syncNow skips non-plain pure state and no-ops after destroy', () => {
   const doc = new Y.Doc();
   const store = create((set) => ({
