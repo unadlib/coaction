@@ -15,6 +15,8 @@ import type { Internal } from './internal';
 import { handleDraft } from './asyncClientStore';
 import { uuid } from './utils';
 
+const clientExecuteSyncTimeoutMs = 1500;
+
 export const getRawState = <T extends CreateState>(
   store: Store<T>,
   internal: Internal<T>,
@@ -105,31 +107,66 @@ export const getRawState = <T extends CreateState>(
               store
                 .transport!.emit('execute', keys, args)
                 // @ts-ignore
-                .then(([result, sequence]: [any, number]) => {
-                  if (internal.sequence >= sequence) {
-                    if (result?.$$Error) {
-                      done?.(result);
-                      throw new Error(result.$$Error);
+                .then(async ([result, sequence]: [any, number]) => {
+                  if (internal.sequence < sequence) {
+                    if (process.env.NODE_ENV === 'development') {
+                      console.warn(
+                        `The sequence of the action is not consistent.`,
+                        sequence,
+                        internal.sequence
+                      );
                     }
-                    done?.(result);
-                    return result;
-                  }
-                  if (process.env.NODE_ENV === 'development') {
-                    console.warn(
-                      `The sequence of the action is not consistent.`,
-                      sequence,
-                      internal.sequence
-                    );
-                  }
-                  return new Promise((resolve) => {
-                    const unsubscribe = store.subscribe(() => {
-                      if (internal.sequence >= sequence) {
+                    await new Promise<void>((resolve, reject) => {
+                      let settled = false;
+                      let unsubscribe = () => {};
+                      let timeoutId: ReturnType<typeof setTimeout> | undefined;
+                      const cleanup = () => {
                         unsubscribe();
-                        done?.(result);
-                        resolve(result);
-                      }
+                        if (typeof timeoutId !== 'undefined') {
+                          clearTimeout(timeoutId);
+                        }
+                      };
+                      const finishResolve = () => {
+                        if (settled) return;
+                        settled = true;
+                        cleanup();
+                        resolve();
+                      };
+                      const finishReject = (error: unknown) => {
+                        if (settled) return;
+                        settled = true;
+                        cleanup();
+                        reject(error);
+                      };
+                      unsubscribe = store.subscribe(() => {
+                        if (internal.sequence >= sequence) {
+                          finishResolve();
+                        }
+                      });
+                      timeoutId = setTimeout(() => {
+                        void store
+                          .transport!.emit('fullSync')
+                          .then((latest) => {
+                            const next = latest as {
+                              state: string;
+                              sequence: number;
+                            };
+                            store.apply(JSON.parse(next.state));
+                            internal.sequence = next.sequence;
+                            finishResolve();
+                          })
+                          .catch((error) => {
+                            finishReject(error);
+                          });
+                      }, clientExecuteSyncTimeoutMs);
                     });
-                  });
+                  }
+                  if (result?.$$Error) {
+                    done?.(result);
+                    throw new Error(result.$$Error);
+                  }
+                  done?.(result);
+                  return result;
                 })
             );
           };
