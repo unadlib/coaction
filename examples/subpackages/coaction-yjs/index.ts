@@ -23,7 +23,11 @@ export const runExample = () => {
   });
 
   store.getState().increment();
-  const syncedCount = doc.getMap<any>('counter').get('state').count as number;
+  const syncedState = doc.getMap<any>('counter').get('state');
+  const syncedCount =
+    syncedState && typeof syncedState.get === 'function'
+      ? (syncedState.get('count') as number)
+      : undefined;
 
   const result = {
     count: store.getState().count,
