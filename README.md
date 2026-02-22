@@ -5,7 +5,6 @@
 ![Node CI](https://github.com/unadlib/coaction/workflows/Node%20CI/badge.svg)
 [![Coverage Status](https://coveralls.io/repos/github/unadlib/coaction/badge.svg?branch=main)](https://coveralls.io/github/unadlib/coaction?branch=main)
 [![npm](https://img.shields.io/npm/v/coaction.svg)](https://www.npmjs.com/package/coaction)
-[![NPM Downloads](https://img.shields.io/npm/dm/coaction)](https://npmtrends.com/coaction)
 ![license](https://img.shields.io/npm/l/coaction)
 
 An efficient and flexible state management library for building high-performance, multithreading web applications.
