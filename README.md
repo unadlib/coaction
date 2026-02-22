@@ -292,14 +292,14 @@ Coaction is designed to be compatible with a wide range of libraries and framewo
 
 ### Supported Libraries and Frameworks
 
-|         | Package          | Status |
-| ------- | ---------------- | ------ |
-| React   | @coaction/react  | ✅     |
-| Vue     | @coaction/vue    | ✅     |
-| Angular | @coaction/ng     | ✅     |
-| Svelte  | @coaction/svelte | ✅     |
-| Solid   | @coaction/solid  | ✅     |
-| Yjs     | @coaction/yjs    | ✅     |
+|         | Package                                            | Status |
+| ------- | -------------------------------------------------- | ------ |
+| React   | @coaction/react                                    | ✅     |
+| Vue     | @coaction/vue                                      | ✅     |
+| Angular | @coaction/ng                                       | ✅     |
+| Svelte  | @coaction/svelte                                   | ✅     |
+| Solid   | @coaction/solid                                    | ✅     |
+| Yjs     | [@coaction/yjs](./packages/coaction-yjs/README.md) | ✅     |
 
 ### State Management Libraries
 
@@ -315,6 +315,17 @@ Coaction is designed to be compatible with a wide range of libraries and framewo
 | alien-signals | @coaction/alien-signals | ✅     |
 
 > Note: `Slices` mode is a core `coaction` feature. Third-party state adapters (`@coaction/mobx`, `@coaction/pinia`, `@coaction/zustand`, `@coaction/redux`, `@coaction/jotai`, `@coaction/xstate`, `@coaction/valtio`) only support whole-store binding.
+
+### Yjs Collaboration Guide
+
+For production collaboration setups with `@coaction/yjs`, see:
+
+- [@coaction/yjs README](./packages/coaction-yjs/README.md)
+- [Sync Model](./packages/coaction-yjs/README.md#sync-model)
+- [Conflict Semantics](./packages/coaction-yjs/README.md#conflict-semantics)
+- [Provider Integration](./packages/coaction-yjs/README.md#provider-integration)
+- [Compatibility and Limits](./packages/coaction-yjs/README.md#compatibility-and-limits)
+- [Troubleshooting](./packages/coaction-yjs/README.md#troubleshooting)
 
 ## Middlewares
 
@@ -341,6 +352,7 @@ Coaction is based on the Mutative library, so it can be used regardless of wheth
 - Does Coaction support CRDTs?
 
 Yes, Coaction supports CRDTs. It can achieve remote synchronization through the `data-transport` library, making Coaction well-suited for building any CRDTs application.
+For Yjs-specific synchronization and conflict behavior, see [`@coaction/yjs` documentation](./packages/coaction-yjs/README.md).
 
 - Does Coaction support multiple tabs?
 
