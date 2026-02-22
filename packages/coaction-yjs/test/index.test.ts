@@ -964,6 +964,45 @@ test('creates array container for numeric remote paths when parent is missing', 
   binding.destroy();
 });
 
+test('handles deep array and object equality checks during local sync', () => {
+  const doc = new Y.Doc();
+  const store = create((set) => ({
+    nested: {
+      arr: [1, 2],
+      obj: {
+        a: 1,
+        b: 2
+      }
+    }
+  }));
+  const binding = bindYjs(store, {
+    doc,
+    key: 'counter'
+  });
+  store.setState((draft) => {
+    draft.nested = {
+      arr: [1, 2],
+      obj: {
+        a: 1,
+        c: 2
+      }
+    };
+  });
+  store.setState((draft) => {
+    draft.nested.arr = [1, 3];
+  });
+  expect(readState(doc, 'counter')).toEqual({
+    nested: {
+      arr: [1, 3],
+      obj: {
+        a: 1,
+        c: 2
+      }
+    }
+  });
+  binding.destroy();
+});
+
 test('syncNow skips non-plain pure state and no-ops after destroy', () => {
   const doc = new Y.Doc();
   const store = create((set) => ({
