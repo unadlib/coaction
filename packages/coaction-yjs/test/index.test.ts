@@ -532,3 +532,349 @@ test('does not create feedback storm over provider link', async () => {
   bindingA.destroy();
   bindingB.destroy();
 });
+
+test('migrates plain object state into Y.Map during bind', () => {
+  const doc = new Y.Doc();
+  const map = doc.getMap<any>('counter');
+  map.set('state', {
+    count: 5,
+    nested: {
+      flag: true
+    },
+    list: [1, 2, 3]
+  });
+  const store = create((set) => ({
+    count: 0,
+    nested: {
+      flag: false
+    },
+    list: [] as number[]
+  }));
+  const binding = bindYjs(store, {
+    doc,
+    key: 'counter'
+  });
+  expect(store.getState()).toMatchObject({
+    count: 5,
+    nested: {
+      flag: true
+    },
+    list: [1, 2, 3]
+  });
+  expect(map.get('state')).toBeInstanceOf(Y.Map);
+  binding.destroy();
+});
+
+test('migrates remote plain object replacement and keeps observing nested changes', async () => {
+  const doc = new Y.Doc();
+  const store = create((set) => ({
+    count: 0,
+    nested: {
+      flag: false
+    }
+  }));
+  const binding = bindYjs(store, {
+    doc,
+    key: 'counter'
+  });
+  const map = doc.getMap<any>('counter');
+  doc.transact(() => {
+    map.set('state', {
+      count: 9,
+      nested: {
+        flag: true
+      }
+    });
+  }, 'external');
+  await waitFor(() => {
+    expect(store.getState()).toMatchObject({
+      count: 9,
+      nested: {
+        flag: true
+      }
+    });
+  });
+  const migrated = map.get('state');
+  expect(migrated).toBeInstanceOf(Y.Map);
+  doc.transact(() => {
+    (migrated as Y.Map<any>).set('count', 10);
+  }, 'external');
+  await waitFor(() => {
+    expect(store.getState().count).toBe(10);
+  });
+  binding.destroy();
+});
+
+test('syncs nested array and object diffs from store to yjs', () => {
+  const doc = new Y.Doc();
+  const store = create((set) => ({
+    obj: {
+      nested: {
+        count: 0
+      },
+      arr: [1, 2, 3],
+      removable: 'yes'
+    },
+    list: [1, { value: 1 }, [1, 2], 'keep'] as Array<
+      number | string | { value: number; extra?: boolean } | number[]
+    >,
+    kind: {
+      mode: 1
+    } as Record<string, unknown> | string[],
+    stamp: new Date('2024-01-01T00:00:00.000Z')
+  }));
+  const binding = bindYjs(store, {
+    doc,
+    key: 'counter'
+  });
+  store.setState((draft) => {
+    draft.obj.nested.count = 2;
+    draft.obj.arr = [9];
+    delete draft.obj.removable;
+    draft.list[0] = [10, 11];
+    draft.list[1] = {
+      value: 2,
+      extra: true
+    };
+    draft.list[2] = [7, 8, 9];
+    draft.list[3] = {
+      value: 3
+    };
+    draft.list.push('tail');
+    draft.kind = ['array-mode'];
+    draft.stamp = new Date('2024-02-01T00:00:00.000Z');
+  });
+  store.setState((draft) => {
+    draft.list = [1, { value: 2 }, [7], 'done'];
+    draft.obj = {
+      nested: {
+        count: 3
+      },
+      arr: []
+    };
+    draft.kind = {
+      back: 1
+    };
+  });
+  const next = readState(doc, 'counter') as Record<string, unknown>;
+  expect(next.obj).toEqual({
+    nested: {
+      count: 3
+    },
+    arr: []
+  });
+  expect(next.list).toEqual([1, { value: 2 }, [7], 'done']);
+  expect(next.kind).toEqual({
+    back: 1
+  });
+  expect(next.stamp).toBeInstanceOf(Date);
+  expect((next.stamp as Date).toISOString()).toBe('2024-02-01T00:00:00.000Z');
+  binding.destroy();
+});
+
+test('applies remote nested map and array operations to store', async () => {
+  const doc = new Y.Doc();
+  const store = create((set) => ({
+    profile: {
+      name: 'alice',
+      age: 20
+    },
+    items: [
+      {
+        title: 'first',
+        done: false
+      }
+    ],
+    count: 0
+  }));
+  const binding = bindYjs(store, {
+    doc,
+    key: 'counter'
+  });
+  const stateMap = doc.getMap<any>('counter').get('state') as Y.Map<any>;
+  const items = stateMap.get('items') as Y.Array<any>;
+  const first = items.get(0) as Y.Map<any>;
+  const remoteProfile = new Y.Map<any>();
+  remoteProfile.set('name', 'bob');
+  remoteProfile.set('age', 30);
+  doc.transact(() => {
+    first.set('title', 'updated');
+    first.set('done', true);
+    stateMap.set('profile', remoteProfile);
+    stateMap.delete('count');
+  }, 'external');
+  await waitFor(() => {
+    expect(store.getState()).toMatchObject({
+      profile: {
+        name: 'bob',
+        age: 30
+      },
+      items: [
+        {
+          title: 'updated',
+          done: true
+        }
+      ]
+    });
+    expect((store.getState() as any).count).toBeUndefined();
+  });
+  doc.transact(() => {
+    first.delete('done');
+    items.delete(0, 1);
+  }, 'external');
+  await waitFor(() => {
+    expect(store.getState().items).toEqual([]);
+  });
+  binding.destroy();
+});
+
+test('retries remote snapshot flush on setState reentry errors', async () => {
+  const doc = new Y.Doc();
+  const store = create((set) => ({
+    count: 0
+  }));
+  const originalSetState = store.setState.bind(store);
+  let shouldFail = true;
+  store.setState = ((next, updater) => {
+    if (shouldFail && typeof next !== 'function') {
+      shouldFail = false;
+      throw new Error('setState cannot be called within the updater');
+    }
+    return originalSetState(next as any, updater as any);
+  }) as typeof store.setState;
+  const binding = bindYjs(store, {
+    doc,
+    key: 'counter'
+  });
+  const map = doc.getMap<any>('counter');
+  const remote = new Y.Map<any>();
+  remote.set('count', 11);
+  doc.transact(() => {
+    map.set('state', remote);
+  }, 'external');
+  await waitFor(() => {
+    expect(store.getState().count).toBe(11);
+  });
+  const stateMap = map.get('state') as Y.Map<any>;
+  doc.transact(() => {
+    stateMap.set('count', 12);
+  }, 'external');
+  binding.destroy();
+  binding.destroy();
+  await wait(20);
+  expect(store.getState().count).toBe(11);
+});
+
+test('retries compacted remote operations on setState reentry errors', async () => {
+  const doc = new Y.Doc();
+  const store = create((set) => ({
+    count: 0
+  }));
+  const originalSetState = store.setState.bind(store);
+  let shouldFail = true;
+  store.setState = ((next, updater) => {
+    if (shouldFail && typeof next === 'function') {
+      shouldFail = false;
+      throw new Error('setState cannot be called within the updater');
+    }
+    return originalSetState(next as any, updater as any);
+  }) as typeof store.setState;
+  const binding = bindYjs(store, {
+    doc,
+    key: 'counter'
+  });
+  const stateMap = doc.getMap<any>('counter').get('state') as Y.Map<any>;
+  doc.transact(() => {
+    stateMap.set('count', 1);
+  }, 'external');
+  doc.transact(() => {
+    stateMap.set('count', 2);
+  }, 'external');
+  await waitFor(() => {
+    expect(store.getState().count).toBe(2);
+  });
+  binding.destroy();
+});
+
+test('throws when snapshot apply fails with non-reentry error', () => {
+  const originalQueueMicrotask = globalThis.queueMicrotask;
+  (globalThis as any).queueMicrotask = (callback: () => void) => callback();
+  try {
+    const doc = new Y.Doc();
+    const store = create((set) => ({
+      count: 0
+    }));
+    const originalSetState = store.setState.bind(store);
+    store.setState = ((next, updater) => {
+      if (typeof next !== 'function') {
+        throw new Error('snapshot-fail');
+      }
+      return originalSetState(next as any, updater as any);
+    }) as typeof store.setState;
+    const binding = bindYjs(store, {
+      doc,
+      key: 'counter'
+    });
+    const map = doc.getMap<any>('counter');
+    const remote = new Y.Map<any>();
+    remote.set('count', 1);
+    expect(() => {
+      doc.transact(() => {
+        map.set('state', remote);
+      }, 'external');
+    }).toThrow('snapshot-fail');
+    binding.destroy();
+  } finally {
+    (globalThis as any).queueMicrotask = originalQueueMicrotask;
+  }
+});
+
+test('throws when operation apply fails with non-reentry error', () => {
+  const originalQueueMicrotask = globalThis.queueMicrotask;
+  (globalThis as any).queueMicrotask = (callback: () => void) => callback();
+  try {
+    const doc = new Y.Doc();
+    const store = create((set) => ({
+      count: 0
+    }));
+    const originalSetState = store.setState.bind(store);
+    store.setState = ((next, updater) => {
+      if (typeof next === 'function') {
+        throw new Error('operations-fail');
+      }
+      return originalSetState(next as any, updater as any);
+    }) as typeof store.setState;
+    const binding = bindYjs(store, {
+      doc,
+      key: 'counter'
+    });
+    const stateMap = doc.getMap<any>('counter').get('state') as Y.Map<any>;
+    expect(() => {
+      doc.transact(() => {
+        stateMap.set('count', 1);
+      }, 'external');
+    }).toThrow('operations-fail');
+    binding.destroy();
+  } finally {
+    (globalThis as any).queueMicrotask = originalQueueMicrotask;
+  }
+});
+
+test('syncNow skips non-plain pure state and no-ops after destroy', () => {
+  const doc = new Y.Doc();
+  const store = create((set) => ({
+    count: 0
+  }));
+  const binding = bindYjs(store, {
+    doc,
+    key: 'counter'
+  });
+  const before = readState(doc, 'counter');
+  const originalGetPureState = store.getPureState.bind(store);
+  store.getPureState = (() => 42 as any) as typeof store.getPureState;
+  binding.syncNow();
+  expect(readState(doc, 'counter')).toEqual(before);
+  store.getPureState = originalGetPureState;
+  binding.destroy();
+  binding.syncNow();
+});
