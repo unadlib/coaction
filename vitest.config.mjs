@@ -20,7 +20,10 @@ export default defineConfig({
         __dirname,
         'packages/coaction-jotai/src/index.ts'
       ),
-      '@coaction/logger': resolve(__dirname, 'packages/logger/src/index.ts'),
+      '@coaction/logger': resolve(
+        __dirname,
+        'packages/coaction-logger/src/index.ts'
+      ),
       '@coaction/mobx': resolve(
         __dirname,
         'packages/coaction-mobx/src/index.ts'
