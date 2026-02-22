@@ -1,6 +1,6 @@
 {
   "name": "@coaction/ng",
-  "version": "1.0.1",
+  "version": "1.1.0",
   "description": "A Coaction integration tool for Angular",
   "keywords": [
     "state",
@@ -45,7 +45,7 @@
   },
   "peerDependencies": {
     "@angular/core": "^17.0.0 || ^18.0.0 || ^19.0.0 || ^20.0.0",
-    "coaction": "^1.0.1"
+    "coaction": "^1.1.0"
   },
   "peerDependenciesMeta": {
     "coaction": {
@@ -54,7 +54,7 @@
   },
   "devDependencies": {
     "@angular/core": "^20.3.1",
-    "coaction": "^1.0.1"
+    "coaction": "^1.1.0"
   },
   "publishConfig": {
     "access": "public",

@@ -1,6 +1,6 @@
 {
   "name": "@coaction/history",
-  "version": "1.0.1",
+  "version": "1.1.0",
   "description": "A undo/redo middleware for Coaction",
   "keywords": [
     "state",
@@ -46,7 +46,7 @@
     "url": "https://github.com/unadlib/coaction/issues"
   },
   "peerDependencies": {
-    "coaction": "^1.0.1"
+    "coaction": "^1.1.0"
   },
   "peerDependenciesMeta": {
     "coaction": {
@@ -54,7 +54,7 @@
     }
   },
   "devDependencies": {
-    "coaction": "^1.0.1"
+    "coaction": "^1.1.0"
   },
   "publishConfig": {
     "access": "public",
