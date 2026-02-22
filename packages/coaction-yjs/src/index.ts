@@ -361,6 +361,27 @@ export type YjsBinding<T extends object> = {
   map: Y.Map<any>;
   syncNow: () => void;
   destroy: () => void;
+  __unsafeTestOnly__?: {
+    applyRemoteOperations: (
+      operations: Array<{
+        type: 'set' | 'delete';
+        path: Array<string | number>;
+        value?: unknown;
+      }>
+    ) => void;
+  };
+};
+
+// Test-only hooks for driving defensive branches that are hard to reach via public flow.
+export const __unsafeTestOnly__ = {
+  getYValueAtPath: (root: Y.Map<unknown>, path: Array<string | number>) =>
+    getYValueAtPath(root, path),
+  setAtPath: (target: any, path: Array<string | number>, value: unknown) => {
+    setAtPath(target, path, value);
+  },
+  deleteAtPath: (target: any, path: Array<string | number>) => {
+    deleteAtPath(target, path);
+  }
 };
 
 export const bindYjs = <T extends object>(
@@ -572,7 +593,7 @@ export const bindYjs = <T extends object>(
     syncNow();
   });
 
-  return {
+  const binding: YjsBinding<T> = {
     doc,
     map,
     syncNow,
@@ -589,6 +610,14 @@ export const bindYjs = <T extends object>(
       }
     }
   };
+  if (process.env.NODE_ENV === 'test') {
+    binding.__unsafeTestOnly__ = {
+      applyRemoteOperations: (operations) => {
+        applyRemoteOperations(operations as RemoteOperation[]);
+      }
+    };
+  }
+  return binding;
 };
 
 export const yjs =
