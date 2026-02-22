@@ -926,6 +926,44 @@ test('ignores unsupported deep events that yield no operations', async () => {
   }
 });
 
+test('creates array container for numeric remote paths when parent is missing', async () => {
+  const doc = new Y.Doc();
+  const store = create((set) => ({
+    items: [
+      {
+        title: 'first'
+      }
+    ]
+  }));
+  const originalSetState = store.setState.bind(store);
+  store.setState = ((next, updater) => {
+    if (typeof next === 'function') {
+      const detachedDraft: Record<string, unknown> = {};
+      next(detachedDraft as any);
+      return originalSetState(detachedDraft as any, updater as any);
+    }
+    return originalSetState(next as any, updater as any);
+  }) as typeof store.setState;
+  const binding = bindYjs(store, {
+    doc,
+    key: 'counter'
+  });
+  const stateMap = doc.getMap<any>('counter').get('state') as Y.Map<any>;
+  const items = stateMap.get('items') as Y.Array<any>;
+  const first = items.get(0) as Y.Map<any>;
+  doc.transact(() => {
+    first.set('title', 'second');
+  }, 'external');
+  await waitFor(() => {
+    expect(store.getState().items).toEqual([
+      {
+        title: 'second'
+      }
+    ]);
+  });
+  binding.destroy();
+});
+
 test('syncNow skips non-plain pure state and no-ops after destroy', () => {
   const doc = new Y.Doc();
   const store = create((set) => ({
