@@ -8,7 +8,7 @@
   "authors": [
     "Michael Lin <unadlib@gmail.com> (https://github.com/unadlib)"
   ],
-  "homepage": "https://github.com/unadlib/coaction/tree/main/packages/logger#readme",
+  "homepage": "https://github.com/unadlib/coaction/tree/main/packages/coaction-logger#readme",
   "license": "MIT",
   "main": "dist/index.js",
   "module": "dist/index.mjs",
@@ -28,7 +28,7 @@
   "repository": {
     "type": "git",
     "url": "https://github.com/unadlib/coaction.git",
-    "directory": "packages/logger"
+    "directory": "packages/coaction-logger"
   },
   "scripts": {
     "clean": "rm -rf dist",
