@@ -484,6 +484,15 @@ describe('Store Name Lifecycle', () => {
     }).not.toThrow();
     recreatedStore!.destroy();
   });
+
+  test('duplicate name also throws in production for main share mode', () => {
+    process.env.NODE_ENV = 'production';
+    const useStore = createMainStore('name-production');
+    expect(() => createMainStore('name-production')).toThrow(
+      "Store name 'name-production' is not unique."
+    );
+    useStore.destroy();
+  });
 });
 
 describe('sliceMode', () => {
