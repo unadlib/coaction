@@ -60,7 +60,8 @@ export const handleMainTransport = <T extends CreateState>(
       if (typeof base !== 'function') {
         throw new Error('The function is not found');
       }
-      return [(base as Function)(...args), internal.sequence];
+      const result = await (base as Function)(...args);
+      return [result, internal.sequence];
     } catch (error: unknown) {
       if (process.env.NODE_ENV === 'development') {
         console.error(error);

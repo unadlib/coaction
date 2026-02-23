@@ -347,6 +347,50 @@ test('worker execute returns $$Error for missing method', async () => {
   useServerStore.destroy();
 });
 
+test('worker async action returns resolved value to client', async () => {
+  const ports = mockPorts();
+  const serverTransport = createTransport('WebWorkerInternal', ports.main);
+  const clientTransport = createTransport(
+    'WebWorkerClient',
+    ports.create() as WorkerMainTransportOptions
+  );
+  const counter: Slice<{
+    count: number;
+    increment: (step?: number) => Promise<number>;
+  }> = (set) => ({
+    count: 0,
+    async increment(step = 1) {
+      set((draft) => {
+        draft.count += step;
+      });
+      await Promise.resolve();
+      set((draft) => {
+        draft.count += step;
+      });
+      return this.count;
+    }
+  });
+  const useServerStore = create(counter, {
+    transport: serverTransport,
+    workerType: 'WebWorkerInternal',
+    name: 'worker-async-return'
+  });
+  const useClientStore = create(counter, {
+    name: 'worker-async-return',
+    clientTransport,
+    workerType: 'WebWorkerClient'
+  });
+  await new Promise((resolve) => {
+    clientTransport.onConnect(() => {
+      setTimeout(resolve);
+    });
+  });
+  const result = await useClientStore.getState().increment(2);
+  expect(result).toBe(4);
+  expect(useClientStore.getState().count).toBe(4);
+  expect(useServerStore.getState().count).toBe(4);
+});
+
 test('3rd-party binding does not support slices mode', () => {
   const handleStore = jest.fn();
   const bindThirdParty = createBinder({
