@@ -170,3 +170,53 @@ test('time traveling setState does not clear redo stack', () => {
   expect(state.count).toBe(999);
   expect(api.canRedo()).toBeTruthy();
 });
+
+test('supports cyclic snapshots without stack overflow', () => {
+  const self: any = {};
+  self.self = self;
+  const useStore = create(
+    (set) => ({
+      count: 0,
+      loop: self,
+      increment() {
+        set((draft) => {
+          draft.count += 1;
+        });
+      }
+    }),
+    {
+      middlewares: [history()]
+    }
+  );
+  const api = (useStore as any).history;
+  expect(() => {
+    useStore.getState().increment();
+  }).not.toThrow();
+  expect(api.getPast()).toHaveLength(1);
+  const past = api.getPast()[0] as any;
+  expect(past.loop.self).toBe(past.loop);
+});
+
+test('compares unchanged cyclic snapshots safely', () => {
+  const self: any = {};
+  self.self = self;
+  const useStore = create(
+    (set) => ({
+      count: 0,
+      loop: self,
+      noop() {
+        set((draft) => {
+          draft.count += 0;
+        });
+      }
+    }),
+    {
+      middlewares: [history()]
+    }
+  );
+  const api = (useStore as any).history;
+  expect(() => {
+    useStore.getState().noop();
+  }).not.toThrow();
+  expect(api.getPast()).toHaveLength(0);
+});
