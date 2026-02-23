@@ -55,8 +55,7 @@ export const create: Creator = <T extends CreateState>(
       listeners: new Set<Listener>()
     } as Internal<T>;
     const name = options.name ?? defaultName;
-    const shouldTrackName =
-      process.env.NODE_ENV === 'development' && share === 'main';
+    const shouldTrackName = share === 'main' && process.env.NODE_ENV !== 'test';
     const releaseStoreName = () => {
       if (shouldTrackName) {
         namespaceMap.delete(name);
