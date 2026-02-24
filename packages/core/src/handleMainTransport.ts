@@ -15,6 +15,8 @@ const getErrorMessage = (error: unknown) => {
   return String(error);
 };
 
+const transportErrorMarker = '__coactionTransportError__';
+
 export const handleMainTransport = <T extends CreateState>(
   store: Store<T>,
   internal: Internal<T>,
@@ -66,7 +68,13 @@ export const handleMainTransport = <T extends CreateState>(
       if (process.env.NODE_ENV === 'development') {
         console.error(error);
       }
-      return [{ $$Error: getErrorMessage(error) }, internal.sequence];
+      return [
+        {
+          [transportErrorMarker]: true,
+          message: getErrorMessage(error)
+        },
+        internal.sequence
+      ];
     }
   });
   transport.listen('fullSync', async () => {

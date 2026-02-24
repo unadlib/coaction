@@ -69,6 +69,37 @@ test('client action trace reports transport $$Error results', async () => {
   );
 });
 
+test('client action trace reports transport envelope errors', async () => {
+  const { store, internal } = createClientStoreContext(async () => [
+    {
+      __coactionTransportError__: true,
+      message: 'boom-envelope'
+    },
+    0
+  ]);
+  internal.sequence = 0;
+  await expect(store.getState().increment(1)).rejects.toThrow('boom-envelope');
+  expect(store.trace).toHaveBeenCalledTimes(2);
+  expect(store.transport.emit).toHaveBeenCalledWith(
+    'execute',
+    ['increment'],
+    [1]
+  );
+});
+
+test('client action does not treat normal $$Error-shaped objects as transport failures', async () => {
+  const payload = {
+    $$Error: 'domain-value',
+    value: 42
+  };
+  const { store, internal } = createClientStoreContext(async () => [
+    payload,
+    0
+  ]);
+  internal.sequence = 0;
+  await expect(store.getState().increment(1)).resolves.toEqual(payload);
+});
+
 test('client action waits for sequence catch-up and warns in development', async () => {
   const { store, internal, trigger } = createClientStoreContext(async () => [
     'ok',

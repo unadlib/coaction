@@ -16,6 +16,33 @@ import { handleDraft } from './asyncClientStore';
 import { uuid } from './utils';
 
 const clientExecuteSyncTimeoutMs = 1500;
+const transportErrorMarker = '__coactionTransportError__';
+
+const isTransportErrorEnvelope = (
+  value: unknown
+): value is Record<string, unknown> & { message: string } => {
+  if (typeof value !== 'object' || value === null) {
+    return false;
+  }
+  return (
+    (value as Record<string, unknown>)[transportErrorMarker] === true &&
+    typeof (value as Record<string, unknown>).message === 'string'
+  );
+};
+
+const isLegacyTransportErrorEnvelope = (
+  value: unknown
+): value is { $$Error: string } => {
+  if (typeof value !== 'object' || value === null) {
+    return false;
+  }
+  const candidate = value as Record<string, unknown>;
+  return (
+    typeof candidate.$$Error === 'string' &&
+    candidate.$$Error.length > 0 &&
+    Object.keys(candidate).length === 1
+  );
+};
 
 export const getRawState = <T extends CreateState>(
   store: Store<T>,
@@ -161,7 +188,11 @@ export const getRawState = <T extends CreateState>(
                       }, clientExecuteSyncTimeoutMs);
                     });
                   }
-                  if (result?.$$Error) {
+                  if (isTransportErrorEnvelope(result)) {
+                    done?.(result);
+                    throw new Error(result.message);
+                  }
+                  if (isLegacyTransportErrorEnvelope(result)) {
                     done?.(result);
                     throw new Error(result.$$Error);
                   }
