@@ -231,6 +231,48 @@ test('createAsyncClientStore ignores stale and duplicate update sequences', asyn
   expect(apply).not.toHaveBeenCalled();
 });
 
+test('createAsyncClientStore ignores stale fullSync snapshots', async () => {
+  let onConnectHandler: (() => Promise<void>) | undefined;
+  const apply = vi.fn();
+  const internal = {
+    sequence: 5
+  };
+  const transport = {
+    emit: vi.fn(async () => ({
+      state: JSON.stringify({
+        count: -1
+      }),
+      sequence: 3
+    })),
+    onConnect: vi.fn((handler: () => Promise<void>) => {
+      onConnectHandler = handler;
+    }),
+    listen: vi.fn()
+  };
+
+  createAsyncClientStore(
+    () => ({
+      store: {
+        name: 'client',
+        apply,
+        getState: () => ({
+          count: 5
+        })
+      } as any,
+      internal: internal as any
+    }),
+    {
+      clientTransport: transport as any
+    } as any
+  );
+
+  await onConnectHandler?.();
+
+  expect(transport.emit).toHaveBeenCalledWith('fullSync');
+  expect(apply).not.toHaveBeenCalled();
+  expect(internal.sequence).toBe(5);
+});
+
 test('createAsyncClientStore catches onConnect fullSync failures', async () => {
   const prev = process.env.NODE_ENV;
   process.env.NODE_ENV = 'development';

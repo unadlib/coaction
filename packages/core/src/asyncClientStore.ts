@@ -43,6 +43,12 @@ export const createAsyncClientStore = <T extends CreateState>(
     if (!syncingPromise) {
       syncingPromise = (async () => {
         const latest = await transport.emit('fullSync');
+        if (typeof latest.sequence !== 'number') {
+          throw new Error('Invalid fullSync sequence');
+        }
+        if (latest.sequence < internal.sequence) {
+          return;
+        }
         asyncClientStore.apply(JSON.parse(latest.state));
         internal.sequence = latest.sequence;
       })().finally(() => {
