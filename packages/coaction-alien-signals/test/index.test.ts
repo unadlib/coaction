@@ -108,3 +108,29 @@ test('slices autoSelector skips non-object slice values', () => {
   expect(selectors.counter.count()).toBe(0);
   expect(selectors.meta).toBeUndefined();
 });
+
+test('autoSelector ignores inherited enumerable keys', () => {
+  const protoKey = '__coactionAlienSignalsProto__';
+  Object.defineProperty(Object.prototype, protoKey, {
+    value: {
+      count: 1
+    },
+    enumerable: true,
+    configurable: true,
+    writable: true
+  });
+  try {
+    const useStore = create({
+      counter: () => ({
+        count: 0
+      })
+    });
+    const selectors = useStore({ autoSelector: true }) as any;
+    expect(selectors.counter.count()).toBe(0);
+    expect(
+      Object.prototype.hasOwnProperty.call(selectors, protoKey)
+    ).toBeFalsy();
+  } finally {
+    delete (Object.prototype as any)[protoKey];
+  }
+});
