@@ -57,7 +57,7 @@
   },
   "devDependencies": {
     "alien-signals": "^3.1.2",
-    "coaction": "^1.2.0"
+    "coaction": "workspace:*"
   },
   "publishConfig": {
     "access": "public",

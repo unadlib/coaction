@@ -56,7 +56,7 @@
     }
   },
   "devDependencies": {
-    "coaction": "^1.2.0",
+    "coaction": "workspace:*",
     "yjs": "^13.6.27"
   },
   "publishConfig": {

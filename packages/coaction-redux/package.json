@@ -57,7 +57,7 @@
   },
   "devDependencies": {
     "@reduxjs/toolkit": "^2.10.1",
-    "coaction": "^1.2.0"
+    "coaction": "workspace:*"
   },
   "publishConfig": {
     "access": "public",
