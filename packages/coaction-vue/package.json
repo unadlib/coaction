@@ -1,6 +1,6 @@
 {
   "name": "@coaction/vue",
-  "version": "1.1.0",
+  "version": "1.2.0",
   "description": "A Coaction integration tool for Vue",
   "keywords": [
     "coaction",
@@ -45,7 +45,7 @@
     "url": "https://github.com/unadlib/coaction/issues"
   },
   "peerDependencies": {
-    "coaction": "^1.1.0",
+    "coaction": "^1.2.0",
     "vue": "^3.0.0"
   },
   "peerDependenciesMeta": {
@@ -55,7 +55,7 @@
   },
   "devDependencies": {
     "@testing-library/vue": "^8.1.0",
-    "coaction": "^1.1.0",
+    "coaction": "^1.2.0",
     "vue": "^3.5.28"
   },
   "publishConfig": {
