@@ -38,22 +38,38 @@ export const createAsyncClientStore = <T extends CreateState>(
     throw new Error('transport is required');
   }
   asyncClientStore.transport = transport;
+  let syncingPromise: Promise<void> | null = null;
   const fullSync = async () => {
-    const latest = await transport.emit('fullSync');
-    asyncClientStore.apply(JSON.parse(latest.state));
-    internal.sequence = latest.sequence;
+    if (!syncingPromise) {
+      syncingPromise = (async () => {
+        const latest = await transport.emit('fullSync');
+        asyncClientStore.apply(JSON.parse(latest.state));
+        internal.sequence = latest.sequence;
+      })().finally(() => {
+        syncingPromise = null;
+      });
+    }
+    return syncingPromise;
   };
   if (typeof transport.onConnect !== 'function') {
     throw new Error('transport.onConnect is required');
   }
-  transport.onConnect?.(async () => {
-    await fullSync();
+  transport.onConnect?.(() => {
+    void fullSync().catch((error) => {
+      if (process.env.NODE_ENV === 'development') {
+        console.error(error);
+      }
+    });
   });
   transport.listen('update', async (options) => {
-    if (
-      typeof options.sequence === 'number' &&
-      options.sequence === internal.sequence + 1
-    ) {
+    if (typeof options.sequence !== 'number') {
+      await fullSync();
+      return;
+    }
+    if (options.sequence <= internal.sequence) {
+      return;
+    }
+    if (options.sequence === internal.sequence + 1) {
       internal.sequence = options.sequence;
       asyncClientStore.apply(undefined, options.patches);
     } else {
