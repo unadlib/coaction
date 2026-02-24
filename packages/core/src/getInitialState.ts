@@ -40,6 +40,13 @@ const hasGetState = (value: unknown): value is StoreWithGetState =>
 const hasBindState = (value: unknown): value is object & BoundState =>
   isObject(value) && !!(value as BoundState)[bindSymbol];
 
+const formatInvalidStateMessage = (
+  type: 'value' | 'result',
+  stateOrFn: unknown,
+  key?: string
+) =>
+  `Invalid state ${type} encountered in makeState: ${key ? `for key ${key}, ` : ''}${typeof stateOrFn}`;
+
 export const getInitialState = <T extends CreateState>(
   store: Store<T>,
   createState: Slice<T> | T,
@@ -55,9 +62,7 @@ export const getInitialState = <T extends CreateState>(
       state = stateOrFn;
     } else {
       if (process.env.NODE_ENV !== 'production') {
-        throw new Error(
-          `Invalid state value encountered in makeState: ${key ? `for key ${key}, ` : ''}${typeof stateOrFn}`
-        );
+        throw new Error(formatInvalidStateMessage('value', stateOrFn, key));
       }
       return {}; // Return empty object or handle error appropriately
     }
@@ -90,6 +95,12 @@ export const getInitialState = <T extends CreateState>(
       );
       delete state[bindSymbol];
       return rawState;
+    }
+    if (!isObject(state)) {
+      if (process.env.NODE_ENV !== 'production') {
+        throw new Error(formatInvalidStateMessage('result', state, key));
+      }
+      return {};
     }
     return state as object;
   };
