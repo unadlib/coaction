@@ -358,3 +358,42 @@ test('falls back when queueMicrotask is unavailable', async () => {
     (globalThis as any).queueMicrotask = originalQueueMicrotask;
   }
 });
+
+test('setState catches persist write errors', async () => {
+  const prev = process.env.NODE_ENV;
+  process.env.NODE_ENV = 'development';
+  const errorSpy = vi.spyOn(console, 'error').mockImplementation(() => {});
+  const storage: PersistStorage = {
+    getItem: () => null,
+    setItem: () => Promise.reject(new Error('write failed')),
+    removeItem: () => undefined
+  };
+  try {
+    const useStore = create(
+      (set) => ({
+        count: 0,
+        increment() {
+          set((draft) => {
+            draft.count += 1;
+          });
+        }
+      }),
+      {
+        middlewares: [
+          persist({
+            name: 'write-error',
+            storage,
+            skipHydration: true
+          })
+        ]
+      }
+    );
+    useStore.getState().increment();
+    await nextTick();
+    expect(useStore.getState().count).toBe(1);
+    expect(errorSpy).toHaveBeenCalled();
+  } finally {
+    process.env.NODE_ENV = prev;
+    errorSpy.mockRestore();
+  }
+});
