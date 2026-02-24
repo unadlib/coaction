@@ -78,6 +78,31 @@ test('replace action strips nested functions from payload', () => {
 `);
 });
 
+test('replace action ignores inherited payload properties', () => {
+  const reducer = withCoactionReducer((state = {} as any) => state);
+  const proto = {
+    inherited: {
+      unsafe: true
+    }
+  };
+  const payload = Object.create(proto) as {
+    own: {
+      count: number;
+    };
+  };
+  payload.own = {
+    count: 1
+  };
+
+  const next = reducer(undefined, replaceStateAction(payload as any)) as any;
+  expect(next).toEqual({
+    own: {
+      count: 1
+    }
+  });
+  expect(next.inherited).toBeUndefined();
+});
+
 describe('Slices', () => {
   test('base - unsupported', () => {
     const counterSlice = createSlice({
