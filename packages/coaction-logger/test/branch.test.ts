@@ -133,6 +133,29 @@ test('covers compact mode and duplicate middleware short-circuit', async () => {
   expect(customLogger.groupCollapsed).toHaveBeenCalledTimes(1);
 });
 
+test('closes action log group when setState throws', async () => {
+  vi.resetModules();
+  const { logger } = await import('../src/logger');
+  const customLogger = createCustomLogger();
+  const store = createFakeStore();
+  store.setState = () => {
+    throw new Error('setState failed');
+  };
+
+  logger({
+    logger: customLogger as any,
+    collapsed: false
+  })(store as any);
+
+  expect(() => {
+    store.setState({
+      count: 1
+    });
+  }).toThrow('setState failed');
+  expect(customLogger.group).toHaveBeenCalledTimes(1);
+  expect(customLogger.groupEnd).toHaveBeenCalledTimes(1);
+});
+
 test('uses Date timer fallback when performance is unavailable', async () => {
   vi.resetModules();
   vi.stubGlobal('performance', undefined);
