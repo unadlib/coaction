@@ -71,7 +71,7 @@ export const bindRedux = <S extends object, A extends AnyAction = AnyAction>(
       if (coactionStore.share === 'client') {
         throw new Error('client redux store cannot be updated');
       }
-      reduxStore.subscribe(() => {
+      const unsubscribe = reduxStore.subscribe(() => {
         if (isCoactionUpdating) {
           return;
         }
@@ -82,6 +82,11 @@ export const bindRedux = <S extends object, A extends AnyAction = AnyAction>(
           isReduxUpdating = false;
         }
       });
+      const baseDestroy = coactionStore.destroy;
+      coactionStore.destroy = () => {
+        unsubscribe();
+        baseDestroy();
+      };
       internal.updateImmutable = (nextState: any) => {
         if (isReduxUpdating) {
           return;
