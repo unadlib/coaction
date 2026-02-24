@@ -52,12 +52,12 @@ export const create: Creator = (createState: any, options: any) => {
   const storeWithAutoSelector = {} as Record<string, any>;
   if (store.isSliceStore) {
     if (typeof state === 'object' && state !== null) {
-      for (const key in state) {
+      for (const key of Object.keys(state)) {
         const sliceState = state[key];
         const descriptors = Object.getOwnPropertyDescriptors(sliceState);
         if (typeof sliceState === 'object' && sliceState !== null) {
           const slice = {};
-          for (const subKey in descriptors) {
+          for (const subKey of Object.keys(descriptors)) {
             const descriptor = descriptors[subKey];
             if (typeof descriptor.get === 'function') {
               descriptor.get = () =>
@@ -71,7 +71,7 @@ export const create: Creator = (createState: any, options: any) => {
     }
   } else {
     const descriptors = Object.getOwnPropertyDescriptors(state);
-    for (const key in descriptors) {
+    for (const key of Object.keys(descriptors)) {
       const descriptor = descriptors[key];
       if (typeof descriptor.get === 'function') {
         descriptor.get = () => useStore(() => store.getState()[key]);
