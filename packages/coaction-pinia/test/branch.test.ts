@@ -46,6 +46,35 @@ test('creates empty getters map when getters are omitted', async () => {
   expect(rawState.name).toBe('counter');
 });
 
+test('builds descriptors from own function getters only', async () => {
+  const { capturedHandleState } = await loadBinding();
+  const proto = {
+    inherited: () => 'inherited'
+  };
+  const getters = Object.create(proto) as {
+    own: (state: { count: number }) => number;
+    invalid: number;
+  };
+  getters.own = (state) => state.count * 2;
+  getters.invalid = 1;
+  const options: any = {
+    state: () => ({
+      count: 2
+    }),
+    getters,
+    actions: {}
+  };
+  const { bind } = capturedHandleState(options);
+  const rawState = bind({
+    $id: 'counter',
+    $subscribe: vi.fn(() => vi.fn())
+  });
+
+  expect(rawState.own).toBe(4);
+  expect(rawState.inherited).toBeUndefined();
+  expect(rawState.invalid).toBeUndefined();
+});
+
 test('throws when pinia store instance cannot be resolved', async () => {
   const { capturedHandleStore } = await loadBinding();
   expect(() => {
