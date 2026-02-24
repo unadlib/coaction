@@ -33,6 +33,14 @@ type PersistApi = {
   hasHydrated: () => boolean;
 };
 
+const scheduleMicrotask = (callback: () => void) => {
+  if (typeof queueMicrotask === 'function') {
+    queueMicrotask(callback);
+    return;
+  }
+  Promise.resolve().then(callback);
+};
+
 const createNoopStorage = (): PersistStorage => ({
   getItem: () => null,
   setItem: () => undefined,
@@ -132,7 +140,7 @@ export const persist =
       baseDestroy();
     };
     if (!skipHydration) {
-      queueMicrotask(() => {
+      scheduleMicrotask(() => {
         void rehydrate();
       });
     }

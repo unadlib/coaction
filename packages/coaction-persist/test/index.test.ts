@@ -323,3 +323,38 @@ test('uses default localStorage when available', async () => {
     vi.unstubAllGlobals();
   }
 });
+
+test('falls back when queueMicrotask is unavailable', async () => {
+  const originalQueueMicrotask = globalThis.queueMicrotask;
+  (globalThis as any).queueMicrotask = undefined;
+  try {
+    const storage = createMemoryStorage();
+    storage.setItem(
+      'counter-fallback',
+      JSON.stringify({
+        state: {
+          count: 9
+        },
+        version: 0
+      })
+    );
+    const useStore = create(
+      () => ({
+        count: 0
+      }),
+      {
+        middlewares: [
+          persist({
+            name: 'counter-fallback',
+            storage
+          })
+        ]
+      }
+    );
+    await nextTick();
+    expect(useStore.getState().count).toBe(9);
+    expect((useStore as any).persist.hasHydrated()).toBeTruthy();
+  } finally {
+    (globalThis as any).queueMicrotask = originalQueueMicrotask;
+  }
+});
