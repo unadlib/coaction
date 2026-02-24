@@ -24,9 +24,14 @@ export const areShallowEqualWithArray = (
 export const mergeObject = (target: any, source: any, isSlice?: boolean) => {
   if (isSlice) {
     if (typeof source === 'object' && source !== null) {
-      for (const key in source) {
-        if (typeof source[key] === 'object' && source[key] !== null) {
-          Object.assign(target[key], source[key]);
+      for (const key of Object.keys(source)) {
+        const sourceValue = source[key];
+        if (typeof sourceValue !== 'object' || sourceValue === null) {
+          continue;
+        }
+        const targetValue = target[key];
+        if (typeof targetValue === 'object' && targetValue !== null) {
+          Object.assign(targetValue, sourceValue);
         }
       }
     }
@@ -39,7 +44,7 @@ export const uuid = () => {
   let timestamp = new Date().getTime();
   const uuidTemplate = 'xxxxxxxx-xxxx-4xxx-yxxx-xxxxxxxxxxxx';
   const uuid = uuidTemplate.replace(/[xy]/g, (char) => {
-    let randomNum = (timestamp + Math.random() * 16) % 16 | 0;
+    let randomNum = ((timestamp + Math.random() * 16) % 16) | 0;
     timestamp = Math.floor(timestamp / 16);
     return (char === 'x' ? randomNum : (randomNum & 0x3) | 0x8).toString(16);
   });
