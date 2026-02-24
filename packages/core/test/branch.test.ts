@@ -182,6 +182,96 @@ test('createAsyncClientStore performs fullSync on sequence mismatch', async () =
   });
 });
 
+test('createAsyncClientStore ignores stale and duplicate update sequences', async () => {
+  let updateHandler: ((options: any) => Promise<void>) | undefined;
+  const apply = vi.fn();
+  const transport = {
+    emit: vi.fn(async () => ({
+      state: JSON.stringify({
+        count: 1
+      }),
+      sequence: 1
+    })),
+    onConnect: vi.fn(),
+    listen: vi.fn((name: string, handler: (options: any) => Promise<void>) => {
+      if (name === 'update') {
+        updateHandler = handler;
+      }
+    })
+  };
+
+  createAsyncClientStore(
+    () => ({
+      store: {
+        name: 'client',
+        apply,
+        getState: () => ({
+          count: 0
+        })
+      } as any,
+      internal: {
+        sequence: 5
+      } as any
+    }),
+    {
+      clientTransport: transport as any
+    } as any
+  );
+
+  await updateHandler?.({
+    sequence: 4,
+    patches: []
+  });
+  await updateHandler?.({
+    sequence: 5,
+    patches: []
+  });
+
+  expect(transport.emit).not.toHaveBeenCalledWith('fullSync');
+  expect(apply).not.toHaveBeenCalled();
+});
+
+test('createAsyncClientStore catches onConnect fullSync failures', async () => {
+  const prev = process.env.NODE_ENV;
+  process.env.NODE_ENV = 'development';
+  const errorSpy = vi.spyOn(console, 'error').mockImplementation(() => {});
+  let onConnectHandler: (() => void) | undefined;
+  const transport = {
+    emit: vi.fn(async () => {
+      throw new Error('connect sync failed');
+    }),
+    onConnect: vi.fn((handler: () => void) => {
+      onConnectHandler = handler;
+    }),
+    listen: vi.fn()
+  };
+  try {
+    createAsyncClientStore(
+      () => ({
+        store: {
+          name: 'client',
+          apply: vi.fn(),
+          getState: () => ({})
+        } as any,
+        internal: {
+          sequence: 0
+        } as any
+      }),
+      {
+        clientTransport: transport as any
+      } as any
+    );
+    expect(() => onConnectHandler?.()).not.toThrow();
+    await new Promise((resolve) => {
+      setTimeout(resolve);
+    });
+    expect(errorSpy).toHaveBeenCalled();
+  } finally {
+    process.env.NODE_ENV = prev;
+    errorSpy.mockRestore();
+  }
+});
+
 test('handleDraft uses patch hook before applying patches', () => {
   const patch = vi.fn(({ patches, inversePatches }) => ({
     patches,
