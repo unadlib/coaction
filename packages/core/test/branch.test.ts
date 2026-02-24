@@ -573,6 +573,46 @@ test('getInitialState invalid slice value includes the slice key in error', () =
   );
 });
 
+test('getInitialState validates non-object state factory results', () => {
+  const fakeStore = {
+    isSliceStore: false,
+    setState: vi.fn(),
+    getState: vi.fn()
+  } as any;
+
+  expect(() => {
+    getInitialState(fakeStore, (() => 1) as any, {} as any);
+  }).toThrow('Invalid state result encountered in makeState: number');
+
+  const prev = process.env.NODE_ENV;
+  process.env.NODE_ENV = 'production';
+  try {
+    expect(getInitialState(fakeStore, (() => 1) as any, {} as any)).toEqual({});
+  } finally {
+    process.env.NODE_ENV = prev;
+  }
+});
+
+test('getInitialState validates non-object slice factory results with key', () => {
+  const fakeStore = {
+    isSliceStore: true,
+    setState: vi.fn(),
+    getState: vi.fn()
+  } as any;
+
+  expect(() => {
+    getInitialState(
+      fakeStore,
+      {
+        counter: (() => 1) as any
+      } as any,
+      {} as any
+    );
+  }).toThrow(
+    'Invalid state result encountered in makeState: for key counter, number'
+  );
+});
+
 test('handleMainTransport validates onConnect and normalizes non-Error throws', async () => {
   expect(() => {
     handleMainTransport(
