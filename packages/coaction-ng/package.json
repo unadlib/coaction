@@ -53,7 +53,7 @@
     }
   },
   "devDependencies": {
-    "@angular/core": "^20.3.1",
+    "@angular/core": "^21.1.5",
     "coaction": "workspace:*"
   },
   "publishConfig": {
