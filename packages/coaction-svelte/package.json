@@ -57,7 +57,7 @@
   },
   "devDependencies": {
     "coaction": "workspace:*",
-    "svelte": "^5.43.11"
+    "svelte": "^5.53.3"
   },
   "publishConfig": {
     "access": "public",
