@@ -180,7 +180,15 @@ export const getRawState = <T extends CreateState>(
                             };
                             store.apply(JSON.parse(next.state));
                             internal.sequence = next.sequence;
-                            finishResolve();
+                            if (internal.sequence >= sequence) {
+                              finishResolve();
+                              return;
+                            }
+                            finishReject(
+                              new Error(
+                                `Stale fullSync sequence: expected >= ${sequence}, got ${internal.sequence}`
+                              )
+                            );
                           })
                           .catch((error) => {
                             finishReject(error);
