@@ -11,7 +11,7 @@ function stripFunctions<T>(value: T): T {
   }
   if (typeof value === 'object' && value !== null) {
     const next: Record<string, unknown> = {};
-    for (const key in value as Record<string, unknown>) {
+    for (const key of Object.keys(value as Record<string, unknown>)) {
       const child = (value as Record<string, unknown>)[key];
       if (typeof child === 'function') {
         continue;
