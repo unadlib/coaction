@@ -272,6 +272,51 @@ test('createAsyncClientStore catches onConnect fullSync failures', async () => {
   }
 });
 
+test('createAsyncClientStore catches update-time fullSync failures', async () => {
+  const prev = process.env.NODE_ENV;
+  process.env.NODE_ENV = 'development';
+  const errorSpy = vi.spyOn(console, 'error').mockImplementation(() => {});
+  let updateHandler: ((options: any) => Promise<void>) | undefined;
+  const transport = {
+    emit: vi.fn(async () => {
+      throw new Error('update sync failed');
+    }),
+    onConnect: vi.fn(),
+    listen: vi.fn((name: string, handler: (options: any) => Promise<void>) => {
+      if (name === 'update') {
+        updateHandler = handler;
+      }
+    })
+  };
+  try {
+    createAsyncClientStore(
+      () => ({
+        store: {
+          name: 'client',
+          apply: vi.fn(),
+          getState: () => ({})
+        } as any,
+        internal: {
+          sequence: 0
+        } as any
+      }),
+      {
+        clientTransport: transport as any
+      } as any
+    );
+    await expect(
+      updateHandler?.({
+        sequence: 2,
+        patches: []
+      })
+    ).resolves.toBeUndefined();
+    expect(errorSpy).toHaveBeenCalled();
+  } finally {
+    process.env.NODE_ENV = prev;
+    errorSpy.mockRestore();
+  }
+});
+
 test('handleDraft uses patch hook before applying patches', () => {
   const patch = vi.fn(({ patches, inversePatches }) => ({
     patches,
