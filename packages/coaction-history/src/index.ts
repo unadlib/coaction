@@ -23,7 +23,7 @@ const toSnapshot = (
     }
     const next: Record<string, unknown> = {};
     visited.set(state, next);
-    for (const key in state as Record<string, unknown>) {
+    for (const key of Object.keys(state as Record<string, unknown>)) {
       const value = (state as Record<string, unknown>)[key];
       if (typeof value === 'function') {
         continue;

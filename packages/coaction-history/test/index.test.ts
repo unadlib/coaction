@@ -220,3 +220,34 @@ test('compares unchanged cyclic snapshots safely', () => {
   }).not.toThrow();
   expect(api.getPast()).toHaveLength(0);
 });
+
+test('snapshot only includes own enumerable properties', () => {
+  const proto = {
+    inherited: 1
+  };
+  const data = Object.create(proto) as {
+    own: number;
+    inherited?: number;
+  };
+  data.own = 0;
+  const useStore = create(
+    (set) => ({
+      data,
+      bump() {
+        set((draft) => {
+          draft.data.own += 1;
+        });
+      }
+    }),
+    {
+      middlewares: [history()]
+    }
+  );
+  const api = (useStore as any).history;
+  useStore.getState().bump();
+  const past = api.getPast()[0] as any;
+  expect(past.data).toEqual({
+    own: 0
+  });
+  expect(past.data.inherited).toBeUndefined();
+});
