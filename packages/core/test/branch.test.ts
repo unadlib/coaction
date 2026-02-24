@@ -314,6 +314,54 @@ test('createAsyncClientStore catches onConnect fullSync failures', async () => {
   }
 });
 
+test('createAsyncClientStore catches invalid onConnect fullSync payloads', async () => {
+  const prev = process.env.NODE_ENV;
+  process.env.NODE_ENV = 'development';
+  const errorSpy = vi.spyOn(console, 'error').mockImplementation(() => {});
+  let onConnectHandler: (() => void) | undefined;
+  const apply = vi.fn();
+  const internal = {
+    sequence: 0
+  };
+  const transport = {
+    emit: vi.fn(async () => ({
+      state: {
+        count: 1
+      },
+      sequence: 1
+    })),
+    onConnect: vi.fn((handler: () => void) => {
+      onConnectHandler = handler;
+    }),
+    listen: vi.fn()
+  };
+  try {
+    createAsyncClientStore(
+      () => ({
+        store: {
+          name: 'client',
+          apply,
+          getState: () => ({})
+        } as any,
+        internal: internal as any
+      }),
+      {
+        clientTransport: transport as any
+      } as any
+    );
+    expect(() => onConnectHandler?.()).not.toThrow();
+    await new Promise((resolve) => {
+      setTimeout(resolve);
+    });
+    expect(errorSpy).toHaveBeenCalled();
+    expect(apply).not.toHaveBeenCalled();
+    expect(internal.sequence).toBe(0);
+  } finally {
+    process.env.NODE_ENV = prev;
+    errorSpy.mockRestore();
+  }
+});
+
 test('createAsyncClientStore catches update-time fullSync failures', async () => {
   const prev = process.env.NODE_ENV;
   process.env.NODE_ENV = 'development';
