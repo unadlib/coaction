@@ -182,6 +182,12 @@ export const getRawState = <T extends CreateState>(
                             state: string;
                             sequence: number;
                           };
+                          if (
+                            typeof next.state !== 'string' ||
+                            typeof next.sequence !== 'number'
+                          ) {
+                            throw new Error('Invalid fullSync payload');
+                          }
                           store.apply(JSON.parse(next.state));
                           internal.sequence = next.sequence;
                           if (internal.sequence >= sequence) {

@@ -210,6 +210,36 @@ test('client action rejects when fullSync fallback fails', async () => {
   }
 });
 
+test('client action rejects when fullSync payload is invalid', async () => {
+  vi.useFakeTimers();
+  try {
+    const { store, internal } = createClientStoreContext(async (event) => {
+      if (event === 'execute') {
+        return ['ok', 2];
+      }
+      if (event === 'fullSync') {
+        return {
+          state: {
+            count: 9
+          },
+          sequence: '2'
+        };
+      }
+      throw new Error(`Unexpected event: ${String(event)}`);
+    });
+    internal.sequence = 0;
+    const pending = store.getState().increment(1);
+    const assertion = expect(pending).rejects.toThrow(
+      'Invalid fullSync payload'
+    );
+    await Promise.resolve();
+    await vi.advanceTimersByTimeAsync(1600);
+    await assertion;
+  } finally {
+    vi.useRealTimers();
+  }
+});
+
 test('client action rejects when fullSync fallback sequence is stale', async () => {
   vi.useFakeTimers();
   try {
