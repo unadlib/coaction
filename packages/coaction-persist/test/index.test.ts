@@ -167,6 +167,7 @@ test('calls onRehydrateStorage for empty storage and deserialize errors', async 
   );
   await nextTick();
   expect(emptyStore.getState().count).toBe(0);
+  expect((emptyStore as any).persist.hasHydrated()).toBeTruthy();
   expect(emptyCallback).toHaveBeenCalledWith(
     expect.objectContaining({
       count: 0
@@ -176,7 +177,7 @@ test('calls onRehydrateStorage for empty storage and deserialize errors', async 
   const invalidStorage = createMemoryStorage();
   invalidStorage.setItem('invalid', '{bad-json');
   const errorCallback = jest.fn();
-  create(
+  const invalidStore = create(
     () => ({
       count: 0
     }),
@@ -191,10 +192,33 @@ test('calls onRehydrateStorage for empty storage and deserialize errors', async 
     }
   );
   await nextTick();
+  expect((invalidStore as any).persist.hasHydrated()).toBeTruthy();
   expect(errorCallback).toHaveBeenCalledWith(
     undefined,
     expect.any(SyntaxError)
   );
+});
+
+test('manual rehydrate marks hydration as completed even when it fails', async () => {
+  const invalidStorage = createMemoryStorage();
+  invalidStorage.setItem('invalid-manual', '{bad-json');
+  const useStore = create(
+    () => ({
+      count: 0
+    }),
+    {
+      middlewares: [
+        persist({
+          name: 'invalid-manual',
+          storage: invalidStorage,
+          skipHydration: true
+        })
+      ]
+    }
+  );
+  expect((useStore as any).persist.hasHydrated()).toBeFalsy();
+  await (useStore as any).persist.rehydrate();
+  expect((useStore as any).persist.hasHydrated()).toBeTruthy();
 });
 
 test('supports noop storage fallback when storage is nullish', async () => {

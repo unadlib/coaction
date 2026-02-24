@@ -104,6 +104,7 @@ export const persist =
         hasHydrated = true;
         onRehydrateStorage?.(store.getState());
       } catch (error) {
+        hasHydrated = true;
         onRehydrateStorage?.(undefined, error);
       } finally {
         isHydrating = false;
