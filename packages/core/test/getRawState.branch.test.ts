@@ -203,6 +203,36 @@ test('client action rejects when fullSync fallback fails', async () => {
   }
 });
 
+test('client action rejects when fullSync fallback sequence is stale', async () => {
+  vi.useFakeTimers();
+  try {
+    const { store, internal } = createClientStoreContext(async (event) => {
+      if (event === 'execute') {
+        return ['ok', 3];
+      }
+      if (event === 'fullSync') {
+        return {
+          state: JSON.stringify({
+            count: 2
+          }),
+          sequence: 2
+        };
+      }
+      throw new Error(`Unexpected event: ${String(event)}`);
+    });
+    internal.sequence = 0;
+    const pending = store.getState().increment(1);
+    const assertion = expect(pending).rejects.toThrow(
+      'Stale fullSync sequence: expected >= 3, got 2'
+    );
+    await Promise.resolve();
+    await vi.advanceTimersByTimeAsync(1600);
+    await assertion;
+  } finally {
+    vi.useRealTimers();
+  }
+});
+
 test('client action mismatch path still throws $$Error after sequence catch-up', async () => {
   const { store, internal, trigger } = createClientStoreContext(async () => [
     {
