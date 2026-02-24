@@ -15,7 +15,7 @@ const toSnapshot = (
     for (const item of state) {
       next.push(toSnapshot(item, visited));
     }
-    return next as Snapshot;
+    return next as unknown as Snapshot;
   }
   if (typeof state === 'object' && state !== null) {
     if (visited.has(state)) {
