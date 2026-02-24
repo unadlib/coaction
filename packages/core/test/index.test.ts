@@ -342,7 +342,8 @@ test('worker execute returns $$Error for missing method', async () => {
   )) as [any, number];
   errorSpy.mockRestore();
   expect(result).toEqual({
-    $$Error: 'The function is not found'
+    __coactionTransportError__: true,
+    message: 'The function is not found'
   });
   useServerStore.destroy();
 });

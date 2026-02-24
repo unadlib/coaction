@@ -540,7 +540,8 @@ test('handleMainTransport validates onConnect and normalizes non-Error throws', 
     expect(executeHandler).not.toBeNull();
     const [result] = await executeHandler!(['bad'], []);
     expect(result).toEqual({
-      $$Error: '123'
+      __coactionTransportError__: true,
+      message: '123'
     });
     expect(errorSpy).toHaveBeenCalled();
   } finally {
