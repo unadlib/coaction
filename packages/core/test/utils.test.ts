@@ -39,6 +39,44 @@ test('mergeObject handles slice and plain merge paths', () => {
   expect(target.count).toBe(3);
 });
 
+test('mergeObject ignores unknown and inherited slice keys', () => {
+  const proto = {
+    inherited: {
+      name: 'bad'
+    }
+  };
+  const source = Object.create(proto) as {
+    user: {
+      name: string;
+    };
+    unknown: {
+      value: number;
+    };
+  };
+  source.user = {
+    name: 'next'
+  };
+  source.unknown = {
+    value: 1
+  };
+  const target = {
+    user: {
+      name: 'coaction'
+    }
+  };
+
+  expect(() => {
+    mergeObject(target, source, true);
+  }).not.toThrow();
+  expect(target).toEqual({
+    user: {
+      name: 'next'
+    }
+  });
+  expect((target as any).inherited).toBeUndefined();
+  expect((target as any).unknown).toBeUndefined();
+});
+
 test('uuid returns v4-like identifier', () => {
   const value = uuid();
   expect(value).toMatch(
