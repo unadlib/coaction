@@ -211,8 +211,8 @@ importers:
   packages/coaction-ng:
     devDependencies:
       '@angular/core':
-        specifier: ^20.3.1
-        version: 20.3.16(rxjs@7.8.2)
+        specifier: ^21.1.5
+        version: 21.1.5(rxjs@7.8.2)
       coaction:
         specifier: workspace:*
         version: link:../core
@@ -414,13 +414,13 @@ packages:
   '@actions/io@3.0.2':
     resolution: {integrity: sha512-nRBchcMM+QK1pdjO7/idu86rbJI5YHUKCvKs0KxnSYbVe3F51UfGxuZX4Qy/fWlp6l7gWFwIkrOzN+oUK03kfw==}
 
-  '@angular/core@20.3.16':
-    resolution: {integrity: sha512-KSFPKvOmWWLCJBbEO+CuRUXfecX2FRuO0jNi9c54ptXMOPHlK1lIojUnyXmMNzjdHgRug8ci9qDuftvC2B7MKg==}
+  '@angular/core@21.1.5':
+    resolution: {integrity: sha512-m61YHiyE+SIvS8UXcFLjYCucv6ShJJCwz9xxEk7ysYW9wOtHdfIf9tgyOsucZDAvrvpSyQLRj5jGBCGm1VIvXA==}
     engines: {node: ^20.19.0 || ^22.12.0 || >=24.0.0}
     peerDependencies:
-      '@angular/compiler': 20.3.16
+      '@angular/compiler': 21.1.5
       rxjs: ^6.5.3 || ^7.4.0
-      zone.js: ~0.15.0
+      zone.js: ~0.15.0 || ~0.16.0
     peerDependenciesMeta:
       '@angular/compiler':
         optional: true
@@ -4415,7 +4415,7 @@ snapshots:
 
   '@actions/io@3.0.2': {}
 
-  '@angular/core@20.3.16(rxjs@7.8.2)':
+  '@angular/core@21.1.5(rxjs@7.8.2)':
     dependencies:
       rxjs: 7.8.2
       tslib: 2.8.1
