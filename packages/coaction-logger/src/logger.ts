@@ -138,25 +138,30 @@ export const logger: (options?: {
         serialized ? JSON.stringify(store.getPureState()) : store.getPureState()
       );
       const now = timer.now();
-      const result = setState(state, action);
-      logger.log(
-        `${verbose ? `[Share: ${store.share}][Store: ${store.name}]` : ''}[Next State]`,
-        serialized ? JSON.stringify(store.getPureState()) : store.getPureState()
-      );
-      logger.log(
-        [
-          verbose ? `%c${date} ` : '%c',
-          verbose ? `[Share: ${store.share}]` : '',
-          `${verbose ? `[Store: ${store.name}]` : ''}[Action]`,
-          ` (${(timer.now() - now).toFixed(3)} ms)`
-        ].join('%c'),
-        'color: gray; font-weight: lighter;',
-        'color: gray; font-weight: lighter;',
-        'color: #4CAF50;',
-        'color: gray; font-weight: lighter;'
-      );
-      logger.groupEnd();
-      return result;
+      try {
+        const result = setState(state, action);
+        logger.log(
+          `${verbose ? `[Share: ${store.share}][Store: ${store.name}]` : ''}[Next State]`,
+          serialized
+            ? JSON.stringify(store.getPureState())
+            : store.getPureState()
+        );
+        logger.log(
+          [
+            verbose ? `%c${date} ` : '%c',
+            verbose ? `[Share: ${store.share}]` : '',
+            `${verbose ? `[Store: ${store.name}]` : ''}[Action]`,
+            ` (${(timer.now() - now).toFixed(3)} ms)`
+          ].join('%c'),
+          'color: gray; font-weight: lighter;',
+          'color: gray; font-weight: lighter;',
+          'color: #4CAF50;',
+          'color: gray; font-weight: lighter;'
+        );
+        return result;
+      } finally {
+        logger.groupEnd();
+      }
     };
     return store;
   };
