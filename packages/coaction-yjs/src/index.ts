@@ -5,6 +5,14 @@ export * from 'yjs';
 
 const STATE_KEY = 'state';
 
+const scheduleMicrotask = (callback: () => void) => {
+  if (typeof queueMicrotask === 'function') {
+    queueMicrotask(callback);
+    return;
+  }
+  Promise.resolve().then(callback);
+};
+
 function clone<T>(value: T): T {
   if (typeof structuredClone === 'function') {
     return structuredClone(value);
@@ -453,7 +461,7 @@ export const bindYjs = <T extends object>(
       return;
     }
     flushScheduled = true;
-    queueMicrotask(flushFromYjs);
+    scheduleMicrotask(flushFromYjs);
   };
 
   const flushFromYjs = () => {
