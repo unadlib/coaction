@@ -52,7 +52,7 @@
     }
   },
   "devDependencies": {
-    "coaction": "^1.2.0"
+    "coaction": "workspace:*"
   },
   "publishConfig": {
     "access": "public",
