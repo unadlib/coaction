@@ -107,7 +107,7 @@ const createAutoSelector = <T extends object>(
   if (!store.isSliceStore) {
     const autoSelector = {} as Record<string, any>;
     const descriptors = Object.getOwnPropertyDescriptors(state);
-    for (const key in descriptors) {
+    for (const key of Object.keys(descriptors)) {
       const descriptor = descriptors[key];
       if (typeof descriptor.value === 'function') {
         autoSelector[key] = descriptor.value.bind(state);
@@ -121,14 +121,14 @@ const createAutoSelector = <T extends object>(
     return autoSelector;
   }
   const autoSelector = {} as Record<string, any>;
-  for (const sliceKey in state) {
+  for (const sliceKey of Object.keys(state)) {
     const slice = state[sliceKey];
     if (typeof slice !== 'object' || slice === null) {
       continue;
     }
     const sliceAutoSelector = {} as Record<string, any>;
     const descriptors = Object.getOwnPropertyDescriptors(slice);
-    for (const key in descriptors) {
+    for (const key of Object.keys(descriptors)) {
       const descriptor = descriptors[key];
       if (typeof descriptor.value === 'function') {
         sliceAutoSelector[key] = descriptor.value.bind(slice);
