@@ -87,7 +87,11 @@ export const handleState = <T extends CreateState>(
           }
         }
       }
-      return [internal.rootState as any, patches, inversePatches];
+      return [
+        internal.rootState as any,
+        finalPatches.patches,
+        finalPatches.inversePatches
+      ];
     }
   ) => {
     if (store.share === 'client') {

@@ -72,6 +72,62 @@ test('setState uses store.patch hook in patches flow', () => {
   expect(store.apply).toHaveBeenCalledTimes(1);
 });
 
+test('setState emits patch-hook output instead of raw patches', () => {
+  const patched = [
+    {
+      op: 'replace',
+      path: ['count'],
+      value: 9
+    }
+  ];
+  const { setState, store, internal } = createContext({
+    enablePatches: true,
+    patch: () => ({
+      patches: patched,
+      inversePatches: []
+    })
+  });
+  store.transport = {
+    emit: vi.fn()
+  };
+
+  setState({
+    count: 1
+  });
+
+  expect(store.transport.emit).toHaveBeenCalledWith(
+    {
+      name: 'update',
+      respond: false
+    },
+    {
+      patches: patched,
+      sequence: 1
+    }
+  );
+  expect(internal.sequence).toBe(1);
+});
+
+test('setState does not emit when patch hook removes all patches', () => {
+  const { setState, store, internal } = createContext({
+    enablePatches: true,
+    patch: () => ({
+      patches: [],
+      inversePatches: []
+    })
+  });
+  store.transport = {
+    emit: vi.fn()
+  };
+
+  setState({
+    count: 1
+  });
+
+  expect(store.transport.emit).not.toHaveBeenCalled();
+  expect(internal.sequence).toBe(0);
+});
+
 test('setState throws for client share store', () => {
   const { setState } = createContext({
     share: 'client',
