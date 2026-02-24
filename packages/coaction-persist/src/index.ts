@@ -124,7 +124,11 @@ export const persist =
     const baseSetState = store.setState;
     store.setState = (next, updater) => {
       const result = baseSetState(next, updater);
-      void persistState();
+      void persistState().catch((error) => {
+        if (process.env.NODE_ENV === 'development') {
+          console.error(error);
+        }
+      });
       return result;
     };
     const persistApi: PersistApi = {
