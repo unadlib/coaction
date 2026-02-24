@@ -114,3 +114,32 @@ test('slices autoSelector skips non-object state entries', () => {
     dispose();
   });
 });
+
+test('autoSelector ignores inherited enumerable keys', () => {
+  const protoKey = '__coactionSolidProto__';
+  Object.defineProperty(Object.prototype, protoKey, {
+    value: {
+      count: 1
+    },
+    enumerable: true,
+    configurable: true,
+    writable: true
+  });
+  try {
+    const useStore = create({
+      counter: () => ({
+        count: 0
+      })
+    });
+    createRoot((dispose) => {
+      const selectors = useStore({ autoSelector: true }) as any;
+      expect(selectors.counter.count()).toBe(0);
+      expect(
+        Object.prototype.hasOwnProperty.call(selectors, protoKey)
+      ).toBeFalsy();
+      dispose();
+    });
+  } finally {
+    delete (Object.prototype as any)[protoKey];
+  }
+});
