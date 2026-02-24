@@ -100,6 +100,13 @@ test('client action does not treat normal $$Error-shaped objects as transport fa
   await expect(store.getState().increment(1)).resolves.toEqual(payload);
 });
 
+test('client action supports legacy execute responses without sequence tuple', async () => {
+  const { store, internal } = createClientStoreContext(async () => 'legacy-ok');
+  internal.sequence = 0;
+  await expect(store.getState().increment(1)).resolves.toBe('legacy-ok');
+  expect(store.subscribe).not.toHaveBeenCalled();
+});
+
 test('client action waits for sequence catch-up and warns in development', async () => {
   const { store, internal, trigger } = createClientStoreContext(async () => [
     'ok',

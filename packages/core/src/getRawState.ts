@@ -130,84 +130,87 @@ export const getRawState = <T extends CreateState>(
             }
             const keys = sliceKey ? [sliceKey, key] : [key];
             // emit the action to worker or main thread execute
-            return (
-              store
-                .transport!.emit('execute', keys, args)
-                // @ts-ignore
-                .then(async ([result, sequence]: [any, number]) => {
-                  if (internal.sequence < sequence) {
-                    if (process.env.NODE_ENV === 'development') {
-                      console.warn(
-                        `The sequence of the action is not consistent.`,
-                        sequence,
-                        internal.sequence
-                      );
-                    }
-                    await new Promise<void>((resolve, reject) => {
-                      let settled = false;
-                      let unsubscribe = () => {};
-                      let timeoutId: ReturnType<typeof setTimeout> | undefined;
-                      const cleanup = () => {
-                        unsubscribe();
-                        if (typeof timeoutId !== 'undefined') {
-                          clearTimeout(timeoutId);
-                        }
-                      };
-                      const finishResolve = () => {
-                        if (settled) return;
-                        settled = true;
-                        cleanup();
-                        resolve();
-                      };
-                      const finishReject = (error: unknown) => {
-                        if (settled) return;
-                        settled = true;
-                        cleanup();
-                        reject(error);
-                      };
-                      unsubscribe = store.subscribe(() => {
-                        if (internal.sequence >= sequence) {
-                          finishResolve();
-                        }
-                      });
-                      timeoutId = setTimeout(() => {
-                        void store
-                          .transport!.emit('fullSync')
-                          .then((latest) => {
-                            const next = latest as {
-                              state: string;
-                              sequence: number;
-                            };
-                            store.apply(JSON.parse(next.state));
-                            internal.sequence = next.sequence;
-                            if (internal.sequence >= sequence) {
-                              finishResolve();
-                              return;
-                            }
-                            finishReject(
-                              new Error(
-                                `Stale fullSync sequence: expected >= ${sequence}, got ${internal.sequence}`
-                              )
-                            );
-                          })
-                          .catch((error) => {
-                            finishReject(error);
-                          });
-                      }, clientExecuteSyncTimeoutMs);
+            return store
+              .transport!.emit('execute', keys, args)
+              .then(async (response: unknown) => {
+                const result = Array.isArray(response) ? response[0] : response;
+                const sequence = Array.isArray(response)
+                  ? typeof response[1] === 'number'
+                    ? response[1]
+                    : internal.sequence
+                  : internal.sequence;
+                if (internal.sequence < sequence) {
+                  if (process.env.NODE_ENV === 'development') {
+                    console.warn(
+                      `The sequence of the action is not consistent.`,
+                      sequence,
+                      internal.sequence
+                    );
+                  }
+                  await new Promise<void>((resolve, reject) => {
+                    let settled = false;
+                    let unsubscribe = () => {};
+                    let timeoutId: ReturnType<typeof setTimeout> | undefined;
+                    const cleanup = () => {
+                      unsubscribe();
+                      if (typeof timeoutId !== 'undefined') {
+                        clearTimeout(timeoutId);
+                      }
+                    };
+                    const finishResolve = () => {
+                      if (settled) return;
+                      settled = true;
+                      cleanup();
+                      resolve();
+                    };
+                    const finishReject = (error: unknown) => {
+                      if (settled) return;
+                      settled = true;
+                      cleanup();
+                      reject(error);
+                    };
+                    unsubscribe = store.subscribe(() => {
+                      if (internal.sequence >= sequence) {
+                        finishResolve();
+                      }
                     });
-                  }
-                  if (isTransportErrorEnvelope(result)) {
-                    done?.(result);
-                    throw new Error(result.message);
-                  }
-                  if (isLegacyTransportErrorEnvelope(result)) {
-                    done?.(result);
-                    throw new Error(result.$$Error);
-                  }
+                    timeoutId = setTimeout(() => {
+                      void store
+                        .transport!.emit('fullSync')
+                        .then((latest) => {
+                          const next = latest as {
+                            state: string;
+                            sequence: number;
+                          };
+                          store.apply(JSON.parse(next.state));
+                          internal.sequence = next.sequence;
+                          if (internal.sequence >= sequence) {
+                            finishResolve();
+                            return;
+                          }
+                          finishReject(
+                            new Error(
+                              `Stale fullSync sequence: expected >= ${sequence}, got ${internal.sequence}`
+                            )
+                          );
+                        })
+                        .catch((error) => {
+                          finishReject(error);
+                        });
+                    }, clientExecuteSyncTimeoutMs);
+                  });
+                }
+                if (isTransportErrorEnvelope(result)) {
                   done?.(result);
-                  return result;
-                })
-            );
+                  throw new Error(result.message);
+                }
+                if (isLegacyTransportErrorEnvelope(result)) {
+                  done?.(result);
+                  throw new Error(result.$$Error);
+                }
+                done?.(result);
+                return result;
+              });
           };
         } else {
           const fn = descriptor.value;
