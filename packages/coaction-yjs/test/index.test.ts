@@ -796,6 +796,31 @@ test('retries compacted remote operations on setState reentry errors', async () 
   binding.destroy();
 });
 
+test('falls back when queueMicrotask is unavailable', async () => {
+  const originalQueueMicrotask = globalThis.queueMicrotask;
+  (globalThis as any).queueMicrotask = undefined;
+  try {
+    const doc = new Y.Doc();
+    const store = create((set) => ({
+      count: 0
+    }));
+    const binding = bindYjs(store, {
+      doc,
+      key: 'counter'
+    });
+    const stateMap = doc.getMap<any>('counter').get('state') as Y.Map<any>;
+    doc.transact(() => {
+      stateMap.set('count', 7);
+    }, 'external');
+    await waitFor(() => {
+      expect(store.getState().count).toBe(7);
+    });
+    binding.destroy();
+  } finally {
+    (globalThis as any).queueMicrotask = originalQueueMicrotask;
+  }
+});
+
 test('throws when snapshot apply fails with non-reentry error', () => {
   const originalQueueMicrotask = globalThis.queueMicrotask;
   (globalThis as any).queueMicrotask = (callback: () => void) => callback();
