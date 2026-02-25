@@ -73,7 +73,7 @@
     "@types/jest": "^30.0.0",
     "@types/node": "^25.3.0",
     "@vitest/coverage-v8": "^4.0.18",
-    "@vue/compiler-sfc": "^3.5.28",
+    "@vue/compiler-sfc": "^3.5.29",
     "babel-preset-solid": "^1.9.10",
     "benchmark": "^2.1.4",
     "commitizen": "^4.3.1",
