@@ -39,7 +39,9 @@ export const createAsyncClientStore = <T extends CreateState>(
   }
   asyncClientStore.transport = transport;
   let syncingPromise: Promise<void> | null = null;
-  const fullSync = async () => {
+  let awaitingReconnectSync = false;
+  let reconnectSequenceBaseline: number | null = null;
+  const fullSync = async (allowLowerSequence = false) => {
     if (!syncingPromise) {
       syncingPromise = (async () => {
         const latest = await transport.emit('fullSync');
@@ -49,11 +51,18 @@ export const createAsyncClientStore = <T extends CreateState>(
         ) {
           throw new Error('Invalid fullSync payload');
         }
-        if (latest.sequence < internal.sequence) {
+        const canApplyLowerSequence =
+          allowLowerSequence &&
+          awaitingReconnectSync &&
+          reconnectSequenceBaseline !== null &&
+          reconnectSequenceBaseline === internal.sequence;
+        if (latest.sequence < internal.sequence && !canApplyLowerSequence) {
           return;
         }
         asyncClientStore.apply(JSON.parse(latest.state));
         internal.sequence = latest.sequence;
+        awaitingReconnectSync = false;
+        reconnectSequenceBaseline = null;
       })().finally(() => {
         syncingPromise = null;
       });
@@ -64,7 +73,9 @@ export const createAsyncClientStore = <T extends CreateState>(
     throw new Error('transport.onConnect is required');
   }
   transport.onConnect?.(() => {
-    void fullSync().catch((error) => {
+    awaitingReconnectSync = true;
+    reconnectSequenceBaseline = internal.sequence;
+    void fullSync(true).catch((error) => {
       if (process.env.NODE_ENV === 'development') {
         console.error(error);
       }
@@ -72,26 +83,40 @@ export const createAsyncClientStore = <T extends CreateState>(
   });
   transport.listen('update', async (options) => {
     let shouldFullSync = false;
+    let allowLowerSequence = false;
     try {
       if (typeof options.sequence !== 'number') {
         shouldFullSync = true;
       } else if (options.sequence <= internal.sequence) {
-        return;
+        if (awaitingReconnectSync) {
+          shouldFullSync = true;
+          allowLowerSequence = true;
+        } else if (options.sequence === 0 && internal.sequence > 0) {
+          awaitingReconnectSync = true;
+          reconnectSequenceBaseline = internal.sequence;
+          shouldFullSync = true;
+          allowLowerSequence = true;
+        } else {
+          return;
+        }
       } else if (options.sequence === internal.sequence + 1) {
         asyncClientStore.apply(undefined, options.patches);
         internal.sequence = options.sequence;
+        awaitingReconnectSync = false;
+        reconnectSequenceBaseline = null;
         return;
       } else {
         shouldFullSync = true;
+        allowLowerSequence = awaitingReconnectSync;
       }
 
       if (shouldFullSync) {
-        await fullSync();
+        await fullSync(allowLowerSequence);
       }
     } catch (error) {
       if (!shouldFullSync) {
         try {
-          await fullSync();
+          await fullSync(awaitingReconnectSync);
         } catch (syncError) {
           if (process.env.NODE_ENV === 'development') {
             console.error(syncError);
