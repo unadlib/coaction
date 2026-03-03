@@ -11,6 +11,12 @@ export type StorageValue<T> = {
   version?: number;
 };
 
+type NonFunctionPropertyNames<T extends object> = {
+  [K in keyof T]: T[K] extends (...args: any[]) => any ? never : K;
+}[keyof T];
+
+export type PureState<T extends object> = Pick<T, NonFunctionPropertyNames<T>>;
+
 export type PersistOptions<T extends object> = {
   name: string;
   storage?: PersistStorage;
@@ -22,7 +28,7 @@ export type PersistOptions<T extends object> = {
     persistedState: object,
     version: number
   ) => object | Promise<object>;
-  merge?: (persistedState: object, currentState: T) => T;
+  merge?: (persistedState: object, currentState: PureState<T>) => object;
   skipHydration?: boolean;
   onRehydrateStorage?: (state?: T, error?: unknown) => void;
 };
@@ -87,9 +93,7 @@ export const persist =
       writePromise = writePromise
         .catch(() => undefined)
         .then(async () => {
-          if (!destroyed) {
-            await persistedStorage.setItem(name, payload);
-          }
+          await persistedStorage.setItem(name, payload);
         });
       return writePromise;
     };
