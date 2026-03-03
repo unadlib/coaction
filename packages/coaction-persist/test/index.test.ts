@@ -135,6 +135,8 @@ test('supports version migration', async () => {
   );
   await nextTick();
   expect(useStore.getState().count).toBe(5);
+  await nextTick();
+  expect(storage.getItem('counter')).toContain('"version":1');
 });
 
 test('rehydrate merge receives pure state without action functions', async () => {
@@ -180,6 +182,39 @@ test('rehydrate merge receives pure state without action functions', async () =>
   expect(currentState.count).toBe(0);
   expect(currentState.increment).toBeUndefined();
   expect(useStore.getState().count).toBe(7);
+});
+
+test('rehydrate writes back current version without migrate', async () => {
+  const storage = createMemoryStorage();
+  storage.setItem(
+    'version-rewrite',
+    JSON.stringify({
+      state: {
+        count: 4
+      },
+      version: 0
+    })
+  );
+
+  const useStore = create(
+    () => ({
+      count: 0
+    }),
+    {
+      middlewares: [
+        persist({
+          name: 'version-rewrite',
+          storage,
+          version: 2
+        })
+      ]
+    }
+  );
+
+  await nextTick();
+
+  expect(useStore.getState().count).toBe(4);
+  expect(storage.getItem('version-rewrite')).toContain('"version":2');
 });
 
 test('supports skipHydration and manual rehydrate', async () => {

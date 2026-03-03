@@ -124,6 +124,7 @@ export const persist =
           return;
         }
         const parsed = deserialize(rawState);
+        const shouldWriteBack = parsed.version !== version;
         let persistedState = parsed.state;
         if (
           parsed.version !== undefined &&
@@ -136,6 +137,13 @@ export const persist =
           }
         }
         store.setState(merge(persistedState, store.getPureState()));
+        if (shouldWriteBack && !destroyed) {
+          const payload = serialize({
+            state: partialize(store.getPureState()),
+            version
+          });
+          await enqueuePersistWrite(payload);
+        }
         hasHydrated = true;
         onRehydrateStorage?.(store.getState());
       } catch (error) {
