@@ -136,6 +136,51 @@ test('supports version migration', async () => {
   expect(useStore.getState().count).toBe(5);
 });
 
+test('rehydrate merge receives pure state without action functions', async () => {
+  const storage = createMemoryStorage();
+  storage.setItem(
+    'pure-state-merge',
+    JSON.stringify({
+      state: {
+        count: 7
+      },
+      version: 0
+    })
+  );
+  const merge = vi.fn((persistedState, currentState) => ({
+    ...currentState,
+    ...persistedState
+  }));
+
+  const useStore = create(
+    (set) => ({
+      count: 0,
+      increment() {
+        set((draft) => {
+          draft.count += 1;
+        });
+      }
+    }),
+    {
+      middlewares: [
+        persist({
+          name: 'pure-state-merge',
+          storage,
+          merge
+        })
+      ]
+    }
+  );
+
+  await nextTick();
+
+  expect(merge).toHaveBeenCalledTimes(1);
+  const currentState = merge.mock.calls[0]?.[1] as Record<string, unknown>;
+  expect(currentState.count).toBe(0);
+  expect(currentState.increment).toBeUndefined();
+  expect(useStore.getState().count).toBe(7);
+});
+
 test('supports skipHydration and manual rehydrate', async () => {
   const storage = createMemoryStorage();
   storage.setItem(
