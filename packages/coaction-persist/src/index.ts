@@ -82,6 +82,17 @@ export const persist =
     let hydrationPromise: Promise<void> | null = null;
     let destroyed = false;
     let hasPendingPersist = false;
+    let writePromise: Promise<void> = Promise.resolve();
+    const enqueuePersistWrite = (payload: string) => {
+      writePromise = writePromise
+        .catch(() => undefined)
+        .then(async () => {
+          if (!destroyed) {
+            await persistedStorage.setItem(name, payload);
+          }
+        });
+      return writePromise;
+    };
     const persistState = async () => {
       if (isHydrating || destroyed) {
         return;
@@ -95,7 +106,7 @@ export const persist =
         state: partialState,
         version
       });
-      await persistedStorage.setItem(name, payload);
+      await enqueuePersistWrite(payload);
     };
     const runRehydrate = async () => {
       if (destroyed) {
