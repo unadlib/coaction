@@ -221,6 +221,98 @@ test('manual rehydrate marks hydration as completed even when it fails', async (
   expect((useStore as any).persist.hasHydrated()).toBeTruthy();
 });
 
+test('deduplicates concurrent rehydrate calls', async () => {
+  let resolveGetItem: ((value: string | null) => void) | undefined;
+  const storage: PersistStorage = {
+    getItem: vi.fn(
+      () =>
+        new Promise<string | null>((resolve) => {
+          resolveGetItem = resolve;
+        })
+    ),
+    setItem: () => undefined,
+    removeItem: () => undefined
+  };
+  const onRehydrateStorage = vi.fn();
+  const useStore = create(
+    () => ({
+      count: 0
+    }),
+    {
+      middlewares: [
+        persist({
+          name: 'dedupe-rehydrate',
+          storage,
+          skipHydration: true,
+          onRehydrateStorage
+        })
+      ]
+    }
+  );
+
+  const api = (useStore as any).persist;
+  const first = api.rehydrate();
+  const second = api.rehydrate();
+
+  expect(first).toBe(second);
+  expect(storage.getItem).toHaveBeenCalledTimes(1);
+
+  if (!resolveGetItem) {
+    throw new Error('Expected pending getItem resolver');
+  }
+  resolveGetItem(
+    JSON.stringify({
+      state: {
+        count: 3
+      },
+      version: 0
+    })
+  );
+  await Promise.all([first, second]);
+
+  expect(useStore.getState().count).toBe(3);
+  expect(onRehydrateStorage).toHaveBeenCalledTimes(1);
+  expect(api.hasHydrated()).toBeTruthy();
+});
+
+test('skips scheduled rehydrate after destroy', async () => {
+  const getItem = vi.fn(() =>
+    JSON.stringify({
+      state: {
+        count: 9
+      },
+      version: 0
+    })
+  );
+  const onRehydrateStorage = vi.fn();
+  const storage: PersistStorage = {
+    getItem,
+    setItem: () => undefined,
+    removeItem: () => undefined
+  };
+  const useStore = create(
+    () => ({
+      count: 0
+    }),
+    {
+      middlewares: [
+        persist({
+          name: 'destroyed-auto-rehydrate',
+          storage,
+          onRehydrateStorage
+        })
+      ]
+    }
+  );
+
+  useStore.destroy();
+  await nextTick();
+
+  expect(getItem).not.toHaveBeenCalled();
+  expect(useStore.getState().count).toBe(0);
+  expect(onRehydrateStorage).not.toHaveBeenCalled();
+});
+
 test('supports noop storage fallback when storage is nullish', async () => {
   const useStore = create(
     (set) => ({
