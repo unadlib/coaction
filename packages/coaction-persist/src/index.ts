@@ -124,7 +124,7 @@ export const persist =
             return;
           }
         }
-        store.setState(merge(persistedState, store.getState()));
+        store.setState(merge(persistedState, store.getPureState()));
         hasHydrated = true;
         onRehydrateStorage?.(store.getState());
       } catch (error) {
