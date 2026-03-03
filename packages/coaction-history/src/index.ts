@@ -88,6 +88,23 @@ const isEqual = (
   return true;
 };
 
+const applySnapshot = (
+  target: Record<string, unknown>,
+  nextState: object,
+  currentState: object
+) => {
+  const next = nextState as Record<string, unknown>;
+  const current = currentState as Record<string, unknown>;
+  for (const key of Object.keys(current)) {
+    if (!Object.prototype.hasOwnProperty.call(next, key)) {
+      delete target[key];
+    }
+  }
+  for (const key of Object.keys(next)) {
+    target[key] = toSnapshot(next[key]);
+  }
+};
+
 export type HistoryOptions<T extends object> = {
   limit?: number;
   partialize?: (state: T) => object;
@@ -143,7 +160,13 @@ export const history =
         future.push(current);
         isTimeTraveling = true;
         try {
-          baseSetState(previous as any);
+          baseSetState((draft) => {
+            applySnapshot(
+              draft as unknown as Record<string, unknown>,
+              previous,
+              current
+            );
+          });
         } finally {
           isTimeTraveling = false;
         }
@@ -158,7 +181,13 @@ export const history =
         past.push(current);
         isTimeTraveling = true;
         try {
-          baseSetState(next as any);
+          baseSetState((draft) => {
+            applySnapshot(
+              draft as unknown as Record<string, unknown>,
+              next,
+              current
+            );
+          });
         } finally {
           isTimeTraveling = false;
         }
