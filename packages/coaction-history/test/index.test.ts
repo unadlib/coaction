@@ -33,6 +33,68 @@ test('undo and redo', () => {
   expect(api.redo()).toBeFalsy();
 });
 
+test('undo and redo restore deleted object keys', () => {
+  const useStore = create(
+    (set) => ({
+      data: {
+        keep: 1,
+        remove: 2
+      },
+      removeKey() {
+        set((draft) => {
+          delete draft.data.remove;
+        });
+      }
+    }),
+    {
+      middlewares: [history()]
+    }
+  );
+  const api = (useStore as any).history;
+
+  useStore.getState().removeKey();
+  expect(useStore.getState().data).toEqual({
+    keep: 1
+  });
+
+  expect(api.undo()).toBeTruthy();
+  expect(useStore.getState().data).toEqual({
+    keep: 1,
+    remove: 2
+  });
+
+  expect(api.redo()).toBeTruthy();
+  expect(useStore.getState().data).toEqual({
+    keep: 1
+  });
+});
+
+test('undo and redo restore array truncation', () => {
+  const useStore = create(
+    (set) => ({
+      list: [1, 2, 3],
+      popItem() {
+        set((draft) => {
+          draft.list.pop();
+        });
+      }
+    }),
+    {
+      middlewares: [history()]
+    }
+  );
+  const api = (useStore as any).history;
+
+  useStore.getState().popItem();
+  expect(useStore.getState().list).toEqual([1, 2]);
+
+  expect(api.undo()).toBeTruthy();
+  expect(useStore.getState().list).toEqual([1, 2, 3]);
+
+  expect(api.redo()).toBeTruthy();
+  expect(useStore.getState().list).toEqual([1, 2]);
+});
+
 test('respects history limit', () => {
   const useStore = create(
     (set) => ({
@@ -151,7 +213,15 @@ test('time traveling setState does not clear redo stack', () => {
   const store = {
     getPureState: () => state,
     setState(next: any) {
-      state = next;
+      if (typeof next === 'function') {
+        const draft = {
+          ...state
+        };
+        next(draft);
+        state = draft;
+      } else {
+        state = next;
+      }
       if (state.count === 0) {
         store.setState({
           count: 999
