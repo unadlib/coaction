@@ -5,6 +5,7 @@ import { createJSONStorage, persist, PersistStorage } from '../src';
 const nextTick = async () => {
   await Promise.resolve();
   await Promise.resolve();
+  await Promise.resolve();
 };
 
 const createMemoryStorage = (): PersistStorage => {
@@ -362,6 +363,62 @@ test('deduplicates concurrent rehydrate calls', async () => {
   expect(api.hasHydrated()).toBeTruthy();
 });
 
+test('serializes async persist writes to prevent stale overwrite', async () => {
+  const map = new Map<string, string>();
+  const pendingWrites: Array<{
+    value: string;
+    commit: () => void;
+  }> = [];
+  const storage: PersistStorage = {
+    getItem: () => null,
+    setItem: (name, value) =>
+      new Promise<void>((resolve) => {
+        pendingWrites.push({
+          value,
+          commit: () => {
+            map.set(name, value);
+            resolve();
+          }
+        });
+      }),
+    removeItem: () => undefined
+  };
+  const useStore = create(
+    (set) => ({
+      count: 0,
+      increment() {
+        set((draft) => {
+          draft.count += 1;
+        });
+      }
+    }),
+    {
+      middlewares: [
+        persist({
+          name: 'ordered-writes',
+          storage,
+          skipHydration: true
+        })
+      ]
+    }
+  );
+
+  useStore.getState().increment();
+  useStore.getState().increment();
+
+  await nextTick();
+  expect(pendingWrites).toHaveLength(1);
+  pendingWrites[0].commit();
+  await nextTick();
+
+  expect(pendingWrites).toHaveLength(2);
+  expect(pendingWrites[1].value).toContain('"count":2');
+  pendingWrites[1].commit();
+  await nextTick();
+
+  expect(map.get('ordered-writes')).toContain('"count":2');
+});
+
 test('skips scheduled rehydrate after destroy', async () => {
   const getItem = vi.fn(() =>
     JSON.stringify({
@@ -569,6 +626,9 @@ test('setState catches persist write errors', async () => {
     );
     useStore.getState().increment();
     await nextTick();
+    await new Promise((resolve) => {
+      setTimeout(resolve);
+    });
     expect(useStore.getState().count).toBe(1);
     expect(errorSpy).toHaveBeenCalled();
   } finally {
