@@ -4,6 +4,7 @@ import { createJSONStorage, persist } from '@coaction/persist';
 const nextTick = async () => {
   await Promise.resolve();
   await Promise.resolve();
+  await Promise.resolve();
 };
 
 export const runExample = async () => {
