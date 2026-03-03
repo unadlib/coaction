@@ -231,6 +231,68 @@ test('createAsyncClientStore ignores stale and duplicate update sequences', asyn
   expect(apply).not.toHaveBeenCalled();
 });
 
+test('createAsyncClientStore falls back to fullSync when incremental apply fails', async () => {
+  let updateHandler: ((options: any) => Promise<void>) | undefined;
+  const apply = vi
+    .fn()
+    .mockImplementationOnce(() => {
+      throw new Error('bad patches');
+    })
+    .mockImplementation(() => undefined);
+  const internal = {
+    sequence: 0
+  };
+  const transport = {
+    emit: vi.fn(async (event: any) => {
+      if (event === 'fullSync') {
+        return {
+          state: JSON.stringify({
+            count: 1
+          }),
+          sequence: 0
+        };
+      }
+      return undefined;
+    }),
+    onConnect: vi.fn(),
+    listen: vi.fn((name: string, handler: (options: any) => Promise<void>) => {
+      if (name === 'update') {
+        updateHandler = handler;
+      }
+    })
+  };
+
+  createAsyncClientStore(
+    () => ({
+      store: {
+        name: 'client',
+        apply,
+        getState: () => ({
+          count: 0
+        })
+      } as any,
+      internal: internal as any
+    }),
+    {
+      clientTransport: transport as any
+    } as any
+  );
+
+  await expect(
+    updateHandler?.({
+      sequence: 1,
+      patches: []
+    })
+  ).resolves.toBeUndefined();
+
+  expect(transport.emit).toHaveBeenCalledWith('fullSync');
+  expect(apply).toHaveBeenNthCalledWith(1, undefined, []);
+  expect(apply).toHaveBeenNthCalledWith(2, {
+    count: 1
+  });
+  expect(internal.sequence).toBe(0);
+});
+
 test('createAsyncClientStore ignores stale fullSync snapshots', async () => {
   let onConnectHandler: (() => Promise<void>) | undefined;
   const apply = vi.fn();
