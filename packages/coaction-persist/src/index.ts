@@ -79,8 +79,10 @@ export const persist =
     const persistedStorage = storage ?? createNoopStorage();
     let hasHydrated = false;
     let isHydrating = false;
+    let hydrationPromise: Promise<void> | null = null;
+    let destroyed = false;
     const persistState = async () => {
-      if (isHydrating) {
+      if (isHydrating || destroyed) {
         return;
       }
       const partialState = partialize(store.getPureState());
@@ -90,10 +92,16 @@ export const persist =
       });
       await persistedStorage.setItem(name, payload);
     };
-    const rehydrate = async () => {
+    const runRehydrate = async () => {
+      if (destroyed) {
+        return;
+      }
       isHydrating = true;
       try {
         const rawState = await persistedStorage.getItem(name);
+        if (destroyed) {
+          return;
+        }
         if (!rawState) {
           hasHydrated = true;
           onRehydrateStorage?.(store.getState());
@@ -107,16 +115,30 @@ export const persist =
           migrate
         ) {
           persistedState = await migrate(parsed.state, parsed.version);
+          if (destroyed) {
+            return;
+          }
         }
         store.setState(merge(persistedState, store.getState()));
         hasHydrated = true;
         onRehydrateStorage?.(store.getState());
       } catch (error) {
+        if (destroyed) {
+          return;
+        }
         hasHydrated = true;
         onRehydrateStorage?.(undefined, error);
       } finally {
         isHydrating = false;
       }
+    };
+    const rehydrate = () => {
+      if (!hydrationPromise) {
+        hydrationPromise = runRehydrate().finally(() => {
+          hydrationPromise = null;
+        });
+      }
+      return hydrationPromise;
     };
     const clearStorage = async () => {
       await persistedStorage.removeItem(name);
@@ -141,11 +163,14 @@ export const persist =
     });
     const baseDestroy = store.destroy;
     store.destroy = () => {
+      destroyed = true;
       baseDestroy();
     };
     if (!skipHydration) {
       scheduleMicrotask(() => {
-        void rehydrate();
+        if (!destroyed) {
+          void rehydrate();
+        }
       });
     }
     return store;
