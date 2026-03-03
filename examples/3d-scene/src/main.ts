@@ -19,7 +19,13 @@ class WindowManager {
 
   private winShapeChangeCallback?: Callback;
   private winChangeCallback?: Callback;
+  private unsubscribeStore?: () => void;
   private store: AsyncStore<WindowsManager>;
+  private readonly handleBeforeUnload = () => {
+    if (this.id !== -1) {
+      void this.store.getState().remove({ id: this.id });
+    }
+  };
 
   constructor() {
     const worker = new SharedWorker(new URL('./worker.ts', import.meta.url), {
@@ -28,16 +34,19 @@ class WindowManager {
     this.store = create<WindowsManager>(windowsManager, {
       worker
     });
-    this.store.subscribe(() => {
+    this.unsubscribeStore = this.store.subscribe(() => {
       if (this.winChangeCallback) {
         this.winChangeCallback();
       }
     });
-    window.addEventListener('beforeunload', async () => {
-      if (this.id !== -1) {
-        await this.store.getState().remove({ id: this.id });
-      }
-    });
+    window.addEventListener('beforeunload', this.handleBeforeUnload);
+  }
+
+  destroy() {
+    this.unsubscribeStore?.();
+    this.unsubscribeStore = undefined;
+    window.removeEventListener('beforeunload', this.handleBeforeUnload);
+    this.store.destroy();
   }
 
   get windows(): WindowInfo[] {
@@ -157,6 +166,7 @@ class SceneManager {
   private camera!: THREE.OrthographicCamera;
   private renderer!: THREE.WebGLRenderer;
   private world!: THREE.Object3D;
+  private readonly handleResize = () => this.resize();
 
   private sceneOffset = { x: 0, y: 0 };
   private sceneOffsetTarget = { x: 0, y: 0 };
@@ -190,7 +200,13 @@ class SceneManager {
     document.body.appendChild(this.renderer.domElement);
 
     this.resize();
-    window.addEventListener('resize', () => this.resize());
+    window.addEventListener('resize', this.handleResize);
+  }
+
+  destroy() {
+    window.removeEventListener('resize', this.handleResize);
+    this.renderer.dispose();
+    this.renderer.domElement.remove();
   }
 
   setSceneOffsetTarget(x: number, y: number, useEasing: boolean = true) {
@@ -241,14 +257,31 @@ class App {
   private windowManager!: WindowManager;
   private sceneManager!: SceneManager;
   private cubeManager!: CubeManager;
+  private initTimerId: ReturnType<typeof setTimeout> | undefined;
+  private frameId: number | undefined;
+  private destroyed = false;
 
   private today: number;
   private falloff: number = 0.05;
+  private readonly handleVisibilityChange = () => {
+    if (document.visibilityState !== 'hidden' && !this.initialized) {
+      this.init();
+    }
+  };
+  private readonly handleLoad = () => {
+    if (document.visibilityState !== 'hidden') {
+      this.init();
+    }
+  };
+  private readonly handleBeforeUnload = () => {
+    this.destroy();
+  };
 
   constructor() {
     this.today = this.getTodayStart();
     this.setupVisibilityChange();
     this.setupOnLoad();
+    window.addEventListener('beforeunload', this.handleBeforeUnload);
   }
 
   private getTodayStart(): number {
@@ -262,25 +295,20 @@ class App {
   }
 
   private setupVisibilityChange() {
-    document.addEventListener('visibilitychange', () => {
-      if (document.visibilityState !== 'hidden' && !this.initialized) {
-        this.init();
-      }
-    });
+    document.addEventListener('visibilitychange', this.handleVisibilityChange);
   }
 
   private setupOnLoad() {
-    window.onload = () => {
-      if (document.visibilityState !== 'hidden') {
-        this.init();
-      }
-    };
+    window.addEventListener('load', this.handleLoad);
   }
 
   private init() {
-    if (!this.initialized) {
+    if (!this.initialized && !this.destroyed) {
       this.initialized = true;
-      setTimeout(() => {
+      this.initTimerId = setTimeout(() => {
+        if (this.destroyed) {
+          return;
+        }
         this.setupScene();
         this.setupWindowManager();
         this.updateWindowShape(false);
@@ -322,6 +350,9 @@ class App {
   }
 
   private renderLoop() {
+    if (this.destroyed) {
+      return;
+    }
     let t = this.getTime();
     this.windowManager.update();
     this.sceneManager.updateSceneOffset(this.falloff);
@@ -330,7 +361,30 @@ class App {
     this.cubeManager.animateCubes(wins, t, this.falloff);
 
     this.sceneManager.render();
-    requestAnimationFrame(() => this.renderLoop());
+    this.frameId = requestAnimationFrame(() => this.renderLoop());
+  }
+
+  destroy() {
+    if (this.destroyed) {
+      return;
+    }
+    this.destroyed = true;
+    document.removeEventListener(
+      'visibilitychange',
+      this.handleVisibilityChange
+    );
+    window.removeEventListener('load', this.handleLoad);
+    window.removeEventListener('beforeunload', this.handleBeforeUnload);
+    if (typeof this.initTimerId !== 'undefined') {
+      clearTimeout(this.initTimerId);
+      this.initTimerId = undefined;
+    }
+    if (typeof this.frameId !== 'undefined') {
+      cancelAnimationFrame(this.frameId);
+      this.frameId = undefined;
+    }
+    this.windowManager?.destroy();
+    this.sceneManager?.destroy();
   }
 }
 
