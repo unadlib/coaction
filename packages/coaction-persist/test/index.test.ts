@@ -492,6 +492,43 @@ test('skips scheduled rehydrate after destroy', async () => {
   expect(onRehydrateStorage).not.toHaveBeenCalled();
 });
 
+test('destroy does not drop already queued persist writes', async () => {
+  const writes: string[] = [];
+  const storage: PersistStorage = {
+    getItem: () => null,
+    setItem: (_name, value) => {
+      writes.push(value);
+    },
+    removeItem: () => undefined
+  };
+  const useStore = create(
+    (set) => ({
+      count: 0,
+      increment() {
+        set((draft) => {
+          draft.count += 1;
+        });
+      }
+    }),
+    {
+      middlewares: [
+        persist({
+          name: 'destroy-queued-write',
+          storage,
+          skipHydration: true
+        })
+      ]
+    }
+  );
+
+  useStore.getState().increment();
+  useStore.destroy();
+  await nextTick();
+
+  expect(writes).toHaveLength(1);
+  expect(writes[0]).toContain('"count":1');
+});
+
 test('supports noop storage fallback when storage is nullish', async () => {
   const useStore = create(
     (set) => ({
