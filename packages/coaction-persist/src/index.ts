@@ -81,8 +81,13 @@ export const persist =
     let isHydrating = false;
     let hydrationPromise: Promise<void> | null = null;
     let destroyed = false;
+    let hasPendingPersist = false;
     const persistState = async () => {
       if (isHydrating || destroyed) {
+        return;
+      }
+      if (!skipHydration && !hasHydrated) {
+        hasPendingPersist = true;
         return;
       }
       const partialState = partialize(store.getPureState());
@@ -130,6 +135,14 @@ export const persist =
         onRehydrateStorage?.(undefined, error);
       } finally {
         isHydrating = false;
+        if (hasPendingPersist && !destroyed) {
+          hasPendingPersist = false;
+          await persistState().catch((error) => {
+            if (process.env.NODE_ENV === 'development') {
+              console.error(error);
+            }
+          });
+        }
       }
     };
     const rehydrate = () => {

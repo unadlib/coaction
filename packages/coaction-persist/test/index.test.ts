@@ -61,6 +61,48 @@ test('persist and rehydrate', async () => {
   expect(rehydratedStore.getState().count).toBe(1);
 });
 
+test('does not overwrite storage before automatic hydration runs', async () => {
+  const storage = createMemoryStorage();
+  storage.setItem(
+    'counter',
+    JSON.stringify({
+      state: {
+        count: 8
+      },
+      version: 0
+    })
+  );
+  const setItemSpy = vi.spyOn(storage, 'setItem');
+  const useStore = create(
+    (set) => ({
+      count: 0,
+      increment() {
+        set((draft) => {
+          draft.count += 1;
+        });
+      }
+    }),
+    {
+      middlewares: [
+        persist({
+          name: 'counter',
+          storage
+        })
+      ]
+    }
+  );
+
+  useStore.getState().increment();
+  expect(storage.getItem('counter')).toContain('"count":8');
+  expect(setItemSpy).not.toHaveBeenCalled();
+
+  await nextTick();
+
+  expect(useStore.getState().count).toBe(8);
+  expect(storage.getItem('counter')).toContain('"count":8');
+  expect(setItemSpy).toHaveBeenCalledTimes(1);
+});
+
 test('supports version migration', async () => {
   const storage = createMemoryStorage();
   storage.setItem(
