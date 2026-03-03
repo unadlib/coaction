@@ -5,6 +5,21 @@ const isEqual = (x: unknown, y: unknown) => {
   return x !== x && y !== y;
 };
 
+const isUnsafeKey = (key: string) =>
+  key === '__proto__' || key === 'prototype' || key === 'constructor';
+
+const assignOwnEnumerable = (
+  target: Record<string, unknown>,
+  source: Record<string, unknown>
+) => {
+  for (const key of Object.keys(source)) {
+    if (isUnsafeKey(key)) {
+      continue;
+    }
+    target[key] = source[key];
+  }
+};
+
 export const areShallowEqualWithArray = (
   prev: any[] | null | IArguments,
   next: any[] | null | IArguments
@@ -25,18 +40,26 @@ export const mergeObject = (target: any, source: any, isSlice?: boolean) => {
   if (isSlice) {
     if (typeof source === 'object' && source !== null) {
       for (const key of Object.keys(source)) {
+        if (isUnsafeKey(key)) {
+          continue;
+        }
+        if (!Object.prototype.hasOwnProperty.call(target, key)) {
+          continue;
+        }
         const sourceValue = source[key];
         if (typeof sourceValue !== 'object' || sourceValue === null) {
           continue;
         }
         const targetValue = target[key];
         if (typeof targetValue === 'object' && targetValue !== null) {
-          Object.assign(targetValue, sourceValue);
+          assignOwnEnumerable(targetValue, sourceValue);
         }
       }
     }
   } else {
-    Object.assign(target, source);
+    if (typeof source === 'object' && source !== null) {
+      assignOwnEnumerable(target, source);
+    }
   }
 };
 

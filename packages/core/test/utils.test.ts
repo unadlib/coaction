@@ -77,6 +77,49 @@ test('mergeObject ignores unknown and inherited slice keys', () => {
   expect((target as any).unknown).toBeUndefined();
 });
 
+test('mergeObject ignores unsafe prototype keys', () => {
+  const pollutedKey = '__coactionPolluted__';
+  const objectPrototype = Object.prototype as Record<string, unknown>;
+  delete objectPrototype[pollutedKey];
+
+  try {
+    const plainTarget = {
+      count: 1
+    };
+    const plainSource = JSON.parse(
+      '{"__proto__":{"polluted":true},"count":2}'
+    ) as Record<string, unknown>;
+
+    mergeObject(plainTarget, plainSource);
+    expect(plainTarget).toEqual({
+      count: 2
+    });
+    expect(Object.getPrototypeOf(plainTarget)).toBe(Object.prototype);
+    expect((plainTarget as Record<string, unknown>).polluted).toBeUndefined();
+
+    const sliceTarget = {
+      nested: {
+        value: 1
+      }
+    };
+    const sliceSource = {
+      nested: JSON.parse(
+        `{"value":2,"__proto__":{"${pollutedKey}":true}}`
+      ) as Record<string, unknown>
+    };
+
+    mergeObject(sliceTarget, sliceSource, true);
+    expect(sliceTarget).toEqual({
+      nested: {
+        value: 2
+      }
+    });
+    expect(objectPrototype[pollutedKey]).toBeUndefined();
+  } finally {
+    delete objectPrototype[pollutedKey];
+  }
+});
+
 test('uuid returns v4-like identifier', () => {
   const value = uuid();
   expect(value).toMatch(
