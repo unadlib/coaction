@@ -71,21 +71,33 @@ export const createAsyncClientStore = <T extends CreateState>(
     });
   });
   transport.listen('update', async (options) => {
+    let shouldFullSync = false;
     try {
       if (typeof options.sequence !== 'number') {
-        await fullSync();
+        shouldFullSync = true;
+      } else if (options.sequence <= internal.sequence) {
         return;
-      }
-      if (options.sequence <= internal.sequence) {
-        return;
-      }
-      if (options.sequence === internal.sequence + 1) {
-        internal.sequence = options.sequence;
+      } else if (options.sequence === internal.sequence + 1) {
         asyncClientStore.apply(undefined, options.patches);
+        internal.sequence = options.sequence;
+        return;
       } else {
+        shouldFullSync = true;
+      }
+
+      if (shouldFullSync) {
         await fullSync();
       }
     } catch (error) {
+      if (!shouldFullSync) {
+        try {
+          await fullSync();
+        } catch (syncError) {
+          if (process.env.NODE_ENV === 'development') {
+            console.error(syncError);
+          }
+        }
+      }
       if (process.env.NODE_ENV === 'development') {
         console.error(error);
       }
