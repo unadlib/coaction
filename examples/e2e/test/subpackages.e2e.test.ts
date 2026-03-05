@@ -52,8 +52,10 @@ describe('subpackage examples e2e', () => {
 
   test('jotai example', () => {
     expect(runJotaiExample()).toEqual({
-      count: 1,
-      atomCount: 1
+      countAfterCoactionIncrement: 1,
+      atomCountAfterCoactionIncrement: 1,
+      countAfterAtomWrite: 4,
+      atomCountAfterAtomWrite: 4
     });
   });
 
