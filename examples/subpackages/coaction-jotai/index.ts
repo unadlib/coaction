@@ -30,9 +30,16 @@ export const runExample = () => {
   );
 
   store.getState().increment();
+  const countAfterCoactionIncrement = store.getState().count;
+  const atomCountAfterCoactionIncrement = jotaiStore.get(countAtom);
+
+  jotaiStore.set(countAtom, 4);
+
   const result = {
-    count: store.getState().count,
-    atomCount: jotaiStore.get(countAtom)
+    countAfterCoactionIncrement,
+    atomCountAfterCoactionIncrement,
+    countAfterAtomWrite: store.getState().count,
+    atomCountAfterAtomWrite: jotaiStore.get(countAtom)
   };
   store.destroy();
 
