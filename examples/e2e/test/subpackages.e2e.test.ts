@@ -88,7 +88,10 @@ describe('subpackage examples e2e', () => {
 
   test('redux example', () => {
     expect(runReduxExample()).toEqual({
-      count: 1
+      afterCoactionDispatch: 1,
+      afterReduxDispatch: 2,
+      finalCoactionCount: 10,
+      finalReduxCount: 10
     });
   });
 

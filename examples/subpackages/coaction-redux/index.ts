@@ -29,8 +29,20 @@ export const runExample = () => {
   });
 
   store.getState().dispatch(counterSlice.actions.increment());
+  const afterCoactionDispatch = store.getState().count;
+
+  reduxStore.dispatch(counterSlice.actions.increment());
+  const afterReduxDispatch = store.getState().count;
+
+  store.setState({
+    count: 10
+  });
+
   const result = {
-    count: store.getState().count
+    afterCoactionDispatch,
+    afterReduxDispatch,
+    finalCoactionCount: store.getState().count,
+    finalReduxCount: reduxStore.getState().count
   };
   store.destroy();
 
