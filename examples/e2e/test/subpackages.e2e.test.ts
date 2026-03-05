@@ -75,7 +75,11 @@ describe('subpackage examples e2e', () => {
 
   test('pinia example', () => {
     expect(runPiniaExample()).toEqual({
-      count: 1
+      afterCoactionIncrement: 1,
+      afterPiniaIncrement: 2,
+      afterPiniaStateWrite: 7,
+      finalCoactionCount: 10,
+      finalPiniaCount: 10
     });
   });
 

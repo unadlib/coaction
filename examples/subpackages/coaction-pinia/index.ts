@@ -30,13 +30,31 @@ export const runExample = () => {
     })
   );
 
+  const piniaStore = useCounterStore();
+
   const store = create<PiniaState>(() => adapt<PiniaState>(useCounterStore), {
     name: id
   });
 
   store.getState().increment();
+  const afterCoactionIncrement = store.getState().count;
+
+  piniaStore.increment();
+  const afterPiniaIncrement = store.getState().count;
+
+  piniaStore.$state.count = 7;
+  const afterPiniaStateWrite = store.getState().count;
+
+  store.setState({
+    count: 10
+  });
+
   const result = {
-    count: store.getState().count
+    afterCoactionIncrement,
+    afterPiniaIncrement,
+    afterPiniaStateWrite,
+    finalCoactionCount: store.getState().count,
+    finalPiniaCount: piniaStore.$state.count
   };
   store.destroy();
 
