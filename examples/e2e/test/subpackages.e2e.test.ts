@@ -128,7 +128,8 @@ describe('subpackage examples e2e', () => {
 
   test('xstate example', () => {
     expect(runXStateExample()).toEqual({
-      count: 1
+      afterCoactionSend: 1,
+      afterActorSend: 2
     });
   });
 

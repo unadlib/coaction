@@ -32,8 +32,15 @@ export const runExample = () => {
     type: 'increment'
   });
 
+  const afterCoactionSend = store.getState().count;
+
+  actor.send({
+    type: 'increment'
+  });
+
   const result = {
-    count: store.getState().count
+    afterCoactionSend,
+    afterActorSend: store.getState().count
   };
 
   actor.stop();
