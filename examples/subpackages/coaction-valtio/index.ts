@@ -15,9 +15,21 @@ export const runExample = () => {
     name: 'valtio-example'
   });
 
+  store.getState().increment();
+  const afterCoactionIncrement = source.count;
+
   source.increment();
+  const afterSourceIncrement = store.getState().count;
+
+  store.setState({
+    count: 10
+  });
+
   const result = {
-    count: store.getState().count
+    afterCoactionIncrement,
+    afterSourceIncrement,
+    finalCoactionCount: store.getState().count,
+    finalSourceCount: source.count
   };
   store.destroy();
 

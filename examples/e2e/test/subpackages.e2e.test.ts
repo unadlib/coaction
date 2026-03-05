@@ -115,7 +115,10 @@ describe('subpackage examples e2e', () => {
 
   test('valtio example', () => {
     expect(runValtioExample()).toEqual({
-      count: 1
+      afterCoactionIncrement: 1,
+      afterSourceIncrement: 2,
+      finalCoactionCount: 10,
+      finalSourceCount: 10
     });
   });
 
