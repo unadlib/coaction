@@ -1,6 +1,6 @@
 {
   "name": "@coaction/xstate",
-  "version": "1.2.0",
+  "version": "1.3.0",
   "description": "A Coaction integration tool for XState",
   "keywords": [
     "state",
@@ -44,7 +44,7 @@
     "url": "https://github.com/unadlib/coaction/issues"
   },
   "peerDependencies": {
-    "coaction": "^1.2.0",
+    "coaction": "^1.3.0",
     "xstate": "^5.0.0"
   },
   "peerDependenciesMeta": {

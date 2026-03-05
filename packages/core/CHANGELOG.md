@@ -1,5 +1,11 @@
 # coaction
 
+## 1.3.0
+
+### Minor Changes
+
+- fix coaction
+
 ## 1.2.0
 
 ### Minor Changes
