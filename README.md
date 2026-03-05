@@ -363,7 +363,6 @@ Yes, Coaction supports multiple tabs. It can achieve state synchronization betwe
 - Coaction's API is inspired by [Zustand](https://zustand.docs.pmnd.rs/).
 - Inspiring Technical Article
   - [React + Redux + Comlink = Off-main-thread](https://dassur.ma/things/react-redux-comlink/)
-  - [Is postMessage slow?](https://dassur.ma/things/is-postmessage-slow/)
 
 ## License
 
