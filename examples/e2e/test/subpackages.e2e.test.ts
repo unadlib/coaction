@@ -136,10 +136,11 @@ describe('subpackage examples e2e', () => {
     });
   });
 
-  test('yjs example', () => {
-    expect(runYjsExample()).toEqual({
-      count: 1,
-      syncedCount: 1
+  test('yjs example', async () => {
+    expect(await runYjsExample()).toEqual({
+      countAfterLocalIncrement: 1,
+      syncedCountFromLocalIncrement: 1,
+      countAfterRemoteWrite: 6
     });
   });
 
