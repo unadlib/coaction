@@ -24,8 +24,22 @@ export const runExample = () => {
   });
 
   store.getState().increment();
+  const afterCoactionIncrement = store.getState().count;
+
+  zustandStore.setState({
+    count: 7
+  });
+  const afterZustandWrite = store.getState().count;
+
+  store.setState({
+    count: 10
+  });
+
   const result = {
-    count: store.getState().count
+    afterCoactionIncrement,
+    afterZustandWrite,
+    finalCoactionCount: store.getState().count,
+    finalZustandCount: zustandStore.getState().count
   };
   store.destroy();
 

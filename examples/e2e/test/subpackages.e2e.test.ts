@@ -141,7 +141,10 @@ describe('subpackage examples e2e', () => {
 
   test('zustand example', () => {
     expect(runZustandExample()).toEqual({
-      count: 1
+      afterCoactionIncrement: 1,
+      afterZustandWrite: 7,
+      finalCoactionCount: 10,
+      finalZustandCount: 10
     });
   });
 
