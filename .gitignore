@@ -131,3 +131,7 @@ dist
 
 # turbo cache
 .turbo
+
+# playwright
+playwright-report/
+test-results/
