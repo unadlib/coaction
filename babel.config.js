@@ -1,6 +1,3 @@
-const { NODE_ENV } = process.env;
-const isTest = NODE_ENV === 'test';
-
 const stripSymbolObservableMethodPlugin = ({ types: t }) => {
   const isSymbolObservable = t.buildMatchMemberExpression('Symbol.observable');
   return {
