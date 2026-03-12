@@ -8,6 +8,7 @@ import { Computed, createSelectorWithArray } from './computed';
 import type {
   ClientStoreOptions,
   CreateState,
+  MiddlewareStore,
   Store,
   StoreOptions
 } from './interface';
@@ -45,7 +46,7 @@ const isLegacyTransportErrorEnvelope = (
 };
 
 export const getRawState = <T extends CreateState>(
-  store: Store<T>,
+  store: MiddlewareStore<T>,
   internal: Internal<T>,
   initialState: any,
   options: StoreOptions<T> | ClientStoreOptions<T>
@@ -150,11 +151,13 @@ export const getRawState = <T extends CreateState>(
                   await new Promise<void>((resolve, reject) => {
                     let settled = false;
                     let unsubscribe = () => {};
-                    let timeoutId: ReturnType<typeof setTimeout> | undefined;
+                    const timeoutRef: {
+                      current?: ReturnType<typeof setTimeout>;
+                    } = {};
                     const cleanup = () => {
                       unsubscribe();
-                      if (typeof timeoutId !== 'undefined') {
-                        clearTimeout(timeoutId);
+                      if (typeof timeoutRef.current !== 'undefined') {
+                        clearTimeout(timeoutRef.current);
                       }
                     };
                     const finishResolve = () => {
@@ -174,7 +177,7 @@ export const getRawState = <T extends CreateState>(
                         finishResolve();
                       }
                     });
-                    timeoutId = setTimeout(() => {
+                    timeoutRef.current = setTimeout(() => {
                       void store
                         .transport!.emit('fullSync')
                         .then((latest) => {
@@ -276,25 +279,32 @@ export const getRawState = <T extends CreateState>(
               });
               internal.finalizeDraft = finalize as () => [T, Patches, Patches];
               internal.rootState = draft as Draft<T>;
+              let asyncResult: Promise<unknown> | undefined;
               try {
                 result = fn.apply(
                   sliceKey ? store.getState()[sliceKey] : store.getState(),
                   args
                 );
-              } finally {
                 if (result instanceof Promise) {
+                  asyncResult = result;
+                }
+              } finally {
+                if (asyncResult) {
                   // if (process.env.NODE_ENV === 'development') {
                   //   console.warn(
                   //     'It will be combined with the next state in the async function.'
                   //   );
                   // }
-                  return result.finally(() => {
-                    const result = handleResult(isDrafted);
-                    done?.(result);
-                    return result;
-                  });
+                } else {
+                  handleResult(isDrafted);
                 }
-                handleResult(isDrafted);
+              }
+              if (asyncResult) {
+                return asyncResult.finally(() => {
+                  const result = handleResult(isDrafted);
+                  done?.(result);
+                  return result;
+                });
               }
               done?.(result);
               return result;

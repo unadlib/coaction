@@ -1,4 +1,4 @@
-import type { Middleware, Store } from 'coaction';
+import type { Middleware, MiddlewareStore } from 'coaction';
 
 const repeat = (str: string, times: number) => new Array(times + 1).join(str);
 
@@ -16,7 +16,7 @@ export const timer =
     : Date;
 
 const traceTimeMap = new Map<string, number>();
-const loggerStoreMap = new WeakMap<Store, boolean>();
+const loggerStoreMap = new WeakMap<MiddlewareStore<any>, boolean>();
 
 export interface Logger {
   log: (...args: any[]) => void;

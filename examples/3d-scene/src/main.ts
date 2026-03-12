@@ -124,12 +124,12 @@ class CubeManager {
     this.cubes = [];
 
     for (let i = 0; i < wins.length; i++) {
-      let win = wins[i];
-      let c = new THREE.Color();
+      const win = wins[i];
+      const c = new THREE.Color();
       c.setHSL(i * 0.1, 1.0, 0.5);
 
-      let s = 100 + i * 50;
-      let cube = new THREE.Mesh(
+      const s = 100 + i * 50;
+      const cube = new THREE.Mesh(
         new THREE.BoxGeometry(s, s, s),
         new THREE.MeshBasicMaterial({ color: c, wireframe: true })
       );
@@ -142,9 +142,9 @@ class CubeManager {
 
   animateCubes(wins: WindowInfo[], t: number, falloff: number) {
     for (let i = 0; i < this.cubes.length; i++) {
-      let cube = this.cubes[i];
-      let win = wins[i];
-      let posTarget = {
+      const cube = this.cubes[i];
+      const win = wins[i];
+      const posTarget = {
         x: win.shape.x + win.shape.w * 0.5,
         y: win.shape.y + win.shape.h * 0.5
       };
@@ -226,8 +226,8 @@ class SceneManager {
   }
 
   resize() {
-    let width = window.innerWidth;
-    let height = window.innerHeight;
+    const width = window.innerWidth;
+    const height = window.innerHeight;
     this.camera = new THREE.OrthographicCamera(
       0,
       width,
@@ -285,7 +285,7 @@ class App {
   }
 
   private getTodayStart(): number {
-    let today = new Date();
+    const today = new Date();
     today.setHours(0, 0, 0, 0);
     return today.getTime();
   }
@@ -318,7 +318,7 @@ class App {
   }
 
   private setupScene() {
-    let pixR = window.devicePixelRatio ? window.devicePixelRatio : 1;
+    const pixR = window.devicePixelRatio ? window.devicePixelRatio : 1;
     this.sceneManager = new SceneManager(pixR);
     this.sceneManager.init();
     this.cubeManager = new CubeManager(this.sceneManager.getWorld());
@@ -331,13 +331,13 @@ class App {
     );
     this.windowManager.setWinChangeCallback(() => this.windowsUpdated());
 
-    let metaData: WindowMetaData = { foo: 'bar' };
+    const metaData: WindowMetaData = { foo: 'bar' };
     this.windowManager.init(metaData);
     this.windowsUpdated();
   }
 
   private windowsUpdated() {
-    let wins = this.windowManager.getWindows();
+    const wins = this.windowManager.getWindows();
     this.cubeManager.updateCubes(wins);
   }
 
@@ -353,11 +353,11 @@ class App {
     if (this.destroyed) {
       return;
     }
-    let t = this.getTime();
+    const t = this.getTime();
     this.windowManager.update();
     this.sceneManager.updateSceneOffset(this.falloff);
 
-    let wins = this.windowManager.getWindows();
+    const wins = this.windowManager.getWindows();
     this.cubeManager.animateCubes(wins, t, this.falloff);
 
     this.sceneManager.render();

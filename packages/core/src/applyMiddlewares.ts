@@ -1,6 +1,11 @@
-import type { CreateState, Middleware, Store } from './interface';
+import type {
+  CreateState,
+  Middleware,
+  MiddlewareStore,
+  Store
+} from './interface';
 
-const isStoreLike = (value: unknown): value is Store<any> => {
+const isStoreLike = (value: unknown): value is MiddlewareStore<any> => {
   if (!value || typeof value !== 'object') {
     return false;
   }
@@ -16,7 +21,7 @@ const isStoreLike = (value: unknown): value is Store<any> => {
 };
 
 export const applyMiddlewares = <T extends CreateState>(
-  store: Store<T>,
+  store: MiddlewareStore<T>,
   middlewares: Middleware<T>[]
 ) => {
   return middlewares.reduce((store, middleware, index) => {

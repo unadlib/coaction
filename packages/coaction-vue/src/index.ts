@@ -68,7 +68,7 @@ const createStateProxy = <T extends object>(
 ) =>
   new Proxy({} as T, {
     get(_, key) {
-      version.value;
+      void version.value;
       const state = store.getState() as Record<PropertyKey, unknown>;
       const value = state[key];
       if (typeof value === 'function') {
@@ -77,15 +77,15 @@ const createStateProxy = <T extends object>(
       return value;
     },
     has(_, key) {
-      version.value;
+      void version.value;
       return key in store.getState();
     },
     ownKeys() {
-      version.value;
+      void version.value;
       return Reflect.ownKeys(store.getState());
     },
     getOwnPropertyDescriptor(_, key) {
-      version.value;
+      void version.value;
       const descriptor = Object.getOwnPropertyDescriptor(store.getState(), key);
       if (!descriptor) {
         return undefined;
@@ -111,7 +111,7 @@ const createAutoSelector = <T extends object>(
         autoSelector[key] = descriptor.value.bind(state);
       } else {
         autoSelector[key] = computed(() => {
-          version.value;
+          void version.value;
           return store.getState()[key as keyof T];
         });
       }
@@ -132,7 +132,7 @@ const createAutoSelector = <T extends object>(
         sliceAutoSelector[key] = descriptor.value.bind(slice);
       } else {
         sliceAutoSelector[key] = computed(() => {
-          version.value;
+          void version.value;
           return (store.getState() as Record<string, any>)[sliceKey][key];
         });
       }
@@ -158,7 +158,7 @@ export const create: Creator = (createState: any, options: any) => {
   const useStore = wrapStore(store, (selector: any) => {
     if (typeof selector === 'function') {
       return computed(() => {
-        version.value;
+        void version.value;
         return selector(store.getState());
       });
     }

@@ -1,4 +1,4 @@
-import { createBinder, type Store } from 'coaction';
+import { createBinder } from 'coaction';
 
 export * from 'xstate';
 

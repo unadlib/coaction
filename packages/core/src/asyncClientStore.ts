@@ -1,17 +1,17 @@
 import { createTransport } from 'data-transport';
 import type { Patches } from 'mutative';
 import type {
-  Store,
   ClientTransportOptions,
   CreateState,
-  ClientTransport
+  ClientTransport,
+  MiddlewareStore
 } from './interface';
 import type { Internal } from './internal';
 import { wrapStore } from './wrapStore';
 
 export const createAsyncClientStore = <T extends CreateState>(
   createStore: (options: { share?: 'client' }) => {
-    store: Store<T>;
+    store: MiddlewareStore<T>;
     internal: Internal<T>;
   },
   asyncStoreClientOption: ClientTransportOptions
@@ -132,7 +132,7 @@ export const createAsyncClientStore = <T extends CreateState>(
 };
 
 export const emit = <T extends CreateState>(
-  store: Store<T>,
+  store: MiddlewareStore<T>,
   internal: Internal<T>,
   patches?: Patches
 ) => {
@@ -153,7 +153,7 @@ export const emit = <T extends CreateState>(
 };
 
 export const handleDraft = <T extends CreateState>(
-  store: Store<T>,
+  store: MiddlewareStore<T>,
   internal: Internal<T>
 ) => {
   internal.rootState = internal.backupState;

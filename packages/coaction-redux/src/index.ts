@@ -1,4 +1,4 @@
-import { createBinder, type Store } from 'coaction';
+import { createBinder } from 'coaction';
 import type { AnyAction, Reducer, Store as ReduxStore } from '@reduxjs/toolkit';
 
 export * from '@reduxjs/toolkit';

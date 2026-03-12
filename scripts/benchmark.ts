@@ -101,7 +101,7 @@ suite
       onStart: () => {
         i = Math.random();
         baseState = getData();
-        store = createWithCoaction<Store>((set, get) => ({
+        store = createWithCoaction<Store>((set) => ({
           arr: baseState.arr,
           map: baseState.map,
           update: () => {

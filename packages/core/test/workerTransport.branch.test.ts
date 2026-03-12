@@ -165,3 +165,36 @@ test('handleMainTransport creates transport for SharedWorkerInternal', async () 
     vi.resetModules();
   }
 });
+
+test('create preserves deprecated main workerType compatibility', async () => {
+  vi.resetModules();
+  const transport = {
+    onConnect: vi.fn(),
+    listen: vi.fn()
+  };
+  const createTransport = vi.fn(() => transport);
+  vi.doMock('data-transport', () => ({
+    createTransport
+  }));
+  try {
+    const { create } = await import('../src/create');
+    const useStore = create(
+      () => ({
+        count: 0
+      }),
+      {
+        name: 'compat-main',
+        workerType: 'WebWorkerInternal'
+      }
+    );
+
+    expect(createTransport).toHaveBeenCalledWith('WebWorkerInternal', {
+      prefix: 'compat-main'
+    });
+    expect(useStore.transport).toBe(transport);
+    expect(useStore.getState().count).toBe(0);
+  } finally {
+    vi.doUnmock('data-transport');
+    vi.resetModules();
+  }
+});

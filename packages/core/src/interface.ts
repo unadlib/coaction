@@ -9,6 +9,34 @@ export type DeepPartial<T> = {
 
 export type Listener = () => void;
 
+export interface PatchTransform {
+  patches: Patches;
+  inversePatches: Patches;
+}
+
+export interface StoreTraceEvent {
+  /**
+   * The id of the method.
+   */
+  id: string;
+  /**
+   * The method name.
+   */
+  method: string;
+  /**
+   * The slice key.
+   */
+  sliceKey?: string;
+  /**
+   * The parameters of the method.
+   */
+  parameters?: any[];
+  /**
+   * The result of the method.
+   */
+  result?: any;
+}
+
 export interface Store<T extends ISlices = ISlices> {
   /**
    * The name of the store.
@@ -65,41 +93,24 @@ export interface Store<T extends ISlices = ISlices> {
    * Get the initial state.
    */
   getInitialState: () => T;
-  // TODO: remove this
   /**
-   * The patch is used to update the state.
+   * @deprecated Middleware compatibility hook. Prefer typing middleware stores
+   * with `MiddlewareStore`.
    */
-  patch?: (option: { patches: Patches; inversePatches: Patches }) => {
-    patches: Patches;
-    inversePatches: Patches;
-  };
-  // TODO: remove this
+  patch?: (option: PatchTransform) => PatchTransform;
   /**
-   * The trace is used to trace the action
+   * @deprecated Middleware compatibility hook. Prefer typing middleware stores
+   * with `MiddlewareStore`.
    */
-  trace?: (options: {
-    /**
-     * The id of the method.
-     */
-    id: string;
-    /**
-     * The method name.
-     */
-    method: string;
-    /**
-     * The slice key.
-     */
-    sliceKey?: string;
-    /**
-     * The parameters of the method.
-     */
-    parameters?: any[];
-    /**
-     * The result of the method.
-     */
-    result?: any;
-  }) => void;
+  trace?: (options: StoreTraceEvent) => void;
 }
+
+/**
+ * Semantic alias for middleware-facing stores.
+ */
+export interface MiddlewareStore<
+  T extends ISlices = ISlices
+> extends Store<T> {}
 
 export type InternalEvents = {
   /**
@@ -166,7 +177,9 @@ export type Slices<T extends ISlices, K extends keyof T> = (
   store: Store<T>
 ) => T[K];
 
-export type Middleware<T extends CreateState> = (store: Store<T>) => Store<T>;
+export type Middleware<T extends CreateState> = (
+  store: MiddlewareStore<T>
+) => MiddlewareStore<T>;
 
 export type SliceState<T extends Record<string, Slice<any>>> = {
   [K in keyof T]: ReturnType<T[K]>;
@@ -177,10 +190,15 @@ export type StoreOptions<T extends CreateState> = {
    * The name of the store.
    */
   name?: string;
-  // TODO: remove this, it's only used in test
-  transport?: Transport;
-  // TODO: remove this, it's only used in test
+  /**
+   * @deprecated Internal worker-mode override retained for compatibility.
+   * Prefer passing `transport` or letting the runtime infer the environment.
+   */
   workerType?: 'SharedWorkerInternal' | 'WebWorkerInternal';
+  /**
+   * Inject a pre-built transport for advanced shared-store setups.
+   */
+  transport?: Transport;
   middlewares?: Middleware<T>[];
   /**
    * enable patches
@@ -211,8 +229,18 @@ export type ClientStoreOptions<T extends CreateState> = {
 } & ClientTransportOptions;
 
 export interface ClientTransportOptions {
+  /**
+   * @deprecated Internal worker-mode override retained for compatibility.
+   * Prefer passing `clientTransport` or `worker`.
+   */
   workerType?: 'WebWorkerClient' | 'SharedWorkerClient';
+  /**
+   * Inject a pre-built client transport.
+   */
   clientTransport?: Transport<any>;
+  /**
+   * Build a client transport from a Worker or SharedWorker instance.
+   */
   worker?: SharedWorker | Worker;
 }
 

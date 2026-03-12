@@ -199,7 +199,6 @@ test('worker', async () => {
   expect(() => {
     const useServerStore = create(counter, {
       transport: serverTransport,
-      workerType: 'WebWorkerInternal',
       name: 'test',
       enablePatches: false
     });
