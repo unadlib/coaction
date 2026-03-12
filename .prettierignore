@@ -1,0 +1,10 @@
+.turbo
+coverage
+node_modules
+packages/*/dist
+examples/*/dist
+playwright-report
+test-results
+pnpm-lock.yaml
+examples/*/yarn.lock
+yarn-error.log

@@ -12,6 +12,10 @@
     "clean": "turbo run clean",
     "watch": "pnpm -r --parallel --filter './packages/*' run dev",
     "fix": "manypkg fix",
+    "lint": "eslint .",
+    "lint:fix": "eslint . --fix",
+    "format": "prettier . --write",
+    "format:check": "prettier . --check",
     "typecheck": "tsc --noEmit",
     "test": "turbo run test && pnpm run test:e2e",
     "test:e2e": "vitest run examples/e2e/test",
@@ -45,7 +49,11 @@
     }
   },
   "lint-staged": {
-    "*.{ts,tsx,js,jsx,json,md,mdx}": [
+    "*.{ts,tsx,js,jsx,mjs,cjs}": [
+      "eslint --fix",
+      "prettier --write"
+    ],
+    "*.{json,md,mdx,css,html,vue,yml,yaml}": [
       "prettier --write",
       "git add"
     ]
@@ -66,6 +74,7 @@
     "@babel/preset-typescript": "^7.28.5",
     "@changesets/changelog-github": "^0.5.2",
     "@changesets/cli": "^2.29.8",
+    "@eslint/js": "^9.39.4",
     "@manypkg/cli": "^0.25.1",
     "@manypkg/get-packages": "^3.1.0",
     "@playwright/test": "^1.58.2",
@@ -80,6 +89,9 @@
     "benchmark": "^2.1.4",
     "commitizen": "^4.3.1",
     "cz-conventional-changelog": "^3.3.0",
+    "eslint": "^9.39.4",
+    "eslint-config-prettier": "^10.1.8",
+    "globals": "^17.4.0",
     "husky": "^9.1.7",
     "immer": "^11.1.4",
     "jsdom": "^28.1.0",
@@ -93,6 +105,7 @@
     "tsx": "^4.21.0",
     "turbo": "^2.8.10",
     "typescript": "^5.9.3",
+    "typescript-eslint": "^8.57.0",
     "vitest": "^4.0.18",
     "vue": "^3.5.28",
     "webpack-dev-middleware": "^7.4.5",
