@@ -2,35 +2,27 @@
 
 ## 1.3.0
 
-### Minor Changes
-
-- fix coaction
+- Aligned the peer dependency with `coaction@^1.3.0`.
 
 ## 1.2.0
 
-### Minor Changes
-
-- fix coaction
+- Aligned the peer dependency with `coaction@^1.2.0`.
 
 ## 1.1.0
 
-### Minor Changes
-
-- fix coaction
+- Aligned the peer dependency with `coaction@^1.1.0`.
 
 ## 1.0.1
 
-### Patch Changes
-
-- Bump all @coaction/\* subpackages to v1.0.1.
+- Aligned the peer dependency with `coaction@^1.0.1`.
 
 ## 1.0.0
 
-### Minor Changes
+- Promoted the Zustand adapter to the 1.x line.
+- Added slice-store support and rejected slices mode in the adapter where it is unsafe.
+- Fixed state update and store synchronization issues.
 
-- fix coaction
+## 0.1.5
 
-### Patch Changes
-
-- Updated dependencies
-  - coaction@0.2.0
+- Initial release of the Zustand adapter.
+- Fixed the initial published type definitions.

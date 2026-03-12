@@ -658,8 +658,6 @@ describe('Slices', () => {
         });
       }
     });
-
-    // TODO: improve type for slices
     const useServerStore = create<{
       counter: Slices<
         {

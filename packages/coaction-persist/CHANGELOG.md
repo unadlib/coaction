@@ -2,35 +2,23 @@
 
 ## 1.3.0
 
-### Minor Changes
-
-- fix coaction
+- Serialized async storage writes and preserved queued writes during destroy.
+- Hardened rehydration by avoiding pre-hydration storage clobber, merging pure snapshots correctly, writing back canonical versions, and guarding hydration lifecycle races.
+- Aligned the peer dependency with `coaction@^1.3.0`.
 
 ## 1.2.0
 
-### Minor Changes
-
-- fix coaction
+- Handled async storage write rejections, missing `queueMicrotask`, and rehydrate-error completion correctly.
+- Aligned the peer dependency with `coaction@^1.2.0`.
 
 ## 1.1.0
 
-### Minor Changes
-
-- fix coaction
+- Aligned the peer dependency with `coaction@^1.1.0`.
 
 ## 1.0.1
 
-### Patch Changes
-
-- Bump all @coaction/\* subpackages to v1.0.1.
+- Aligned the peer dependency with `coaction@^1.0.1`.
 
 ## 1.0.0
 
-### Minor Changes
-
-- fix coaction
-
-### Patch Changes
-
-- Updated dependencies
-  - coaction@0.2.0
+- First stable release of the persistence middleware.

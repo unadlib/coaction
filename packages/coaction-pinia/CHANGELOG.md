@@ -2,35 +2,43 @@
 
 ## 1.3.0
 
-### Minor Changes
-
-- fix coaction
+- Aligned the peer dependency with `coaction@^1.3.0`.
 
 ## 1.2.0
 
-### Minor Changes
-
-- fix coaction
+- Ignored inherited and non-function getters when binding Pinia getters.
+- Aligned the peer dependency with `coaction@^1.2.0`.
 
 ## 1.1.0
 
-### Minor Changes
-
-- fix coaction
+- Aligned the peer dependency with `coaction@^1.1.0`.
 
 ## 1.0.1
 
-### Patch Changes
-
-- Bump all @coaction/\* subpackages to v1.0.1.
+- Aligned the peer dependency with `coaction@^1.0.1`.
 
 ## 1.0.0
 
-### Minor Changes
+- Promoted the Pinia adapter to the 1.x line.
+- Rejected slices mode in the adapter to match the core safety checks.
 
-- fix coaction
+## 0.1.5
 
-### Patch Changes
+- Version-alignment release with no package-specific source changes.
 
-- Updated dependencies
-  - coaction@0.2.0
+## 0.1.4
+
+- Version-alignment release with no package-specific source changes.
+
+## 0.1.3
+
+- Version-alignment release with no package-specific source changes.
+
+## 0.1.2
+
+- Version-alignment release with no package-specific source changes.
+
+## 0.1.0
+
+- Initial release of the Pinia adapter.
+- Shipped follow-up fixes for subscriptions, store updates, async actions, and getter handling.
