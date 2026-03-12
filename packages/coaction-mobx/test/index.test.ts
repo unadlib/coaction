@@ -184,8 +184,7 @@ test('worker', async () => {
     );
   const useServerStore = create(counter, {
     name: 'test',
-    transport: serverTransport,
-    workerType: 'WebWorkerInternal'
+    transport: serverTransport
   });
   const { count, increment } = useServerStore();
   expect(count).toBe(0);
@@ -225,8 +224,7 @@ test('worker', async () => {
   {
     const useClientStore = create(counter, {
       name: 'test',
-      clientTransport,
-      workerType: 'WebWorkerClient'
+      clientTransport
     });
 
     await new Promise((resolve) => {
@@ -318,7 +316,6 @@ test('worker - async', async () => {
     );
   const useServerStore = create(counter, {
     transport: serverTransport,
-    workerType: 'WebWorkerInternal',
     name: 'test'
   });
   const { count, increment } = useServerStore();
@@ -355,8 +352,7 @@ test('worker - async', async () => {
   {
     const useClientStore = create(counter, {
       name: 'test',
-      clientTransport,
-      workerType: 'WebWorkerClient'
+      clientTransport
     });
 
     await new Promise((resolve) => {
@@ -453,8 +449,7 @@ describe('Slices', () => {
         { counter },
         {
           name: 'test',
-          transport: serverTransport,
-          workerType: 'WebWorkerInternal'
+          transport: serverTransport
         }
       );
     }).toThrow(

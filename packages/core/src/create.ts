@@ -3,6 +3,7 @@ import type {
   Listener,
   Slice,
   Store,
+  MiddlewareStore,
   StoreOptions,
   CreateState,
   ClientStoreOptions,
@@ -48,7 +49,7 @@ export const create: Creator = <T extends CreateState>(
       ? 'main'
       : undefined;
   const createStore = ({ share }: { share?: 'client' | 'main' }) => {
-    const store = {} as Store<T>;
+    const store = {} as MiddlewareStore<T>;
     const internal = {
       sequence: 0,
       isBatching: false,

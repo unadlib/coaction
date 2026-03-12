@@ -759,11 +759,19 @@ test('create requires enablePatches for async store', () => {
         count: 0
       }),
       {
-        workerType: 'WebWorkerClient',
+        clientTransport: {} as any,
         enablePatches: false
       } as any
     );
   }).toThrow('enablePatches: true is required for the async store');
+});
+
+test('create preserves deprecated client workerType compatibility', () => {
+  expect(() => {
+    create(() => ({ count: 0 }), {
+      workerType: 'WebWorkerClient'
+    });
+  }).toThrow('transport is required');
 });
 
 test('getInitialState handles invalid state values in development and production', () => {

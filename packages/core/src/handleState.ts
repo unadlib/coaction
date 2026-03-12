@@ -7,6 +7,7 @@ import {
 import type {
   ClientStoreOptions,
   CreateState,
+  MiddlewareStore,
   Store,
   StoreOptions
 } from './interface';
@@ -16,7 +17,7 @@ import { emit, handleDraft } from './asyncClientStore';
 import { Computed } from './computed';
 
 export const handleState = <T extends CreateState>(
-  store: Store<T>,
+  store: MiddlewareStore<T>,
   internal: Internal<T>,
   options: StoreOptions<T> | ClientStoreOptions<T>
 ): {

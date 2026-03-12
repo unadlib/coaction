@@ -24,5 +24,12 @@ export default tseslint.config(
         { allowConstantExport: true }
       ]
     }
+  },
+  {
+    files: ['**/*.d.ts'],
+    rules: {
+      'no-var': 'off',
+      '@typescript-eslint/no-explicit-any': 'off'
+    }
   }
 );

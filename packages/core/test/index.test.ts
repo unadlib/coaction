@@ -171,7 +171,6 @@ test('worker', async () => {
   });
   const useServerStore = create(counter, {
     transport: serverTransport,
-    workerType: 'WebWorkerInternal',
     name: 'test'
   });
   const { count, increment } = useServerStore();
@@ -203,8 +202,7 @@ test('worker', async () => {
   {
     const useClientStore = create(counter, {
       name: 'test',
-      clientTransport,
-      workerType: 'WebWorkerClient'
+      clientTransport
     });
 
     await new Promise((resolve) => {
@@ -245,67 +243,6 @@ test('worker', async () => {
   }
 });
 
-test('worker without transport', async () => {
-  const ports = mockPorts();
-  const serverTransport = createTransport('WebWorkerInternal', ports.main);
-  const clientTransport = createTransport(
-    'WebWorkerClient',
-    ports.create() as WorkerMainTransportOptions
-  );
-
-  const counter: Slice<{
-    count: number;
-    increment: () => void;
-  }> = (set) => ({
-    count: 0,
-    increment() {
-      set((draft) => {
-        draft.count += 1;
-      });
-    }
-  });
-  const useServerStore = create(counter, {
-    transport: serverTransport,
-    workerType: 'WebWorkerInternal',
-    name: 'test'
-  });
-  const { count, increment } = useServerStore();
-  expect(count).toBe(0);
-  expect(increment).toBeInstanceOf(Function);
-  expect(useServerStore.name).toBe('test');
-  expect(useServerStore.getState()).toMatchInlineSnapshot(`
-{
-  "count": 0,
-  "increment": [Function],
-}
-`);
-  const fn = jest.fn();
-  useServerStore.subscribe(fn);
-  useServerStore.getState().increment();
-  expect(useServerStore.getState()).toMatchInlineSnapshot(`
-{
-  "count": 1,
-  "increment": [Function],
-}
-`);
-  increment();
-  expect(useServerStore.getState()).toMatchInlineSnapshot(`
-{
-  "count": 2,
-  "increment": [Function],
-}
-`);
-  {
-    expect(() => {
-      const useStore = create(counter, {
-        name: 'test',
-        // clientTransport,
-        workerType: 'WebWorkerClient'
-      });
-    }).toThrow('transport is required');
-  }
-});
-
 test('worker execute returns $$Error for missing method', async () => {
   const ports = mockPorts();
   const serverTransport = createTransport('WebWorkerInternal', ports.main);
@@ -326,7 +263,6 @@ test('worker execute returns $$Error for missing method', async () => {
   });
   const useServerStore = create(counter, {
     transport: serverTransport,
-    workerType: 'WebWorkerInternal',
     name: 'worker-missing-method'
   });
   await new Promise((resolve) => {
@@ -373,13 +309,11 @@ test('worker async action returns resolved value to client', async () => {
   });
   const useServerStore = create(counter, {
     transport: serverTransport,
-    workerType: 'WebWorkerInternal',
     name: 'worker-async-return'
   });
   const useClientStore = create(counter, {
     name: 'worker-async-return',
-    clientTransport,
-    workerType: 'WebWorkerClient'
+    clientTransport
   });
   await new Promise((resolve) => {
     clientTransport.onConnect(() => {
@@ -441,8 +375,7 @@ describe('Store Name Lifecycle', () => {
     const transport = createTransport('WebWorkerInternal', ports.main);
     return create(createState, {
       name,
-      transport,
-      workerType: 'WebWorkerInternal'
+      transport
     });
   };
 
@@ -684,8 +617,7 @@ describe('Slices', () => {
       },
       {
         name: 'test',
-        transport: serverTransport,
-        workerType: 'WebWorkerInternal'
+        transport: serverTransport
       }
     );
     const { count, increment } = useServerStore().counter;
@@ -719,8 +651,7 @@ describe('Slices', () => {
         { counter },
         {
           name: 'test',
-          clientTransport,
-          workerType: 'WebWorkerClient'
+          clientTransport
         }
       );
       await new Promise((resolve) => {

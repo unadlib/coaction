@@ -4,11 +4,14 @@ export { wrapStore } from './wrapStore';
 
 export type {
   Store,
+  MiddlewareStore,
   StoreOptions,
   ISlices,
   Slice,
   Slices,
   Middleware,
+  PatchTransform,
+  StoreTraceEvent,
   ClientStoreOptions,
   SliceState,
   Asyncify,

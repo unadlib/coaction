@@ -100,7 +100,6 @@ test('worker main propagates direct zustand mutations', () => {
   const underlyingStore = createWithZustand(bindZustand(counter));
   const useServerStore = create(() => adapt(underlyingStore), {
     transport: serverTransport,
-    workerType: 'WebWorkerInternal',
     name: 'test-worker-main'
   });
   underlyingStore.setState({ count: 6 });
@@ -147,7 +146,6 @@ test('worker client forbids direct zustand mutations', async () => {
     () => adapt(createWithZustand(bindZustand(counter))),
     {
       transport: serverTransport,
-      workerType: 'WebWorkerInternal',
       name: 'test-worker-client-guard'
     }
   );
@@ -163,8 +161,7 @@ test('worker client forbids direct zustand mutations', async () => {
     },
     {
       name: 'test-worker-client-guard',
-      clientTransport,
-      workerType: 'WebWorkerClient'
+      clientTransport
     }
   );
   await new Promise((resolve) => {
@@ -204,7 +201,6 @@ test('worker', async () => {
     () => adapt(createWithZustand(bindZustand(counter))),
     {
       transport: serverTransport,
-      workerType: 'WebWorkerInternal',
       name: 'test'
     }
   );
@@ -239,8 +235,7 @@ test('worker', async () => {
       () => adapt(createWithZustand(bindZustand(counter))),
       {
         name: 'test',
-        clientTransport,
-        workerType: 'WebWorkerClient'
+        clientTransport
       }
     );
 
@@ -349,8 +344,7 @@ describe('Slices', () => {
         },
         {
           name: 'test',
-          transport: serverTransport,
-          workerType: 'WebWorkerInternal'
+          transport: serverTransport
         }
       );
     }).toThrow(
