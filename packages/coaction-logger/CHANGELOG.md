@@ -2,35 +2,45 @@
 
 ## 1.3.0
 
-### Minor Changes
-
-- fix coaction
+- Aligned the peer dependency with `coaction@^1.3.0`.
 
 ## 1.2.0
 
-### Minor Changes
-
-- fix coaction
+- Ensured action log groups are always closed when `setState` throws.
+- Aligned the peer dependency with `coaction@^1.2.0`.
 
 ## 1.1.0
 
-### Minor Changes
-
-- fix coaction
+- Moved the package source to `packages/coaction-logger` without changing the published package name.
+- Verified both default and named entrypoint exports.
+- Aligned the peer dependency with `coaction@^1.1.0`.
 
 ## 1.0.1
 
-### Patch Changes
-
-- Bump all @coaction/\* subpackages to v1.0.1.
+- Aligned the peer dependency with `coaction@^1.0.1`.
 
 ## 1.0.0
 
-### Minor Changes
+- Promoted the logger middleware to the 1.x line.
+- Fixed action grouping to respect injected logger implementations.
 
-- fix coaction
+## 0.1.5
 
-### Patch Changes
+- Version-alignment release with no package-specific source changes.
 
-- Updated dependencies
-  - coaction@0.2.0
+## 0.1.4
+
+- Version-alignment release with no package-specific source changes.
+
+## 0.1.3
+
+- Version-alignment release with no package-specific source changes.
+
+## 0.1.2
+
+- Version-alignment release with no package-specific source changes.
+
+## 0.1.0
+
+- Initial release of the logger middleware.
+- Added support for verbose logging options.

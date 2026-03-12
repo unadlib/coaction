@@ -2,35 +2,23 @@
 
 ## 1.3.0
 
-### Minor Changes
-
-- fix coaction
+- Aligned the peer dependency with `coaction@^1.3.0`.
 
 ## 1.2.0
 
-### Minor Changes
-
-- fix coaction
+- Added a fallback for environments where `queueMicrotask` is unavailable.
+- Aligned the peer dependency with `coaction@^1.2.0`.
 
 ## 1.1.0
 
-### Minor Changes
-
-- fix coaction
+- Hardened multi-peer synchronization behavior.
+- Expanded collaboration documentation and sync-semantic test coverage.
+- Aligned the peer dependency with `coaction@^1.1.0`.
 
 ## 1.0.1
 
-### Patch Changes
-
-- Bump all @coaction/\* subpackages to v1.0.1.
+- Aligned the peer dependency with `coaction@^1.0.1`.
 
 ## 1.0.0
 
-### Minor Changes
-
-- fix coaction
-
-### Patch Changes
-
-- Updated dependencies
-  - coaction@0.2.0
+- First stable release of the Yjs binding.
