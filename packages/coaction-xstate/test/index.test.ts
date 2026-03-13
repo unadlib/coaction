@@ -74,7 +74,8 @@ describe('Slices', () => {
           counter: () => adapt(bindXState(actor))
         },
         {
-          name: 'test'
+          name: 'test',
+          sliceMode: 'slices'
         }
       );
     }).toThrow(

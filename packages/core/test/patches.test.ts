@@ -255,7 +255,8 @@ describe('Slices', () => {
         >
       },
       {
-        enablePatches: true
+        enablePatches: true,
+        sliceMode: 'slices'
       }
     );
     const spy = jest.spyOn(useStore, 'apply');

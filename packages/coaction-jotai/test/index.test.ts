@@ -119,7 +119,8 @@ describe('Slices', () => {
             )
         },
         {
-          name: 'test'
+          name: 'test',
+          sliceMode: 'slices'
         }
       );
     }).toThrow(

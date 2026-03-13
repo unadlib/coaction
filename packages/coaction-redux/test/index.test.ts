@@ -135,7 +135,8 @@ describe('Slices', () => {
           counter: () => adapt(bindRedux(reduxStore))
         },
         {
-          name: 'test'
+          name: 'test',
+          sliceMode: 'slices'
         }
       );
     }).toThrow(

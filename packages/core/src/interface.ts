@@ -206,7 +206,8 @@ export type StoreOptions<T extends CreateState> = {
   enablePatches?: boolean;
   /**
    * control how createState should be interpreted.
-   * - auto: infer from createState shape.
+   * - auto: infer only unambiguous shapes. Object maps whose values are all
+   *   functions must set `sliceMode` explicitly.
    * - slices: force slices mode.
    * - single: force single-store mode.
    */
@@ -221,7 +222,8 @@ export type ClientStoreOptions<T extends CreateState> = {
   middlewares?: Middleware<T>[];
   /**
    * control how createState should be interpreted.
-   * - auto: infer from createState shape.
+   * - auto: infer only unambiguous shapes. Object maps whose values are all
+   *   functions must set `sliceMode` explicitly.
    * - slices: force slices mode.
    * - single: force single-store mode.
    */

@@ -344,7 +344,8 @@ describe('Slices', () => {
           >
         },
         {
-          name: 'test'
+          name: 'test',
+          sliceMode: 'slices'
         }
       );
     }).toThrow(
@@ -386,7 +387,8 @@ describe('Slices', () => {
         { counter },
         {
           name: 'test',
-          transport: serverTransport
+          transport: serverTransport,
+          sliceMode: 'slices'
         }
       );
     }).toThrow(

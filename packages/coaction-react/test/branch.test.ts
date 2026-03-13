@@ -60,11 +60,16 @@ test('autoSelector in slices mode ignores non-object slice values', async () => 
     writable: true
   });
   try {
-    const store = create({
-      counter: () => ({
-        count: 0
-      })
-    });
+    const store = create(
+      {
+        counter: () => ({
+          count: 0
+        })
+      },
+      {
+        sliceMode: 'slices'
+      }
+    );
     const selectors = store({ autoSelector: true }) as any;
     expect(selectors.counter).toBeDefined();
     expect(

@@ -336,13 +336,18 @@ test('3rd-party binding does not support slices mode', () => {
     })) as any
   });
   expect(() => {
-    create({
-      counter: () =>
-        bindThirdParty({
-          count: 0,
-          increment() {}
-        })
-    });
+    create(
+      {
+        counter: () =>
+          bindThirdParty({
+            count: 0,
+            increment() {}
+          })
+      },
+      {
+        sliceMode: 'slices'
+      }
+    );
   }).toThrow(
     'Third-party state binding does not support Slices mode. Please inject a whole store instead.'
   );
@@ -430,6 +435,18 @@ describe('Store Name Lifecycle', () => {
 });
 
 describe('sliceMode', () => {
+  test('auto mode rejects ambiguous function maps without invoking them', () => {
+    const ping = jest.fn(() => ({ ok: true }));
+    expect(() =>
+      create({
+        ping
+      } as any)
+    ).toThrow(
+      "sliceMode: 'auto' cannot infer whether an object of functions is a single store or slices. Please set sliceMode to 'single' or 'slices'."
+    );
+    expect(ping).not.toHaveBeenCalled();
+  });
+
   test('single mode treats function maps as a plain store', () => {
     const useStore = create(
       {
@@ -511,7 +528,8 @@ describe('Slices', () => {
         >
       },
       {
-        name: 'test'
+        name: 'test',
+        sliceMode: 'slices'
       }
     );
     const { count, increment } = useStore().counter;
@@ -617,7 +635,8 @@ describe('Slices', () => {
       },
       {
         name: 'test',
-        transport: serverTransport
+        transport: serverTransport,
+        sliceMode: 'slices'
       }
     );
     const { count, increment } = useServerStore().counter;
@@ -651,7 +670,8 @@ describe('Slices', () => {
         { counter },
         {
           name: 'test',
-          clientTransport
+          clientTransport,
+          sliceMode: 'slices'
         }
       );
       await new Promise((resolve) => {

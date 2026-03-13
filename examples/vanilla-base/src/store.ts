@@ -32,7 +32,8 @@ const store = create<{
   },
   {
     ...(worker ? { worker } : {}),
-    middlewares: [logger({ collapsed: false })]
+    middlewares: [logger({ collapsed: false })],
+    sliceMode: 'slices'
   }
 );
 

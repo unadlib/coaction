@@ -119,7 +119,8 @@ describe('Slices', () => {
           counter: () => adapt(state)
         },
         {
-          name: 'test'
+          name: 'test',
+          sliceMode: 'slices'
         }
       );
     }).toThrow(

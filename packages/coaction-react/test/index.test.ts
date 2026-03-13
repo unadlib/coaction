@@ -76,19 +76,24 @@ test('supports autoSelector', () => {
 });
 
 test('supports slices autoSelector', () => {
-  const useStore = create({
-    counter: (set) => ({
-      count: 0,
-      get double() {
-        return this.count * 2;
-      },
-      increment() {
-        set((draft) => {
-          draft.counter.count += 1;
-        });
-      }
-    })
-  });
+  const useStore = create(
+    {
+      counter: (set) => ({
+        count: 0,
+        get double() {
+          return this.count * 2;
+        },
+        increment() {
+          set((draft) => {
+            draft.counter.count += 1;
+          });
+        }
+      })
+    },
+    {
+      sliceMode: 'slices'
+    }
+  );
 
   const Counter = () => {
     const state = useStore({ autoSelector: true });
