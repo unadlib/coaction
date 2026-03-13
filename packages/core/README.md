@@ -27,10 +27,10 @@ const useStore = create((set) => ({
 
 ### Store Shape Mode (`sliceMode`)
 
-`create()` uses `sliceMode: 'auto'` by default. `auto` only handles unambiguous
-inputs. If you pass an object whose enumerable values are all functions, you
-must set `sliceMode` explicitly because that shape can mean either a plain store
-or slices.
+`create()` uses `sliceMode: 'auto'` by default. For backward compatibility,
+`auto` still treats a non-empty object whose enumerable values are all
+functions as slices. That shape is ambiguous with a plain store that only
+contains methods, so you should set `sliceMode` explicitly.
 
 You can force behavior explicitly:
 
