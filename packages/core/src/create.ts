@@ -20,6 +20,21 @@ import { wrapStore } from './wrapStore';
 import { handleMainTransport } from './handleMainTransport';
 
 const namespaceMap = new Map<string, boolean>();
+let hasWarnedAmbiguousFunctionMap = false;
+
+const warnAmbiguousFunctionMap = () => {
+  if (
+    hasWarnedAmbiguousFunctionMap ||
+    process.env.NODE_ENV === 'production' ||
+    process.env.NODE_ENV === 'test'
+  ) {
+    return;
+  }
+  hasWarnedAmbiguousFunctionMap = true;
+  console.warn(
+    `sliceMode: 'auto' inferred slices from an object of functions. This shape is ambiguous with a single store that only contains methods. Set sliceMode to 'slices' or 'single' explicitly.`
+  );
+};
 
 /**
  * Create a simple store or a shared store. The shared store can be used in a worker or another thread.
@@ -124,9 +139,8 @@ export const create: Creator = <T extends CreateState>(
           return true;
         }
         if (isFunctionMapObject()) {
-          throw new Error(
-            `sliceMode: 'auto' cannot infer whether an object of functions is a single store or slices. Please set sliceMode to 'single' or 'slices'.`
-          );
+          warnAmbiguousFunctionMap();
+          return true;
         }
         return false;
       };

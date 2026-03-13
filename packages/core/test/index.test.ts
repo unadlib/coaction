@@ -435,16 +435,25 @@ describe('Store Name Lifecycle', () => {
 });
 
 describe('sliceMode', () => {
-  test('auto mode rejects ambiguous function maps without invoking them', () => {
-    const ping = jest.fn(() => ({ ok: true }));
-    expect(() =>
-      create({
-        ping
-      } as any)
-    ).toThrow(
-      "sliceMode: 'auto' cannot infer whether an object of functions is a single store or slices. Please set sliceMode to 'single' or 'slices'."
-    );
-    expect(ping).not.toHaveBeenCalled();
+  test('auto mode preserves slices inference and warns in development', () => {
+    const prev = process.env.NODE_ENV;
+    process.env.NODE_ENV = 'development';
+    const warn = jest.spyOn(console, 'warn').mockImplementation(() => {});
+    try {
+      const useStore = create({
+        counter: () => ({
+          count: 0
+        })
+      });
+      expect(useStore.isSliceStore).toBe(true);
+      expect(useStore.getState().counter.count).toBe(0);
+      expect(warn).toHaveBeenCalledWith(
+        "sliceMode: 'auto' inferred slices from an object of functions. This shape is ambiguous with a single store that only contains methods. Set sliceMode to 'slices' or 'single' explicitly."
+      );
+    } finally {
+      warn.mockRestore();
+      process.env.NODE_ENV = prev;
+    }
   });
 
   test('single mode treats function maps as a plain store', () => {
