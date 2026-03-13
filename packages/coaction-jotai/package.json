@@ -57,7 +57,7 @@
   },
   "devDependencies": {
     "coaction": "workspace:*",
-    "jotai": "^2.15.1"
+    "jotai": "^2.18.1"
   },
   "publishConfig": {
     "access": "public",
