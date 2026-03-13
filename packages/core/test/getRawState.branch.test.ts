@@ -9,7 +9,8 @@ type ClientStoreContext = {
 };
 
 const createClientStoreContext = (
-  emitImpl: (...args: any[]) => Promise<any>
+  emitImpl: (...args: any[]) => Promise<any>,
+  options: Record<string, unknown> = {}
 ): ClientStoreContext => {
   const subscriptions = new Set<() => void>();
   const internal = {
@@ -41,7 +42,7 @@ const createClientStoreContext = (
         return step + 1;
       }
     },
-    {}
+    options
   );
   return {
     internal,
@@ -187,6 +188,41 @@ test('client action performs fullSync when sequence catch-up times out', async (
   }
 });
 
+test('client action uses custom executeSyncTimeoutMs before falling back to fullSync', async () => {
+  vi.useFakeTimers();
+  try {
+    const { store, internal, trigger } = createClientStoreContext(
+      async (event) => {
+        if (event === 'execute') {
+          return ['ok', 2];
+        }
+        if (event === 'fullSync') {
+          return {
+            state: JSON.stringify({
+              count: 9
+            }),
+            sequence: 2
+          };
+        }
+        throw new Error(`Unexpected event: ${String(event)}`);
+      },
+      {
+        executeSyncTimeoutMs: 5_000
+      }
+    );
+    internal.sequence = 0;
+    const pending = store.getState().increment(1);
+    await Promise.resolve();
+    await vi.advanceTimersByTimeAsync(1_600);
+    expect(store.transport.emit).not.toHaveBeenCalledWith('fullSync');
+    internal.sequence = 2;
+    trigger();
+    await expect(pending).resolves.toBe('ok');
+  } finally {
+    vi.useRealTimers();
+  }
+});
+
 test('client action rejects when fullSync fallback fails', async () => {
   vi.useFakeTimers();
   try {
@@ -208,6 +244,16 @@ test('client action rejects when fullSync fallback fails', async () => {
   } finally {
     vi.useRealTimers();
   }
+});
+
+test('client action rejects invalid executeSyncTimeoutMs configuration', () => {
+  expect(() => {
+    createClientStoreContext(async () => ['ok', 0], {
+      executeSyncTimeoutMs: -1
+    });
+  }).toThrow(
+    'executeSyncTimeoutMs must be a finite number greater than or equal to 0'
+  );
 });
 
 test('client action rejects when fullSync payload is invalid', async () => {

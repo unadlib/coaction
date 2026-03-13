@@ -235,6 +235,16 @@ export interface ClientTransportOptions {
    */
   workerType?: 'WebWorkerClient' | 'SharedWorkerClient';
   /**
+   * How long the client should wait for sequence catch-up before falling back
+   * to `fullSync`.
+   *
+   * Increase this when worker-side execution can complete before the matching
+   * incremental `update` message arrives under heavy load.
+   *
+   * @default 1500
+   */
+  executeSyncTimeoutMs?: number;
+  /**
    * Inject a pre-built client transport.
    */
   clientTransport?: Transport<any>;
