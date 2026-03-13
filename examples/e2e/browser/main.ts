@@ -10,6 +10,7 @@ import {
   bindYjs,
   Doc
 } from '../../../packages/coaction-yjs/src/index';
+import { createWorkerHarness, type WorkerHarness } from './workerHarness';
 
 type CounterState = {
   count: number;
@@ -76,6 +77,7 @@ type MiddlewareHarness = {
 declare global {
   interface Window {
     __middlewareHarness: MiddlewareHarness;
+    __workerHarness: WorkerHarness;
   }
 }
 
@@ -325,14 +327,17 @@ const runYjsScenario = async (): Promise<YjsResult> => {
   });
 
   await waitFor(
-    () => storeA.getState().count === 0 && storeB.getState().count === 0
+    () => storeA.getState().count === 0 && storeB.getState().count === 0,
+    3000,
+    15
   );
+  await wait(40);
 
   storeA.getState().increment();
-  await waitFor(() => storeB.getState().count === 1);
+  await waitFor(() => storeB.getState().count === 1, 3000, 15);
 
   storeB.getState().increment();
-  await waitFor(() => storeA.getState().count === 2);
+  await waitFor(() => storeA.getState().count === 2, 3000, 15);
 
   const result: YjsResult = {
     peerACount: storeA.getState().count,
@@ -359,6 +364,8 @@ window.__middlewareHarness = {
   runYjsScenario,
   clearPersistState
 };
+
+window.__workerHarness = createWorkerHarness();
 
 const statusNode = document.querySelector<HTMLParagraphElement>('#status');
 if (statusNode) {

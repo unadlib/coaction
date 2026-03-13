@@ -24,3 +24,20 @@ jobs:
         uses: romeovs/lcov-reporter-action@v0.4.0
         with:
           lcov-file: ./coverage/lcov.info
+  browser-e2e:
+    name: Browser E2E
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: pnpm/action-setup@v4
+      - name: Use Node.js 22.x
+        uses: actions/setup-node@v4
+        with:
+          node-version: 22.x
+          cache: pnpm
+      - name: Install dependencies
+        run: pnpm install --frozen-lockfile
+      - name: Install Playwright Chromium
+        run: pnpm exec playwright install --with-deps chromium
+      - name: Run browser E2E
+        run: pnpm test:e2e:browser
