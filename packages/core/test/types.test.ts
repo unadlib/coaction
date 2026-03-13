@@ -22,4 +22,7 @@ test('preserves deprecated public compatibility fields', () => {
   expectTypeOf<
     ClientStoreOptions<{ count: number }>['workerType']
   >().toEqualTypeOf<'SharedWorkerClient' | 'WebWorkerClient' | undefined>();
+  expectTypeOf<
+    ClientStoreOptions<{ count: number }>['executeSyncTimeoutMs']
+  >().toEqualTypeOf<number | undefined>();
 });
