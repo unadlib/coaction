@@ -32,16 +32,21 @@ test('base', () => {
 });
 
 test('slices', () => {
-  const store = create({
-    counter: (set) => ({
-      count: 0,
-      increment() {
-        set((draft) => {
-          draft.counter.count += 1;
-        });
-      }
-    })
-  });
+  const store = create(
+    {
+      counter: (set) => ({
+        count: 0,
+        increment() {
+          set((draft) => {
+            draft.counter.count += 1;
+          });
+        }
+      })
+    },
+    {
+      sliceMode: 'slices'
+    }
+  );
 
   const count = store.select((state) => state.counter.count);
 

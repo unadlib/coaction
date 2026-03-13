@@ -100,7 +100,7 @@ export const create: Creator = <T extends CreateState>(
       };
       const getPureState: Store<T>['getPureState'] = () =>
         internal.rootState as T;
-      const inferSliceStore = () => {
+      const isFunctionMapObject = () => {
         if (typeof createState === 'object' && createState !== null) {
           const values = Object.values(createState);
           return (
@@ -110,30 +110,25 @@ export const create: Creator = <T extends CreateState>(
         }
         return false;
       };
-      const isValidSliceObject = () => {
-        if (typeof createState !== 'object' || createState === null) {
-          return false;
-        }
-        const values = Object.values(createState);
-        return (
-          values.length > 0 &&
-          values.every((value) => typeof value === 'function')
-        );
-      };
       const getIsSliceStore = () => {
         const sliceMode = options.sliceMode ?? 'auto';
         if (sliceMode === 'single') {
           return false;
         }
         if (sliceMode === 'slices') {
-          if (!isValidSliceObject()) {
+          if (!isFunctionMapObject()) {
             throw new Error(
               `sliceMode: 'slices' requires createState to be an object of slice functions.`
             );
           }
           return true;
         }
-        return inferSliceStore();
+        if (isFunctionMapObject()) {
+          throw new Error(
+            `sliceMode: 'auto' cannot infer whether an object of functions is a single store or slices. Please set sliceMode to 'single' or 'slices'.`
+          );
+        }
+        return false;
       };
       const isSliceStore = getIsSliceStore();
       Object.assign(store, {

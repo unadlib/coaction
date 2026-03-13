@@ -62,19 +62,24 @@ test('autoSelector', () => {
 });
 
 test('slices autoSelector', () => {
-  const useStore = create({
-    counter: (set) => ({
-      count: 0,
-      get double() {
-        return this.count * 2;
-      },
-      increment() {
-        set((draft) => {
-          draft.counter.count += 1;
-        });
-      }
-    })
-  });
+  const useStore = create(
+    {
+      counter: (set) => ({
+        count: 0,
+        get double() {
+          return this.count * 2;
+        },
+        increment() {
+          set((draft) => {
+            draft.counter.count += 1;
+          });
+        }
+      })
+    },
+    {
+      sliceMode: 'slices'
+    }
+  );
   createRoot((dispose) => {
     const selectors = useStore({ autoSelector: true });
     expect(selectors.counter.count()).toBe(0);
@@ -101,11 +106,16 @@ test('destroy unsubscribes solid listener lifecycle', () => {
 });
 
 test('slices autoSelector skips non-object state entries', () => {
-  const useStore = create({
-    counter: () => ({
-      count: 0
-    })
-  });
+  const useStore = create(
+    {
+      counter: () => ({
+        count: 0
+      })
+    },
+    {
+      sliceMode: 'slices'
+    }
+  );
   (useStore.getState() as any).meta = 1;
   createRoot((dispose) => {
     const selectors = useStore({ autoSelector: true }) as any;
@@ -126,11 +136,16 @@ test('autoSelector ignores inherited enumerable keys', () => {
     writable: true
   });
   try {
-    const useStore = create({
-      counter: () => ({
-        count: 0
-      })
-    });
+    const useStore = create(
+      {
+        counter: () => ({
+          count: 0
+        })
+      },
+      {
+        sliceMode: 'slices'
+      }
+    );
     createRoot((dispose) => {
       const selectors = useStore({ autoSelector: true }) as any;
       expect(selectors.counter.count()).toBe(0);

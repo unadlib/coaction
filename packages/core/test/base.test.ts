@@ -418,63 +418,68 @@ describe('Slices', () => {
   test('base', () => {
     const stateFn = jest.fn();
     const getterFn = jest.fn();
-    const useStore = create({
-      counter: ((set, get, store) => ({
-        count: 0,
-        get count1() {
-          return this.count;
-        },
-        double: get(
-          (state) => [state.counter.count1],
-          (count) => count * 2
-        ),
-        increment1() {
-          set({
-            counter: {
-              count: this.count + 1
-            }
-          });
-        },
-        increment() {
-          set((draft) => {
-            draft.counter.count += 1;
+    const useStore = create(
+      {
+        counter: ((set, get, store) => ({
+          count: 0,
+          get count1() {
+            return this.count;
+          },
+          double: get(
+            (state) => [state.counter.count1],
+            (count) => count * 2
+          ),
+          increment1() {
+            set({
+              counter: {
+                count: this.count + 1
+              }
+            });
+          },
+          increment() {
+            set((draft) => {
+              draft.counter.count += 1;
+              stateFn(
+                get().counter.count,
+                store.getState().counter.count,
+                this.count,
+                draft.counter.count
+              );
+              getterFn(
+                get().counter.double,
+                store.getState().counter.double,
+                this.double,
+                draft.counter.double
+              );
+            });
             stateFn(
               get().counter.count,
               store.getState().counter.count,
-              this.count,
-              draft.counter.count
+              this.count
             );
             getterFn(
               get().counter.double,
               store.getState().counter.double,
-              this.double,
-              draft.counter.double
+              this.double
             );
-          });
-          stateFn(
-            get().counter.count,
-            store.getState().counter.count,
-            this.count
-          );
-          getterFn(
-            get().counter.double,
-            store.getState().counter.double,
-            this.double
-          );
-        }
-      })) satisfies Slices<
-        {
-          counter: {
-            count: number;
-            readonly count1: number;
-            readonly double: number;
-            increment1: () => void;
-            increment: () => void;
-          };
-        },
-        'counter'
-      >
-    });
+          }
+        })) satisfies Slices<
+          {
+            counter: {
+              count: number;
+              readonly count1: number;
+              readonly double: number;
+              increment1: () => void;
+              increment: () => void;
+            };
+          },
+          'counter'
+        >
+      },
+      {
+        sliceMode: 'slices'
+      }
+    );
     const { count, increment } = useStore().counter;
     expect(count).toBe(0);
     expect(increment).toBeInstanceOf(Function);
@@ -560,7 +565,8 @@ describe('Slices', () => {
         counter
       },
       {
-        transport: serverTransport
+        transport: serverTransport,
+        sliceMode: 'slices'
       }
     );
     const { count, increment } = useServerStore().counter;
@@ -593,7 +599,8 @@ describe('Slices', () => {
       const useClientStore = create(
         { counter },
         {
-          clientTransport
+          clientTransport,
+          sliceMode: 'slices'
         }
       );
       await new Promise((resolve) => {

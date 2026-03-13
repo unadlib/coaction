@@ -308,7 +308,8 @@ describe('Slices', () => {
           counter: () => adapt(createWithZustand(bindZustand(counter)))
         },
         {
-          name: 'test'
+          name: 'test',
+          sliceMode: 'slices'
         }
       );
     }).toThrow(
@@ -344,7 +345,8 @@ describe('Slices', () => {
         },
         {
           name: 'test',
-          transport: serverTransport
+          transport: serverTransport,
+          sliceMode: 'slices'
         }
       );
     }).toThrow(
