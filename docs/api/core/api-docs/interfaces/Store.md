@@ -2,7 +2,7 @@
 
 ---
 
-[coaction](../../modules.md) / [index](../index.md) / Store
+[coaction](../../modules.md) / [api-docs](../index.md) / Store
 
 # Interface: Store\<T\>
 
@@ -186,7 +186,7 @@ Mutate the current state.
 
 The next partial state, or an updater that mutates a draft.
 
-`DeepPartial`\<`T`\> | (`draft`) => `any` | `null`
+[`DeepPartial`](../type-aliases/DeepPartial.md)\<`T`\> | (`draft`) => `any` | `null`
 
 ##### updater?
 
@@ -229,7 +229,7 @@ Subscribe to state changes.
 
 ##### listener
 
-`Listener`
+[`Listener`](../type-aliases/Listener.md)
 
 #### Returns
 

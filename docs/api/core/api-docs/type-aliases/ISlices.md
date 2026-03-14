@@ -2,7 +2,7 @@
 
 ---
 
-[coaction](../../modules.md) / [index](../index.md) / ISlices
+[coaction](../../modules.md) / [api-docs](../index.md) / ISlices
 
 # Type Alias: ISlices\<T\>
 

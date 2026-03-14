@@ -1,22 +1,23 @@
 # Core API Reference
 
-This reference is generated from the public `coaction` entry point in
-`packages/core/index.ts`.
+This reference is generated from the docs-only entry point in
+`packages/core/api-docs.ts`, which re-exports the public core API together with
+supporting types used in public signatures.
 
 ## Primary Entry Points
 
-- {@link index.create | create}: create local stores, shared main stores, and shared
+- {@link api-docs.create | create}: create local stores, shared main stores, and shared
   clients.
-- {@link index.Creator | Creator}: overload matrix for `create()`.
-- {@link index.Store | Store} and {@link index.MiddlewareStore | MiddlewareStore}: runtime
+- {@link api-docs.Creator | Creator}: overload matrix for `create()`.
+- {@link api-docs.Store | Store} and {@link api-docs.MiddlewareStore | MiddlewareStore}: runtime
   store contracts.
-- {@link index.StoreOptions | StoreOptions} and
-  {@link index.ClientStoreOptions | ClientStoreOptions}: creation options for
+- {@link api-docs.StoreOptions | StoreOptions} and
+  {@link api-docs.ClientStoreOptions | ClientStoreOptions}: creation options for
   main/local and client stores.
-- {@link index.Slice | Slice} and {@link index.Slices | Slices}: state-factory signatures.
-- {@link index.Middleware | Middleware}: store enhancement contract.
-- {@link index.createBinder | createBinder}: third-party store adapter helper.
-- {@link index.wrapStore | wrapStore}: low-level helper used by framework bindings.
+- {@link api-docs.Slice | Slice} and {@link api-docs.Slices | Slices}: state-factory signatures.
+- {@link api-docs.Middleware | Middleware}: store enhancement contract.
+- {@link api-docs.createBinder | createBinder}: third-party store adapter helper.
+- {@link api-docs.wrapStore | wrapStore}: low-level helper used by framework bindings.
 
 ## Semantics Worth Reading First
 

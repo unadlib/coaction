@@ -2,7 +2,7 @@
 
 ---
 
-[coaction](../../modules.md) / [index](../index.md) / StoreTraceEvent
+[coaction](../../modules.md) / [api-docs](../index.md) / StoreTraceEvent
 
 # Interface: StoreTraceEvent
 

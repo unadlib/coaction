@@ -2,7 +2,7 @@
 
 ---
 
-[coaction](../../modules.md) / [index](../index.md) / Asyncify
+[coaction](../../modules.md) / [api-docs](../index.md) / Asyncify
 
 # Type Alias: Asyncify\<T, D\>
 

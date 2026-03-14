@@ -3,9 +3,6 @@ export { createBinder } from './binder';
 export { wrapStore } from './wrapStore';
 
 export type {
-  ClientTransportOptions,
-  Creator,
-  Getter,
   Store,
   MiddlewareStore,
   StoreOptions,

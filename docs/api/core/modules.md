@@ -10,4 +10,4 @@
 
 ## Modules
 
-- [index](index/index.md)
+- [api-docs](api-docs/index.md)

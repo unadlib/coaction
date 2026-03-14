@@ -2,7 +2,7 @@
 
 ---
 
-[coaction](../../modules.md) / [index](../index.md) / Slice
+[coaction](../../modules.md) / [api-docs](../index.md) / Slice
 
 # Type Alias: Slice()\<T\>
 
