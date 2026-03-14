@@ -101,6 +101,9 @@ Officially unsupported:
   authority
 - adapter-specific transport semantics that bypass the core sequence model
 
+See [support-matrix.md](./support-matrix.md) for the package-by-package support
+status of official adapters.
+
 ## Contract Tests
 
 Official binder-backed adapters should share one contract suite.

@@ -104,6 +104,9 @@ Officially unsupported:
 - binder-backed adapter nested inside slices mode
 - shared stores created with patch generation explicitly disabled
 
+For package-level combinations such as adapters and middlewares, use the
+[support matrix](./support-matrix.md) as the source of truth.
+
 ## Guarantee Levels
 
 The runtime makes three distinct guarantee levels:
