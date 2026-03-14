@@ -8,6 +8,7 @@ import type { Internal } from './internal';
 import { createClientAction } from './getRawStateClientAction';
 import { createLocalAction } from './getRawStateLocalAction';
 import { prepareStateDescriptor } from './getRawStateStateProperty';
+import { isUnsafeKey, setOwnEnumerable } from './utils';
 
 const defaultClientExecuteSyncTimeoutMs = 1500;
 
@@ -36,8 +37,16 @@ export const getRawState = <T extends CreateState>(
   const rawState = {} as Record<string, any>;
   const handle = (_rawState: any, _initialState: any, sliceKey?: string) => {
     internal.mutableInstance = internal.toMutableRaw?.(_initialState);
-    const descriptors = Object.getOwnPropertyDescriptors(_initialState);
-    Object.entries(descriptors).forEach(([key, descriptor]) => {
+    const safeDescriptors = {} as Record<string, PropertyDescriptor>;
+    Object.entries(Object.getOwnPropertyDescriptors(_initialState)).forEach(
+      ([key, descriptor]) => {
+        if (isUnsafeKey(key)) {
+          return;
+        }
+        safeDescriptors[key] = descriptor;
+      }
+    );
+    Object.entries(safeDescriptors).forEach(([key, descriptor]) => {
       if (Object.prototype.hasOwnProperty.call(descriptor, 'value')) {
         if (typeof descriptor.value !== 'function') {
           prepareStateDescriptor({
@@ -68,14 +77,22 @@ export const getRawState = <T extends CreateState>(
       }
     });
     // it should be a immutable state
-    const slice = Object.defineProperties({}, descriptors);
+    const slice = Object.defineProperties({}, safeDescriptors);
     return slice;
   };
   if (store.isSliceStore) {
     internal.module = {} as T;
     Object.entries(initialState).forEach(([key, value]) => {
-      rawState[key] = {};
-      internal.module[key] = handle(rawState[key], value, key);
+      if (isUnsafeKey(key)) {
+        return;
+      }
+      const sliceRawState = {};
+      setOwnEnumerable(rawState, key, sliceRawState);
+      setOwnEnumerable(
+        internal.module as Record<string, unknown>,
+        key,
+        handle(sliceRawState, value, key)
+      );
     });
   } else {
     internal.module = handle(rawState, initialState) as T;

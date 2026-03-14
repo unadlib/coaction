@@ -40,6 +40,63 @@ describe('State Management Store Tests', () => {
     expect(state.text).toBe('hello');
   });
 
+  test('should ignore unsafe keys during initialization', () => {
+    const pollutedKey = '__coactionCreatePolluted__';
+    const objectPrototype = Object.prototype as Record<string, unknown>;
+    delete objectPrototype[pollutedKey];
+
+    try {
+      const useStore = create(() =>
+        JSON.parse(
+          `{"counter":1,"__proto__":{"${pollutedKey}":true},"constructor":{"value":2}}`
+        )
+      );
+
+      expect(useStore.getState()).toEqual({
+        counter: 1
+      });
+      expect(
+        Object.prototype.hasOwnProperty.call(useStore.getState(), '__proto__')
+      ).toBeFalsy();
+      expect(objectPrototype[pollutedKey]).toBeUndefined();
+    } finally {
+      delete objectPrototype[pollutedKey];
+    }
+  });
+
+  test('should ignore unsafe keys in slices mode', () => {
+    const pollutedKey = '__coactionSlicePolluted__';
+    const objectPrototype = Object.prototype as Record<string, unknown>;
+    delete objectPrototype[pollutedKey];
+
+    try {
+      const slices = Object.create(null) as Record<string, any>;
+      slices.counter = () =>
+        JSON.parse(
+          `{"count":1,"__proto__":{"${pollutedKey}":true},"prototype":{"value":2}}`
+        );
+      slices.__proto__ = () => ({
+        hidden: true
+      });
+
+      const useStore = create(slices, {
+        sliceMode: 'slices'
+      });
+
+      expect(useStore.getState()).toEqual({
+        counter: {
+          count: 1
+        }
+      });
+      expect(
+        Object.prototype.hasOwnProperty.call(useStore.getState(), '__proto__')
+      ).toBeFalsy();
+      expect(objectPrototype[pollutedKey]).toBeUndefined();
+    } finally {
+      delete objectPrototype[pollutedKey];
+    }
+  });
+
   test('should update state using function', () => {
     store.setState((state: any) => ({ counter: state.counter + 5 }));
     const state = store.getState();
