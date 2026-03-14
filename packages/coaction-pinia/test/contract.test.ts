@@ -12,24 +12,24 @@ let counterId = 0;
 
 const createCounterStore = () => {
   const id = `contract-counter-${counterId++}`;
-  const definition = adapt<Counter>(
-    defineStore(
-      id,
-      bindPinia({
-        state: () => ({
-          count: 0
-        }),
-        actions: {
-          increment() {
-            this.count += 1;
-          }
+  const storeDefinition = defineStore(
+    id,
+    bindPinia({
+      state: () => ({
+        count: 0
+      }),
+      actions: {
+        increment() {
+          this.count += 1;
         }
-      })
-    )
+      }
+    })
   );
-  const external = definition();
+  const definition = adapt<Counter>(storeDefinition);
+  const external = storeDefinition();
   return {
     definition,
+    storeDefinition,
     external
   };
 };
@@ -37,9 +37,9 @@ const createCounterStore = () => {
 runBinderAdapterContract({
   packageName: '@coaction/pinia',
   createLocalContract: () => {
-    const { definition, external } = createCounterStore();
+    const { storeDefinition, external } = createCounterStore();
     return {
-      createState: () => definition,
+      createState: () => storeDefinition,
       readValue: (store) => store.getState().count,
       invokeUpdate: (store) => store.getState().increment(),
       expectedValueAfterUpdate: 1,
@@ -53,8 +53,8 @@ runBinderAdapterContract({
     const server = createCounterStore();
     const client = createCounterStore();
     return {
-      createServerState: () => server.definition,
-      createClientState: () => client.definition,
+      createServerState: () => server.storeDefinition,
+      createClientState: () => client.storeDefinition,
       readValue: (store) => store.getState().count,
       invokeServer: (store) => store.getState().increment(),
       expectedValueAfterServerUpdate: 1,
