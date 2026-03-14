@@ -92,7 +92,7 @@ Officially supported:
 - binder-backed adapter as a whole store in main/shared mode when the adapter
   itself supports that runtime
 - binder-backed adapter as a whole store in client/shared mode when the adapter
-  explicitly guards or mirrors external writes correctly
+  explicitly supports Coaction's mirror authority model
 
 Officially unsupported:
 
@@ -100,6 +100,38 @@ Officially unsupported:
 - adapter behavior that allows client mode to become an independent write
   authority
 - adapter-specific transport semantics that bypass the core sequence model
+
+## Client-Bound External Writes
+
+Shared client support is narrower than local whole-store support.
+
+What is part of the maintained contract in shared client mode:
+
+- calling Coaction store methods from the client mirror
+- receiving transport-driven updates from the authority store
+- converging through the core sequence model
+
+What is not automatically part of the contract:
+
+- mutating the underlying third-party store instance attached to the client
+  mirror
+
+That client-bound external-write behavior is adapter-specific unless an adapter
+explicitly documents and enforces it.
+
+Current status:
+
+- `@coaction/zustand`
+  direct writes to the client-side Zustand store are explicitly rejected
+- `@coaction/mobx`
+  direct writes to the client-side MobX instance are not a maintained contract
+- `@coaction/pinia`
+  direct writes to the client-side Pinia store instance are not a maintained
+  contract
+
+Treat the last two as integration-defined behavior. If strict client-side
+authority enforcement is required, the adapter must add an explicit runtime
+guard before this repository can claim that as supported behavior.
 
 See [support-matrix.md](./support-matrix.md) for the package-by-package support
 status of official adapters.
