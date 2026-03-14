@@ -8,6 +8,15 @@
   "projectDocuments": ["docs/reference/core-api-notes.md"],
   "entryFileName": "index.md",
   "gitRevision": "main",
-  "intentionallyNotExported": ["Internal"],
+  "intentionallyNotExported": [
+    "ClientTransportOptions",
+    "CreateState",
+    "Creator",
+    "DeepPartial",
+    "Getter",
+    "Internal",
+    "Listener",
+    "StoreReturn"
+  ],
   "excludeInternal": true
 }

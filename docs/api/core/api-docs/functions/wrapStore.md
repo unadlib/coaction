@@ -6,7 +6,7 @@
 
 # Function: wrapStore()
 
-> **wrapStore**\<`T`\>(`store`, `getState?`): [`StoreReturn`](../type-aliases/StoreReturn.md)\<`T`\>
+> **wrapStore**\<`T`\>(`store`, `getState?`): `StoreReturn`\<`T`\>
 
 Defined in: [src/wrapStore.ts:12](https://github.com/unadlib/coaction/blob/main/packages/core/src/wrapStore.ts#L12)
 
@@ -30,7 +30,7 @@ Convert a store object into Coaction's callable store shape.
 
 ## Returns
 
-[`StoreReturn`](../type-aliases/StoreReturn.md)\<`T`\>
+`StoreReturn`\<`T`\>
 
 ## Remarks
 

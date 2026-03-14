@@ -30,7 +30,7 @@ Factory for a named slice inside a slices store.
 
 ### get
 
-[`Getter`](../interfaces/Getter.md)\<`T`\>
+`Getter`\<`T`\>
 
 ### store
 

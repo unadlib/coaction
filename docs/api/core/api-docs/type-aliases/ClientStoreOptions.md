@@ -6,7 +6,7 @@
 
 # Type Alias: ClientStoreOptions\<T\>
 
-> **ClientStoreOptions**\<`T`\> = `object` & [`ClientTransportOptions`](../interfaces/ClientTransportOptions.md)
+> **ClientStoreOptions**\<`T`\> = `object` & `ClientTransportOptions`
 
 Defined in: [src/interface.ts:322](https://github.com/unadlib/coaction/blob/main/packages/core/src/interface.ts#L322)
 
@@ -43,7 +43,7 @@ Control how `createState` should be interpreted.
 
 ### T
 
-`T` _extends_ [`CreateState`](CreateState.md)
+`T` _extends_ `CreateState`
 
 ## Remarks
 

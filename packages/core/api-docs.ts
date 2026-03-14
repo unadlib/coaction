@@ -5,13 +5,7 @@ export { wrapStore } from './src/wrapStore';
 export type {
   Asyncify,
   ClientStoreOptions,
-  ClientTransportOptions,
-  CreateState,
-  Creator,
-  DeepPartial,
-  Getter,
   ISlices,
-  Listener,
   Middleware,
   MiddlewareStore,
   PatchTransform,
@@ -20,7 +14,6 @@ export type {
   Slices,
   Store,
   StoreOptions,
-  StoreReturn,
   StoreTraceEvent,
   StoreWithAsyncFunction as AsyncStore
 } from './src/interface';

@@ -1,14 +1,12 @@
 # Core API Reference
 
 This reference is generated from the docs-only entry point in
-`packages/core/api-docs.ts`, which re-exports the public core API together with
-supporting types used in public signatures.
+`packages/core/api-docs.ts`, which mirrors the public `coaction` core exports.
 
 ## Primary Entry Points
 
 - {@link api-docs.create | create}: create local stores, shared main stores, and shared
   clients.
-- {@link api-docs.Creator | Creator}: overload matrix for `create()`.
 - {@link api-docs.Store | Store} and {@link api-docs.MiddlewareStore | MiddlewareStore}: runtime
   store contracts.
 - {@link api-docs.StoreOptions | StoreOptions} and
