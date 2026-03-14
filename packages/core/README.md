@@ -30,7 +30,8 @@ const useStore = create((set) => ({
 `create()` uses `sliceMode: 'auto'` by default. For backward compatibility,
 `auto` still treats a non-empty object whose enumerable values are all
 functions as slices. That shape is ambiguous with a plain store that only
-contains methods, so you should set `sliceMode` explicitly.
+contains methods, so development builds warn and you should set `sliceMode`
+explicitly.
 
 You can force behavior explicitly:
 
