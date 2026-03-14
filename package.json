@@ -30,7 +30,7 @@
     "benchmark:mobx": "tsx ./packages/coaction-mobx/test/benchmark/index.ts",
     "benchmark": "NODE_ENV='production' tsx ./scripts/benchmark.ts",
     "docs:api": "typedoc --options typedoc.core.json",
-    "docs:api:check": "pnpm run docs:api && git diff --exit-code docs/api/core",
+    "docs:api:check": "pnpm run docs:api && node ./scripts/check-clean-path.js docs/api/core",
     "prepare": "husky"
   },
   "authors": [
