@@ -11,7 +11,7 @@
 [![npm](https://img.shields.io/npm/v/coaction.svg)](https://www.npmjs.com/package/coaction)
 [![license](https://img.shields.io/npm/l/coaction)](./LICENSE)
 
-[Getting Started](#installation) · [Documentation](#usage) · [Examples](#examples) · [FAQ](#faqs)
+[Getting Started](#installation) · [Documentation](#usage) · [Maintenance Guide](#maintenance-guide) · [Examples](#examples) · [FAQ](#faqs)
 
 </div>
 
@@ -20,6 +20,12 @@
 ## Table of Contents
 
 - [Motivation](#motivation)
+- [Maintenance Guide](#maintenance-guide)
+- [Repository Map](#repository-map)
+- [Architecture Map](#architecture-map)
+- [Supported Integration Matrix](#supported-integration-matrix)
+- [Testing Pyramid](#testing-pyramid)
+- [Contributing a New Adapter](#contributing-a-new-adapter)
 - [Features](#features)
 - [Operating Modes](#operating-modes)
 - [Performance](#performance)
@@ -48,6 +54,67 @@ While Web Workers (and SharedWorker) offer a path towards parallelism, they intr
 - **Performance first** — Offload computationally intensive tasks and state management to worker threads, keeping your UI responsive and fluid.
 - **Scalable architecture** — An intuitive API (inspired by Zustand) with Slices, namespaces, and computed properties promotes modularity and clean code organization.
 - **Flexible synchronization** — Integration with [data-transport](https://github.com/unadlib/data-transport) enables generic transport protocols, supporting various communication patterns including remote synchronization for CRDTs applications.
+
+## Maintenance Guide
+
+If you're working on the repository rather than only consuming the package, use
+this section as the entry point.
+
+## Repository Map
+
+- `packages/core`
+  - runtime creation, authority model, patch flow, transport integration,
+    middleware hooks, adapter hooks
+- `packages/coaction-*` framework bindings
+  - React, Vue, Angular, Svelte, Solid wrappers around core stores
+- `packages/coaction-*` state adapters
+  - whole-store integrations for external runtimes such as Zustand, MobX,
+    Pinia, Redux, Jotai, Valtio, and XState
+- `packages/coaction-*` middlewares
+  - logger, persist, history, yjs
+- `examples/*`
+  - runnable integration and end-to-end examples
+- `docs/architecture/*`
+  - maintainer-oriented runtime, support, and API evolution docs
+
+## Architecture Map
+
+- [Architecture Overview](./docs/architecture/overview.md)
+- [Core Runtime](./docs/architecture/core-runtime.md)
+- [Threading Model](./docs/architecture/threading-model.md)
+- [Support Matrix](./docs/architecture/support-matrix.md)
+- [API Evolution](./docs/architecture/api-evolution.md)
+- [Adapter Contract](./docs/architecture/adapter-contract.md)
+
+## Supported Integration Matrix
+
+| Surface                | Official contract                                                                                            |
+| :--------------------- | :----------------------------------------------------------------------------------------------------------- |
+| Native Coaction stores | Local and shared single/slices stores are supported.                                                         |
+| Binder-backed adapters | Whole-store only. Shared main/client is currently maintained for MobX, Pinia, and Zustand.                   |
+| Middleware authority   | Logger is supported on local/main and limited on clients. Persist and history belong on the authority store. |
+| Yjs                    | Local/main store binding is supported. Client mode is unsupported.                                           |
+
+For the package-by-package status and boundary notes, see the
+[full support matrix](./docs/architecture/support-matrix.md).
+
+## Testing Pyramid
+
+- Core runtime and type coverage lives in [`packages/core/test`](./packages/core/test).
+- Shared binder adapter coverage lives in `packages/*/test/contract.test.ts`.
+- Package-specific behavior and branch coverage lives in each package `test/`
+  directory.
+- Integration and end-to-end coverage lives in
+  [`packages/coaction-yjs/test/ws.integration.test.ts`](./packages/coaction-yjs/test/ws.integration.test.ts)
+  and [`examples/e2e/test`](./examples/e2e/test).
+
+## Contributing a New Adapter
+
+- Read the [adapter contract](./docs/architecture/adapter-contract.md) first.
+- Follow the [adapter contribution guide](./docs/contributing/adapter-guide.md).
+- Add the shared binder contract suite when the package is binder-backed.
+- Update the [support matrix](./docs/architecture/support-matrix.md) in the
+  same change as any new guarantee.
 
 ## Features
 
@@ -271,6 +338,9 @@ increment();
 
 - [Core API index](./docs/api/core/index.md)
 - [Core API notes](./docs/api/core/documents/core-api-notes.md)
+- [Architecture overview](./docs/architecture/overview.md)
+- [Support matrix](./docs/architecture/support-matrix.md)
+- [API evolution](./docs/architecture/api-evolution.md)
 
 Regenerate the reference from source with `pnpm docs:api`.
 
