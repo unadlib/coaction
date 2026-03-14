@@ -42,14 +42,15 @@ test('uses getInitialState as fallback snapshot for selector and multi-selector'
 
 test('autoSelector in slices mode ignores non-object slice values', async () => {
   vi.resetModules();
+  const useSyncExternalStore = vi.fn(
+    (
+      _subscribe: () => () => void,
+      getSnapshot: () => unknown,
+      getServerSnapshot?: () => unknown
+    ) => (getServerSnapshot ? getServerSnapshot() : getSnapshot())
+  );
   vi.doMock('use-sync-external-store/shim', () => ({
-    useSyncExternalStore: vi.fn(
-      (
-        _subscribe: () => () => void,
-        getSnapshot: () => unknown,
-        getServerSnapshot?: () => unknown
-      ) => (getServerSnapshot ? getServerSnapshot() : getSnapshot())
-    )
+    useSyncExternalStore
   }));
   const { create } = await import('../src');
   const protoKey = '__coactionReactNonObjectSlice__';
@@ -70,14 +71,48 @@ test('autoSelector in slices mode ignores non-object slice values', async () => 
         sliceMode: 'slices'
       }
     );
-    const selectors = store({ autoSelector: true }) as any;
+    const selectors = store.auto() as any;
     expect(selectors.counter).toBeDefined();
     expect(
       Object.prototype.hasOwnProperty.call(selectors, protoKey)
     ).toBeFalsy();
+    expect(useSyncExternalStore).not.toHaveBeenCalled();
   } finally {
     delete (Object.prototype as any)[protoKey];
   }
+});
+
+test('autoSelector option returns cached selector map without subscribing', async () => {
+  vi.resetModules();
+  const useSyncExternalStore = vi.fn(
+    (
+      _subscribe: () => () => void,
+      getSnapshot: () => unknown,
+      getServerSnapshot?: () => unknown
+    ) => (getServerSnapshot ? getServerSnapshot() : getSnapshot())
+  );
+  vi.doMock('use-sync-external-store/shim', () => ({
+    useSyncExternalStore
+  }));
+
+  const { create } = await import('../src');
+  const store = create(() => ({
+    count: 0,
+    nested: {
+      value: 1
+    }
+  }));
+
+  const fromMethod = store.auto();
+  const fromOption = store({
+    autoSelector: true
+  });
+
+  expect(fromOption).toBe(fromMethod);
+  expect(typeof fromMethod.count).toBe('function');
+  expect(typeof fromMethod.nested).toBe('function');
+  expect(typeof fromMethod.nested.value).toBe('function');
+  expect(useSyncExternalStore).not.toHaveBeenCalled();
 });
 
 test('handles non-object slice state defensively', async () => {
@@ -105,5 +140,5 @@ test('handles non-object slice state defensively', async () => {
   }));
   const { create } = await import('../src');
   const store = create(() => ({}));
-  expect(store({ autoSelector: true })).toMatchInlineSnapshot(`{}`);
+  expect(store.auto()).toMatchInlineSnapshot(`{}`);
 });

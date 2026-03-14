@@ -43,6 +43,21 @@ const CounterComponent = () => {
 };
 ```
 
+For selector-heavy components, `autoSelector` returns a cached selector map
+instead of values. Hook calls stay explicit:
+
+```tsx
+const selectors = useStore.auto();
+
+const CounterComponent = () => {
+  const count = useStore(selectors.count);
+  const increment = useStore(selectors.increment);
+  return <button onClick={increment}>Count: {count}</button>;
+};
+```
+
+`useStore({ autoSelector: true })` is kept as an alias for `useStore.auto()`.
+
 ## Documentation
 
 You can find the documentation [here](https://github.com/unadlib/coaction).

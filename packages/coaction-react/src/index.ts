@@ -14,9 +14,35 @@ import { useSyncExternalStore } from 'use-sync-external-store/shim';
 
 export * from 'coaction';
 
+type SelectorOptions = {
+  autoSelector?: boolean;
+};
+
+type SelectorFn<TState extends object, TValue> = (state: TState) => TValue;
+
+export type AutoSelector<TState extends object, TValue> = SelectorFn<
+  TState,
+  TValue
+> &
+  (TValue extends (...args: any[]) => any
+    ? {}
+    : TValue extends readonly any[]
+      ? {}
+      : TValue extends object
+        ? {
+            [K in keyof TValue]: AutoSelector<TState, TValue[K]>;
+          }
+        : {});
+
+export type AutoSelectors<T extends object> = {
+  [K in keyof T]: AutoSelector<T, T[K]>;
+};
+
 export type StoreReturn<T extends object> = Store<T> & {
   <P>(selector: (state: T) => P): P;
-  (options?: { autoSelector?: boolean }): T;
+  (options: { autoSelector: true }): AutoSelectors<T>;
+  (options?: SelectorOptions): T;
+  auto: () => AutoSelectors<T>;
 };
 
 export type StoreWithAsyncFunction<
@@ -24,7 +50,9 @@ export type StoreWithAsyncFunction<
   D extends true | false = false
 > = Store<Asyncify<T, D>> & {
   <P>(selector: (state: Asyncify<T, D>) => P): P;
-  (options?: { autoSelector?: boolean }): Asyncify<T, D>;
+  (options: { autoSelector: true }): AutoSelectors<Asyncify<T, D>>;
+  (options?: SelectorOptions): Asyncify<T, D>;
+  auto: () => AutoSelectors<Asyncify<T, D>>;
 };
 
 export type CreateState = ISlices | Record<string, Slice<any>>;
@@ -48,41 +76,68 @@ export type Creator = {
   ): StoreWithAsyncFunction<T>;
 };
 
+const getPathValue = (state: unknown, path: string[]) => {
+  let current = state as Record<string, unknown> | undefined;
+  for (const key of path) {
+    if (
+      (typeof current !== 'object' && typeof current !== 'function') ||
+      current === null
+    ) {
+      return undefined;
+    }
+    current = current[key] as Record<string, unknown> | undefined;
+  }
+  return current;
+};
+
+const createSelectorNode = <T extends object>(
+  path: string[],
+  value: unknown
+): AutoSelector<T, unknown> => {
+  const selector = ((state: T) => {
+    return getPathValue(state, path);
+  }) as AutoSelector<T, unknown>;
+  if (typeof value !== 'object' || value === null || Array.isArray(value)) {
+    return selector;
+  }
+  const childDescriptors: PropertyDescriptorMap = {};
+  for (const key of Object.keys(Object.getOwnPropertyDescriptors(value))) {
+    childDescriptors[key] = {
+      value: createSelectorNode<T>(
+        [...path, key],
+        (value as Record<string, unknown>)[key]
+      ),
+      enumerable: true
+    };
+  }
+  return Object.defineProperties(selector, childDescriptors);
+};
+
+const createAutoSelectors = <T extends object>(store: Store<T>) => {
+  const state = store.getState();
+  if (typeof state !== 'object' || state === null) {
+    return {} as AutoSelectors<T>;
+  }
+  const selectors = {} as Record<string, AutoSelector<T, unknown>>;
+  for (const key of Object.keys(Object.getOwnPropertyDescriptors(state))) {
+    selectors[key] = createSelectorNode<T>(
+      [key],
+      (state as Record<string, unknown>)[key]
+    );
+  }
+  return selectors as AutoSelectors<T>;
+};
+
 export const create: Creator = (createState: any, options: any) => {
   const store = createVanilla(createState, options);
-  const state = store.getState();
-  const storeWithAutoSelector = {} as Record<string, any>;
-  if (store.isSliceStore) {
-    if (typeof state === 'object' && state !== null) {
-      for (const key of Object.keys(state)) {
-        const sliceState = state[key];
-        const descriptors = Object.getOwnPropertyDescriptors(sliceState);
-        if (typeof sliceState === 'object' && sliceState !== null) {
-          const slice = {};
-          for (const subKey of Object.keys(descriptors)) {
-            const descriptor = descriptors[subKey];
-            if (typeof descriptor.get === 'function') {
-              descriptor.get = () =>
-                useStore(() => store.getState()[key][subKey]);
-            }
-          }
-          Object.defineProperties(slice, descriptors);
-          storeWithAutoSelector[key] = slice;
-        }
-      }
+  let autoSelectors: AutoSelectors<any> | undefined;
+  const getAutoSelectors = () => {
+    if (!autoSelectors) {
+      autoSelectors = createAutoSelectors(store);
     }
-  } else {
-    const descriptors = Object.getOwnPropertyDescriptors(state);
-    for (const key of Object.keys(descriptors)) {
-      const descriptor = descriptors[key];
-      if (typeof descriptor.get === 'function') {
-        descriptor.get = () => useStore(() => store.getState()[key]);
-      }
-    }
-    Object.defineProperties(storeWithAutoSelector, descriptors);
-  }
+    return autoSelectors;
+  };
   const useStore = wrapStore(store, (selector: any) => {
-    // support auto-selector with useStore({ autoSelector: true })
     if (typeof selector === 'function') {
       return useSyncExternalStore(
         store.subscribe,
@@ -90,14 +145,17 @@ export const create: Creator = (createState: any, options: any) => {
         () => selector(store.getInitialState())
       );
     }
-    if (selector?.autoSelector) return storeWithAutoSelector;
+    if (selector?.autoSelector) {
+      return getAutoSelectors();
+    }
     useSyncExternalStore(
       store.subscribe,
       () => store.getPureState(),
       () => store.getInitialState()
     );
     return store.getState();
-  });
+  }) as StoreReturn<any>;
+  useStore.auto = getAutoSelectors;
   return useStore;
 };
 
