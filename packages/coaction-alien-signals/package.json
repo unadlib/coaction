@@ -1,6 +1,6 @@
 {
   "name": "@coaction/alien-signals",
-  "version": "1.4.0",
+  "version": "1.4.1",
   "description": "A Coaction integration tool for alien-signals",
   "keywords": [
     "state",
@@ -45,7 +45,7 @@
   },
   "peerDependencies": {
     "alien-signals": "^3.0.0",
-    "coaction": "^1.4.0"
+    "coaction": "^1.4.1"
   },
   "peerDependenciesMeta": {
     "coaction": {

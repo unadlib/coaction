@@ -1,5 +1,11 @@
 # @coaction/logger
 
+## 1.4.1
+
+### Patch Changes
+
+- Aligned the peer dependency with `coaction@^1.4.1`.
+
 ## 1.4.0
 
 - Aligned middleware typings with `coaction`'s `MiddlewareStore` alias without changing runtime logging behavior.
