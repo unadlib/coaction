@@ -92,7 +92,8 @@ const getPathValue = (state: unknown, path: string[]) => {
 
 const createSelectorNode = <T extends object>(
   path: string[],
-  value: unknown
+  value: unknown,
+  ancestors: object[] = []
 ): AutoSelector<T, unknown> => {
   const selector = ((state: T) => {
     return getPathValue(state, path);
@@ -100,12 +101,17 @@ const createSelectorNode = <T extends object>(
   if (typeof value !== 'object' || value === null || Array.isArray(value)) {
     return selector;
   }
+  if (ancestors.includes(value)) {
+    return selector;
+  }
+  const nextAncestors = [...ancestors, value];
   const childDescriptors: PropertyDescriptorMap = {};
   for (const key of Object.keys(Object.getOwnPropertyDescriptors(value))) {
     childDescriptors[key] = {
       value: createSelectorNode<T>(
         [...path, key],
-        (value as Record<string, unknown>)[key]
+        (value as Record<string, unknown>)[key],
+        nextAncestors
       ),
       enumerable: true
     };
