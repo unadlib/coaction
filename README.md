@@ -258,6 +258,14 @@ const useStore = create(
 );
 ```
 
+Methods that rely on `this` stay bound when you destructure them from
+`getState()`:
+
+```ts
+const { increment } = useStore.getState().counter;
+increment();
+```
+
 ### Store Shape Mode (`sliceMode`)
 
 `create()` infers store shape from `createState` by default (`sliceMode: 'auto'`).
