@@ -1,63 +1,85 @@
-# Coaction
+<div align="center">
 
 <a href="https://github.com/unadlib/coaction" target="_blank"><img src="./logo.png" height="120" alt="Coaction Logo" /></a>
 
-![Node CI](https://github.com/unadlib/coaction/workflows/Node%20CI/badge.svg)
+# Coaction
+
+**An efficient and flexible state management library for building high-performance, multithreading web applications.**
+
+[![Node CI](https://github.com/unadlib/coaction/workflows/Node%20CI/badge.svg)](https://github.com/unadlib/coaction/actions)
 [![Coverage Status](https://coveralls.io/repos/github/unadlib/coaction/badge.svg?branch=main)](https://coveralls.io/github/unadlib/coaction?branch=main)
 [![npm](https://img.shields.io/npm/v/coaction.svg)](https://www.npmjs.com/package/coaction)
-![license](https://img.shields.io/npm/l/coaction)
+[![license](https://img.shields.io/npm/l/coaction)](./LICENSE)
 
-An efficient and flexible state management library for building high-performance, multithreading web applications.
+[Getting Started](#installation) · [Documentation](#usage) · [Examples](#examples) · [FAQ](#faqs)
+
+</div>
+
+---
+
+## Table of Contents
+
+- [Motivation](#motivation)
+- [Features](#features)
+- [Operating Modes](#operating-modes)
+- [Performance](#performance)
+- [Coaction vs Zustand](#coaction-vs-zustand)
+- [Installation](#installation)
+- [Usage](#usage)
+- [Integration](#integration)
+- [Middlewares](#middlewares)
+- [FAQs](#faqs)
+- [Credits](#credits)
+- [License](#license)
 
 ## Motivation
 
-Modern web applications are becoming increasingly complex, pushing the boundaries of what's possible in the browser. Single-threaded JavaScript, while powerful, often struggles to keep up with the demands of sophisticated UIs, real-time interactions, and data-intensive computations. This bottleneck leads to performance issues, laggy or unresponsive interfaces, limitations in request connections, and ultimately, a compromised user experience.
+Modern web applications are becoming increasingly complex, pushing the boundaries of what's possible in the browser. Single-threaded JavaScript often struggles to keep up with the demands of sophisticated UIs, real-time interactions, and data-intensive computations — leading to laggy interfaces and compromised user experiences.
 
-While Web Workers (or SharedWorker) offer a path towards parallelism and improved performance, they introduce a new set of challenges. Managing state across threads, synchronizing data efficiently, and maintaining coherent application logic can quickly become a daunting task. Existing state management solutions often fall short in addressing these specific needs, either by being too tightly coupled to the worker thread or by introducing complex abstractions that hinder developer productivity.
+While Web Workers (and SharedWorker) offer a path towards parallelism, they introduce challenges around state management, data synchronization, and maintaining coherent application logic across threads.
 
-![Coaction Concept](./coaction-concept.svg)
+<div align="center">
+<img src="./coaction-concept.svg" alt="Coaction Concept" width="680" />
+</div>
 
-**`Coaction` was created out of the need for a state management solution that truly embraces the multithreading nature of modern web applications.** It recognizes that performance and developer experience shouldn't be mutually exclusive. By leveraging the power of Web Workers and Shared Workers, `Coaction` allows developers to offload computationally intensive tasks and state management logic from the worker thread, resulting in a more responsive and fluid user interface.
+**Coaction was created to bridge this gap** — a state management solution that truly embraces the multithreading nature of modern web applications, without sacrificing developer experience.
 
-**More than just performance, `Coaction` is about enabling a more scalable and maintainable architecture for complex applications.** The library's intuitive API, inspired by Zustand, ensures a smooth learning curve and a productive development workflow. Its support for Slices, namespaces, and computed properties promotes modularity and code organization, making it easier to manage large and evolving codebases.
+- **Performance first** — Offload computationally intensive tasks and state management to worker threads, keeping your UI responsive and fluid.
+- **Scalable architecture** — An intuitive API (inspired by Zustand) with Slices, namespaces, and computed properties promotes modularity and clean code organization.
+- **Flexible synchronization** — Integration with [data-transport](https://github.com/unadlib/data-transport) enables generic transport protocols, supporting various communication patterns including remote synchronization for CRDTs applications.
 
-**`Coaction`'s integration with [data-transport](https://github.com/unadlib/data-transport) unlocks a new level of flexibility in state synchronization.** By supporting generic transport protocols, it opens up possibilities for various communication patterns and architectures, catering to the unique needs of different applications.
+## Features
 
-**In essence, `Coaction` empowers developers to build the next generation of web applications without sacrificing performance, developer experience, or architectural integrity.** It bridges the gap between the increasing complexity of web applications and the need for efficient, maintainable, and performant state management across threads. It's a tool designed for developers who strive to create exceptional user experiences in a world where parallelism and responsiveness are no longer optional, but essential. It also supports remote synchronization, making it suitable for building any CRDTs application as well.
+- 🧵 **Multithreading Sync** — Share state between webpage and worker threads. With `data-transport`, avoid the complexities of message passing and serialization.
+- 🔒 **Immutable State with Optional Mutability** — Powered by [Mutative](https://github.com/unadlib/mutative), providing immutable state transitions with opt-in mutable instances for performance.
+- 🧩 **Patch-Based Updates** — Efficient incremental state changes through patch-based synchronization, ideal for CRDTs applications.
+- 📐 **Built-in Computed** — Derived properties based on state dependencies with automatic caching.
+- 📦 **Slices Pattern** — Combine multiple slices into a store with namespace support.
+- 🔌 **Extensible Middleware** — Enhance store behavior with logging, time-travel debugging, persistence, and more.
+- 🌐 **Framework Agnostic** — Works with React, Angular, Vue, Svelte, Solid, and state libraries like Redux, Zustand, and MobX.
 
-## Concepts and Features
+## Operating Modes
 
-`Coaction` aims to provide a secure and efficient solution for sharing and synchronizing state in multithreading environments (such as Web Workers, Shared Workers, or even across processes and devices) in web applications.
+Coaction operates in two primary modes:
 
-Key features include:
+### Standard Mode
 
-- **Multithreading Sync**: Supports sharing state between webpage thread and the worker thread. With `data-transport` for generic communication, developers can avoid the complexities of message passing and serialization logic.
-- **Immutable State with Optional Mutability**: Powered by the [Mutative](https://github.com/unadlib/mutative) library, the core provides an immutable state transition process while allowing performance optimization with mutable instances when needed.
-- **Patch-Based Updates**: Enables efficient incremental state changes through patch-based synchronization, simplifying its use in CRDTs applications.
-- **Built-in Computed**: Supports derived properties based on state dependencies, making it easier to manage and retrieve computed data from core states.
-- **Slices Pattern**: Easily combine multiple slices into a store with namespace.
-- **Extensible Middleware**: Allows for middleware to enhance the store's behavior, such as logging, time-travel debugging, or integration with third-party tools.
-- **Integration with 3rd-Party Libraries**: Supports popular frameworks like React, Angular, Vue, Svelte, and Solid, as well as state management libraries such as Redux, Zustand, and MobX.
+The store is managed entirely within the webpage thread. Patch updates are disabled by default for optimal performance.
 
-## Operating Modes and Fundamentals
+### Shared Mode
 
-This library operates in two primary modes:
+The worker thread serves as the primary source of shared state, utilizing transport for synchronization. Webpage threads act as clients, accessing and manipulating the state asynchronously.
 
-- Standard Mode
-  - In a standard webpage environment, the store is managed entirely within the webpage thread. Patch updates are disabled by default to ensure optimal performance in standard mode.
-- Shared Mode
-  - The worker thread serves as the primary source of the shared state, utilizing transport for synchronization.
-  - Webpage thread act as clients, accessing and manipulating the state asynchronously through a store.
+> In shared mode, the library automatically determines the execution context based on transport parameters, handling synchronization seamlessly. You can easily support multiple tabs, multithreading, or multiprocessing.
 
-In shared mode, the library automatically determines the execution context based on the transport parameters, handling the synchronization thread seamlessly.
+### Examples
 
-You can easily use `Coaction` in your application to support multiple tabs, multithreading, or multiprocessing.
-
-For example, for a [3D scene](./examples/3d-scene/src/windowsManager.ts) shared across several tabs, you can effortlessly handle their state management using `Coaction`.
+For a [3D scene](./examples/3d-scene/src/windowsManager.ts) shared across several tabs, you can effortlessly handle state management using Coaction:
 
 https://github.com/user-attachments/assets/9eb9f4f8-8d47-433a-8eb2-85f044d6d8fa
 
-### Shared Mode - Sequence Diagram
+<details>
+<summary><b>Shared Mode — Sequence Diagram</b></summary>
 
 ```mermaid
 sequenceDiagram
@@ -85,53 +107,53 @@ sequenceDiagram
     deactivate Client
 ```
 
+</details>
+
 ## Performance
 
-Measure(ops/sec) to update 50K arrays and 1K objects, bigger is better([view source](./scripts/benchmark.ts)). [Coaction v0.1.5 vs Zustand v5.0.2]
+Benchmark measuring ops/sec to update 50K arrays and 1K objects — higher is better ([source](./scripts/benchmark.ts)).
 
-![Benchmark](benchmark.jpg)
+> Coaction v0.1.5 vs Zustand v5.0.2
 
-```
-Coaction x 5,272 ops/sec ±3.08% (63 runs sampled)
-Coaction with Mutative x 4,626 ops/sec ±2.26% (83 runs sampled)
-Zustand x 5,233 ops/sec ±2.68% (79 runs sampled)
-Zustand with Immer x 253 ops/sec ±0.26% (93 runs sampled)
+<div align="center">
+<img src="benchmark.jpg" alt="Benchmark" width="600" />
+</div>
 
-The fastest method is Coaction,Zustand
-```
+| Library                    | ops/sec | Relative |
+| :------------------------- | ------: | -------: |
+| **Coaction**               |   5,272 | **1.0x** |
+| **Coaction** with Mutative |   4,626 |    0.88x |
+| **Zustand**                |   5,233 |    0.99x |
+| **Zustand** with Immer     |     253 |    0.05x |
 
-According to the provided performance data, Coaction's performance is comparable to Zustand's performance. However, Coaction with Mutative demonstrates a significant performance advantage compared to Zustand with Immer.
+Coaction performs on par with Zustand in standard usage. The key difference emerges with immutable helpers: **Coaction with Mutative is ~18.3x faster than Zustand with Immer** (4,626 vs 253 ops/sec), thanks to [Mutative](https://github.com/unadlib/mutative)'s efficient state update mechanism.
 
-While standard Coaction achieves approximately 5,272 (ops/sec) and standard Zustand reaches around 5,233 (ops/sec), the most striking difference is observed with Zustand with Immer, which drastically drops to a mere 253 (ops/sec). Furthermore, Coaction with Mutative achieves around 4,626 (ops/sec). This means Coaction with Mutative is approximately 18.3X faster than Zustand with Immer (4626 / 253 ≈ 18.3). The data clearly indicates that Coaction offers superior performance characteristics compared to Zustand, and this advantage is especially pronounced when contrasted with Zustand's Immer implementation.
+## Coaction vs Zustand
 
-> We will also provide more complete benchmarking.
+Coaction inherits Zustand's intuitive API design while adding built-in support for features Zustand doesn't offer out of the box:
 
-## Difference between Coaction and Zustand
+| Feature                           | Coaction | Zustand |
+| :-------------------------------- | :------: | :-----: |
+| Built-in multithreading           |    ✅    |   ❌    |
+| Getter accessor support           |    ✅    |   ❌    |
+| Built-in computed properties      |    ✅    |   ❌    |
+| Built-in namespace Slices         |    ✅    |   ❌    |
+| Built-in auto selector for state  |    ✅    |   ❌    |
+| Built-in multiple stores selector |    ✅    |   ❌    |
+| Easy middleware implementation    |    ✅    |   ❌    |
+| `this` support in getter/action   |    ✅    |   ❌    |
 
-Coaction's design philosophy is to provide a necessary and sufficiently simple API, making it easy for developers to use. Therefore, Coaction inherits the advantages of Zustand's API design and includes built-in support for features that Zustand does not offer.
-
-|                                   | Coaction | Zustand |
-| --------------------------------- | -------- | ------- |
-| Built-in multithreading           | ✅       | ❌      |
-| Support getter accessor           | ✅       | ❌      |
-| Built-in computed properties      | ✅       | ❌      |
-| Built-in namespace Slice          | ✅       | ❌      |
-| Built-in auto selector for state  | ✅       | ❌      |
-| Built-in multiple stores selector | ✅       | ❌      |
-| Easy to implement middleware      | ✅       | ❌      |
-| Support `this` in getter/action   | ✅       | ❌      |
-
-> Some of these features may already have corresponding solutions in the Zustand community; however, Coaction opts for a more unified and streamlined API, better suited to the development needs of modern web applications.
+> Some features may have community solutions in Zustand; Coaction provides a more unified and streamlined API suited for modern web application development.
 
 ## Installation
 
-You can install `@coaction/react` for React application via npm, yarn, or pnpm.
+For React applications:
 
 ```bash
 npm install coaction @coaction/react
 ```
 
-If you want to use the core library without any framework, you can install `coaction` via npm, yarn, or pnpm.
+For the core library without any framework:
 
 ```bash
 npm install coaction
@@ -162,7 +184,7 @@ const CounterComponent = () => {
 
 ### Shared Mode Store
 
-`counter.js`:
+**`counter.js`**
 
 ```js
 export const counter = (set) => ({
@@ -171,7 +193,7 @@ export const counter = (set) => ({
 });
 ```
 
-`worker.js`:
+**`worker.js`**
 
 ```js
 import { create } from '@coaction/react';
@@ -179,6 +201,8 @@ import { counter } from './counter';
 
 create(counter);
 ```
+
+**`App.jsx`**
 
 ```jsx
 import { create } from '@coaction/react';
@@ -200,7 +224,7 @@ const CounterComponent = () => {
 };
 ```
 
-### Slices Pattern And Derived Data
+### Slices Pattern & Derived Data
 
 ```jsx
 import { create } from '@coaction/react';
@@ -233,8 +257,8 @@ const useStore = create({
 
 `create()` infers store shape from `createState` by default (`sliceMode: 'auto'`).
 
-- Use `sliceMode: 'single'` when you want an object to be treated as a single store, even if all values are functions.
-- Use `sliceMode: 'slices'` when you want strict slices mode with validation.
+- **`'single'`** — Treat an object as a single store, even if all values are functions.
+- **`'slices'`** — Strict slices mode with validation.
 
 ```ts
 const singleStore = create(
@@ -263,12 +287,14 @@ const slicesStore = create(
 
 ### Reusable Store
 
-You can refactor a general store into a multi-thread reusable store like this. This means you can use this store source code on a webpage and also on a worker. The key difference is that the references to these two stores are isolated, but their state is synchronized.
+Refactor a general store into a multithreading reusable store — the same source runs on both the webpage and the worker, with isolated references but synchronized state:
 
-`store.js`:
+**`store.js`**
 
 ```diff
-+ const worker = globalThis.SharedWorker ? new SharedWorker(new URL('./store.js', import.meta.url), { type: 'module' }) : undefined;
++ const worker = globalThis.SharedWorker
++   ? new SharedWorker(new URL('./store.js', import.meta.url), { type: 'module' })
++   : undefined;
 
 export const store = create(
   (set) => ({
@@ -280,90 +306,102 @@ export const store = create(
     }
   }),
 + { worker }
- );
+);
 ```
 
-> If you use TypeScript, then you should be aware of the difference between the two different store types. In the webpage context, it's AsyncStore (because its methods will become asynchronous, and these methods will be proxied to the worker for execution). In the worker context, it's Store. You can see [the reusable store example](examples/vanilla-base/src/store.ts).
+> **TypeScript note:** In the webpage context, the store type is `AsyncStore` (methods become asynchronous and are proxied to the worker). In the worker context, it's `Store`. See the [reusable store example](examples/vanilla-base/src/store.ts).
 
 ## Integration
 
-Coaction is designed to be compatible with a wide range of libraries and frameworks.
+Coaction is designed to work with a wide range of libraries and frameworks.
 
-### Supported Libraries and Frameworks
+### Frameworks
 
-|         | Package                                            | Status |
-| ------- | -------------------------------------------------- | ------ |
-| React   | @coaction/react                                    | ✅     |
-| Vue     | @coaction/vue                                      | ✅     |
-| Angular | @coaction/ng                                       | ✅     |
-| Svelte  | @coaction/svelte                                   | ✅     |
-| Solid   | @coaction/solid                                    | ✅     |
-| Yjs     | [@coaction/yjs](./packages/coaction-yjs/README.md) | ✅     |
+| Framework | Package                                              | Status |
+| :-------- | :--------------------------------------------------- | :----: |
+| React     | `@coaction/react`                                    |   ✅   |
+| Vue       | `@coaction/vue`                                      |   ✅   |
+| Angular   | `@coaction/ng`                                       |   ✅   |
+| Svelte    | `@coaction/svelte`                                   |   ✅   |
+| Solid     | `@coaction/solid`                                    |   ✅   |
+| Yjs       | [`@coaction/yjs`](./packages/coaction-yjs/README.md) |   ✅   |
 
 ### State Management Libraries
 
-|               | Package                 | Status |
-| ------------- | ----------------------- | ------ |
-| MobX          | @coaction/mobx          | ✅     |
-| Pinia         | @coaction/pinia         | ✅     |
-| Zustand       | @coaction/zustand       | ✅     |
-| Redux Toolkit | @coaction/redux         | ✅     |
-| Jotai         | @coaction/jotai         | ✅     |
-| XState        | @coaction/xstate        | ✅     |
-| Valtio        | @coaction/valtio        | ✅     |
-| alien-signals | @coaction/alien-signals | ✅     |
+| Library       | Package                   | Status |
+| :------------ | :------------------------ | :----: |
+| MobX          | `@coaction/mobx`          |   ✅   |
+| Pinia         | `@coaction/pinia`         |   ✅   |
+| Zustand       | `@coaction/zustand`       |   ✅   |
+| Redux Toolkit | `@coaction/redux`         |   ✅   |
+| Jotai         | `@coaction/jotai`         |   ✅   |
+| XState        | `@coaction/xstate`        |   ✅   |
+| Valtio        | `@coaction/valtio`        |   ✅   |
+| alien-signals | `@coaction/alien-signals` |   ✅   |
 
-> Note: `Slices` mode is a core `coaction` feature. Third-party state adapters (`@coaction/mobx`, `@coaction/pinia`, `@coaction/zustand`, `@coaction/redux`, `@coaction/jotai`, `@coaction/xstate`, `@coaction/valtio`) only support whole-store binding.
+> **Note:** Slices mode is a core `coaction` feature. Third-party state adapters only support whole-store binding.
 
-### Yjs Collaboration Guide
+### Yjs Collaboration
 
 For production collaboration setups with `@coaction/yjs`, see:
 
-- [@coaction/yjs README](./packages/coaction-yjs/README.md)
 - [Sync Model](./packages/coaction-yjs/README.md#sync-model)
 - [Conflict Semantics](./packages/coaction-yjs/README.md#conflict-semantics)
 - [Provider Integration](./packages/coaction-yjs/README.md#provider-integration)
-- [Compatibility and Limits](./packages/coaction-yjs/README.md#compatibility-and-limits)
+- [Compatibility & Limits](./packages/coaction-yjs/README.md#compatibility-and-limits)
 - [Troubleshooting](./packages/coaction-yjs/README.md#troubleshooting)
 
 ## Middlewares
 
-|           | Package           | Status |
-| --------- | ----------------- | ------ |
-| Logger    | @coaction/logger  | ✅     |
-| Persist   | @coaction/persist | ✅     |
-| Undo/Redo | @coaction/history | ✅     |
+| Middleware | Package             | Status |
+| :--------- | :------------------ | :----: |
+| Logger     | `@coaction/logger`  |   ✅   |
+| Persist    | `@coaction/persist` |   ✅   |
+| Undo/Redo  | `@coaction/history` |   ✅   |
 
 ## FAQs
 
-- Can I use Coaction without using multithreading?
+<details>
+<summary><b>Can I use Coaction without multithreading?</b></summary>
 
-Absolutely, Coaction also supports single-threaded mode. Its API is designed to be usable in both multithreaded and single-threaded environments. It's powerful, simple, and offers high performance. In its default single-threaded mode, it doesn't use patch updates to ensure optimal performance.
+Absolutely. Coaction supports single-threaded mode with its full API. In default single-threaded mode, it doesn't use patch updates, ensuring optimal performance.
 
-- Why is Coaction faster than Zustand with Immer?
+</details>
 
-Coaction utilizes the Mutative library, which offers a faster state update mechanism. The Mutative library allows for the use of mutable instances for performance optimization when needed, whereas Zustand uses the Immer library, which is an immutable library and can potentially lead to performance slowdowns.
+<details>
+<summary><b>Why is Coaction faster than Zustand with Immer?</b></summary>
 
-- Why can Coaction integrate with both observable and immutable state libraries?
+Coaction uses [Mutative](https://github.com/unadlib/mutative), which provides a faster state update mechanism. Mutative allows mutable instances for performance optimization, whereas Immer's pure immutable approach incurs more overhead.
 
-Coaction is based on the Mutative library, so it can be used regardless of whether the state is immutable or not. No matter the nature of the state library, Coaction can integrate with it effectively. It can first bind to the existing state object and then, through proxy execution, obtain patches for modifying the state. Finally, it applies these patches to the third-party state library to update the state.
+</details>
 
-- Does Coaction support CRDTs?
+<details>
+<summary><b>Why can Coaction integrate with both observable and immutable state libraries?</b></summary>
 
-Yes, Coaction supports CRDTs. It can achieve remote synchronization through the `data-transport` library, making Coaction well-suited for building any CRDTs application.
-For Yjs-specific synchronization and conflict behavior, see [`@coaction/yjs` documentation](./packages/coaction-yjs/README.md).
+Coaction is built on Mutative, so it works regardless of whether the state library is immutable or observable. It binds to the existing state object, obtains patches through proxy execution, and applies them to the third-party state library.
 
-- Does Coaction support multiple tabs?
+</details>
 
-Yes, Coaction supports multiple tabs. It can achieve state synchronization between multiple tabs through the `data-transport` library. You might consider using SharedWorker for support, which allows sharing state between multiple tabs.
+<details>
+<summary><b>Does Coaction support CRDTs?</b></summary>
+
+Yes. Coaction achieves remote synchronization through `data-transport`, making it well-suited for CRDTs applications. For Yjs-specific synchronization, see the [`@coaction/yjs` documentation](./packages/coaction-yjs/README.md).
+
+</details>
+
+<details>
+<summary><b>Does Coaction support multiple tabs?</b></summary>
+
+Yes. State synchronization between multiple tabs is supported via `data-transport`. Consider using SharedWorker for sharing state across tabs.
+
+</details>
 
 ## Credits
 
-- Coaction's concept is inspired by [Partytown](https://partytown.qwik.dev/).
-- Coaction's API is inspired by [Zustand](https://zustand.docs.pmnd.rs/).
-- Inspiring Technical Article
-  - [React + Redux + Comlink = Off-main-thread](https://dassur.ma/things/react-redux-comlink/)
+- Concept inspired by [Partytown](https://partytown.qwik.dev/)
+- API design inspired by [Zustand](https://zustand.docs.pmnd.rs/)
+- Technical reference: [React + Redux + Comlink = Off-main-thread](https://dassur.ma/things/react-redux-comlink/)
 
 ## License
 
-`Coaction` is [MIT licensed](./LICENSE).
+Coaction is [MIT licensed](./LICENSE).
