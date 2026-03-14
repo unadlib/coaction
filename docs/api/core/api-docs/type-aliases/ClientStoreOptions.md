@@ -2,7 +2,7 @@
 
 ---
 
-[coaction](../../modules.md) / [index](../index.md) / ClientStoreOptions
+[coaction](../../modules.md) / [api-docs](../index.md) / ClientStoreOptions
 
 # Type Alias: ClientStoreOptions\<T\>
 
@@ -43,7 +43,7 @@ Control how `createState` should be interpreted.
 
 ### T
 
-`T` _extends_ `CreateState`
+`T` _extends_ [`CreateState`](CreateState.md)
 
 ## Remarks
 

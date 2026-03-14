@@ -2,7 +2,7 @@
 
 ---
 
-[coaction](../../modules.md) / [index](../index.md) / StoreOptions
+[coaction](../../modules.md) / [api-docs](../index.md) / StoreOptions
 
 # Type Alias: StoreOptions\<T\>
 
@@ -16,7 +16,7 @@ Options for creating a local store or the main side of a shared store.
 
 ### T
 
-`T` _extends_ `CreateState`
+`T` _extends_ [`CreateState`](CreateState.md)
 
 ## Properties
 

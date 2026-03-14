@@ -2,7 +2,7 @@
 
 ---
 
-[coaction](../../modules.md) / [index](../index.md) / PatchTransform
+[coaction](../../modules.md) / [api-docs](../index.md) / PatchTransform
 
 # Interface: PatchTransform
 

@@ -2,11 +2,11 @@
 
 ---
 
-[coaction](../../modules.md) / [index](../index.md) / Creator
+[coaction](../../modules.md) / [api-docs](../index.md) / Creator
 
 # Type Alias: Creator()
 
-> **Creator** = \{\<`T`\>(`createState`, `options?`): `StoreReturn`\<[`SliceState`](SliceState.md)\<`T`\>\>; \<`T`\>(`createState`, `options?`): `StoreReturn`\<`T`\>; \<`T`\>(`createState`, `options?`): [`AsyncStore`](AsyncStore.md)\<[`SliceState`](SliceState.md)\<`T`\>, `true`\>; \<`T`\>(`createState`, `options?`): [`AsyncStore`](AsyncStore.md)\<`T`\>; \}
+> **Creator** = \{\<`T`\>(`createState`, `options?`): [`StoreReturn`](StoreReturn.md)\<[`SliceState`](SliceState.md)\<`T`\>\>; \<`T`\>(`createState`, `options?`): [`StoreReturn`](StoreReturn.md)\<`T`\>; \<`T`\>(`createState`, `options?`): [`AsyncStore`](AsyncStore.md)\<[`SliceState`](SliceState.md)\<`T`\>, `true`\>; \<`T`\>(`createState`, `options?`): [`AsyncStore`](AsyncStore.md)\<`T`\>; \}
 
 Defined in: [src/interface.ts:425](https://github.com/unadlib/coaction/blob/main/packages/core/src/interface.ts#L425)
 
@@ -14,7 +14,7 @@ Overload set for [create](../variables/create.md).
 
 ## Call Signature
 
-> \<`T`\>(`createState`, `options?`): `StoreReturn`\<[`SliceState`](SliceState.md)\<`T`\>\>
+> \<`T`\>(`createState`, `options?`): [`StoreReturn`](StoreReturn.md)\<[`SliceState`](SliceState.md)\<`T`\>\>
 
 ### Type Parameters
 
@@ -34,11 +34,11 @@ Overload set for [create](../variables/create.md).
 
 ### Returns
 
-`StoreReturn`\<[`SliceState`](SliceState.md)\<`T`\>\>
+[`StoreReturn`](StoreReturn.md)\<[`SliceState`](SliceState.md)\<`T`\>\>
 
 ## Call Signature
 
-> \<`T`\>(`createState`, `options?`): `StoreReturn`\<`T`\>
+> \<`T`\>(`createState`, `options?`): [`StoreReturn`](StoreReturn.md)\<`T`\>
 
 ### Type Parameters
 
@@ -58,7 +58,7 @@ Overload set for [create](../variables/create.md).
 
 ### Returns
 
-`StoreReturn`\<`T`\>
+[`StoreReturn`](StoreReturn.md)\<`T`\>
 
 ## Call Signature
 

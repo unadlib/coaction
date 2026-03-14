@@ -1,6 +1,6 @@
 {
   "$schema": "https://typedoc.org/schema.json",
-  "entryPoints": ["packages/core/index.ts"],
+  "entryPoints": ["packages/core/api-docs.ts"],
   "tsconfig": "tsconfig.json",
   "plugin": ["typedoc-plugin-markdown"],
   "out": "docs/api/core",
@@ -8,12 +8,6 @@
   "projectDocuments": ["docs/reference/core-api-notes.md"],
   "entryFileName": "index.md",
   "gitRevision": "main",
-  "intentionallyNotExported": [
-    "CreateState",
-    "DeepPartial",
-    "Internal",
-    "Listener",
-    "StoreReturn"
-  ],
+  "intentionallyNotExported": ["Internal"],
   "excludeInternal": true
 }

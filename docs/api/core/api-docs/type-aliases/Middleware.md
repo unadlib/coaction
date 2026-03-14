@@ -2,7 +2,7 @@
 
 ---
 
-[coaction](../../modules.md) / [index](../index.md) / Middleware
+[coaction](../../modules.md) / [api-docs](../index.md) / Middleware
 
 # Type Alias: Middleware()\<T\>
 
@@ -16,7 +16,7 @@ Store enhancer invoked during store creation.
 
 ### T
 
-`T` _extends_ `CreateState`
+`T` _extends_ [`CreateState`](CreateState.md)
 
 ## Parameters
 

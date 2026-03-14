@@ -2,7 +2,7 @@
 
 ---
 
-[coaction](../../modules.md) / [index](../index.md) / ClientTransportOptions
+[coaction](../../modules.md) / [api-docs](../index.md) / ClientTransportOptions
 
 # Interface: ClientTransportOptions
 

@@ -2,7 +2,7 @@
 
 ---
 
-[coaction](../../modules.md) / [index](../index.md) / Getter
+[coaction](../../modules.md) / [api-docs](../index.md) / Getter
 
 # Interface: Getter()\<T\>
 

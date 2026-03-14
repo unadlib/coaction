@@ -2,7 +2,7 @@
 
 ---
 
-[coaction](../../modules.md) / [index](../index.md) / createBinder
+[coaction](../../modules.md) / [api-docs](../index.md) / createBinder
 
 # Function: createBinder()
 

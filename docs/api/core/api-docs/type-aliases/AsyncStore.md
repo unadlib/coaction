@@ -2,7 +2,7 @@
 
 ---
 
-[coaction](../../modules.md) / [index](../index.md) / AsyncStore
+[coaction](../../modules.md) / [api-docs](../index.md) / AsyncStore
 
 # Type Alias: AsyncStore\<T, D\>
 
