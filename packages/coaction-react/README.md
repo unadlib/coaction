@@ -14,6 +14,14 @@ You can install it via npm, yarn or pnpm.
 npm install coaction @coaction/react
 ```
 
+## Compatibility
+
+`@coaction/react` currently supports React 17, 18, and 19.
+
+The package intentionally uses `use-sync-external-store/shim` internally so the
+same published build can work across those React versions. Removing the shim
+would require dropping React 17 support in a future major release.
+
 ## Usage
 
 ```jsx
