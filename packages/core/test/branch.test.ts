@@ -706,25 +706,81 @@ test('WorkerType is null when no worker globals exist', async () => {
 });
 
 test('create rejects transport and clientTransport together in development', () => {
-  const prev = process.env.NODE_ENV;
-  process.env.NODE_ENV = 'development';
-  try {
-    expect(() => {
-      create(
-        () => ({
-          count: 0
-        }),
-        {
-          transport: {} as any,
-          clientTransport: {} as any
-        } as any
-      );
-    }).toThrow(
-      'transport and clientTransport cannot be used together, please use one of them.'
+  expect(() => {
+    create(
+      () => ({
+        count: 0
+      }),
+      {
+        transport: {} as any,
+        clientTransport: {} as any
+      } as any
     );
-  } finally {
-    process.env.NODE_ENV = prev;
-  }
+  }).toThrow(
+    'transport and clientTransport cannot be used together, please use one authority model per store.'
+  );
+});
+
+test('create rejects transport and worker together', () => {
+  expect(() => {
+    create(
+      () => ({
+        count: 0
+      }),
+      {
+        transport: {} as any,
+        worker: {} as any
+      } as any
+    );
+  }).toThrow(
+    'transport and worker cannot be used together, please use one authority model per store.'
+  );
+});
+
+test('create rejects clientTransport and worker together', () => {
+  expect(() => {
+    create(
+      () => ({
+        count: 0
+      }),
+      {
+        clientTransport: {} as any,
+        worker: {} as any
+      } as any
+    );
+  }).toThrow(
+    'clientTransport and worker cannot be used together, please use one client transport source.'
+  );
+});
+
+test('create rejects main workerType with client transport settings', () => {
+  expect(() => {
+    create(
+      () => ({
+        count: 0
+      }),
+      {
+        workerType: 'WebWorkerInternal',
+        clientTransport: {} as any
+      } as any
+    );
+  }).toThrow(
+    'main workerType cannot be combined with client transport settings.'
+  );
+});
+
+test('create rejects client workerType with transport', () => {
+  expect(() => {
+    create(
+      () => ({
+        count: 0
+      }),
+      {
+        workerType: 'WebWorkerClient',
+        transport: {} as any
+      } as any
+    );
+  }).toThrow('client workerType cannot be combined with transport.');
 });
 
 test('create validates explicit slices mode and supports valid slices mode', () => {

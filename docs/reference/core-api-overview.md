@@ -26,6 +26,8 @@ This reference is generated from the docs-only entry point in
 - Methods destructured from `getState()` keep the correct `this` binding.
 - Binder-backed integrations are whole-store adapters; slices mode is not
   supported for them.
+- `create()` should not gain more ambiguous option combinations; prefer
+  explicit helpers or variants for future expansion.
 
 ## Regenerating
 
