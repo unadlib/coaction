@@ -128,8 +128,47 @@ const createAutoSelectors = <T extends object>(store: Store<T>) => {
   return selectors as AutoSelectors<T>;
 };
 
+const touchState = (value: unknown, seen = new WeakSet<object>()) => {
+  if (typeof value !== 'object' || value === null) {
+    return;
+  }
+  if (seen.has(value)) {
+    return;
+  }
+  seen.add(value);
+  if (Array.isArray(value)) {
+    value.forEach((item) => touchState(item, seen));
+    return;
+  }
+  for (const key of Object.keys(value as Record<string, unknown>)) {
+    touchState((value as Record<string, unknown>)[key], seen);
+  }
+};
+
 export const create: Creator = (createState: any, options: any) => {
   const store = createVanilla(createState, options);
+  let fullStateVersion = 0;
+  const fullStateListeners = new Set<() => void>();
+  let isTrackingSubscriptionSetup = true;
+  const unsubscribeVersion = store.subscribe(() => {
+    touchState(store.getPureState());
+    if (isTrackingSubscriptionSetup) {
+      return;
+    }
+    fullStateVersion += 1;
+    fullStateListeners.forEach((listener) => listener());
+  });
+  isTrackingSubscriptionSetup = false;
+  const baseDestroy = store.destroy;
+  store.destroy = () => {
+    unsubscribeVersion();
+    fullStateListeners.clear();
+    baseDestroy();
+  };
+  const subscribeFullState = (listener: () => void) => {
+    fullStateListeners.add(listener);
+    return () => fullStateListeners.delete(listener);
+  };
   let autoSelectors: AutoSelectors<any> | undefined;
   const getAutoSelectors = () => {
     if (!autoSelectors) {
@@ -149,9 +188,9 @@ export const create: Creator = (createState: any, options: any) => {
       return getAutoSelectors();
     }
     useSyncExternalStore(
-      store.subscribe,
-      () => store.getPureState(),
-      () => store.getInitialState()
+      subscribeFullState,
+      () => fullStateVersion,
+      () => 0
     );
     return store.getState();
   }) as StoreReturn<any>;
