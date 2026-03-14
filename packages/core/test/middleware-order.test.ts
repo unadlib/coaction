@@ -1,6 +1,6 @@
-import { history } from '@coaction/history';
-import { logger } from '@coaction/logger';
-import { persist, type PersistStorage } from '@coaction/persist';
+import { history } from '../../coaction-history/src';
+import { logger } from '../../coaction-logger/src';
+import { persist, type PersistStorage } from '../../coaction-persist/src';
 import { vi } from 'vitest';
 import { create } from '../src';
 
@@ -13,11 +13,11 @@ const nextTick = async () => {
 const createMemoryStorage = (): PersistStorage => {
   const map = new Map<string, string>();
   return {
-    getItem: (name) => map.get(name) ?? null,
-    removeItem: (name) => {
+    getItem: (name: string) => map.get(name) ?? null,
+    removeItem: (name: string) => {
       map.delete(name);
     },
-    setItem: (name, value) => {
+    setItem: (name: string, value: string) => {
       map.set(name, value);
     }
   };
