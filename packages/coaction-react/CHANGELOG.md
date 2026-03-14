@@ -1,5 +1,10 @@
 # @coaction/react
 
+## 1.4.0
+
+- Aligned the peer dependency with `coaction@^1.4.0`.
+- Clarified the React 17/18/19 compatibility contract around the continued use of `use-sync-external-store/shim`.
+
 ## 1.3.0
 
 - Aligned the peer dependency with `coaction@^1.3.0`.

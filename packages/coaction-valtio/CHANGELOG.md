@@ -1,5 +1,9 @@
 # @coaction/valtio
 
+## 1.4.0
+
+- Aligned the peer dependency with `coaction@^1.4.0`.
+
 ## 1.3.0
 
 - Aligned the peer dependency with `coaction@^1.3.0`.

@@ -1,5 +1,11 @@
 # coaction
 
+## 1.4.0
+
+- Added `executeSyncTimeoutMs` to configure how long async clients wait for sequence catch-up before falling back to `fullSync`.
+- Preserved 1.x middleware and worker typing compatibility by keeping `patch`, `trace`, and deprecated `workerType` options public while introducing `MiddlewareStore` as the preferred middleware-facing type.
+- Kept `sliceMode: 'auto'` backward-compatible for object-of-functions inputs, but now warns in development because that shape is ambiguous and should use an explicit `sliceMode`.
+
 ## 1.3.0
 
 - Recovered client synchronization after sequence resets and incremental apply failures.

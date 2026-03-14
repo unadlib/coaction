@@ -1,5 +1,9 @@
 # @coaction/persist
 
+## 1.4.0
+
+- Aligned the peer dependency with `coaction@^1.4.0`.
+
 ## 1.3.0
 
 - Serialized async storage writes and preserved queued writes during destroy.

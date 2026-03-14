@@ -1,5 +1,9 @@
 # @coaction/history
 
+## 1.4.0
+
+- Aligned the peer dependency with `coaction@^1.4.0`.
+
 ## 1.3.0
 
 - Fixed undo/redo snapshot application so deletions are preserved.
