@@ -1,0 +1,13 @@
+{
+  "$schema": "https://typedoc.org/schema.json",
+  "entryPoints": ["packages/core/index.ts"],
+  "tsconfig": "tsconfig.json",
+  "plugin": ["typedoc-plugin-markdown"],
+  "out": "docs/api/core",
+  "readme": "docs/reference/core-api-overview.md",
+  "projectDocuments": ["docs/reference/core-api-notes.md"],
+  "entryFileName": "index.md",
+  "gitRevision": "main",
+  "intentionallyNotExported": ["Internal"],
+  "excludeInternal": true
+}
