@@ -8,6 +8,8 @@ import type {
   ISlices,
   Asyncify
 } from 'coaction';
+// Keep the shim so one published build works across React 17/18/19.
+// Switching to `react` directly would be a breaking change for React 17 users.
 import { useSyncExternalStore } from 'use-sync-external-store/shim';
 
 export * from 'coaction';
