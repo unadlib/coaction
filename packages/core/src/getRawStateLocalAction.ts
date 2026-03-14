@@ -58,67 +58,85 @@ export const createLocalAction = <T extends CreateState>({
         });
       };
     }
+    const traceAction = <R>(run: () => R): R => {
+      try {
+        const result = run();
+        if (result instanceof Promise) {
+          return result.then(
+            (value) => {
+              done?.(value);
+              return value;
+            },
+            (error) => {
+              done?.(error);
+              throw error;
+            }
+          ) as R;
+        }
+        done?.(result);
+        return result;
+      } catch (error) {
+        done?.(error);
+        throw error;
+      }
+    };
     const enablePatches =
       store.transport ?? (options as StoreOptions<T>).enablePatches;
-    if (internal.mutableInstance && !internal.isBatching && enablePatches) {
-      let result: any;
-      const handleResult = (isDrafted?: boolean) => {
-        handleDraft(store, internal);
+    return traceAction(() => {
+      if (internal.mutableInstance && !internal.isBatching && enablePatches) {
+        let result: any;
+        const handleResult = (isDrafted?: boolean) => {
+          handleDraft(store, internal);
+          if (isDrafted) {
+            internal.backupState = internal.rootState;
+            const [draft, finalize] = createWithMutative(internal.rootState, {
+              enablePatches: true
+            });
+            internal.finalizeDraft = finalize as () => [T, Patches, Patches];
+            internal.rootState = draft as Draft<T>;
+          }
+        };
+        const isDrafted = isDraft(internal.rootState);
         if (isDrafted) {
-          internal.backupState = internal.rootState;
-          const [draft, finalize] = createWithMutative(internal.rootState, {
-            enablePatches: true
-          });
-          internal.finalizeDraft = finalize as () => [T, Patches, Patches];
-          internal.rootState = draft as Draft<T>;
+          handleResult();
         }
-      };
-      const isDrafted = isDraft(internal.rootState);
-      if (isDrafted) {
-        handleResult();
-      }
-      internal.backupState = internal.rootState;
-      const [draft, finalize] = createWithMutative(internal.rootState, {
-        enablePatches: true
-      });
-      internal.finalizeDraft = finalize as () => [T, Patches, Patches];
-      internal.rootState = draft as Draft<T>;
-      let asyncResult: Promise<unknown> | undefined;
-      try {
-        result = fn.apply(getActionTarget(store, sliceKey), args);
-        if (result instanceof Promise) {
-          asyncResult = result;
+        internal.backupState = internal.rootState;
+        const [draft, finalize] = createWithMutative(internal.rootState, {
+          enablePatches: true
+        });
+        internal.finalizeDraft = finalize as () => [T, Patches, Patches];
+        internal.rootState = draft as Draft<T>;
+        let asyncResult: Promise<unknown> | undefined;
+        try {
+          result = fn.apply(getActionTarget(store, sliceKey), args);
+          if (result instanceof Promise) {
+            asyncResult = result;
+          }
+        } finally {
+          if (!asyncResult) {
+            handleResult(isDrafted);
+          }
         }
-      } finally {
         if (asyncResult) {
-          // if (process.env.NODE_ENV === 'development') {
-          //   console.warn(
-          //     'It will be combined with the next state in the async function.'
-          //   );
-          // }
-        } else {
-          handleResult(isDrafted);
+          return asyncResult.then(
+            (value) => {
+              handleResult(isDrafted);
+              return value;
+            },
+            (error) => {
+              handleResult(isDrafted);
+              throw error;
+            }
+          );
         }
+        return result;
       }
-      if (asyncResult) {
-        return asyncResult.finally(() => {
-          const result = handleResult(isDrafted);
-          done?.(result);
-          return result;
+      if (internal.mutableInstance && internal.actMutable) {
+        return internal.actMutable(() => {
+          return fn.apply(getActionTarget(store, sliceKey), args);
         });
       }
-      done?.(result);
-      return result;
-    }
-    if (internal.mutableInstance && internal.actMutable) {
-      const result = internal.actMutable(() => {
-        return fn.apply(getActionTarget(store, sliceKey), args);
-      });
-      done?.(result);
-      return result;
-    }
-    const result = fn.apply(getActionTarget(store, sliceKey), args);
-    done?.(result);
-    return result;
+      return fn.apply(getActionTarget(store, sliceKey), args);
+    });
   };
 };
