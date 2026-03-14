@@ -127,15 +127,15 @@ export const createClientAction = <T extends CreateState>({
                   ) {
                     throw new Error('Invalid fullSync payload');
                   }
-                  store.apply(JSON.parse(next.state));
-                  internal.sequence = next.sequence;
-                  if (internal.sequence >= sequence) {
+                  if (next.sequence >= sequence) {
+                    store.apply(JSON.parse(next.state));
+                    internal.sequence = next.sequence;
                     finishResolve();
                     return;
                   }
                   finishReject(
                     new Error(
-                      `Stale fullSync sequence: expected >= ${sequence}, got ${internal.sequence}`
+                      `Stale fullSync sequence: expected >= ${sequence}, got ${next.sequence}`
                     )
                   );
                 })

@@ -311,6 +311,8 @@ test('client action rejects when fullSync fallback sequence is stale', async () 
     await Promise.resolve();
     await vi.advanceTimersByTimeAsync(1600);
     await assertion;
+    expect(store.apply).not.toHaveBeenCalled();
+    expect(internal.sequence).toBe(0);
   } finally {
     vi.useRealTimers();
   }
