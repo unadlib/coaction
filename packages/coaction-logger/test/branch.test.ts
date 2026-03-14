@@ -217,7 +217,7 @@ test('closes trace group when client transport rejects', async () => {
     }
   );
 
-  await expect(useStore.getState().increment()).rejects.toThrow(
+  await expect((useStore.getState() as any).increment()).rejects.toThrow(
     'transport failed'
   );
   expect(customLogger.group).toHaveBeenCalledTimes(1);
@@ -260,7 +260,7 @@ test('closes trace group when client fullSync fallback rejects', async () => {
       }
     );
 
-    const pending = useStore.getState().increment();
+    const pending = (useStore.getState() as any).increment();
     const assertion = expect(pending).rejects.toThrow('full sync failed');
     await Promise.resolve();
     await vi.advanceTimersByTimeAsync(1);

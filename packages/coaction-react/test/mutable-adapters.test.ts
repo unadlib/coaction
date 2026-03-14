@@ -1,21 +1,21 @@
+// @ts-nocheck
 import React from 'react';
 import { act, render, screen, waitFor } from '@testing-library/react';
 import { makeAutoObservable, runInAction } from 'mobx';
 import { createPinia, defineStore, setActivePinia } from 'pinia';
-import { bindMobx } from '@coaction/mobx';
-import { adapt as adaptPinia, bindPinia } from '@coaction/pinia';
-import { adapt as adaptValtio, bindValtio, proxy } from '@coaction/valtio';
+import { bindMobx } from '../../coaction-mobx/src';
+import { adapt as adaptPinia, bindPinia } from '../../coaction-pinia/src';
+import {
+  adapt as adaptValtio,
+  bindValtio,
+  proxy
+} from '../../coaction-valtio/src';
 import { create } from '../src';
 
 type MutableAdapterCase = {
   createStore: () => {
     externalUpdate: () => void;
-    useStore: ReturnType<
-      typeof create<{
-        count: number;
-        increment: () => void;
-      }>
-    >;
+    useStore: any;
   };
   name: string;
 };
@@ -89,8 +89,8 @@ const cases: MutableAdapterCase[] = [
           name: 'react-pinia'
         }),
         externalUpdate: () => {
-          state.$patch({
-            count: state.count + 1
+          (state as any).$patch({
+            count: (state as any).count + 1
           });
         }
       };
@@ -135,7 +135,7 @@ describe.each(cases)(
           React.createElement(FullStateCounter),
           React.createElement(SelectorCounter),
           React.createElement(AutoSelectorCounter)
-        )
+        ) as any
       );
 
       expect(screen.getByTestId('full').textContent).toBe('0');
