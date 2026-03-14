@@ -1,4 +1,6 @@
+import { create } from 'coaction';
 import { vi } from 'vitest';
+import { logger } from '../src/logger';
 
 type FakeStore = {
   name: string;
@@ -161,4 +163,111 @@ test('uses Date timer fallback when performance is unavailable', async () => {
   vi.stubGlobal('performance', undefined);
   const { timer } = await import('../src/logger');
   expect(timer).toBe(Date);
+});
+
+test('closes trace group when local action throws', () => {
+  const customLogger = createCustomLogger();
+  const useStore = create(
+    () => ({
+      explode() {
+        throw new Error('boom');
+      }
+    }),
+    {
+      middlewares: [
+        logger({
+          logger: customLogger as any,
+          collapsed: false
+        })
+      ]
+    }
+  );
+
+  expect(() => {
+    useStore.getState().explode();
+  }).toThrow('boom');
+  expect(customLogger.group).toHaveBeenCalledTimes(1);
+  expect(customLogger.groupEnd).toHaveBeenCalledTimes(1);
+});
+
+test('closes trace group when client transport rejects', async () => {
+  const customLogger = createCustomLogger();
+  const transport = {
+    dispose: vi.fn(),
+    emit: vi.fn(async () => {
+      throw new Error('transport failed');
+    }),
+    listen: vi.fn(),
+    onConnect: vi.fn()
+  };
+  const useStore = create(
+    () => ({
+      increment() {
+        return 1;
+      }
+    }),
+    {
+      clientTransport: transport as any,
+      middlewares: [
+        logger({
+          logger: customLogger as any,
+          collapsed: false
+        })
+      ]
+    }
+  );
+
+  await expect(useStore.getState().increment()).rejects.toThrow(
+    'transport failed'
+  );
+  expect(customLogger.group).toHaveBeenCalledTimes(1);
+  expect(customLogger.groupEnd).toHaveBeenCalledTimes(1);
+});
+
+test('closes trace group when client fullSync fallback rejects', async () => {
+  vi.useFakeTimers();
+  try {
+    const customLogger = createCustomLogger();
+    const transport = {
+      dispose: vi.fn(),
+      emit: vi.fn(async (event: string) => {
+        if (event === 'execute') {
+          return ['ok', 2];
+        }
+        if (event === 'fullSync') {
+          throw new Error('full sync failed');
+        }
+        throw new Error(`unexpected event: ${event}`);
+      }),
+      listen: vi.fn(),
+      onConnect: vi.fn()
+    };
+    const useStore = create(
+      () => ({
+        increment() {
+          return 1;
+        }
+      }),
+      {
+        clientTransport: transport as any,
+        executeSyncTimeoutMs: 1,
+        middlewares: [
+          logger({
+            logger: customLogger as any,
+            collapsed: false
+          })
+        ]
+      }
+    );
+
+    const pending = useStore.getState().increment();
+    const assertion = expect(pending).rejects.toThrow('full sync failed');
+    await Promise.resolve();
+    await vi.advanceTimersByTimeAsync(1);
+    await assertion;
+    expect(customLogger.group).toHaveBeenCalledTimes(1);
+    expect(customLogger.groupEnd).toHaveBeenCalledTimes(1);
+  } finally {
+    vi.useRealTimers();
+  }
 });
