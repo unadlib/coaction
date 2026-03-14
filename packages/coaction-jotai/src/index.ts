@@ -77,6 +77,7 @@ export const bindJotai = <
           isJotaiUpdating = true;
           try {
             coactionStore.setState(getAtomState(context));
+            internal.listeners.forEach((listener) => listener());
           } finally {
             isJotaiUpdating = false;
           }
