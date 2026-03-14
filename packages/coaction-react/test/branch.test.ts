@@ -115,6 +115,40 @@ test('autoSelector option returns cached selector map without subscribing', asyn
   expect(useSyncExternalStore).not.toHaveBeenCalled();
 });
 
+test('autoSelector stops expanding recursive references', async () => {
+  vi.resetModules();
+  const useSyncExternalStore = vi.fn(
+    (
+      _subscribe: () => () => void,
+      getSnapshot: () => unknown,
+      getServerSnapshot?: () => unknown
+    ) => (getServerSnapshot ? getServerSnapshot() : getSnapshot())
+  );
+  vi.doMock('use-sync-external-store/shim', () => ({
+    useSyncExternalStore
+  }));
+
+  const { create } = await import('../src');
+  const nested = {
+    value: 1
+  } as {
+    self?: unknown;
+    value: number;
+  };
+  nested.self = nested;
+
+  const store = create(() => ({
+    nested
+  }));
+
+  const selectors = store.auto() as any;
+  expect(typeof selectors.nested).toBe('function');
+  expect(typeof selectors.nested.value).toBe('function');
+  expect(typeof selectors.nested.self).toBe('function');
+  expect(selectors.nested.self.self).toBeUndefined();
+  expect(useSyncExternalStore).not.toHaveBeenCalled();
+});
+
 test('handles non-object slice state defensively', async () => {
   vi.resetModules();
   const mockStore = {
