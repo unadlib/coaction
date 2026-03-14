@@ -22,6 +22,52 @@ import { handleMainTransport } from './handleMainTransport';
 const namespaceMap = new Map<string, boolean>();
 let hasWarnedAmbiguousFunctionMap = false;
 
+const isMainWorkerType = (
+  workerType:
+    | StoreOptions<any>['workerType']
+    | ClientStoreOptions<any>['workerType']
+) =>
+  workerType === 'SharedWorkerInternal' || workerType === 'WebWorkerInternal';
+
+const isClientWorkerType = (
+  workerType:
+    | StoreOptions<any>['workerType']
+    | ClientStoreOptions<any>['workerType']
+) => workerType === 'SharedWorkerClient' || workerType === 'WebWorkerClient';
+
+const validateCreateModeOptions = <T extends CreateState>(
+  options: StoreOptions<T> | ClientStoreOptions<T>
+) => {
+  const storeTransport = (options as StoreOptions<T>).transport;
+  const clientTransport = (options as ClientStoreOptions<T>).clientTransport;
+  const worker = (options as ClientStoreOptions<T>).worker;
+  const explicitWorkerType = options.workerType;
+
+  if (storeTransport && clientTransport) {
+    throw new Error(
+      'transport and clientTransport cannot be used together, please use one authority model per store.'
+    );
+  }
+  if (storeTransport && worker) {
+    throw new Error(
+      'transport and worker cannot be used together, please use one authority model per store.'
+    );
+  }
+  if (clientTransport && worker) {
+    throw new Error(
+      'clientTransport and worker cannot be used together, please use one client transport source.'
+    );
+  }
+  if (isMainWorkerType(explicitWorkerType) && (clientTransport || worker)) {
+    throw new Error(
+      'main workerType cannot be combined with client transport settings.'
+    );
+  }
+  if (isClientWorkerType(explicitWorkerType) && storeTransport) {
+    throw new Error('client workerType cannot be combined with transport.');
+  }
+};
+
 const warnAmbiguousFunctionMap = () => {
   if (
     hasWarnedAmbiguousFunctionMap ||
@@ -53,6 +99,8 @@ const warnAmbiguousFunctionMap = () => {
  * - When `clientTransport` or `worker` is provided, returned store methods
  *   become promise-returning methods because execution happens on the main
  *   shared store.
+ * - New semantics should prefer explicit helpers or variants over adding more
+ *   ambiguous `create()` input forms.
  */
 export const create: Creator = <T extends CreateState>(
   createState: Slice<T> | T,
@@ -61,16 +109,8 @@ export const create: Creator = <T extends CreateState>(
   const checkEnablePatches =
     Object.hasOwnProperty.call(options, 'enablePatches') &&
     !(options as StoreOptions<T>).enablePatches;
+  validateCreateModeOptions(options);
   const workerType = options.workerType ?? WorkerType;
-  if (
-    process.env.NODE_ENV === 'development' &&
-    (options as StoreOptions<T>).transport &&
-    (options as ClientStoreOptions<T>).clientTransport
-  ) {
-    throw new Error(
-      `transport and clientTransport cannot be used together, please use one of them.`
-    );
-  }
   const storeTransport = (options as StoreOptions<T>).transport;
   const share =
     workerType === 'WebWorkerInternal' ||

@@ -49,3 +49,18 @@ systems such as Redux, Zustand, Jotai, Pinia, MobX, or Valtio.
 Binder-backed stores are not compatible with Coaction slices mode. If an
 external integration should live under a slice key, wrap the entire external
 store instead of mixing it into a slices object.
+
+## API Evolution Boundary
+
+`create()` should be treated as a closed polymorphic surface, not an open-ended
+bucket for new semantics.
+
+What that means in practice:
+
+- do not mix main-store and client-store transport settings in one call
+- do not pass multiple client transport sources in one call
+- prefer explicit helpers or `createXxx` variants for future expansion instead
+  of new ambiguous overloads
+
+The compatibility-only `workerType` options remain available, but they are not
+the preferred path for new API design.
