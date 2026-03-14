@@ -42,7 +42,19 @@ const warnAmbiguousFunctionMap = () => {
 };
 
 /**
- * Create a simple store or a shared store. The shared store can be used in a worker or another thread.
+ * Create a local store, the main side of a shared store, or a client mirror of
+ * a shared store.
+ *
+ * @remarks
+ * - Pass a {@link Slice} function for a single store.
+ * - Pass an object of slice factories for a slices store.
+ * - When an object input only contains functions, prefer explicit `sliceMode`
+ *   to avoid ambiguous inference.
+ * - When `clientTransport` or `worker` is provided, returned store methods
+ *   become promise-returning methods because execution happens on the main
+ *   shared store.
+ *
+ * @see {@link Creator}
  */
 export const create: Creator = <T extends CreateState>(
   createState: Slice<T> | T,

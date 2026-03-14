@@ -26,6 +26,7 @@
 - [Coaction vs Zustand](#coaction-vs-zustand)
 - [Installation](#installation)
 - [Usage](#usage)
+- [API Reference](#api-reference)
 - [Integration](#integration)
 - [Middlewares](#middlewares)
 - [FAQs](#faqs)
@@ -265,6 +266,13 @@ Methods that rely on `this` stay bound when you destructure them from
 const { increment } = useStore.getState().counter;
 increment();
 ```
+
+## API Reference
+
+- [Core API index](./docs/api/core/index.md)
+- [Core API notes](./docs/api/core/documents/core-api-notes.md)
+
+Regenerate the reference from source with `pnpm docs:api`.
 
 ### Store Shape Mode (`sliceMode`)
 
