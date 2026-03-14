@@ -50,6 +50,8 @@ layers:
   semantics.
 - Then read [threading-model.md](./threading-model.md) for local/main/client
   authority rules.
+- Read [support-matrix.md](./support-matrix.md) for the officially maintained
+  feature-combination boundaries.
 - Read [adapter-contract.md](./adapter-contract.md) before adding or changing an
   official adapter.
 
