@@ -168,3 +168,27 @@ test('setState fast path ignores unsafe keys', () => {
     delete objectPrototype[pollutedKey];
   }
 });
+
+test('setState treats null as a no-op in fast path', () => {
+  const listener = vi.fn();
+  const { setState, internal } = createContext();
+  internal.listeners.add(listener);
+
+  expect(setState(null)).toEqual([]);
+  expect(internal.rootState).toEqual({
+    count: 0
+  });
+  expect(listener).not.toHaveBeenCalled();
+});
+
+test('setState treats null as a no-op when patches are enabled', () => {
+  const { setState, store, internal } = createContext({
+    enablePatches: true
+  });
+
+  expect(setState(null)).toEqual([]);
+  expect(store.apply).not.toHaveBeenCalled();
+  expect(internal.rootState).toEqual({
+    count: 0
+  });
+});

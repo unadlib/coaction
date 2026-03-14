@@ -103,6 +103,9 @@ export const handleState = <T extends CreateState>(
     if (internal.isBatching) {
       throw new Error('setState cannot be called within the updater');
     }
+    if (next === null) {
+      return [];
+    }
     internal.isBatching = true;
     if (
       !store.share &&
