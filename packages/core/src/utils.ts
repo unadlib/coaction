@@ -5,19 +5,35 @@ const isEqual = (x: unknown, y: unknown) => {
   return x !== x && y !== y;
 };
 
-const isUnsafeKey = (key: string) =>
+export const isUnsafeKey = (key: string) =>
   key === '__proto__' || key === 'prototype' || key === 'constructor';
 
-const assignOwnEnumerable = (
+export const setOwnEnumerable = (
+  target: Record<string, unknown>,
+  key: string,
+  value: unknown
+) => {
+  if (isUnsafeKey(key)) {
+    return;
+  }
+  target[key] = value;
+};
+
+export const assignOwnEnumerable = (
   target: Record<string, unknown>,
   source: Record<string, unknown>
 ) => {
   for (const key of Object.keys(source)) {
-    if (isUnsafeKey(key)) {
-      continue;
-    }
-    target[key] = source[key];
+    setOwnEnumerable(target, key, source[key]);
   }
+};
+
+export const cloneOwnEnumerable = <T extends Record<string, unknown>>(
+  source: T
+) => {
+  const target = {} as T;
+  assignOwnEnumerable(target, source);
+  return target;
 };
 
 export const areShallowEqualWithArray = (

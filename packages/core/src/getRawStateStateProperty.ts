@@ -1,6 +1,7 @@
 import { Computed, createSelectorWithArray } from './computed';
 import type { CreateState, Store } from './interface';
 import type { Internal } from './internal';
+import { setOwnEnumerable } from './utils';
 
 type PrepareStateDescriptorOptions<T extends CreateState> = {
   descriptor: PropertyDescriptor;
@@ -27,7 +28,7 @@ export const prepareStateDescriptor = <T extends CreateState>({
       enumerable: true
     });
   } else if (!isComputed) {
-    rawState[key] = descriptor.value;
+    setOwnEnumerable(rawState, key, descriptor.value);
   }
 
   if (isComputed) {

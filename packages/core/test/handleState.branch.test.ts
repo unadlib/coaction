@@ -142,3 +142,29 @@ test('setState throws for client share store', () => {
     'setState() cannot be called in the client store. To update the state, please trigger a store method with setState() instead.'
   );
 });
+
+test('setState fast path ignores unsafe keys', () => {
+  const pollutedKey = '__coactionSetStatePolluted__';
+  const objectPrototype = Object.prototype as Record<string, unknown>;
+  delete objectPrototype[pollutedKey];
+
+  try {
+    const { setState, internal } = createContext();
+
+    setState(
+      JSON.parse(
+        `{"count":1,"__proto__":{"${pollutedKey}":true},"prototype":{"value":2}}`
+      )
+    );
+
+    expect(internal.rootState).toEqual({
+      count: 1
+    });
+    expect(
+      Object.prototype.hasOwnProperty.call(internal.rootState, '__proto__')
+    ).toBeFalsy();
+    expect(objectPrototype[pollutedKey]).toBeUndefined();
+  } finally {
+    delete objectPrototype[pollutedKey];
+  }
+});

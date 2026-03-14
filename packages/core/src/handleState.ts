@@ -12,7 +12,7 @@ import type {
   StoreOptions
 } from './interface';
 import type { Internal } from './internal';
-import { mergeObject } from './utils';
+import { cloneOwnEnumerable, mergeObject, setOwnEnumerable } from './utils';
 import { emit, handleDraft } from './asyncClientStore';
 import { Computed } from './computed';
 
@@ -125,13 +125,9 @@ export const handleState = <T extends CreateState>(
           throw error;
         }
       } else {
-        const copy = {} as T;
-        const rootState = internal.rootState as T;
-        for (const key of Object.keys(rootState)) {
-          copy[key] = rootState[key];
-        }
+        const copy = cloneOwnEnumerable(internal.rootState as T);
         for (const key of Object.keys(next!)) {
-          copy[key] = next![key];
+          setOwnEnumerable(copy as Record<string, unknown>, key, next![key]);
         }
         internal.rootState = copy;
       }
