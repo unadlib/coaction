@@ -448,7 +448,7 @@ describe('sliceMode', () => {
       expect(useStore.isSliceStore).toBe(true);
       expect(useStore.getState().counter.count).toBe(0);
       expect(warn).toHaveBeenCalledWith(
-        "sliceMode: 'auto' inferred slices from an object of functions. This shape is ambiguous with a single store that only contains methods. Set sliceMode to 'slices' or 'single' explicitly."
+        "sliceMode: 'auto' inferred slices from an object of functions. This shape is ambiguous with a single store that only contains methods. Use create({ ping() {} }, { sliceMode: 'single' }) for a plain method store, or create({ counter: (set) => ({ count: 0 }) }, { sliceMode: 'slices' }) for slices."
       );
     } finally {
       warn.mockRestore();

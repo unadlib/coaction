@@ -248,14 +248,23 @@ const counter = (set, get) => ({
   }
 });
 
-const useStore = create({
-  counter
-});
+const useStore = create(
+  {
+    counter
+  },
+  {
+    sliceMode: 'slices'
+  }
+);
 ```
 
 ### Store Shape Mode (`sliceMode`)
 
 `create()` infers store shape from `createState` by default (`sliceMode: 'auto'`).
+For backward compatibility, `auto` still treats a non-empty object whose
+enumerable values are all functions as slices. That shape is ambiguous with a
+plain store that only contains methods, so development builds warn and you
+should set `sliceMode` explicitly.
 
 - **`'single'`** — Treat an object as a single store, even if all values are functions.
 - **`'slices'`** — Strict slices mode with validation.
