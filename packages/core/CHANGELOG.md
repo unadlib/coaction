@@ -1,5 +1,13 @@
 # coaction
 
+## 1.4.1
+
+### Patch Changes
+
+- Clarified the guidance for ambiguous `sliceMode: 'auto'` object-of-functions inputs with explicit `single` and `slices` examples in warnings and docs.
+- Documented and tested that methods destructured from `store.getState()` keep their `this` binding to the latest store state.
+- Added a generated core API reference for `create()`, store types, middleware contracts, and `createBinder()`.
+
 ## 1.4.0
 
 - Added `executeSyncTimeoutMs` to configure how long async clients wait for sequence catch-up before falling back to `fullSync`.

@@ -1,6 +1,6 @@
 {
   "name": "@coaction/yjs",
-  "version": "1.4.0",
+  "version": "1.4.1",
   "description": "A Coaction integration tool for Yjs",
   "keywords": [
     "state",
@@ -44,7 +44,7 @@
     "url": "https://github.com/unadlib/coaction/issues"
   },
   "peerDependencies": {
-    "coaction": "^1.4.0",
+    "coaction": "^1.4.1",
     "yjs": "^13.6.0"
   },
   "peerDependenciesMeta": {
