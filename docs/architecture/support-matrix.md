@@ -35,15 +35,15 @@ actually enforce.
 Binder-backed adapters are whole-store adapters. They are never supported as a
 slice nested inside a Coaction slices store.
 
-| Adapter             | Local whole store | Shared main/client | Slices mode | Notes                                                |
-| :------------------ | :---------------- | :----------------- | :---------- | :--------------------------------------------------- |
-| `@coaction/zustand` | Supported         | Supported          | Unsupported | Shared contract covers remote method execution.      |
-| `@coaction/mobx`    | Supported         | Supported          | Unsupported | Shared contract covers remote method execution.      |
-| `@coaction/pinia`   | Supported         | Supported          | Unsupported | Shared contract covers remote method execution.      |
-| `@coaction/jotai`   | Supported         | Unsupported        | Unsupported | Official contract is local whole-store binding only. |
-| `@coaction/redux`   | Supported         | Unsupported        | Unsupported | Official contract is local whole-store binding only. |
-| `@coaction/valtio`  | Supported         | Unsupported        | Unsupported | Official contract is local whole-store binding only. |
-| `@coaction/xstate`  | Supported         | Unsupported        | Unsupported | Official contract is local whole-store binding only. |
+| Adapter             | Local whole store | Shared main/client | Slices mode | Notes                                                                                                    |
+| :------------------ | :---------------- | :----------------- | :---------- | :------------------------------------------------------------------------------------------------------- |
+| `@coaction/zustand` | Supported         | Supported          | Unsupported | Shared contract covers remote method execution. Direct client-side Zustand writes are rejected.          |
+| `@coaction/mobx`    | Supported         | Supported          | Unsupported | Shared contract covers remote method execution. Direct client-side MobX writes are integration-defined.  |
+| `@coaction/pinia`   | Supported         | Supported          | Unsupported | Shared contract covers remote method execution. Direct client-side Pinia writes are integration-defined. |
+| `@coaction/jotai`   | Supported         | Unsupported        | Unsupported | Official contract is local whole-store binding only.                                                     |
+| `@coaction/redux`   | Supported         | Unsupported        | Unsupported | Official contract is local whole-store binding only.                                                     |
+| `@coaction/valtio`  | Supported         | Unsupported        | Unsupported | Official contract is local whole-store binding only.                                                     |
+| `@coaction/xstate`  | Supported         | Unsupported        | Unsupported | Official contract is local whole-store binding only.                                                     |
 
 ### Adapter Boundaries
 
@@ -56,6 +56,11 @@ slice nested inside a Coaction slices store.
   binder-backed adapters.
 - Shared external writes to the underlying adapter store are not yet a uniform
   cross-adapter contract.
+- Client-bound external writes are only supported when the adapter explicitly
+  says so.
+  - `@coaction/zustand` rejects them at runtime.
+  - `@coaction/mobx` and `@coaction/pinia` currently leave them
+    integration-defined and should not be treated as authoritative.
 
 ## Middleware and Integration Matrix
 
