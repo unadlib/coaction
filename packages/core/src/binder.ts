@@ -3,53 +3,62 @@ import { bindSymbol } from './constant';
 import { Internal } from './internal';
 
 /**
- * createBinder is a function to create a binder for the 3rd party store.
+ * Build an adapter helper for bridging an external store implementation into
+ * Coaction.
+ *
+ * @remarks
+ * Official bindings use this to integrate stores such as Redux, Jotai, Pinia,
+ * Zustand, MobX, and Valtio. Binder-backed integrations are whole-store
+ * adapters; they are not compatible with Coaction slices mode.
  */
 export function createBinder<F = (...args: any[]) => any>({
   handleState,
   handleStore
 }: {
   /**
-   * handleState is a function to handle the state object.
+   * Normalize a third-party store instance into a raw state object plus the
+   * binding hook used during initialization.
    */
   handleState: <T extends object = object>(
     state: T
   ) => {
     /**
-     * copyState is a copy of the state object.
+     * Copy of the incoming state object that Coaction should consume.
      */
     copyState: T;
     /**
-     * key is the key of the state object.
+     * Optional nested key when the adapter exposes a single child object from
+     * the third-party store.
      */
     key?: keyof T;
     /**
-     * bind is a function to bind the state object.
+     * Convert the external state object into the raw state shape used by
+     * Coaction.
      */
     bind: (state: T) => T;
   };
   /**
-   * handleStore is a function to handle the store object.
+   * Wire Coaction's store lifecycle to the external store implementation.
    */
   handleStore: (
     /**
-     * Coaction store
+     * Coaction store wrapper.
      */
     store: Store<object>,
     /**
-     * The raw state object from 3rd party library.
+     * Raw state object returned from `bind`.
      */
     rawState: object,
     /**
-     * 3rd party library state object to Coaction state object.
+     * Original external store state object.
      */
     state: object,
     /**
-     * internal Coaction API.
+     * Low-level Coaction adapter hooks used by official bindings.
      */
     internal: Internal<object>,
     /**
-     * the key of the slice state object.
+     * Optional nested key returned by `handleState`.
      */
     key?: string
   ) => void;

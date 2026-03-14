@@ -1,7 +1,13 @@
 import type { Store, StoreReturn } from './interface';
 
 /**
- * wrapStore is a function to wrap the store and return function to get the state with store.
+ * Convert a store object into Coaction's callable store shape.
+ *
+ * @remarks
+ * Framework bindings use this to attach selector-aware readers while
+ * preserving the underlying store API on the returned function object. Most
+ * applications should call {@link create} instead of using `wrapStore()`
+ * directly.
  */
 export const wrapStore = <T extends object>(
   store: Store<T>,

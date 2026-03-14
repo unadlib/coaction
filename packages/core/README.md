@@ -42,6 +42,11 @@ const { increment } = store.getState();
 increment();
 ```
 
+## API Reference
+
+- [Generated core API index](../../docs/api/core/index.md)
+- [Core API notes](../../docs/api/core/documents/core-api-notes.md)
+
 ### Store Shape Mode (`sliceMode`)
 
 `create()` uses `sliceMode: 'auto'` by default. For backward compatibility,
