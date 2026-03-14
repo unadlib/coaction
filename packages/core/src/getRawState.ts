@@ -37,16 +37,21 @@ export const getRawState = <T extends CreateState>(
   const rawState = {} as Record<string, any>;
   const handle = (_rawState: any, _initialState: any, sliceKey?: string) => {
     internal.mutableInstance = internal.toMutableRaw?.(_initialState);
-    const safeDescriptors = {} as Record<string, PropertyDescriptor>;
-    Object.entries(Object.getOwnPropertyDescriptors(_initialState)).forEach(
-      ([key, descriptor]) => {
-        if (isUnsafeKey(key)) {
-          return;
-        }
-        safeDescriptors[key] = descriptor;
+    const safeDescriptors: PropertyDescriptorMap = {};
+    const descriptors = Object.getOwnPropertyDescriptors(_initialState);
+    Reflect.ownKeys(descriptors).forEach((key) => {
+      if (typeof key === 'string' && isUnsafeKey(key)) {
+        return;
       }
-    );
-    Object.entries(safeDescriptors).forEach(([key, descriptor]) => {
+      (safeDescriptors as any)[key] = Reflect.get(descriptors, key);
+    });
+    Reflect.ownKeys(safeDescriptors).forEach((key) => {
+      const descriptor = (safeDescriptors as any)[key] as
+        | PropertyDescriptor
+        | undefined;
+      if (typeof descriptor === 'undefined') {
+        return;
+      }
       if (Object.prototype.hasOwnProperty.call(descriptor, 'value')) {
         if (typeof descriptor.value !== 'function') {
           prepareStateDescriptor({
@@ -56,7 +61,12 @@ export const getRawState = <T extends CreateState>(
             rawState: _rawState,
             sliceKey
           });
-        } else if (store.share === 'client') {
+          return;
+        }
+        if (typeof key !== 'string') {
+          return;
+        }
+        if (store.share === 'client') {
           descriptor.value = createClientAction({
             clientExecuteSyncTimeoutMs,
             internal,

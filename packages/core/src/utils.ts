@@ -9,11 +9,11 @@ export const isUnsafeKey = (key: string) =>
   key === '__proto__' || key === 'prototype' || key === 'constructor';
 
 export const setOwnEnumerable = (
-  target: Record<string, unknown>,
-  key: string,
+  target: Record<PropertyKey, unknown>,
+  key: PropertyKey,
   value: unknown
 ) => {
-  if (isUnsafeKey(key)) {
+  if (typeof key === 'string' && isUnsafeKey(key)) {
     return;
   }
   target[key] = value;

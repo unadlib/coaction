@@ -97,6 +97,18 @@ describe('State Management Store Tests', () => {
     }
   });
 
+  test('should preserve symbol keyed state members during initialization', () => {
+    const token = Symbol('coaction-symbol');
+    const useStore = create(() => ({
+      [token]: 1,
+      count: 0
+    }));
+
+    const state = useStore.getState() as Record<PropertyKey, unknown>;
+    expect(state[token]).toBe(1);
+    expect(Object.getOwnPropertySymbols(state)).toContain(token);
+  });
+
   test('should update state using function', () => {
     store.setState((state: any) => ({ counter: state.counter + 5 }));
     const state = store.getState();
