@@ -44,8 +44,8 @@ increment();
 
 ## API Reference
 
-- [Generated core API index](../../docs/api/core/index.md)
-- [Core API notes](../../docs/api/core/documents/core-api-notes.md)
+- [Generated core API index](https://github.com/unadlib/coaction/tree/main/docs/api/core/index.md)
+- [Core API notes](https://github.com/unadlib/coaction/tree/main/docs/api/core/documents/core-api-notes.md)
 
 ### Store Shape Mode (`sliceMode`)
 

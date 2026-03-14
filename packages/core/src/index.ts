@@ -4,15 +4,12 @@ export { wrapStore } from './wrapStore';
 
 export type {
   ClientTransportOptions,
-  CreateState,
   Creator,
-  DeepPartial,
   Getter,
   Store,
   MiddlewareStore,
   StoreOptions,
   ISlices,
-  Listener,
   Slice,
   Slices,
   Middleware,
@@ -21,6 +18,5 @@ export type {
   ClientStoreOptions,
   SliceState,
   Asyncify,
-  StoreReturn,
   StoreWithAsyncFunction as AsyncStore
 } from './interface';

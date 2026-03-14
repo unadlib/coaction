@@ -43,7 +43,7 @@ Control how `createState` should be interpreted.
 
 ### T
 
-`T` _extends_ [`CreateState`](CreateState.md)
+`T` _extends_ `CreateState`
 
 ## Remarks
 
