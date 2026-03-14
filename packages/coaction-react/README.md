@@ -58,6 +58,11 @@ const CounterComponent = () => {
 
 `useStore({ autoSelector: true })` is kept as an alias for `useStore.auto()`.
 
+`autoSelector` is generated from the store shape known during initialization.
+If your application adds new keys at runtime, prefer explicit selectors such as
+`useStore((state) => state.dynamic[key])` for those paths instead of expecting
+the cached selector map to grow dynamically.
+
 ## Documentation
 
 You can find the documentation [here](https://github.com/unadlib/coaction).

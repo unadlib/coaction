@@ -117,6 +117,23 @@ Client stores may not:
 - Run undo/redo on the authority store.
 - Do not expose client-local undo/redo as if it were authoritative.
 
+### Framework Auto-Selector Boundaries
+
+Framework packages that expose `autoSelector` or equivalent generated selector
+maps currently build those maps from the state descriptors available during
+initialization.
+
+Implications:
+
+- known keys get stable generated selectors
+- dynamically added keys are not promoted into the generated selector map later
+- dynamic paths should use explicit selectors instead of relying on
+  `autoSelector`
+
+For React specifically, `autoSelector` returns a cached selector map rather than
+implicitly reading values. Call `useStore(selectorMap.someKey)` to subscribe to
+that field.
+
 ### Yjs Data Model Constraints
 
 `@coaction/yjs` synchronizes the store's pure data, not Coaction runtime
