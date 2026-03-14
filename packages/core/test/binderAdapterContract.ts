@@ -5,6 +5,7 @@ import {
 } from 'data-transport';
 import { describe, expect, test, vi } from 'vitest';
 import { create } from '../src';
+import type { ClientTransport } from '../src/interface';
 
 type Awaitable<T> = T | Promise<T>;
 
@@ -14,9 +15,13 @@ const waitForNextTick = async () => {
 };
 
 const waitForConnect = async (
-  clientTransport: ReturnType<typeof createTransport>
+  clientTransport: NonNullable<ClientTransport>
 ) => {
   await new Promise<void>((resolve) => {
+    if (!clientTransport.onConnect) {
+      setTimeout(resolve);
+      return;
+    }
     clientTransport.onConnect(() => {
       setTimeout(resolve);
     });
