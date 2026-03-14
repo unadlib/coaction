@@ -1,23 +1,15 @@
-import {
-  create as createWithMutative,
-  type Draft,
-  isDraft,
-  type Patches
-} from 'mutative';
-import { Computed, createSelectorWithArray } from './computed';
 import type {
   ClientStoreOptions,
   CreateState,
   MiddlewareStore,
-  Store,
   StoreOptions
 } from './interface';
 import type { Internal } from './internal';
-import { handleDraft } from './asyncClientStore';
-import { uuid } from './utils';
+import { createClientAction } from './getRawStateClientAction';
+import { createLocalAction } from './getRawStateLocalAction';
+import { prepareStateDescriptor } from './getRawStateStateProperty';
 
 const defaultClientExecuteSyncTimeoutMs = 1500;
-const transportErrorMarker = '__coactionTransportError__';
 
 const getClientExecuteSyncTimeoutMs = (
   options: StoreOptions<any> | ClientStoreOptions<any>
@@ -34,32 +26,6 @@ const getClientExecuteSyncTimeoutMs = (
   return timeout;
 };
 
-const isTransportErrorEnvelope = (
-  value: unknown
-): value is Record<string, unknown> & { message: string } => {
-  if (typeof value !== 'object' || value === null) {
-    return false;
-  }
-  return (
-    (value as Record<string, unknown>)[transportErrorMarker] === true &&
-    typeof (value as Record<string, unknown>).message === 'string'
-  );
-};
-
-const isLegacyTransportErrorEnvelope = (
-  value: unknown
-): value is { $$Error: string } => {
-  if (typeof value !== 'object' || value === null) {
-    return false;
-  }
-  const candidate = value as Record<string, unknown>;
-  return (
-    typeof candidate.$$Error === 'string' &&
-    candidate.$$Error.length > 0 &&
-    Object.keys(candidate).length === 1
-  );
-};
-
 export const getRawState = <T extends CreateState>(
   store: MiddlewareStore<T>,
   internal: Internal<T>,
@@ -74,274 +40,30 @@ export const getRawState = <T extends CreateState>(
     Object.entries(descriptors).forEach(([key, descriptor]) => {
       if (Object.prototype.hasOwnProperty.call(descriptor, 'value')) {
         if (typeof descriptor.value !== 'function') {
-          const isComputed = descriptor.value instanceof Computed;
-          if (internal.mutableInstance) {
-            Object.defineProperty(_rawState, key, {
-              get: () => internal.mutableInstance[key],
-              set: (value) => {
-                internal.mutableInstance[key] = value;
-              },
-              enumerable: true
-            });
-          } else if (!isComputed) {
-            _rawState[key] = descriptor.value;
-          }
-          if (isComputed) {
-            if (internal.mutableInstance) {
-              throw new Error(
-                'Computed is not supported with mutable instance'
-              );
-            }
-            // manually handle computed property
-            const { deps, fn } = descriptor.value as Computed;
-            const depsCallbackSelector = createSelectorWithArray(
-              // the root state should be updated, and the computed property will be updated.
-              () => [internal.rootState],
-              () => {
-                return deps(internal.module as Store<T>['getState']);
-              }
-            );
-            const selector = createSelectorWithArray(
-              (that) => depsCallbackSelector.call(that),
-              fn
-            );
-            descriptor.get = function () {
-              return selector.call(this);
-            };
-          } else {
-            if (sliceKey) {
-              descriptor.get = () => (internal.rootState as any)[sliceKey][key];
-              descriptor.set = (value: unknown) => {
-                (internal.rootState as any)[sliceKey][key] = value;
-              };
-            } else {
-              descriptor.get = () => (internal.rootState as any)[key];
-              descriptor.set = (value: unknown) => {
-                (internal.rootState as any)[key] = value;
-              };
-            }
-          }
-          // handle state property
-          delete descriptor.value;
-          delete descriptor.writable;
+          prepareStateDescriptor({
+            descriptor,
+            internal,
+            key,
+            rawState: _rawState,
+            sliceKey
+          });
         } else if (store.share === 'client') {
-          descriptor.value = (...args: unknown[]) => {
-            let actionId: string | undefined;
-            let done: ((result: any) => void) | undefined;
-            if (store.trace) {
-              actionId = uuid();
-              store.trace!({
-                method: key,
-                parameters: args,
-                id: actionId,
-                sliceKey
-              });
-              done = (result: any) => {
-                store.trace!({
-                  method: key,
-                  id: actionId!,
-                  result,
-                  sliceKey
-                });
-              };
-            }
-            const keys = sliceKey ? [sliceKey, key] : [key];
-            // emit the action to worker or main thread execute
-            return store
-              .transport!.emit('execute', keys, args)
-              .then(async (response: unknown) => {
-                const result = Array.isArray(response) ? response[0] : response;
-                const sequence = Array.isArray(response)
-                  ? typeof response[1] === 'number'
-                    ? response[1]
-                    : internal.sequence
-                  : internal.sequence;
-                if (internal.sequence < sequence) {
-                  if (process.env.NODE_ENV === 'development') {
-                    console.warn(
-                      `The sequence of the action is not consistent.`,
-                      sequence,
-                      internal.sequence
-                    );
-                  }
-                  await new Promise<void>((resolve, reject) => {
-                    let settled = false;
-                    let unsubscribe = () => {};
-                    const timeoutRef: {
-                      current?: ReturnType<typeof setTimeout>;
-                    } = {};
-                    const cleanup = () => {
-                      unsubscribe();
-                      if (typeof timeoutRef.current !== 'undefined') {
-                        clearTimeout(timeoutRef.current);
-                      }
-                    };
-                    const finishResolve = () => {
-                      if (settled) return;
-                      settled = true;
-                      cleanup();
-                      resolve();
-                    };
-                    const finishReject = (error: unknown) => {
-                      if (settled) return;
-                      settled = true;
-                      cleanup();
-                      reject(error);
-                    };
-                    unsubscribe = store.subscribe(() => {
-                      if (internal.sequence >= sequence) {
-                        finishResolve();
-                      }
-                    });
-                    timeoutRef.current = setTimeout(() => {
-                      void store
-                        .transport!.emit('fullSync')
-                        .then((latest) => {
-                          const next = latest as {
-                            state: string;
-                            sequence: number;
-                          };
-                          if (
-                            typeof next.state !== 'string' ||
-                            typeof next.sequence !== 'number'
-                          ) {
-                            throw new Error('Invalid fullSync payload');
-                          }
-                          store.apply(JSON.parse(next.state));
-                          internal.sequence = next.sequence;
-                          if (internal.sequence >= sequence) {
-                            finishResolve();
-                            return;
-                          }
-                          finishReject(
-                            new Error(
-                              `Stale fullSync sequence: expected >= ${sequence}, got ${internal.sequence}`
-                            )
-                          );
-                        })
-                        .catch((error) => {
-                          finishReject(error);
-                        });
-                    }, clientExecuteSyncTimeoutMs);
-                  });
-                }
-                if (isTransportErrorEnvelope(result)) {
-                  done?.(result);
-                  throw new Error(result.message);
-                }
-                if (isLegacyTransportErrorEnvelope(result)) {
-                  done?.(result);
-                  throw new Error(result.$$Error);
-                }
-                done?.(result);
-                return result;
-              });
-          };
+          descriptor.value = createClientAction({
+            clientExecuteSyncTimeoutMs,
+            internal,
+            key,
+            store,
+            sliceKey
+          });
         } else {
-          const fn = descriptor.value;
-          descriptor.value = (...args: unknown[]) => {
-            let actionId: string | undefined;
-            let done: ((result: any) => void) | undefined;
-            if (store.trace) {
-              actionId = uuid();
-              store.trace({
-                method: key,
-                parameters: args,
-                id: actionId,
-                sliceKey
-              });
-              done = (result: any) => {
-                store.trace!({
-                  method: key,
-                  id: actionId!,
-                  result,
-                  sliceKey
-                });
-              };
-            }
-            const enablePatches =
-              store.transport ?? (options as StoreOptions<T>).enablePatches;
-            if (
-              internal.mutableInstance &&
-              !internal.isBatching &&
-              enablePatches
-            ) {
-              let result: any;
-              const handleResult = (isDrafted?: boolean) => {
-                handleDraft(store, internal);
-                if (isDrafted) {
-                  internal.backupState = internal.rootState;
-                  const [draft, finalize] = createWithMutative(
-                    internal.rootState,
-                    {
-                      enablePatches: true
-                    }
-                  );
-                  internal.finalizeDraft = finalize as () => [
-                    T,
-                    Patches,
-                    Patches
-                  ];
-                  internal.rootState = draft as Draft<T>;
-                }
-              };
-              const isDrafted = isDraft(internal.rootState);
-              if (isDrafted) {
-                handleResult();
-              }
-              internal.backupState = internal.rootState;
-              const [draft, finalize] = createWithMutative(internal.rootState, {
-                enablePatches: true
-              });
-              internal.finalizeDraft = finalize as () => [T, Patches, Patches];
-              internal.rootState = draft as Draft<T>;
-              let asyncResult: Promise<unknown> | undefined;
-              try {
-                result = fn.apply(
-                  sliceKey ? store.getState()[sliceKey] : store.getState(),
-                  args
-                );
-                if (result instanceof Promise) {
-                  asyncResult = result;
-                }
-              } finally {
-                if (asyncResult) {
-                  // if (process.env.NODE_ENV === 'development') {
-                  //   console.warn(
-                  //     'It will be combined with the next state in the async function.'
-                  //   );
-                  // }
-                } else {
-                  handleResult(isDrafted);
-                }
-              }
-              if (asyncResult) {
-                return asyncResult.finally(() => {
-                  const result = handleResult(isDrafted);
-                  done?.(result);
-                  return result;
-                });
-              }
-              done?.(result);
-              return result;
-            }
-            if (internal.mutableInstance && internal.actMutable) {
-              const result = internal.actMutable(() => {
-                return fn.apply(
-                  sliceKey ? store.getState()[sliceKey] : store.getState(),
-                  args
-                );
-              });
-              done?.(result);
-              return result;
-            }
-            const result = fn.apply(
-              sliceKey ? store.getState()[sliceKey] : store.getState(),
-              args
-            );
-            done?.(result);
-            return result;
-          };
+          descriptor.value = createLocalAction({
+            fn: descriptor.value,
+            internal,
+            key,
+            options,
+            store,
+            sliceKey
+          });
         }
       }
     });
