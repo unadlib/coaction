@@ -216,7 +216,7 @@ Mutate the current state.
 
 The next partial state, or an updater that mutates a draft.
 
-[`DeepPartial`](../type-aliases/DeepPartial.md)\<`T`\> | (`draft`) => `any` | `null`
+`DeepPartial`\<`T`\> | (`draft`) => `any` | `null`
 
 ##### updater?
 
@@ -267,7 +267,7 @@ Subscribe to state changes.
 
 ##### listener
 
-[`Listener`](../type-aliases/Listener.md)
+`Listener`
 
 #### Returns
 

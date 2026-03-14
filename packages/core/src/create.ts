@@ -53,8 +53,6 @@ const warnAmbiguousFunctionMap = () => {
  * - When `clientTransport` or `worker` is provided, returned store methods
  *   become promise-returning methods because execution happens on the main
  *   shared store.
- *
- * @see {@link Creator}
  */
 export const create: Creator = <T extends CreateState>(
   createState: Slice<T> | T,

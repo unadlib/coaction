@@ -16,7 +16,7 @@ Store enhancer invoked during store creation.
 
 ### T
 
-`T` _extends_ [`CreateState`](CreateState.md)
+`T` _extends_ `CreateState`
 
 ## Parameters
 

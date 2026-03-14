@@ -16,7 +16,7 @@ Options for creating a local store or the main side of a shared store.
 
 ### T
 
-`T` _extends_ [`CreateState`](CreateState.md)
+`T` _extends_ `CreateState`
 
 ## Properties
 

@@ -26,7 +26,7 @@ Factory for a single store object.
 
 ### get
 
-[`Getter`](../interfaces/Getter.md)\<`T`\>
+`Getter`\<`T`\>
 
 ### store
 
