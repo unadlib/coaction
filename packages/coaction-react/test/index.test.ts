@@ -57,13 +57,16 @@ test('supports autoSelector', () => {
   }));
 
   const Counter = () => {
-    const state = useStore({ autoSelector: true });
+    const selectors = useStore.auto();
+    const count = useStore(selectors.count);
+    const double = useStore(selectors.double);
+    const increment = useStore(selectors.increment);
     return React.createElement(
       'div',
       null,
-      React.createElement('span', { 'data-testid': 'count' }, state.count),
-      React.createElement('span', { 'data-testid': 'double' }, state.double),
-      React.createElement('button', { onClick: state.increment }, 'inc')
+      React.createElement('span', { 'data-testid': 'count' }, count),
+      React.createElement('span', { 'data-testid': 'double' }, double),
+      React.createElement('button', { onClick: increment }, 'inc')
     );
   };
 
@@ -96,21 +99,16 @@ test('supports slices autoSelector', () => {
   );
 
   const Counter = () => {
-    const state = useStore({ autoSelector: true });
+    const selectors = useStore.auto();
+    const count = useStore(selectors.counter.count);
+    const double = useStore(selectors.counter.double);
+    const increment = useStore(selectors.counter.increment);
     return React.createElement(
       'div',
       null,
-      React.createElement(
-        'span',
-        { 'data-testid': 'count' },
-        state.counter.count
-      ),
-      React.createElement(
-        'span',
-        { 'data-testid': 'double' },
-        state.counter.double
-      ),
-      React.createElement('button', { onClick: state.counter.increment }, 'inc')
+      React.createElement('span', { 'data-testid': 'count' }, count),
+      React.createElement('span', { 'data-testid': 'double' }, double),
+      React.createElement('button', { onClick: increment }, 'inc')
     );
   };
 
