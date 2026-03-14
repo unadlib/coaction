@@ -72,7 +72,7 @@ export interface Store<T extends ISlices = ISlices> {
    *
    * @remarks
    * Pass a deep-partial object to merge fields, or pass an updater to edit a
-   * Mutative draft. Client-side shared stores intentionally reject direct
+   * Mutative draft. Passing `null` is a no-op. Client-side shared stores intentionally reject direct
    * `setState()` calls; trigger a store method instead.
    */
   setState: (
