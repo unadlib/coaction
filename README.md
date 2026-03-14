@@ -9,7 +9,6 @@
 [![CI](https://github.com/unadlib/coaction/workflows/Node%20CI/badge.svg)](https://github.com/unadlib/coaction/actions)
 [![Coverage](https://coveralls.io/repos/github/unadlib/coaction/badge.svg?branch=main)](https://coveralls.io/github/unadlib/coaction?branch=main)
 [![npm](https://img.shields.io/npm/v/coaction.svg)](https://www.npmjs.com/package/coaction)
-[![Bundle Size](https://img.shields.io/bundlephobia/minzip/coaction)](https://bundlephobia.com/package/coaction)
 [![License](https://img.shields.io/npm/l/coaction)](./LICENSE)
 
 [Getting Started](#installation) · [Usage](#usage) · [API Reference](#api-reference) · [Examples](#examples) · [FAQ](#faqs)
