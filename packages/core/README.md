@@ -25,6 +25,23 @@ const useStore = create((set) => ({
 }));
 ```
 
+Store methods using `this` are rebound to the latest state when invoked from
+`getState()`, so destructuring remains safe:
+
+```ts
+const store = create((set) => ({
+  count: 0,
+  increment() {
+    set(() => {
+      this.count += 1;
+    });
+  }
+}));
+
+const { increment } = store.getState();
+increment();
+```
+
 ### Store Shape Mode (`sliceMode`)
 
 `create()` uses `sliceMode: 'auto'` by default. For backward compatibility,

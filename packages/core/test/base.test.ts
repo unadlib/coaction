@@ -218,6 +218,28 @@ test('base', () => {
 `);
 });
 
+test('methods destructured from getState preserve this binding', () => {
+  const useStore = create<{
+    count: number;
+    increment: () => number;
+  }>((set) => ({
+    count: 0,
+    increment() {
+      set(() => {
+        this.count += 1;
+      });
+      return this.count;
+    }
+  }));
+
+  const { increment } = useStore.getState();
+
+  expect(increment()).toBe(1);
+  expect(useStore.getState().count).toBe(1);
+  expect(increment()).toBe(2);
+  expect(useStore.getState().count).toBe(2);
+});
+
 test('base - error handling', () => {
   const useStore = create<{
     count: number;
