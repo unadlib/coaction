@@ -75,7 +75,12 @@ const handleStore = (
     store._subscriptions = new Set<SubscriptionCallback>();
     store._destroyers = new Set<() => void>();
     const baseDestroy = store.destroy;
+    let destroyed = false;
     store.destroy = () => {
+      if (destroyed) {
+        return;
+      }
+      destroyed = true;
       baseDestroy();
       store._subscriptions!.clear();
       store._subscriptions = undefined;

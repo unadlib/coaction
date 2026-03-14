@@ -78,6 +78,7 @@ export const bindRedux = <S extends object, A extends AnyAction = AnyAction>(
         isReduxUpdating = true;
         try {
           coactionStore.setState(reduxStore.getState() as any);
+          internal.listeners.forEach((listener) => listener());
         } finally {
           isReduxUpdating = false;
         }

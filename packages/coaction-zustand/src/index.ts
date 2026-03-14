@@ -5,19 +5,33 @@ type BindZustand = <T>(
   initializer: StateCreator<T, [], []>
 ) => StateCreator<T, [], []>;
 
+type StoreWithDestroyers = Store<object> & {
+  _destroyers?: Set<() => void>;
+};
+
 /**
  * Bind a store to Zustand
  */
 export const bindZustand = ((initializer: StateCreator<any, [], []>) =>
   (set, get, zustandStore) => {
-    let coactionStore: Store<object>;
+    let coactionStore: StoreWithDestroyers;
     const internalBindZustand = createBinder<BindZustand>({
       handleStore: (store, rawState, state, internal) => {
-        coactionStore = store;
+        coactionStore = store as StoreWithDestroyers;
+        if (!coactionStore._destroyers) {
+          coactionStore._destroyers = new Set();
+          const baseDestroy = coactionStore.destroy;
+          coactionStore.destroy = () => {
+            coactionStore._destroyers?.forEach((destroy) => destroy());
+            coactionStore._destroyers?.clear();
+            coactionStore._destroyers = undefined;
+            baseDestroy();
+          };
+        }
         if (zustandStore.getState() === internal.rootState) return;
         let isCoactionUpdated = false;
         internal.rootState = zustandStore.getState() as object;
-        zustandStore.subscribe(() => {
+        const unsubscribe = zustandStore.subscribe(() => {
           if (!isCoactionUpdated) {
             internal.rootState = zustandStore.getState() as object;
             if (coactionStore.share === 'client') {
@@ -28,6 +42,9 @@ export const bindZustand = ((initializer: StateCreator<any, [], []>) =>
             }
           }
           internal.listeners.forEach((listener) => listener());
+        });
+        coactionStore._destroyers.add(() => {
+          unsubscribe();
         });
         internal.updateImmutable = (state: any) => {
           isCoactionUpdated = true;
