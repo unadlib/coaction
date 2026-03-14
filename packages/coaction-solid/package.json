@@ -1,6 +1,6 @@
 {
   "name": "@coaction/solid",
-  "version": "1.3.0",
+  "version": "1.4.0",
   "description": "A Coaction integration tool for Solid",
   "keywords": [
     "state",
@@ -44,7 +44,7 @@
     "url": "https://github.com/unadlib/coaction/issues"
   },
   "peerDependencies": {
-    "coaction": "^1.3.0",
+    "coaction": "^1.4.0",
     "solid-js": "^1.8.0"
   },
   "peerDependenciesMeta": {
