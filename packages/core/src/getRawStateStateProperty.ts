@@ -6,8 +6,8 @@ import { setOwnEnumerable } from './utils';
 type PrepareStateDescriptorOptions<T extends CreateState> = {
   descriptor: PropertyDescriptor;
   internal: Internal<T>;
-  key: string;
-  rawState: Record<string, any>;
+  key: PropertyKey;
+  rawState: Record<PropertyKey, any>;
   sliceKey?: string;
 };
 
