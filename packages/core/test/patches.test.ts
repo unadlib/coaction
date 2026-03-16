@@ -70,6 +70,7 @@ test('base', () => {
   useStore.subscribe(fn);
   expect(spy).toHaveBeenCalledTimes(0);
   useStore.getState().increment();
+  expect(fn).toHaveBeenCalledTimes(1);
   expect(spy).toHaveBeenCalledTimes(1);
   expect(spy).toHaveBeenLastCalledWith({ count: 0 }, [
     { op: 'replace', path: ['count'], value: 1 }
@@ -110,8 +111,9 @@ test('base', () => {
   "double": 2,
   "increment": [Function],
 }
-`);
+  `);
   increment();
+  expect(fn).toHaveBeenCalledTimes(2);
   expect(spy).toHaveBeenCalledTimes(2);
   expect(spy).toHaveBeenLastCalledWith({ count: 1 }, [
     { op: 'replace', path: ['count'], value: 2 }
@@ -276,6 +278,7 @@ describe('Slices', () => {
     const fn = jest.fn();
     useStore.subscribe(fn);
     useStore.getState().counter.increment();
+    expect(fn).toHaveBeenCalledTimes(1);
     expect(useStore.getState()).toMatchInlineSnapshot(`
 {
   "counter": {
@@ -286,6 +289,7 @@ describe('Slices', () => {
 }
 `);
     increment();
+    expect(fn).toHaveBeenCalledTimes(2);
     expect(useStore.getState()).toMatchInlineSnapshot(`
 {
   "counter": {
