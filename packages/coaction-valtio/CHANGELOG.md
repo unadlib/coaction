@@ -1,5 +1,13 @@
 # @coaction/valtio
 
+## 1.5.0
+
+### Minor Changes
+
+- Released adapter-installed Valtio subscriptions on `store.destroy()` and
+  added official binder-adapter contract coverage for local whole-store usage.
+- Aligned the peer dependency with `coaction@^1.5.0`.
+
 ## 1.4.1
 
 ### Patch Changes

@@ -1,5 +1,14 @@
 # @coaction/zustand
 
+## 1.5.0
+
+### Minor Changes
+
+- Released adapter-installed Zustand subscriptions on `store.destroy()` and
+  added official binder-adapter contract coverage for local and shared
+  whole-store usage.
+- Aligned the peer dependency with `coaction@^1.5.0`.
+
 ## 1.4.1
 
 ### Patch Changes

@@ -1,5 +1,13 @@
 # @coaction/yjs
 
+## 1.5.0
+
+### Minor Changes
+
+- Refactored the Yjs binding internals into focused sync, value-conversion, and
+  remote-operation modules without changing the public API.
+- Aligned the peer dependency with `coaction@^1.5.0`.
+
 ## 1.4.1
 
 ### Patch Changes
