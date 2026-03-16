@@ -1,5 +1,11 @@
 # @coaction/persist
 
+## 1.5.0
+
+### Minor Changes
+
+- Aligned the peer dependency with `coaction@^1.5.0`.
+
 ## 1.4.1
 
 ### Patch Changes

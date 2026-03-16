@@ -1,6 +1,6 @@
 {
   "name": "@coaction/valtio",
-  "version": "1.4.1",
+  "version": "1.5.0",
   "description": "A Coaction integration tool for Valtio",
   "keywords": [
     "state",
@@ -44,7 +44,7 @@
     "url": "https://github.com/unadlib/coaction/issues"
   },
   "peerDependencies": {
-    "coaction": "^1.4.1",
+    "coaction": "^1.5.0",
     "mutative": "^1.1.0",
     "valtio": "^2.0.0"
   },

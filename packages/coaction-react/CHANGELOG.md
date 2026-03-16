@@ -1,5 +1,18 @@
 # @coaction/react
 
+## 1.5.0
+
+### Minor Changes
+
+- Reworked `autoSelector` to return cached selector maps through
+  `useStore.auto()` and `useStore({ autoSelector: true })` instead of hiding
+  hook calls inside property getters.
+- Stopped auto-selector expansion on recursive object graphs and documented that
+  dynamically added keys should use explicit selectors.
+- Fixed full-state React subscriptions for mutable adapters so MobX, Pinia, and
+  Valtio-backed stores rerender correctly for full-state readers and selectors.
+- Aligned the peer dependency with `coaction@^1.5.0`.
+
 ## 1.4.1
 
 ### Patch Changes

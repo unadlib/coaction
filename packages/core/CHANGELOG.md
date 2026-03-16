@@ -1,5 +1,18 @@
 # coaction
 
+## 1.5.0
+
+### Minor Changes
+
+- Hardened state update semantics by filtering unsafe keys during initialization
+  and fast-path updates, preserving symbol-keyed state descriptors, treating
+  `setState(null)` as a no-op, removing duplicate patch notifications, and
+  preserving slice sibling state in the local object fast path.
+- Tightened shared-client synchronization by rejecting stale `fullSync`
+  fallbacks before they can roll back mirrored state.
+- Tightened `create()` mode validation and documented the maintained runtime,
+  adapter, and middleware support boundaries for the 1.5 line.
+
 ## 1.4.1
 
 ### Patch Changes
