@@ -80,13 +80,6 @@ export const handleState = <T extends CreateState>(
         : { patches, inversePatches };
       if (finalPatches.patches.length) {
         store.apply(internal.rootState as T, finalPatches.patches);
-        if (!internal.mutableInstance) {
-          if (internal.updateImmutable) {
-            internal.updateImmutable(internal.rootState as T);
-          } else {
-            internal.listeners.forEach((listener) => listener());
-          }
-        }
       }
       return [
         internal.rootState as any,
