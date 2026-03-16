@@ -557,6 +557,54 @@ describe('Slices', () => {
 }
 `);
   });
+  test('object-form slice updates preserve sibling state in fast path', () => {
+    const useStore = create(
+      {
+        counter: ((set) => ({
+          count: 0,
+          other: 1,
+          update() {
+            set({
+              counter: {
+                count: this.count + 1
+              }
+            });
+          }
+        })) satisfies Slices<
+          {
+            counter: {
+              count: number;
+              other: number;
+              update: () => void;
+            };
+          },
+          'counter'
+        >
+      },
+      {
+        sliceMode: 'slices'
+      }
+    );
+
+    const previousPureState = useStore.getPureState();
+
+    useStore.getState().counter.update();
+
+    expect(previousPureState).toEqual({
+      counter: {
+        count: 0,
+        other: 1
+      }
+    });
+    expect(useStore.getPureState()).toEqual({
+      counter: {
+        count: 1,
+        other: 1
+      }
+    });
+    expect(useStore.getPureState().counter).not.toBe(previousPureState.counter);
+    expect(useStore.getState().counter.other).toBe(1);
+  });
   test('worker', async () => {
     const ports = mockPorts();
     const serverTransport = createTransport('WebWorkerInternal', ports.main);

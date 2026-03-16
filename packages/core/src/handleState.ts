@@ -122,8 +122,27 @@ export const handleState = <T extends CreateState>(
         }
       } else {
         const copy = cloneOwnEnumerable(internal.rootState as T);
-        for (const key of Object.keys(next!)) {
-          setOwnEnumerable(copy as Record<string, unknown>, key, next![key]);
+        if (store.isSliceStore) {
+          for (const key of Object.keys(next!)) {
+            if (!Object.prototype.hasOwnProperty.call(copy, key)) {
+              continue;
+            }
+            const sourceValue = next![key];
+            if (typeof sourceValue !== 'object' || sourceValue === null) {
+              continue;
+            }
+            const targetValue = copy[key];
+            if (typeof targetValue !== 'object' || targetValue === null) {
+              continue;
+            }
+            const sliceCopy = cloneOwnEnumerable(
+              targetValue as Record<string, unknown>
+            );
+            mergeObject(sliceCopy, sourceValue);
+            setOwnEnumerable(copy as Record<string, unknown>, key, sliceCopy);
+          }
+        } else {
+          mergeObject(copy, next);
         }
         internal.rootState = copy;
       }
