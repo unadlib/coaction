@@ -221,7 +221,7 @@ sequenceDiagram
 
 Benchmark measuring ops/sec to update 50K arrays and 1K objects — higher is better ([source](./scripts/benchmark.ts)).
 
-> Coaction v0.1.5 vs Zustand v5.0.2
+> Benchmark snapshot from the current `scripts/benchmark.ts` comparison
 
 <div align="center">
 <img src="benchmark.jpg" alt="Benchmark" width="600" />
