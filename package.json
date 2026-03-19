@@ -109,7 +109,7 @@
     "typedoc": "^0.28.17",
     "typedoc-plugin-markdown": "^4.10.0",
     "typescript": "^5.9.3",
-    "typescript-eslint": "^8.57.0",
+    "typescript-eslint": "^8.57.1",
     "vitest": "^4.1.0",
     "vue": "^3.5.30",
     "webpack-dev-middleware": "^7.4.5",
