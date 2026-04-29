@@ -4,15 +4,17 @@ This document covers official adapter expectations.
 
 Coaction currently has two adapter families:
 
-- binder-backed state adapters built with `createBinder()`
+- binder-backed state adapters built with `defineExternalStoreAdapter()` or its
+  compatibility alias `createBinder()`
 - non-binder integrations such as Yjs or framework wrappers
 
 The most rigid contract applies to binder-backed state adapters.
 
 ## Binder Adapter Scope
 
-`createBinder()` exists to bridge an external whole-store implementation into
-Coaction.
+`defineExternalStoreAdapter()` exists to bridge an external whole-store
+implementation into Coaction. Existing integrations may still call
+`createBinder()`, which is kept as a compatibility alias.
 
 Examples:
 
@@ -49,9 +51,9 @@ An official binder-backed adapter must satisfy all of the following:
   - the adapter returns a whole-store shape compatible with Coaction's runtime
     and public TypeScript surface
 
-## `createBinder()` Responsibilities
+## Adapter Responsibilities
 
-`createBinder()` splits adapter work into two hooks.
+`defineExternalStoreAdapter()` splits adapter work into two hooks.
 
 ### `handleState`
 

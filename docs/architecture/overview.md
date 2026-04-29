@@ -22,7 +22,8 @@ layers:
 - `packages/coaction-*` framework bindings
   - Wrap a core store for framework-specific reactivity and lifecycle behavior
 - `packages/coaction-*` state adapters
-  - Bridge an external state system into Coaction through `createBinder()`
+  - Bridge an external state system into Coaction through
+    `defineExternalStoreAdapter()` or the compatibility alias `createBinder()`
 - `packages/coaction-*` middlewares
   - Extend a core store by decorating `setState()`, `apply()`, `destroy()`, or
     by attaching extra store APIs
@@ -41,8 +42,9 @@ layers:
   - A store created from an object of slice factories rather than a single
     state factory.
 - Binder-backed adapter
-  - An external store integration built through `createBinder()`. These are
-    whole-store adapters, not slice-level adapters.
+  - An external store integration built through `defineExternalStoreAdapter()`
+    or `createBinder()`. These are whole-store adapters, not slice-level
+    adapters.
 
 ## Reading Order
 

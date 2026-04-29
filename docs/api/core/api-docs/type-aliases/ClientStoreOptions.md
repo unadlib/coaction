@@ -8,7 +8,7 @@
 
 > **ClientStoreOptions**\<`T`\> = `object` & `ClientTransportOptions`
 
-Defined in: [src/interface.ts:322](https://github.com/unadlib/coaction/blob/main/packages/core/src/interface.ts#L322)
+Defined in: [packages/core/src/interface.ts:322](https://github.com/unadlib/coaction/blob/main/packages/core/src/interface.ts#L322)
 
 Options for creating a client mirror of a shared store.
 

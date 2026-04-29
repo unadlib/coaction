@@ -8,7 +8,7 @@ Before writing code, decide which family the new integration belongs to.
 
 - Binder-backed adapter
   - Bridges an external whole-store runtime into Coaction through
-    `createBinder()`
+    `defineExternalStoreAdapter()` or the compatibility alias `createBinder()`
   - Examples: Zustand, MobX, Pinia, Redux, Jotai, Valtio, XState
 - Middleware integration
   - Extends a Coaction-owned store without replacing store ownership
@@ -38,7 +38,7 @@ For binder-backed adapters, the key rule is unchanged:
 
 For a binder-backed adapter:
 
-1. Build the binding through `createBinder()`
+1. Build the binding through `defineExternalStoreAdapter()`
 2. Normalize external state in `handleState`
 3. Wire Coaction lifecycle into the external runtime in `handleStore`
 4. Preserve the store contract when overriding `subscribe()`, `destroy()`, or

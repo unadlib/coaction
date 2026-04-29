@@ -41,10 +41,12 @@ const { increment } = store.getState().counter;
 increment();
 ```
 
-## `createBinder()` Boundaries
+## External Adapter Boundaries
 
-`createBinder()` is intended for whole-store adapters that bridge external state
-systems such as Redux, Zustand, Jotai, Pinia, MobX, or Valtio.
+`defineExternalStoreAdapter()` is intended for whole-store adapters that bridge
+external state systems such as Redux, Zustand, Jotai, Pinia, MobX, or Valtio.
+`createBinder()` remains available as the compatibility name for existing
+adapters.
 
 Binder-backed stores are not compatible with Coaction slices mode. If an
 external integration should live under a slice key, wrap the entire external

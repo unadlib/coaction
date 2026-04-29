@@ -8,7 +8,7 @@
 
 > **AsyncStore**\<`T`, `D`\> = [`Store`](../interfaces/Store.md)\<[`Asyncify`](Asyncify.md)\<`T`, `D`\>\> & () => [`Asyncify`](Asyncify.md)\<`T`, `D`\>
 
-Defined in: [src/interface.ts:394](https://github.com/unadlib/coaction/blob/main/packages/core/src/interface.ts#L394)
+Defined in: [packages/core/src/interface.ts:394](https://github.com/unadlib/coaction/blob/main/packages/core/src/interface.ts#L394)
 
 Store shape returned by [create](../variables/create.md) when acting as a client of a shared
 store.

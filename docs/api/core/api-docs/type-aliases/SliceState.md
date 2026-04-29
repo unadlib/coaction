@@ -8,7 +8,7 @@
 
 > **SliceState**\<`T`\> = `{ [K in keyof T]: ReturnType<T[K]> }`
 
-Defined in: [src/interface.ts:270](https://github.com/unadlib/coaction/blob/main/packages/core/src/interface.ts#L270)
+Defined in: [packages/core/src/interface.ts:270](https://github.com/unadlib/coaction/blob/main/packages/core/src/interface.ts#L270)
 
 Derived state object produced by mapping slice factories to their return
 types.

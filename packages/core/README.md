@@ -6,6 +6,9 @@
 
 An efficient and flexible state management library for building high-performance, multithreading web applications.
 
+Coaction 2.0 uses `alien-signals` internally for cached getter/computed state
+and re-exports the signal primitives for advanced integrations.
+
 ## Installation
 
 You can install it via npm, yarn or pnpm.

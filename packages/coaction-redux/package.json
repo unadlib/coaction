@@ -1,6 +1,6 @@
 {
   "name": "@coaction/redux",
-  "version": "1.5.0",
+  "version": "2.0.0",
   "description": "A Coaction integration tool for Redux Toolkit",
   "keywords": [
     "state",
@@ -45,7 +45,7 @@
   },
   "peerDependencies": {
     "@reduxjs/toolkit": "^2.0.0",
-    "coaction": "^1.5.0"
+    "coaction": "^2.0.0"
   },
   "peerDependenciesMeta": {
     "coaction": {

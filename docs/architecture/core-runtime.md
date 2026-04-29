@@ -64,7 +64,8 @@ It supports:
 - a pre-built object
 - a third-party store exposing `getState()`
 - a function-returning-store form used by some adapters
-- binder-backed state objects tagged by `createBinder()`
+- binder-backed state objects tagged by `defineExternalStoreAdapter()` or
+  `createBinder()`
 
 For slice stores, this work happens per slice key.
 

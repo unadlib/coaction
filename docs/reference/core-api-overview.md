@@ -14,8 +14,12 @@ This reference is generated from the docs-only entry point in
   main/local and client stores.
 - {@link api-docs.Slice | Slice} and {@link api-docs.Slices | Slices}: state-factory signatures.
 - {@link api-docs.Middleware | Middleware}: store enhancement contract.
-- {@link api-docs.createBinder | createBinder}: third-party store adapter helper.
+- {@link api-docs.defineExternalStoreAdapter | defineExternalStoreAdapter}: third-party
+  whole-store adapter helper. `createBinder` remains available as the
+  compatibility name.
 - {@link api-docs.wrapStore | wrapStore}: low-level helper used by framework bindings.
+- `signal`, `computed`, `effect`, and `trigger`: alien-signals primitives
+  re-exported for advanced integrations.
 
 ## Semantics Worth Reading First
 
@@ -24,6 +28,8 @@ This reference is generated from the docs-only entry point in
 - Client stores mirror shared state and their methods return promises because
   execution happens on the main store.
 - Methods destructured from `getState()` keep the correct `this` binding.
+- Getter accessors and `get(deps, selector)` computed values are cached through
+  the built-in alien-signals runtime.
 - Binder-backed integrations are whole-store adapters; slices mode is not
   supported for them.
 - `create()` should not gain more ambiguous option combinations; prefer

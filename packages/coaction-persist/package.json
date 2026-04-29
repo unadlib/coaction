@@ -1,6 +1,6 @@
 {
   "name": "@coaction/persist",
-  "version": "1.5.0",
+  "version": "2.0.0",
   "description": "A persist middleware for Coaction",
   "keywords": [
     "state",
@@ -44,7 +44,7 @@
     "url": "https://github.com/unadlib/coaction/issues"
   },
   "peerDependencies": {
-    "coaction": "^1.5.0"
+    "coaction": "^2.0.0"
   },
   "peerDependenciesMeta": {
     "coaction": {

@@ -8,7 +8,7 @@
 
 > **Slices**\<`T`, `K`\> = (`set`, `get`, `store`) => `T`\[`K`\]
 
-Defined in: [src/interface.ts:240](https://github.com/unadlib/coaction/blob/main/packages/core/src/interface.ts#L240)
+Defined in: [packages/core/src/interface.ts:240](https://github.com/unadlib/coaction/blob/main/packages/core/src/interface.ts#L240)
 
 Factory for a named slice inside a slices store.
 

@@ -6,7 +6,7 @@
 
 # Interface: MiddlewareStore\<T\>
 
-Defined in: [src/interface.ts:164](https://github.com/unadlib/coaction/blob/main/packages/core/src/interface.ts#L164)
+Defined in: [packages/core/src/interface.ts:164](https://github.com/unadlib/coaction/blob/main/packages/core/src/interface.ts#L164)
 
 Semantic alias for middleware-facing stores.
 
@@ -31,7 +31,7 @@ Middleware implementations should type their `store` parameter as
 
 > **apply**: (`state?`, `patches?`) => `void`
 
-Defined in: [src/interface.ts:132](https://github.com/unadlib/coaction/blob/main/packages/core/src/interface.ts#L132)
+Defined in: [packages/core/src/interface.ts:132](https://github.com/unadlib/coaction/blob/main/packages/core/src/interface.ts#L132)
 
 Apply patches to the current state.
 
@@ -64,7 +64,7 @@ code should generally prefer store methods or `setState()`.
 
 > **destroy**: () => `void`
 
-Defined in: [src/interface.ts:111](https://github.com/unadlib/coaction/blob/main/packages/core/src/interface.ts#L111)
+Defined in: [packages/core/src/interface.ts:111](https://github.com/unadlib/coaction/blob/main/packages/core/src/interface.ts#L111)
 
 Tear down the store.
 
@@ -87,7 +87,7 @@ attached transport.
 
 > **getInitialState**: () => `T`
 
-Defined in: [src/interface.ts:144](https://github.com/unadlib/coaction/blob/main/packages/core/src/interface.ts#L144)
+Defined in: [packages/core/src/interface.ts:144](https://github.com/unadlib/coaction/blob/main/packages/core/src/interface.ts#L144)
 
 Return the state produced during initialization before later mutations.
 
@@ -105,7 +105,7 @@ Return the state produced during initialization before later mutations.
 
 > **getPureState**: () => `T`
 
-Defined in: [src/interface.ts:140](https://github.com/unadlib/coaction/blob/main/packages/core/src/interface.ts#L140)
+Defined in: [packages/core/src/interface.ts:140](https://github.com/unadlib/coaction/blob/main/packages/core/src/interface.ts#L140)
 
 Return the current state without methods or getters.
 
@@ -128,7 +128,7 @@ data.
 
 > **getState**: () => `T`
 
-Defined in: [src/interface.ts:97](https://github.com/unadlib/coaction/blob/main/packages/core/src/interface.ts#L97)
+Defined in: [packages/core/src/interface.ts:97](https://github.com/unadlib/coaction/blob/main/packages/core/src/interface.ts#L97)
 
 Read the current state object.
 
@@ -151,7 +151,7 @@ this object continue to execute against the latest store state.
 
 > **isSliceStore**: `boolean`
 
-Defined in: [src/interface.ts:124](https://github.com/unadlib/coaction/blob/main/packages/core/src/interface.ts#L124)
+Defined in: [packages/core/src/interface.ts:124](https://github.com/unadlib/coaction/blob/main/packages/core/src/interface.ts#L124)
 
 Whether `createState` was interpreted as a slices object.
 
@@ -165,7 +165,7 @@ Whether `createState` was interpreted as a slices object.
 
 > **name**: `string`
 
-Defined in: [src/interface.ts:69](https://github.com/unadlib/coaction/blob/main/packages/core/src/interface.ts#L69)
+Defined in: [packages/core/src/interface.ts:69](https://github.com/unadlib/coaction/blob/main/packages/core/src/interface.ts#L69)
 
 The name of the store.
 
@@ -179,7 +179,7 @@ The name of the store.
 
 > `optional` **patch**: (`option`) => [`PatchTransform`](PatchTransform.md)
 
-Defined in: [src/interface.ts:149](https://github.com/unadlib/coaction/blob/main/packages/core/src/interface.ts#L149)
+Defined in: [packages/core/src/interface.ts:149](https://github.com/unadlib/coaction/blob/main/packages/core/src/interface.ts#L149)
 
 #### Parameters
 
@@ -206,7 +206,7 @@ with `MiddlewareStore`.
 
 > **setState**: (`next`, `updater?`) => `void`
 
-Defined in: [src/interface.ts:78](https://github.com/unadlib/coaction/blob/main/packages/core/src/interface.ts#L78)
+Defined in: [packages/core/src/interface.ts:78](https://github.com/unadlib/coaction/blob/main/packages/core/src/interface.ts#L78)
 
 Mutate the current state.
 
@@ -231,7 +231,7 @@ Low-level updater hook used by transports and middleware integrations.
 #### Remarks
 
 Pass a deep-partial object to merge fields, or pass an updater to edit a
-Mutative draft. Client-side shared stores intentionally reject direct
+Mutative draft. Passing `null` is a no-op. Client-side shared stores intentionally reject direct
 `setState()` calls; trigger a store method instead.
 
 #### Inherited from
@@ -244,7 +244,7 @@ Mutative draft. Client-side shared stores intentionally reject direct
 
 > `optional` **share**: `false` \| `"main"` \| `"client"`
 
-Defined in: [src/interface.ts:116](https://github.com/unadlib/coaction/blob/main/packages/core/src/interface.ts#L116)
+Defined in: [packages/core/src/interface.ts:116](https://github.com/unadlib/coaction/blob/main/packages/core/src/interface.ts#L116)
 
 Indicates whether the store is local, the main shared store, or a client
 mirror of a shared store.
@@ -259,7 +259,7 @@ mirror of a shared store.
 
 > **subscribe**: (`listener`) => () => `void`
 
-Defined in: [src/interface.ts:103](https://github.com/unadlib/coaction/blob/main/packages/core/src/interface.ts#L103)
+Defined in: [packages/core/src/interface.ts:103](https://github.com/unadlib/coaction/blob/main/packages/core/src/interface.ts#L103)
 
 Subscribe to state changes.
 
@@ -289,7 +289,7 @@ A function that removes the listener.
 
 > `optional` **trace**: (`options`) => `void`
 
-Defined in: [src/interface.ts:154](https://github.com/unadlib/coaction/blob/main/packages/core/src/interface.ts#L154)
+Defined in: [packages/core/src/interface.ts:154](https://github.com/unadlib/coaction/blob/main/packages/core/src/interface.ts#L154)
 
 #### Parameters
 
@@ -316,7 +316,7 @@ with `MiddlewareStore`.
 
 > `optional` **transport**: `Transport`\<`any`\>
 
-Defined in: [src/interface.ts:120](https://github.com/unadlib/coaction/blob/main/packages/core/src/interface.ts#L120)
+Defined in: [packages/core/src/interface.ts:120](https://github.com/unadlib/coaction/blob/main/packages/core/src/interface.ts#L120)
 
 Transport used to synchronize a shared store between processes or threads.
 

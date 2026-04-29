@@ -79,7 +79,7 @@ Unsupported.
 
 Reason:
 
-- `createBinder()` adapts an external whole-store runtime
+- `defineExternalStoreAdapter()` adapts an external whole-store runtime
 - Coaction slices are a native state-composition model
 - nesting one inside the other makes store ownership ambiguous
 

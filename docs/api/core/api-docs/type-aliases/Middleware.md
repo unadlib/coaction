@@ -8,7 +8,7 @@
 
 > **Middleware**\<`T`\> = (`store`) => [`MiddlewareStore`](../interfaces/MiddlewareStore.md)\<`T`\>
 
-Defined in: [src/interface.ts:262](https://github.com/unadlib/coaction/blob/main/packages/core/src/interface.ts#L262)
+Defined in: [packages/core/src/interface.ts:262](https://github.com/unadlib/coaction/blob/main/packages/core/src/interface.ts#L262)
 
 Store enhancer invoked during store creation.
 

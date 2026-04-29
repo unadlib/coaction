@@ -8,7 +8,7 @@
 
 > `const` **create**: `Creator`
 
-Defined in: [src/create.ts:57](https://github.com/unadlib/coaction/blob/main/packages/core/src/create.ts#L57)
+Defined in: [packages/core/src/create.ts:106](https://github.com/unadlib/coaction/blob/main/packages/core/src/create.ts#L106)
 
 Create a local store, the main side of a shared store, or a client mirror of
 a shared store.
@@ -22,3 +22,5 @@ a shared store.
 - When `clientTransport` or `worker` is provided, returned store methods
   become promise-returning methods because execution happens on the main
   shared store.
+- New semantics should prefer explicit helpers or variants over adding more
+  ambiguous `create()` input forms.

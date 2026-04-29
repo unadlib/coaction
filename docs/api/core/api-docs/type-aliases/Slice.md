@@ -8,7 +8,7 @@
 
 > **Slice**\<`T`\> = (`set`, `get`, `store`) => `T`
 
-Defined in: [src/interface.ts:217](https://github.com/unadlib/coaction/blob/main/packages/core/src/interface.ts#L217)
+Defined in: [packages/core/src/interface.ts:217](https://github.com/unadlib/coaction/blob/main/packages/core/src/interface.ts#L217)
 
 Factory for a single store object.
 

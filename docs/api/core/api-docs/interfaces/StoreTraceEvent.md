@@ -6,7 +6,7 @@
 
 # Interface: StoreTraceEvent
 
-Defined in: [src/interface.ts:33](https://github.com/unadlib/coaction/blob/main/packages/core/src/interface.ts#L33)
+Defined in: [packages/core/src/interface.ts:33](https://github.com/unadlib/coaction/blob/main/packages/core/src/interface.ts#L33)
 
 Trace envelope emitted before and after a store method executes.
 
@@ -16,7 +16,7 @@ Trace envelope emitted before and after a store method executes.
 
 > **id**: `string`
 
-Defined in: [src/interface.ts:37](https://github.com/unadlib/coaction/blob/main/packages/core/src/interface.ts#L37)
+Defined in: [packages/core/src/interface.ts:37](https://github.com/unadlib/coaction/blob/main/packages/core/src/interface.ts#L37)
 
 The id of the method.
 
@@ -26,7 +26,7 @@ The id of the method.
 
 > **method**: `string`
 
-Defined in: [src/interface.ts:41](https://github.com/unadlib/coaction/blob/main/packages/core/src/interface.ts#L41)
+Defined in: [packages/core/src/interface.ts:41](https://github.com/unadlib/coaction/blob/main/packages/core/src/interface.ts#L41)
 
 The method name.
 
@@ -36,7 +36,7 @@ The method name.
 
 > `optional` **parameters**: `any`[]
 
-Defined in: [src/interface.ts:49](https://github.com/unadlib/coaction/blob/main/packages/core/src/interface.ts#L49)
+Defined in: [packages/core/src/interface.ts:49](https://github.com/unadlib/coaction/blob/main/packages/core/src/interface.ts#L49)
 
 The parameters of the method.
 
@@ -46,7 +46,7 @@ The parameters of the method.
 
 > `optional` **result**: `any`
 
-Defined in: [src/interface.ts:53](https://github.com/unadlib/coaction/blob/main/packages/core/src/interface.ts#L53)
+Defined in: [packages/core/src/interface.ts:53](https://github.com/unadlib/coaction/blob/main/packages/core/src/interface.ts#L53)
 
 The result of the method.
 
@@ -56,6 +56,6 @@ The result of the method.
 
 > `optional` **sliceKey**: `string`
 
-Defined in: [src/interface.ts:45](https://github.com/unadlib/coaction/blob/main/packages/core/src/interface.ts#L45)
+Defined in: [packages/core/src/interface.ts:45](https://github.com/unadlib/coaction/blob/main/packages/core/src/interface.ts#L45)
 
 The slice key.

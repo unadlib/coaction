@@ -18,6 +18,7 @@
 - [Asyncify](type-aliases/Asyncify.md)
 - [AsyncStore](type-aliases/AsyncStore.md)
 - [ClientStoreOptions](type-aliases/ClientStoreOptions.md)
+- [ExternalStoreAdapterOptions](type-aliases/ExternalStoreAdapterOptions.md)
 - [ISlices](type-aliases/ISlices.md)
 - [Middleware](type-aliases/Middleware.md)
 - [Slice](type-aliases/Slice.md)
@@ -31,5 +32,11 @@
 
 ## Functions
 
+- [computed](functions/computed.md)
 - [createBinder](functions/createBinder.md)
+- [defineExternalStoreAdapter](functions/defineExternalStoreAdapter.md)
+- [effect](functions/effect.md)
+- [effectScope](functions/effectScope.md)
+- [signal](functions/signal.md)
+- [trigger](functions/trigger.md)
 - [wrapStore](functions/wrapStore.md)

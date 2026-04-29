@@ -6,7 +6,7 @@
 
 # Interface: PatchTransform
 
-Defined in: [src/interface.ts:25](https://github.com/unadlib/coaction/blob/main/packages/core/src/interface.ts#L25)
+Defined in: [packages/core/src/interface.ts:25](https://github.com/unadlib/coaction/blob/main/packages/core/src/interface.ts#L25)
 
 Patch pair exposed to middleware compatibility hooks.
 
@@ -16,7 +16,7 @@ Patch pair exposed to middleware compatibility hooks.
 
 > **inversePatches**: `Patches`
 
-Defined in: [src/interface.ts:27](https://github.com/unadlib/coaction/blob/main/packages/core/src/interface.ts#L27)
+Defined in: [packages/core/src/interface.ts:27](https://github.com/unadlib/coaction/blob/main/packages/core/src/interface.ts#L27)
 
 ---
 
@@ -24,4 +24,4 @@ Defined in: [src/interface.ts:27](https://github.com/unadlib/coaction/blob/main/
 
 > **patches**: `Patches`
 
-Defined in: [src/interface.ts:26](https://github.com/unadlib/coaction/blob/main/packages/core/src/interface.ts#L26)
+Defined in: [packages/core/src/interface.ts:26](https://github.com/unadlib/coaction/blob/main/packages/core/src/interface.ts#L26)

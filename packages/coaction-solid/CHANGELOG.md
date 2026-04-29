@@ -1,5 +1,17 @@
 # @coaction/solid
 
+## 2.0.0
+
+### Major Changes
+
+- Release Coaction 2.0 with alien-signals-backed computed state, React selector
+  reactivity, and a formal external store adapter API.
+
+### Patch Changes
+
+- Updated dependencies
+  - coaction@2.0.0
+
 ## 1.5.0
 
 ### Minor Changes
