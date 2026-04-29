@@ -153,15 +153,6 @@ importers:
         specifier: ^1.3.1
         version: 1.3.1(@types/react@19.2.14)(mutative@1.3.0)(react@19.2.4)(zustand@5.0.11(@types/react@19.2.14)(immer@11.1.4)(react@19.2.4)(use-sync-external-store@1.6.0(react@19.2.4)))
 
-  packages/coaction-alien-signals:
-    devDependencies:
-      alien-signals:
-        specifier: ^3.1.2
-        version: 3.1.2
-      coaction:
-        specifier: workspace:*
-        version: link:../core
-
   packages/coaction-history:
     devDependencies:
       coaction:

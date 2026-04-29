@@ -8,10 +8,6 @@ export default defineConfig({
   resolve: {
     alias: {
       coaction: resolve(__dirname, 'packages/core/src/index.ts'),
-      '@coaction/alien-signals': resolve(
-        __dirname,
-        'packages/coaction-alien-signals/src/index.ts'
-      ),
       '@coaction/history': resolve(
         __dirname,
         'packages/coaction-history/src/index.ts'

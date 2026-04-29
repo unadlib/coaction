@@ -15,7 +15,6 @@ import { runExample as runVueExample } from '../../subpackages/coaction-vue';
 import { runExample as runXStateExample } from '../../subpackages/coaction-xstate';
 import { runExample as runYjsExample } from '../../subpackages/coaction-yjs';
 import { runExample as runZustandExample } from '../../subpackages/coaction-zustand';
-import { runExample as runAlienSignalsExample } from '../../subpackages/coaction-alien-signals';
 
 describe('subpackage integration contracts', () => {
   test('core example keeps update semantics', () => {
@@ -148,13 +147,6 @@ describe('subpackage integration contracts', () => {
       afterZustandWrite: 7,
       finalCoactionCount: 10,
       finalZustandCount: 10
-    });
-  });
-
-  test('alien-signals example keeps selector and state aligned', () => {
-    expect(runAlienSignalsExample()).toMatchObject({
-      count: 1,
-      selectedCount: 1
     });
   });
 });

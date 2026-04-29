@@ -251,6 +251,9 @@ Coaction inherits Zustand's intuitive API design while adding built-in support f
 | Easy middleware implementation    |    ✅    |   ❌    |
 | `this` support in getter/action   |    ✅    |   ❌    |
 
+Coaction uses `alien-signals` internally for cached computed getters and
+selector reactivity; no separate `@coaction/alien-signals` package is required.
+
 > Some features may have community solutions in Zustand; Coaction provides a more unified and streamlined API suited for modern web application development.
 
 ## API Reference
@@ -342,16 +345,15 @@ Coaction is designed to work with a wide range of libraries and frameworks.
 
 ### State Management Libraries
 
-| Library       | Package                   |
-| :------------ | :------------------------ |
-| MobX          | `@coaction/mobx`          |
-| Pinia         | `@coaction/pinia`         |
-| Zustand       | `@coaction/zustand`       |
-| Redux Toolkit | `@coaction/redux`         |
-| Jotai         | `@coaction/jotai`         |
-| XState        | `@coaction/xstate`        |
-| Valtio        | `@coaction/valtio`        |
-| alien-signals | `@coaction/alien-signals` |
+| Library       | Package             |
+| :------------ | :------------------ |
+| MobX          | `@coaction/mobx`    |
+| Pinia         | `@coaction/pinia`   |
+| Zustand       | `@coaction/zustand` |
+| Redux Toolkit | `@coaction/redux`   |
+| Jotai         | `@coaction/jotai`   |
+| XState        | `@coaction/xstate`  |
+| Valtio        | `@coaction/valtio`  |
 
 > **Note:** Slices mode is a core `coaction` feature. Third-party state adapters only support whole-store binding.
 

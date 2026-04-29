@@ -15,7 +15,6 @@ import { runExample as runVueExample } from '../../subpackages/coaction-vue';
 import { runExample as runXStateExample } from '../../subpackages/coaction-xstate';
 import { runExample as runYjsExample } from '../../subpackages/coaction-yjs';
 import { runExample as runZustandExample } from '../../subpackages/coaction-zustand';
-import { runExample as runAlienSignalsExample } from '../../subpackages/coaction-alien-signals';
 
 describe('subpackage examples e2e', () => {
   test('coaction core example', () => {
@@ -150,13 +149,6 @@ describe('subpackage examples e2e', () => {
       afterZustandWrite: 7,
       finalCoactionCount: 10,
       finalZustandCount: 10
-    });
-  });
-
-  test('alien-signals example', () => {
-    expect(runAlienSignalsExample()).toEqual({
-      count: 1,
-      selectedCount: 1
     });
   });
 });
