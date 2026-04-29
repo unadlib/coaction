@@ -123,6 +123,54 @@ test('selector subscriptions skip unrelated state updates', () => {
   expect(renders).toBe(2);
 });
 
+test('selector subscriptions isolate current values per component', () => {
+  const useStore = create<{
+    count: number;
+    increment: () => void;
+  }>((set) => ({
+    count: 0,
+    increment() {
+      set((draft) => {
+        draft.count += 1;
+      });
+    }
+  }));
+  const selectCount = (state: { count: number }) => state.count;
+  let firstRenders = 0;
+  let secondRenders = 0;
+
+  const FirstCounter = () => {
+    firstRenders += 1;
+    const count = useStore(selectCount);
+    return React.createElement('span', { 'data-testid': 'first' }, count);
+  };
+  const SecondCounter = () => {
+    secondRenders += 1;
+    const count = useStore(selectCount);
+    return React.createElement('span', { 'data-testid': 'second' }, count);
+  };
+
+  render(
+    React.createElement(
+      'div',
+      null,
+      React.createElement(FirstCounter),
+      React.createElement(SecondCounter)
+    ) as any
+  );
+  expect(screen.getByTestId('first').textContent).toBe('0');
+  expect(screen.getByTestId('second').textContent).toBe('0');
+
+  act(() => {
+    useStore.getState().increment();
+  });
+
+  expect(screen.getByTestId('first').textContent).toBe('1');
+  expect(screen.getByTestId('second').textContent).toBe('1');
+  expect(firstRenders).toBe(2);
+  expect(secondRenders).toBe(2);
+});
+
 test('supports slices autoSelector', () => {
   const useStore = create(
     {

@@ -156,35 +156,39 @@ const createReactiveSelector = <TState extends object, TValue>(
   selector: SelectorFn<TState, TValue>
 ) => {
   const selected = computed(() => selector(store.getState()));
-  let currentValue = selector(store.getState());
-  const notifyIfChanged = (nextValue: TValue, listener: () => void) => {
-    if (!Object.is(currentValue, nextValue)) {
-      currentValue = nextValue;
-      listener();
-    }
-  };
   return {
-    getSnapshot: () => {
-      currentValue = selector(store.getState());
-      return currentValue;
-    },
-    subscribe(listener: () => void) {
-      let isInitialRun = true;
-      currentValue = selector(store.getState());
-      const stop = effect(() => {
-        const nextValue = selected();
-        if (isInitialRun) {
-          isInitialRun = false;
-          return;
+    createSubscription() {
+      let currentValue = selector(store.getState());
+      const notifyIfChanged = (nextValue: TValue, listener: () => void) => {
+        if (!Object.is(currentValue, nextValue)) {
+          currentValue = nextValue;
+          listener();
         }
-        notifyIfChanged(nextValue, listener);
-      });
-      const unsubscribe = store.subscribe(() => {
-        notifyIfChanged(selector(store.getState()), listener);
-      });
-      return () => {
-        stop();
-        unsubscribe();
+      };
+      return {
+        getSnapshot: () => {
+          currentValue = selector(store.getState());
+          return currentValue;
+        },
+        subscribe(listener: () => void) {
+          let isInitialRun = true;
+          currentValue = selector(store.getState());
+          const stop = effect(() => {
+            const nextValue = selected();
+            if (isInitialRun) {
+              isInitialRun = false;
+              return;
+            }
+            notifyIfChanged(nextValue, listener);
+          });
+          const unsubscribe = store.subscribe(() => {
+            notifyIfChanged(selector(store.getState()), listener);
+          });
+          return () => {
+            stop();
+            unsubscribe();
+          };
+        }
       };
     }
   };
@@ -236,9 +240,10 @@ export const create: Creator = (createState: any, options: any) => {
   const useStore = wrapStore(store, (selector: any) => {
     if (typeof selector === 'function') {
       const reactiveSelector = getReactiveSelector(selector);
+      const subscription = reactiveSelector.createSubscription();
       return useSyncExternalStore(
-        reactiveSelector.subscribe,
-        reactiveSelector.getSnapshot,
+        subscription.subscribe,
+        subscription.getSnapshot,
         () => selector(store.getInitialState())
       );
     }
