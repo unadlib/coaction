@@ -78,6 +78,51 @@ test('supports autoSelector', () => {
   expect(screen.getByTestId('double').textContent).toBe('2');
 });
 
+test('selector subscriptions skip unrelated state updates', () => {
+  const useStore = create<{
+    count: number;
+    label: string;
+    increment: () => void;
+    rename: () => void;
+  }>((set) => ({
+    count: 0,
+    label: 'one',
+    increment() {
+      set((draft) => {
+        draft.count += 1;
+      });
+    },
+    rename() {
+      set((draft) => {
+        draft.label = 'two';
+      });
+    }
+  }));
+  let renders = 0;
+
+  const Counter = () => {
+    renders += 1;
+    const count = useStore((current) => current.count);
+    return React.createElement('span', { 'data-testid': 'count' }, count);
+  };
+
+  render(React.createElement(Counter) as any);
+  expect(screen.getByTestId('count').textContent).toBe('0');
+  expect(renders).toBe(1);
+
+  act(() => {
+    useStore.getState().rename();
+  });
+  expect(screen.getByTestId('count').textContent).toBe('0');
+  expect(renders).toBe(1);
+
+  act(() => {
+    useStore.getState().increment();
+  });
+  expect(screen.getByTestId('count').textContent).toBe('1');
+  expect(renders).toBe(2);
+});
+
 test('supports slices autoSelector', () => {
   const useStore = create(
     {

@@ -1,4 +1,4 @@
-import { create as createVanilla, wrapStore } from 'coaction';
+import { computed, create as createVanilla, effect, wrapStore } from 'coaction';
 import type {
   Slice,
   Store,
@@ -151,6 +151,45 @@ const touchState = (value: unknown, seen = new WeakSet<object>()) => {
   }
 };
 
+const createReactiveSelector = <TState extends object, TValue>(
+  store: Store<TState>,
+  selector: SelectorFn<TState, TValue>
+) => {
+  const selected = computed(() => selector(store.getState()));
+  let currentValue = selector(store.getState());
+  const notifyIfChanged = (nextValue: TValue, listener: () => void) => {
+    if (!Object.is(currentValue, nextValue)) {
+      currentValue = nextValue;
+      listener();
+    }
+  };
+  return {
+    getSnapshot: () => {
+      currentValue = selector(store.getState());
+      return currentValue;
+    },
+    subscribe(listener: () => void) {
+      let isInitialRun = true;
+      currentValue = selector(store.getState());
+      const stop = effect(() => {
+        const nextValue = selected();
+        if (isInitialRun) {
+          isInitialRun = false;
+          return;
+        }
+        notifyIfChanged(nextValue, listener);
+      });
+      const unsubscribe = store.subscribe(() => {
+        notifyIfChanged(selector(store.getState()), listener);
+      });
+      return () => {
+        stop();
+        unsubscribe();
+      };
+    }
+  };
+};
+
 export const create: Creator = (createState: any, options: any) => {
   const store = createVanilla(createState, options);
   let fullStateVersion = 0;
@@ -182,11 +221,24 @@ export const create: Creator = (createState: any, options: any) => {
     }
     return autoSelectors;
   };
+  const reactiveSelectors = new WeakMap<
+    SelectorFn<any, any>,
+    ReturnType<typeof createReactiveSelector<any, any>>
+  >();
+  const getReactiveSelector = (selector: SelectorFn<any, any>) => {
+    let reactiveSelector = reactiveSelectors.get(selector);
+    if (!reactiveSelector) {
+      reactiveSelector = createReactiveSelector(store, selector);
+      reactiveSelectors.set(selector, reactiveSelector);
+    }
+    return reactiveSelector;
+  };
   const useStore = wrapStore(store, (selector: any) => {
     if (typeof selector === 'function') {
+      const reactiveSelector = getReactiveSelector(selector);
       return useSyncExternalStore(
-        store.subscribe,
-        () => selector(store.getState()),
+        reactiveSelector.subscribe,
+        reactiveSelector.getSnapshot,
         () => selector(store.getInitialState())
       );
     }
