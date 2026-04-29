@@ -33,14 +33,16 @@ export const bindZustand = ((initializer: StateCreator<any, [], []>) =>
         internal.rootState = zustandStore.getState() as object;
         const unsubscribe = zustandStore.subscribe(() => {
           if (!isCoactionUpdated) {
-            internal.rootState = zustandStore.getState() as object;
+            const nextState = zustandStore.getState() as object;
             if (coactionStore.share === 'client') {
+              internal.rootState = nextState;
               throw new Error('client zustand store cannot be updated');
             } else if (coactionStore.share === 'main') {
               // emit to all clients
-              coactionStore.setState(zustandStore.getState()!);
+              coactionStore.setState(nextState);
               return;
             }
+            internal.rootState = nextState;
           }
           internal.notifyStateChange();
         });

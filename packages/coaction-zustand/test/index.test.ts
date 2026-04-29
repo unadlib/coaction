@@ -84,13 +84,17 @@ test('initializer get callback reads latest state', () => {
   expect(useStore.getState().count).toBe(2);
 });
 
-test('worker main propagates direct zustand mutations', () => {
+test('worker main propagates direct zustand mutations', async () => {
   type Counter = {
     count: number;
     increment: () => void;
   };
   const ports = mockPorts();
   const serverTransport = createTransport('WebWorkerInternal', ports.main);
+  const clientTransport = createTransport(
+    'WebWorkerClient',
+    ports.create() as WorkerMainTransportOptions
+  );
   const counter: StateCreator<Counter, [], []> = (set) => ({
     count: 0,
     increment() {
@@ -102,8 +106,38 @@ test('worker main propagates direct zustand mutations', () => {
     transport: serverTransport,
     name: 'test-worker-main'
   });
+  const serverListener = jest.fn();
+  const signalValues: number[] = [];
+  useServerStore.subscribe(serverListener);
+  const stop = effect(() => {
+    signalValues.push(useServerStore.getState().count);
+  });
+  const useClientStore = create(
+    () => adapt(createWithZustand(bindZustand(counter))),
+    {
+      clientTransport,
+      name: 'test-worker-main'
+    }
+  );
+  await new Promise((resolve) => {
+    clientTransport.onConnect(() => {
+      setTimeout(resolve);
+    });
+  });
+  const clientListener = jest.fn();
+  useClientStore.subscribe(clientListener);
+
   underlyingStore.setState({ count: 6 });
+  await new Promise((resolve) => {
+    setTimeout(resolve);
+  });
+  stop();
+
   expect(useServerStore.getState().count).toBe(6);
+  expect(serverListener).toHaveBeenCalledTimes(1);
+  expect(signalValues).toEqual([0, 6]);
+  expect(useClientStore.getState().count).toBe(6);
+  expect(clientListener).toHaveBeenCalled();
 });
 
 test('base direct zustand mutation syncs without forwarding', () => {
