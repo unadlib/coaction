@@ -43,6 +43,9 @@ For a binder-backed adapter:
 3. Wire Coaction lifecycle into the external runtime in `handleStore`
 4. Preserve the store contract when overriding `subscribe()`, `destroy()`, or
    `apply()`
+5. Call `internal.notifyStateChange()` after direct external immutable writes
+   that update `internal.rootState` without using `store.setState()` or
+   `store.apply()`
 
 Implementation expectations:
 

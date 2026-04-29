@@ -44,6 +44,9 @@ An official binder-backed adapter must satisfy all of the following:
 - `external write`
   - direct writes in the external store are observed and reflected back into the
     Coaction store according to the adapter's contract
+  - immutable adapters that assign `internal.rootState` directly must call
+    `internal.notifyStateChange()` so signal-backed selectors and store
+    subscribers see the change
 - `destroy`
   - adapter-installed subscriptions or observers are released when
     `store.destroy()` runs
@@ -68,6 +71,9 @@ The adapter must:
 The adapter must:
 
 - attach subscriptions or observers so external writes reach Coaction
+- call `internal.notifyStateChange()` after external immutable writes that
+  update `internal.rootState` without going through `store.setState()` or
+  `store.apply()`
 - preserve Coaction store lifecycle semantics
 - clean up external resources from an overridden `destroy()` when needed
 - avoid violating client/main authority rules

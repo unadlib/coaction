@@ -39,9 +39,10 @@ export const bindZustand = ((initializer: StateCreator<any, [], []>) =>
             } else if (coactionStore.share === 'main') {
               // emit to all clients
               coactionStore.setState(zustandStore.getState()!);
+              return;
             }
           }
-          internal.listeners.forEach((listener) => listener());
+          internal.notifyStateChange();
         });
         coactionStore._destroyers.add(() => {
           unsubscribe();

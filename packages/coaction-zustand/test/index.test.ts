@@ -1,5 +1,5 @@
 // @ts-nocheck
-import { create, Slices } from 'coaction';
+import { create, effect, Slices } from 'coaction';
 import {
   createTransport,
   mockPorts,
@@ -123,6 +123,32 @@ test('base direct zustand mutation syncs without forwarding', () => {
   });
   underlyingStore.setState({ count: 3 });
   expect(useStore.getState().count).toBe(3);
+});
+
+test('direct zustand mutations refresh signal-backed dependencies', () => {
+  type Counter = {
+    count: number;
+    increment: () => void;
+  };
+  const counter: StateCreator<Counter, [], []> = (set) => ({
+    count: 0,
+    increment() {
+      set((state) => ({ count: state.count + 1 }));
+    }
+  });
+  const underlyingStore = createWithZustand(bindZustand(counter));
+  const useStore = create(() => adapt(underlyingStore), {
+    name: 'test-base-direct-signals'
+  });
+  const seen: number[] = [];
+  const stop = effect(() => {
+    seen.push(useStore.getState().count);
+  });
+
+  underlyingStore.setState({ count: 4 });
+  stop();
+
+  expect(seen).toEqual([0, 4]);
 });
 
 test('worker client forbids direct zustand mutations', async () => {

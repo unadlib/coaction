@@ -126,6 +126,10 @@ export const create: Creator = <T extends CreateState>(
       isBatching: false,
       listeners: new Set<Listener>()
     } as Internal<T>;
+    internal.notifyStateChange = () => {
+      refreshSignalSlots(internal);
+      internal.listeners.forEach((listener) => listener());
+    };
     const name = options.name ?? defaultName;
     const shouldTrackName = share === 'main' && process.env.NODE_ENV !== 'test';
     const releaseStoreName = () => {

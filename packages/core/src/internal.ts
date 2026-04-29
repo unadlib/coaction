@@ -39,6 +39,11 @@ export interface Internal<T extends CreateState = CreateState> {
    */
   listeners: Set<Listener>;
   /**
+   * Publish an externally-owned immutable state change to signal slots and
+   * store subscribers.
+   */
+  notifyStateChange: () => void;
+  /**
    * Reactive state slots used by computed getters/selectors.
    */
   signalSlots?: Set<SignalSlot>;
