@@ -7,7 +7,10 @@ import type {
 import type { Internal } from './internal';
 import { createClientAction } from './getRawStateClientAction';
 import { createLocalAction } from './getRawStateLocalAction';
-import { prepareStateDescriptor } from './getRawStateStateProperty';
+import {
+  prepareAccessorDescriptor,
+  prepareStateDescriptor
+} from './getRawStateStateProperty';
 import { isUnsafeKey, setOwnEnumerable } from './utils';
 
 const defaultClientExecuteSyncTimeoutMs = 1500;
@@ -50,6 +53,13 @@ export const getRawState = <T extends CreateState>(
         | PropertyDescriptor
         | undefined;
       if (typeof descriptor === 'undefined') {
+        return;
+      }
+      if (!Object.prototype.hasOwnProperty.call(descriptor, 'value')) {
+        prepareAccessorDescriptor({
+          descriptor,
+          internal
+        });
         return;
       }
       if (Object.prototype.hasOwnProperty.call(descriptor, 'value')) {

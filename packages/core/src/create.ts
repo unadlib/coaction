@@ -18,6 +18,7 @@ import type { Internal } from './internal';
 import { applyMiddlewares } from './applyMiddlewares';
 import { wrapStore } from './wrapStore';
 import { handleMainTransport } from './handleMainTransport';
+import { refreshSignalSlots } from './computed';
 
 const namespaceMap = new Map<string, boolean>();
 let hasWarnedAmbiguousFunctionMap = false;
@@ -162,6 +163,7 @@ export const create: Creator = <T extends CreateState>(
         internal.rootState = patches
           ? (applyWithMutative(state, patches) as T)
           : state;
+        refreshSignalSlots(internal);
         if (internal.updateImmutable) {
           internal.updateImmutable(internal.rootState as T);
         } else {

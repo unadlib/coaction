@@ -1,6 +1,10 @@
 import type { Draft, Patches } from 'mutative';
 import type { CreateState, Listener } from './interface';
 
+export type SignalSlot = {
+  refresh: () => void;
+};
+
 export interface Internal<T extends CreateState = CreateState> {
   /**
    * The store module.
@@ -34,6 +38,10 @@ export interface Internal<T extends CreateState = CreateState> {
    * The listeners.
    */
   listeners: Set<Listener>;
+  /**
+   * Reactive state slots used by computed getters/selectors.
+   */
+  signalSlots?: Set<SignalSlot>;
   /**
    * The act is used to run the function in the action for mutable state.
    */

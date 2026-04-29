@@ -7,4 +7,8 @@ test('re-exports runtime APIs from package entry', () => {
   expect(core.create).toBe(create);
   expect(core.createBinder).toBe(createBinder);
   expect(core.wrapStore).toBe(wrapStore);
+  expect(core.signal).toBeInstanceOf(Function);
+  expect(core.computed).toBeInstanceOf(Function);
+  expect(core.effect).toBeInstanceOf(Function);
+  expect(core.trigger).toBeInstanceOf(Function);
 });

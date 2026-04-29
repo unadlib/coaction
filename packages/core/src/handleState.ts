@@ -14,7 +14,7 @@ import type {
 import type { Internal } from './internal';
 import { cloneOwnEnumerable, mergeObject, setOwnEnumerable } from './utils';
 import { emit, handleDraft } from './asyncClientStore';
-import { Computed } from './computed';
+import { Computed, refreshSignalSlots } from './computed';
 
 export const handleState = <T extends CreateState>(
   store: MiddlewareStore<T>,
@@ -146,6 +146,7 @@ export const handleState = <T extends CreateState>(
         }
         internal.rootState = copy;
       }
+      refreshSignalSlots(internal);
       if (internal.updateImmutable) {
         internal.updateImmutable(internal.rootState as T);
       } else {
