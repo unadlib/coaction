@@ -2,19 +2,7 @@ import type { Store } from './interface';
 import { bindSymbol } from './constant';
 import { Internal } from './internal';
 
-/**
- * Build an adapter helper for bridging an external store implementation into
- * Coaction.
- *
- * @remarks
- * Official bindings use this to integrate stores such as Redux, Jotai, Pinia,
- * Zustand, MobX, and Valtio. Binder-backed integrations are whole-store
- * adapters; they are not compatible with Coaction slices mode.
- */
-export function createBinder<F = (...args: any[]) => any>({
-  handleState,
-  handleStore
-}: {
+export type ExternalStoreAdapterOptions<F = (...args: any[]) => any> = {
   /**
    * Normalize a third-party store instance into a raw state object plus the
    * binding hook used during initialization.
@@ -62,8 +50,19 @@ export function createBinder<F = (...args: any[]) => any>({
      */
     key?: string
   ) => void;
-}) {
-  return (<S extends object>(state: S): S => {
+  /**
+   * This phantom field lets callers pin the returned adapter function type
+   * without affecting runtime behavior.
+   * @internal
+   */
+  adapterType?: F;
+};
+
+const createExternalStoreAdapter = <F = (...args: any[]) => any>({
+  handleState,
+  handleStore
+}: ExternalStoreAdapterOptions<F>) =>
+  (<S extends object>(state: S): S => {
     const { copyState, key, bind } = handleState(state);
     const value = (key ? copyState[key] : copyState) as {
       [bindSymbol]: {
@@ -77,4 +76,36 @@ export function createBinder<F = (...args: any[]) => any>({
     };
     return copyState;
   }) as F;
+
+/**
+ * Build an adapter helper for bridging an external store implementation into
+ * Coaction.
+ *
+ * @remarks
+ * Official bindings use this to integrate stores such as Redux, Jotai, Pinia,
+ * Zustand, MobX, and Valtio. Binder-backed integrations are whole-store
+ * adapters; they are not compatible with Coaction slices mode.
+ */
+export function createBinder<F = (...args: any[]) => any>({
+  handleState,
+  handleStore
+}: ExternalStoreAdapterOptions<F>) {
+  return createExternalStoreAdapter<F>({
+    handleState,
+    handleStore
+  });
+}
+
+/**
+ * Define a whole-store adapter for integrating an external state runtime with
+ * Coaction.
+ *
+ * @remarks
+ * This is the stable 2.x name for adapter authors. `createBinder()` remains as
+ * a compatibility alias for existing official and community integrations.
+ */
+export function defineExternalStoreAdapter<F = (...args: any[]) => any>(
+  options: ExternalStoreAdapterOptions<F>
+) {
+  return createExternalStoreAdapter<F>(options);
 }

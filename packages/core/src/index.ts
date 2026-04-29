@@ -1,5 +1,5 @@
 export { create } from './create';
-export { createBinder } from './binder';
+export { createBinder, defineExternalStoreAdapter } from './binder';
 export { wrapStore } from './wrapStore';
 export {
   computed,
@@ -30,3 +30,5 @@ export type {
   Asyncify,
   StoreWithAsyncFunction as AsyncStore
 } from './interface';
+
+export type { ExternalStoreAdapterOptions } from './binder';
