@@ -18,8 +18,9 @@ This reference is generated from the docs-only entry point in
   whole-store adapter helper. `createBinder` remains available as the
   compatibility name.
 - {@link api-docs.wrapStore | wrapStore}: low-level helper used by framework bindings.
-- `signal`, `computed`, `effect`, and `trigger`: alien-signals primitives
-  re-exported for advanced integrations.
+- `signal`, `computed`, `effect`, `effectScope`, `trigger`, batching helpers,
+  and introspection helpers: alien-signals primitives re-exported for advanced
+  integrations.
 
 ## Semantics Worth Reading First
 
