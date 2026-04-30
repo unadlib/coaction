@@ -41,7 +41,7 @@ While Web Workers (and SharedWorker) offer a path towards parallelism, they intr
 - **Immutable State with Optional Mutability** — Powered by [Mutative](https://github.com/unadlib/mutative), providing immutable state transitions with opt-in mutable instances for performance.
 - **Patch-Based Updates** — Efficient incremental state changes through patch-based synchronization, ideal for CRDTs applications.
 - **Signal-Backed Computed** — Accessor getters are cached by default through the built-in `alien-signals` runtime, while `get(deps, selector)` remains available for manual dependencies.
-- **Reactive React Selectors** — `@coaction/react` selector subscriptions use signal computed values, so selector-heavy components can subscribe to exactly what they read.
+- **Signal-Backed React Selectors** — `@coaction/react` selector subscriptions use signal computed values, so selector-heavy components re-render only when selected values change.
 - **Core Signal Exports** — Advanced integrations can import `signal`, `computed`, `effect`, batching helpers, and `defineExternalStoreAdapter` directly from `coaction`.
 - **Slices Pattern** — Combine multiple slices into a store with namespace support.
 - **Extensible Middleware** — Enhance store behavior with logging, time-travel debugging, persistence, and more.
@@ -258,18 +258,18 @@ Coaction performs on par with Zustand in standard usage. The key difference emer
 
 Coaction inherits Zustand's intuitive API design while adding built-in support for features Zustand doesn't offer out of the box:
 
-| Feature                              | Coaction | Zustand |
-| :----------------------------------- | :------: | :-----: |
-| Built-in multithreading              |    ✅    |   ❌    |
-| Signal-backed cached getters         |    ✅    |   ❌    |
-| Explicit computed deps via `get()`   |    ✅    |   ❌    |
-| Reactive React selector subscription |    ✅    |   ❌    |
-| Built-in namespace Slices            |    ✅    |   ❌    |
-| Built-in auto selector for state     |    ✅    |   ❌    |
-| Built-in multiple stores selector    |    ✅    |   ❌    |
-| External store adapter API           |    ✅    |   ❌    |
-| Easy middleware implementation       |    ✅    |   ❌    |
-| `this` support in getter/action      |    ✅    |   ❌    |
+| Feature                            | Coaction | Zustand |
+| :--------------------------------- | :------: | :-----: |
+| Built-in multithreading            |    ✅    |   ❌    |
+| Signal-backed cached getters       |    ✅    |   ❌    |
+| Explicit computed deps via `get()` |    ✅    |   ❌    |
+| Signal-backed selector reactivity  |    ✅    |   ❌    |
+| Built-in namespace Slices          |    ✅    |   ❌    |
+| Built-in auto selector for state   |    ✅    |   ❌    |
+| Built-in multiple stores selector  |    ✅    |   ❌    |
+| External store adapter API         |    ✅    |   ❌    |
+| Easy middleware implementation     |    ✅    |   ❌    |
+| `this` support in getter/action    |    ✅    |   ❌    |
 
 Coaction uses `alien-signals` internally for cached computed getters and
 selector reactivity; no separate `@coaction/alien-signals` package is required.
