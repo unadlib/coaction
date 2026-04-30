@@ -31,8 +31,8 @@ While Web Workers (and SharedWorker) offer a path towards parallelism, they intr
 
 **Coaction was created to bridge this gap** — a state management solution that truly embraces the multithreading nature of modern web applications, without sacrificing developer experience.
 
-- **Performance first** — Offload computationally intensive tasks and state management to worker threads, keeping your UI responsive and fluid.
-- **Scalable architecture** — An intuitive API (inspired by Zustand) with Slices, namespaces, and computed properties promotes modularity and clean code organization.
+- **Performance first** — Offload computationally intensive tasks and state management to worker threads, while signal-backed derived state keeps UI reads fast.
+- **Scalable architecture** — An intuitive API (inspired by Zustand) with Slices, namespaces, cached getters, and explicit computed dependencies promotes modularity and clean code organization.
 - **Flexible synchronization** — Integration with [data-transport](https://github.com/unadlib/data-transport) enables generic transport protocols, supporting various communication patterns including remote synchronization for CRDTs applications.
 
 ## Features
@@ -40,7 +40,9 @@ While Web Workers (and SharedWorker) offer a path towards parallelism, they intr
 - **Multithreading Sync** — Share state between webpage and worker threads. With `data-transport`, avoid the complexities of message passing and serialization.
 - **Immutable State with Optional Mutability** — Powered by [Mutative](https://github.com/unadlib/mutative), providing immutable state transitions with opt-in mutable instances for performance.
 - **Patch-Based Updates** — Efficient incremental state changes through patch-based synchronization, ideal for CRDTs applications.
-- **Built-in Computed** — Derived properties based on state dependencies with automatic caching.
+- **Signal-Backed Computed** — Accessor getters are cached by default through the built-in `alien-signals` runtime, while `get(deps, selector)` remains available for manual dependencies.
+- **Reactive React Selectors** — `@coaction/react` selector subscriptions use signal computed values, so selector-heavy components can subscribe to exactly what they read.
+- **Core Signal Exports** — Advanced integrations can import `signal`, `computed`, `effect`, batching helpers, and `defineExternalStoreAdapter` directly from `coaction`.
 - **Slices Pattern** — Combine multiple slices into a store with namespace support.
 - **Extensible Middleware** — Enhance store behavior with logging, time-travel debugging, persistence, and more.
 - **Framework Agnostic** — Works with React, Angular, Vue, Svelte, Solid, and state libraries like Redux, Zustand, and MobX.
@@ -59,6 +61,9 @@ For the core library without any framework:
 npm install coaction
 ```
 
+Coaction 2.0 includes `alien-signals` in the core package. You do not need a
+separate `@coaction/alien-signals` install.
+
 ## Usage
 
 ### Standard Mode Store
@@ -68,7 +73,14 @@ import { create } from '@coaction/react';
 
 const useStore = create((set) => ({
   count: 0,
-  increment: () => set((state) => state.count++)
+  get doubleCount() {
+    return this.count * 2;
+  },
+  increment() {
+    set(() => {
+      this.count += 1;
+    });
+  }
 }));
 
 const CounterComponent = () => {
@@ -76,6 +88,7 @@ const CounterComponent = () => {
   return (
     <div>
       <p>Count: {store.count}</p>
+      <p>Double: {store.doubleCount}</p>
       <button onClick={store.increment}>Increment</button>
     </div>
   );
@@ -131,11 +144,11 @@ import { create } from '@coaction/react';
 
 const counter = (set, get) => ({
   count: 0,
-  // derived data without cache
+  // accessor getters are cached automatically
   get tripleCount() {
     return this.count * 3;
   },
-  // derived data with cache
+  // explicit dependency form for manual dependency control
   doubleCount: get(
     (state) => [state.counter.count],
     (count) => count * 2
@@ -157,6 +170,11 @@ const useStore = create(
   }
 );
 ```
+
+Accessor getters are the default derived-state API. Coaction wraps them in
+`alien-signals` computed values, so repeated reads are cached until their state
+dependencies change. Use `get(deps, selector)` when you want explicit manual
+dependencies, for example cross-slice derived data or adapter integration code.
 
 Methods that rely on `this` stay bound when you destructure them from
 `getState()`:
@@ -240,16 +258,18 @@ Coaction performs on par with Zustand in standard usage. The key difference emer
 
 Coaction inherits Zustand's intuitive API design while adding built-in support for features Zustand doesn't offer out of the box:
 
-| Feature                           | Coaction | Zustand |
-| :-------------------------------- | :------: | :-----: |
-| Built-in multithreading           |    ✅    |   ❌    |
-| Getter accessor support           |    ✅    |   ❌    |
-| Built-in computed properties      |    ✅    |   ❌    |
-| Built-in namespace Slices         |    ✅    |   ❌    |
-| Built-in auto selector for state  |    ✅    |   ❌    |
-| Built-in multiple stores selector |    ✅    |   ❌    |
-| Easy middleware implementation    |    ✅    |   ❌    |
-| `this` support in getter/action   |    ✅    |   ❌    |
+| Feature                              | Coaction | Zustand |
+| :----------------------------------- | :------: | :-----: |
+| Built-in multithreading              |    ✅    |   ❌    |
+| Signal-backed cached getters         |    ✅    |   ❌    |
+| Explicit computed deps via `get()`   |    ✅    |   ❌    |
+| Reactive React selector subscription |    ✅    |   ❌    |
+| Built-in namespace Slices            |    ✅    |   ❌    |
+| Built-in auto selector for state     |    ✅    |   ❌    |
+| Built-in multiple stores selector    |    ✅    |   ❌    |
+| External store adapter API           |    ✅    |   ❌    |
+| Easy middleware implementation       |    ✅    |   ❌    |
+| `this` support in getter/action      |    ✅    |   ❌    |
 
 Coaction uses `alien-signals` internally for cached computed getters and
 selector reactivity; no separate `@coaction/alien-signals` package is required.
@@ -265,6 +285,29 @@ selector reactivity; no separate `@coaction/alien-signals` package is required.
 - [API evolution](./docs/architecture/api-evolution.md)
 
 Regenerate the reference from source with `pnpm docs:api`.
+
+### Signal Runtime Exports
+
+Coaction 2.0 folds `alien-signals` into the core package. Normal stores do not
+need direct signal usage, but integration authors can use the native primitives
+without installing an extra package:
+
+```ts
+import {
+  computed,
+  defineExternalStoreAdapter,
+  effect,
+  effectScope,
+  endBatch,
+  signal,
+  startBatch,
+  trigger
+} from 'coaction';
+```
+
+Use these exports for framework bindings, external store adapters, and advanced
+reactivity integrations. For application state, prefer Coaction getters and
+`get(deps, selector)`.
 
 ### Store Shape Mode (`sliceMode`)
 
@@ -357,6 +400,10 @@ Coaction is designed to work with a wide range of libraries and frameworks.
 
 > **Note:** Slices mode is a core `coaction` feature. Third-party state adapters only support whole-store binding.
 
+Custom state-library integrations should use `defineExternalStoreAdapter()` from
+`coaction`. The adapter API bridges an external whole-store runtime while
+keeping Coaction subscriptions and signal-backed selectors refreshed.
+
 ### Middlewares
 
 | Middleware | Package             |
@@ -376,6 +423,15 @@ For production collaboration setups with `@coaction/yjs`, see:
 - [Troubleshooting](./packages/coaction-yjs/README.md#troubleshooting)
 
 ## FAQs
+
+<details>
+<summary><b>Do I need `@coaction/alien-signals`?</b></summary>
+
+No. In Coaction 2.0, `alien-signals` is built into `coaction`. Import native
+signal primitives from `coaction` for advanced integrations, and use normal
+getter accessors or `get(deps, selector)` for application derived state.
+
+</details>
 
 <details>
 <summary><b>Can I use Coaction without multithreading?</b></summary>

@@ -6,8 +6,9 @@
 
 An efficient and flexible state management library for building high-performance, multithreading web applications.
 
-Coaction 2.0 uses `alien-signals` internally for cached getter/computed state
-and re-exports the signal primitives for advanced integrations.
+Coaction 2.0 uses `alien-signals` internally for cached getter/computed state,
+React selector reactivity, and adapter-facing subscriptions. The core package
+also re-exports the signal primitives for advanced integrations.
 
 ## Installation
 
@@ -22,10 +23,42 @@ npm install coaction
 ```jsx
 import { create } from 'coaction';
 
-const useStore = create((set) => ({
+const store = create((set) => ({
   count: 0,
-  increment: () => set((state) => state.count++)
+  get doubleCount() {
+    return this.count * 2;
+  },
+  increment() {
+    set(() => {
+      this.count += 1;
+    });
+  }
 }));
+```
+
+Accessor getters are cached automatically through the built-in signal runtime.
+Use `get(deps, selector)` when you want to declare dependencies manually:
+
+```ts
+const store = create((set, get) => ({
+  count: 0,
+  doubleCount: get(
+    (state) => [state.count],
+    (count) => count * 2
+  ),
+  increment() {
+    set(() => {
+      this.count += 1;
+    });
+  }
+}));
+```
+
+Advanced integrations can import the native signal primitives and adapter helper
+directly from `coaction`:
+
+```ts
+import { computed, defineExternalStoreAdapter, effect, signal } from 'coaction';
 ```
 
 Store methods using `this` are rebound to the latest state when invoked from
