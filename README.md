@@ -274,12 +274,19 @@ Coaction inherits Zustand's intuitive API design while adding built-in support f
 Coaction uses `alien-signals` internally for cached computed getters and
 selector reactivity; no separate `@coaction/alien-signals` package is required.
 
+For a deeper side-by-side comparison, see [Coaction vs Zustand](./docs/comparison/zustand.md).
+For existing Zustand codebases, see [Migrating from Zustand](./docs/migration/from-zustand.md).
+
 > Some features may have community solutions in Zustand; Coaction provides a more unified and streamlined API suited for modern web application development.
 
 ## API Reference
 
 - [Core API index](./docs/api/core/index.md)
 - [Core API notes](./docs/api/core/documents/core-api-notes.md)
+- [Coaction vs Zustand](./docs/comparison/zustand.md)
+- [Migrating from Zustand](./docs/migration/from-zustand.md)
+- [Zustand-focused benchmarks](./docs/benchmarking/zustand.md)
+- [DevTools roadmap](./docs/roadmap/devtools.md)
 - [Architecture overview](./docs/architecture/overview.md)
 - [Support matrix](./docs/architecture/support-matrix.md)
 - [API evolution](./docs/architecture/api-evolution.md)

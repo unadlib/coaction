@@ -58,6 +58,8 @@ layers:
   `create()`.
 - Read [adapter-contract.md](./adapter-contract.md) before adding or changing an
   official adapter.
+- Read [../roadmap/devtools.md](../roadmap/devtools.md) before promising
+  DevTools behavior beyond logger, snapshots, patches, and middleware hooks.
 
 ## Design Constraints
 
