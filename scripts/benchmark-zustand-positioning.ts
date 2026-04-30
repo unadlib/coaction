@@ -77,10 +77,11 @@ const createZustandSelectorStore = () =>
     })
   );
 
-const createZustandMaintainedTotalStore = () =>
-  createWithZustand<CartStore>((set, get) => ({
-    items: createItems(),
-    total: sumItems(createItems()),
+const createZustandMaintainedTotalStore = () => {
+  const items = createItems();
+  return createWithZustand<CartStore>((set, get) => ({
+    items,
+    total: sumItems(items),
     bump(index) {
       const current = get();
       const previous = current.items[index];
@@ -96,6 +97,7 @@ const createZustandMaintainedTotalStore = () =>
       });
     }
   }));
+};
 
 const runSuite = (name: string, suite: Suite) => {
   console.log(`\n${name}`);
