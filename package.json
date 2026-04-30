@@ -61,7 +61,7 @@
       "git add"
     ]
   },
-  "version": "1.4.1",
+  "version": "2.0.0",
   "packageManager": "pnpm@10.29.3",
   "pnpm": {
     "overrides": {

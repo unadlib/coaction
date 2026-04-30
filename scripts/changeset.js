@@ -21,6 +21,7 @@ const run = (command, commandArgs) => {
 if (args[0] === 'version') {
   run('node', [path.join(__dirname, 'validate-changesets.js')]);
   run(process.execPath, [changesetBin, 'version', ...args.slice(1)]);
+  run('node', [path.join(__dirname, 'sync-root-version.js')]);
   run('node', [path.join(__dirname, 'bump-peer-dep-ranges.js')]);
   process.exit(0);
 }
