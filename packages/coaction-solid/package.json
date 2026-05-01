@@ -57,7 +57,7 @@
   },
   "devDependencies": {
     "coaction": "workspace:*",
-    "solid-js": "^1.9.10"
+    "solid-js": "^1.9.12"
   },
   "publishConfig": {
     "access": "public",
