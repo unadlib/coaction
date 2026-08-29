@@ -65,6 +65,26 @@ describe('degradable client store (async local fallback)', () => {
     expect(store.getState().todos[2].text).toBe('third');
   });
 
+  test('keeps initial actions synchronous while live actions stay async', async () => {
+    const store = create<{ ping: () => string }>(
+      () => ({
+        ping() {
+          return 'pong';
+        }
+      }),
+      { worker: undefined }
+    );
+
+    const initialAction = store.getInitialState().ping;
+    const liveAction = store.getState().ping;
+    const initialResult: string = initialAction();
+    const liveResult: Promise<string> = liveAction();
+
+    expect(initialAction).not.toBe(liveAction);
+    expect(initialResult).toBe('pong');
+    await expect(liveResult).resolves.toBe('pong');
+  });
+
   test('async actions already returning promises stay flattened', async () => {
     const store = create<{ load: () => Promise<number> }>(
       (set) => ({
