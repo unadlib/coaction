@@ -28,6 +28,7 @@
     "format": "oxfmt --check \"{apps,packages,scripts,examples,docs,.github}/**/*.{js,mjs,cjs,ts,tsx,json,md,mdx,css,html,vue,yml,yaml}\" \".changeset/**/*.{json,md}\" \".vscode/**/*.json\" \".ox*.json\" \"package.json\" tsconfig*.json \"turbo.json\" \"typedoc.core.json\" \"vitest.config.mjs\" \"playwright.config.ts\" \"babel.config.js\" \"pnpm-workspace.yaml\" \"README.md\"",
     "format:fix": "oxfmt \"{apps,packages,scripts,examples,docs,.github}/**/*.{js,mjs,cjs,ts,tsx,json,md,mdx,css,html,vue,yml,yaml}\" \".changeset/**/*.{json,md}\" \".vscode/**/*.json\" \".ox*.json\" \"package.json\" tsconfig*.json \"turbo.json\" \"typedoc.core.json\" \"vitest.config.mjs\" \"playwright.config.ts\" \"babel.config.js\" \"pnpm-workspace.yaml\" \"README.md\"",
     "typecheck": "tsc --noEmit --project tsconfig.typecheck.json",
+    "test:history:travels": "node ./scripts/check-history-travels-types.mjs",
     "package:quality": "node ./scripts/check-package-quality.mjs",
     "package:size": "node ./scripts/check-package-size.mjs && node ./scripts/check-core-entry-isolation.mjs",
     "package:check": "pnpm build && pnpm package:quality && pnpm package:size",

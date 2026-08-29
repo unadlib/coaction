@@ -23,6 +23,7 @@ jobs:
           pnpm lint
           pnpm typecheck
           pnpm build
+          pnpm test:history:travels travels@2.1.0 travels@2.2.0
           pnpm package:quality
           pnpm package:size
           pnpm test:coverage
