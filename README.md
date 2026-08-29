@@ -452,6 +452,12 @@ Custom integrations should use `defineExternalStoreAdapter()` from `coaction/ada
 
 ## Examples
 
+- **Cross-tab todos** — the reproducible proof that one SharedWorker authority keeps every tab in
+  sync. Run `pnpm exec vite --host 127.0.0.1 --port 4174 --strictPort`, then open
+  `http://127.0.0.1:4174/examples/e2e/browser/todos/todos.html` in two tabs. The
+  [demo source](./examples/e2e/browser/todos/todos.html) is kept beside its worker and store. Replay
+  the same scenario on Chromium, Firefox, and WebKit with
+  `pnpm test:e2e:browser -- cross-tab-todos`. No benchmark numbers required — watch it, run it, fork it.
 - [3D multi-window scene](./examples/3d-scene/README.md) — SharedWorker state across multiple browser windows ([demo video](https://github.com/user-attachments/assets/9eb9f4f8-8d47-433a-8eb2-85f044d6d8fa)).
 - Framework examples — [React](./examples/react-base), [Vue](./examples/vue-base), [Angular](./examples/ng-base), [Svelte](./examples/svelte-base), [Solid](./examples/solid-base).
 - Adapter examples — [MobX](./examples/mobx-base), [Pinia](./examples/pinia-base), [Zustand](./examples/zustand-base), and the [adapter gallery](./examples/adapters-base).

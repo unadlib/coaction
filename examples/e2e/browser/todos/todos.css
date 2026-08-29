@@ -1,0 +1,283 @@
+:root {
+  color-scheme: light dark;
+  --bg: #f5f5f4;
+  --panel: #ffffff;
+  --text: #1c1917;
+  --muted: #78716c;
+  --border: #e7e5e4;
+  --accent: #1c1917;
+  --ok: #059669;
+  --warn: #d97706;
+  --danger: #dc2626;
+}
+
+@media (prefers-color-scheme: dark) {
+  :root {
+    --bg: #1c1917;
+    --panel: #292524;
+    --text: #fafaf9;
+    --muted: #a8a29e;
+    --border: #44403c;
+    --accent: #fafaf9;
+    --ok: #34d399;
+    --warn: #fbbf24;
+    --danger: #f87171;
+  }
+}
+
+* {
+  box-sizing: border-box;
+}
+
+body {
+  margin: 0;
+  font-family:
+    system-ui,
+    -apple-system,
+    'Segoe UI',
+    Roboto,
+    sans-serif;
+  background: var(--bg);
+  color: var(--text);
+}
+
+.shell {
+  max-width: 34rem;
+  margin: 0 auto;
+  padding: 3rem 1rem 4rem;
+}
+
+.header {
+  text-align: center;
+  margin-bottom: 1.25rem;
+}
+
+.header h1 {
+  font-size: 3rem;
+  font-weight: 700;
+  letter-spacing: -0.05em;
+  margin: 0;
+  color: var(--muted);
+}
+
+.subtitle {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 0.5rem;
+  flex-wrap: wrap;
+  color: var(--muted);
+  font-size: 0.85rem;
+  margin: 0.5rem 0 0.25rem;
+}
+
+.badge {
+  border: 1px solid var(--border);
+  border-radius: 999px;
+  padding: 0.1rem 0.55rem;
+  font-size: 0.75rem;
+  font-weight: 500;
+}
+
+.badge::before {
+  content: '●';
+  font-size: 0.5rem;
+  margin-right: 0.3rem;
+  vertical-align: 1px;
+}
+
+.badge.ok {
+  color: var(--ok);
+}
+
+.badge.warn {
+  color: var(--warn);
+}
+
+.link {
+  background: none;
+  border: none;
+  color: var(--muted);
+  font-size: 0.8rem;
+  text-decoration: underline;
+  cursor: pointer;
+  padding: 0;
+}
+
+.panel {
+  background: var(--panel);
+  border: 1px solid var(--border);
+  border-radius: 0.75rem;
+  box-shadow: 0 8px 24px rgb(0 0 0 / 6%);
+  overflow: hidden;
+}
+
+.add {
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+  padding: 0.75rem;
+  border-bottom: 1px solid var(--border);
+}
+
+.add input {
+  flex: 1;
+  min-width: 0;
+  border: 1px solid var(--border);
+  border-radius: 0.5rem;
+  background: var(--bg);
+  color: var(--text);
+  padding: 0.55rem 0.75rem;
+  font-size: 0.95rem;
+}
+
+.add input:focus-visible {
+  outline: 2px solid var(--accent);
+  outline-offset: 1px;
+}
+
+.add-button {
+  border: 1px solid var(--border);
+  border-radius: 0.5rem;
+  background: var(--accent);
+  color: var(--bg);
+  font-weight: 600;
+  padding: 0.55rem 0.9rem;
+  cursor: pointer;
+}
+
+.add-button:disabled {
+  opacity: 0.5;
+  cursor: not-allowed;
+}
+
+.icon {
+  background: none;
+  border: none;
+  color: var(--muted);
+  font-size: 1.1rem;
+  line-height: 1;
+  cursor: pointer;
+  padding: 0.35rem 0.4rem;
+  border-radius: 0.4rem;
+}
+
+.icon:disabled {
+  opacity: 0.3;
+  cursor: not-allowed;
+}
+
+.icon.danger {
+  opacity: 0;
+}
+
+.icon.done {
+  color: var(--ok);
+}
+
+.list {
+  list-style: none;
+  margin: 0;
+  padding: 0.35rem;
+}
+
+.todo {
+  display: flex;
+  align-items: center;
+  gap: 0.65rem;
+  padding: 0.55rem 0.65rem;
+  border-radius: 0.5rem;
+}
+
+.todo:hover {
+  background: var(--bg);
+}
+
+.todo:hover .icon.danger,
+.todo .icon.danger:focus-visible {
+  opacity: 1;
+}
+
+.todo input[type='checkbox'] {
+  width: 1.05rem;
+  height: 1.05rem;
+  accent-color: var(--ok);
+  cursor: pointer;
+}
+
+.label {
+  flex: 1;
+  min-width: 0;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+  font-size: 0.95rem;
+}
+
+.label.completed {
+  color: var(--muted);
+  text-decoration: line-through;
+}
+
+.todo.editing {
+  padding: 0.35rem 0.65rem;
+}
+
+.todo.editing input {
+  flex: 1;
+  min-width: 0;
+  border: 1px solid var(--ok);
+  border-radius: 0.5rem;
+  background: var(--bg);
+  color: var(--text);
+  padding: 0.45rem 0.6rem;
+  font-size: 0.95rem;
+}
+
+.empty {
+  color: var(--muted);
+  font-size: 0.9rem;
+  text-align: center;
+  margin: 0;
+  padding: 2.25rem 1rem;
+}
+
+.footer {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 0.75rem;
+  flex-wrap: wrap;
+  border-top: 1px solid var(--border);
+  color: var(--muted);
+  font-size: 0.8rem;
+  padding: 0.65rem 0.9rem;
+}
+
+.filters {
+  display: flex;
+  gap: 0.15rem;
+}
+
+.filters button {
+  background: none;
+  border: 1px solid transparent;
+  border-radius: 0.4rem;
+  color: var(--muted);
+  cursor: pointer;
+  font-size: 0.8rem;
+  padding: 0.2rem 0.55rem;
+}
+
+.filters button[aria-pressed='true'] {
+  border-color: var(--border);
+  color: var(--text);
+  font-weight: 600;
+}
+
+.note {
+  color: var(--muted);
+  font-size: 0.8rem;
+  text-align: center;
+  margin-top: 1rem;
+}
