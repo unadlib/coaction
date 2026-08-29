@@ -1,4 +1,4 @@
 {
   "title": "Guides",
-  "pages": ["from-zustand", "performance"]
+  "pages": ["from-zustand", "performance", "when-not-to-use"]
 }

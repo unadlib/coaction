@@ -1,0 +1,73 @@
+---
+title: When not to use Coaction
+description: An honest boundary check — the situations where Coaction is the wrong tool, and where it has no real competitor.
+---
+
+Most apps do not need Coaction. A Zustand or Jotai store plus a few selectors is a smaller,
+safer dependency for plain client state, and "more powerful" is not a reason to pay switching
+costs. This page exists so you can make that call quickly, and so the cases where Coaction
+genuinely has no equivalent are easy to find.
+
+<Callout type="info" title="An intentionally skeptical guide">
+
+This guide is deliberately anti-marketing. If your situation is listed under "skip it", skip it —
+the Coaction you would need is not the Coaction being offered.
+
+</Callout>
+
+## Skip Coaction when
+
+### Plain single-tab state is all you have
+
+A form here, a counter there, one settings panel. You will pay for render tracking, computed
+graphs, and a transport foundation you never activate. **Use Zustand, Jotai, or a slice of
+component state.** Coaction's single-threaded DX is competitive, but its reason to exist is the
+day state needs more than one thread.
+
+### Your shared state is not JSON-shaped
+
+Everything crossing a shared boundary — state, action arguments, returned values — must be a
+plain JSON tree: no `Date`, no `Map`, no class instances, no `undefined`, no cycles. Domain
+models built from rich objects need a serialization redesign before they can be shared, and
+that redesign is the real cost, not the store call. Keep such state local, or accept the mapping
+layer. See the [JSON contract](/en/docs/shared/json-contract) for the exact rules.
+
+### Call sites cannot await actions
+
+Client-mirror actions execute on the authority and return promises. UI that must read a result
+synchronously — optimistic-free flows, render-phase reads of action results, hot paths where a
+round-trip is a regression — should keep authority local instead of forcing every read through
+a transport.
+
+### You need an ecosystem that already exists
+
+Mature devtools, a large middleware shelf, community answers on every edge case. Coaction is a
+focused project, not an ecosystem. Check the [support matrix](/en/docs/reference/support-matrix)
+before betting a large surface on it.
+
+### Your browser matrix punishes SharedWorker
+
+Module SharedWorkers are inconsistent across browsers and private modes. If every tab must share
+one state instance, treat missing `SharedWorker` as a hard failure rather than shipping the
+[local fallback](/en/docs/shared/workers-and-reconnect) and hoping. Cross-tab state that merely
+needs to _eventually_ agree often fits `BroadcastChannel` + persistence — simpler machinery,
+weaker guarantees.
+
+## Reach for Coaction when
+
+- **One state, many tabs.** A SharedWorker authority with mirrored clients — the
+  [cross-tab todos demo](https://github.com/coactionjs/coaction/tree/main/examples/e2e/browser/todos)
+  replays a full editing session across tabs on three engines.
+- **Heavy compute off the main thread.** Keep the write authority in a Web Worker; the main
+  thread keeps synchronous local reads from its mirror.
+- **You want signals ergonomics without leaving the `create()` world.** Render tracking and
+  cached computed values with Zustand-style stores.
+- **Gradual adoption matters.** The [Zustand adapter](/en/docs/integrations/adapters) wraps an
+  existing store first; workers and cross-tab mode can come later without rewriting call sites.
+- **Real-time collaboration.** The [Yjs binding](/en/docs/integrations/yjs) puts CRDT state behind
+  the same store interface.
+
+## A rule of thumb
+
+> Adopt Coaction when the _shape of your problem_ is more than one thread, more than one tab, or
+> more derivation than you want to memoize by hand. Adopt something smaller when it is not.

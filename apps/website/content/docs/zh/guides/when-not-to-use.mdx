@@ -1,0 +1,65 @@
+---
+title: 什么时候不该用 Coaction
+description: 一份诚实的边界清单——哪些场景 Coaction 是错误的选择，哪些场景它没有真正的对手。
+---
+
+大多数应用不需要 Coaction。如果只是普通的单页客户端状态，Zustand 或 Jotai 加几个 selector
+是更小、更安全的依赖，“功能更强”并不构成支付切换成本的理由。这一页存在的意义，是让你快速做出
+判断，也让 Coaction 真正没有对位方案的场景容易被找到。
+
+<Callout type="info" title="一份刻意保持怀疑的指南">
+
+这一页刻意反营销。如果你的情况落在「跳过它」清单里，那就跳过——你需要的 Coaction 并不是
+它实际提供的东西。
+
+</Callout>
+
+## 跳过 Coaction 的情况
+
+### 只有普通的单标签页状态
+
+一个表单、一个计数器、一个设置面板。你会为一个永远不会启用的 transport 地基支付渲染追踪、
+computed 图的全部成本。**用 Zustand、Jotai，或者组件本地状态。** Coaction 的单线程开发体验
+有竞争力，但它存在的理由是状态需要多线程的那一天。
+
+### 共享状态不是 JSON 形状
+
+跨共享边界的一切——状态、动作参数、返回值——必须是纯 JSON 树：没有 `Date`、没有 `Map`、
+没有类实例、没有 `undefined`、没有循环引用。用富对象构建的领域模型要先做一次序列化重设计
+才能共享，而这个重设计才是真正的成本，不是那一次 store 调用。这类状态请保持 local，或者
+接受一层映射。具体规则见 [JSON contract](/zh/docs/shared/json-contract)。
+
+### 调用点无法 await 动作
+
+client mirror 的动作在权威端执行并返回 Promise。必须同步读取结果的 UI——无乐观更新的流程、
+渲染期读取动作结果、往返延迟即是回归的热路径——应该保持权威在本地，而不是强行让每次读取
+经过 transport。
+
+### 你需要一个已经存在的生态
+
+成熟的 devtools、庞大的中间件货架、每个边角问题都有社区答案。Coaction 是一个专注的项目，
+不是一个生态。在大面积押注之前先看 [support matrix](/zh/docs/reference/support-matrix)。
+
+### 你的浏览器矩阵惩罚 SharedWorker
+
+Module SharedWorker 在各浏览器和隐私模式下表现不一致。如果所有标签页必须共享同一个状态
+实例，请把 `SharedWorker` 缺失当作硬失败，而不是依赖 [local fallback](/zh/docs/shared/workers-and-reconnect)
+碰运气。只需要「最终一致」的跨标签页状态，往往 `BroadcastChannel` + 持久化就够了——机制
+更简单，保证更弱。
+
+## 应该选择 Coaction 的情况
+
+- **一份状态，多个标签页。** SharedWorker 权威 + 镜像客户端——[跨标签页 todos
+  demo](https://github.com/coactionjs/coaction/tree/main/examples/e2e/browser/todos)
+  在三个引擎上完整回放跨标签页编辑会话。
+- **重计算移出主线程。** 把写权威放进 Web Worker，主线程从 mirror 同步读取。
+- **想要 signals 的体验但不离开 `create()` 的世界。** Zustand 风格 store + 渲染追踪 +
+  缓存 computed。
+- **渐进采用很重要。** [Zustand adapter](/zh/docs/integrations/adapters) 先包住现有 store，
+  worker 与跨标签页模式以后再开，调用点不用重写。
+- **实时协作。** [Yjs binding](/zh/docs/integrations/yjs) 把 CRDT 状态放进同一个 store 接口。
+
+## 一条经验法则
+
+> 当问题的形状是多线程、多标签页，或者派生状态多到不想手写 memo 时，采用 Coaction；
+> 否则选更小的那个。

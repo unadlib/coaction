@@ -101,6 +101,22 @@ fields they read invalidate together:
 
 <img src="./coaction-concept.svg" alt="Coaction Concept" />
 
+## Is Coaction for you?
+
+Honest answer: **most apps don't need it.** For plain single-tab state, Zustand or Jotai is a
+smaller dependency with a bigger ecosystem — "more powerful" is not a reason to pay switching
+costs. Coaction earns its dependency line when the _shape of your problem_ is more than one
+thread, more than one tab, or more derivation than you want to memoize by hand:
+
+- one state instance shared across tabs (SharedWorker authority),
+- heavy compute moved off the main thread (Web Worker authority),
+- or signals-style tracking/computed without leaving the `create()` world.
+
+If your shared state isn't JSON-shaped, your call sites can't `await` actions, or your browser
+matrix punishes SharedWorker, know that before adopting — the full boundary list lives in
+[When not to use Coaction](https://coactionjs.github.io/coaction/en/docs/guides/when-not-to-use)
+([中文](https://coactionjs.github.io/coaction/zh/docs/guides/when-not-to-use)).
+
 ## Install
 
 For the core library without any framework:
@@ -376,6 +392,8 @@ const worker = globalThis.SharedWorker
   ? new SharedWorker(new URL('./store.js', import.meta.url), { type: 'module' })
   : undefined;
 
+// An explicit `worker: undefined` uses a strict local fallback whose
+// `getState()` actions still return promises and obey the shared JSON contract.
 export const store = create(
   (set) => ({
     count: 0,
@@ -385,7 +403,7 @@ export const store = create(
       });
     }
   }),
-  worker ? { worker } : undefined
+  { worker }
 );
 ```
 
