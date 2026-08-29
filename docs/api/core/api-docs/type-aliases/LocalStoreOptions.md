@@ -6,9 +6,9 @@
 
 # Type Alias: LocalStoreOptions\<T\>
 
-> **LocalStoreOptions**\<`T`\> = `Omit`\<[`StoreOptions`](StoreOptions.md)\<`T`\>, `"transport"` \| `"transportPolicy"` \| `"workerType"`\>
+> **LocalStoreOptions**\<`T`\> = `Omit`\<[`StoreOptions`](StoreOptions.md)\<`T`\>, `"clientTransport"` \| `"executeSyncTimeoutMs"` \| `"transport"` \| `"transportPolicy"` \| `"worker"` \| `"workerType"`\>
 
-Defined in: [packages/core/src/interface.ts:334](https://github.com/coactionjs/coaction/blob/main/packages/core/src/interface.ts#L334)
+Defined in: [packages/core/src/interface.ts:340](https://github.com/coactionjs/coaction/blob/main/packages/core/src/interface.ts#L340)
 
 Options accepted by the statically isolated local-store entry point.
 

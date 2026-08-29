@@ -3,7 +3,7 @@ import { applyMiddlewares } from './applyMiddlewares';
 import { refreshSignalSlots } from './computed';
 import { defaultName } from './constant';
 import { getInitialState } from './getInitialState';
-import { getRawState } from './getRawState';
+import { getRawState, type LocalActionWrapper } from './getRawState';
 import type { ClientActionFactory } from './getRawStateClientAction';
 import { handleState } from './handleState';
 import type {
@@ -40,6 +40,7 @@ type StoreRuntime = {
   clientAction?: ClientActionFactory;
   collectActionPaths?: (state: unknown, isSliceStore: boolean) => Set<string>;
   share?: 'client' | 'main';
+  wrapLocalAction?: LocalActionWrapper;
   validateInitialState?: (state: unknown, isSliceStore: boolean) => void;
   validatePatches?: (patches: Patches) => void;
   validateReplacementSource?: (state: unknown) => void;
@@ -310,7 +311,8 @@ export const createStore = <T extends CreateState>(
       internal,
       initialState,
       options,
-      runtime.clientAction
+      runtime.clientAction,
+      runtime.wrapLocalAction
     ) as T;
     if (validatePatches && store.apply !== apply) {
       const applyWithAdapter = store.apply.bind(store);

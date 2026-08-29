@@ -8,7 +8,7 @@
 
 > **ClientStoreOptions**\<`T`\> = `object` & `ClientTransportOptions`
 
-Defined in: [packages/core/src/interface.ts:346](https://github.com/coactionjs/coaction/blob/main/packages/core/src/interface.ts#L346)
+Defined in: [packages/core/src/interface.ts:363](https://github.com/coactionjs/coaction/blob/main/packages/core/src/interface.ts#L363)
 
 Options for creating a client mirror of a shared store.
 
@@ -49,3 +49,9 @@ Control how `createState` should be interpreted.
 
 Methods on the returned store become promise-returning methods because
 execution happens on the main/shared store.
+
+Passing an explicit `worker` or `clientTransport` key whose value is
+`undefined` degrades to a strict local authority. Its `getState()` actions
+remain promise-returning and its state, arguments, and results obey the
+shared JSON contract. It is not a client mirror: tabs remain independent
+and low-level local-authority mutations stay available.

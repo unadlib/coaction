@@ -91,3 +91,64 @@ test('types async client methods with awaited return values', () => {
     () => Promise<string>
   >();
 });
+
+test('types a possibly-undefined worker as a client store', () => {
+  type Counter = {
+    count: number;
+    increment: () => void;
+  };
+
+  const slice = (set: any) => ({
+    count: 0,
+    increment() {
+      set((state: Counter) => {
+        state.count += 1;
+      });
+    }
+  });
+
+  // `worker` may legitimately be undefined at runtime; the store must still
+  // be typed with the async client contract so call sites are identical in
+  // shared mode and in the degraded local fallback.
+  const maybeWorker: SharedWorker | undefined = undefined;
+  const store = create<Counter>(slice, { worker: maybeWorker });
+  const spreadOptions = { worker: maybeWorker };
+  const namedSpreadStore = create<Counter>(slice, {
+    name: 'named-spread',
+    ...spreadOptions
+  });
+  const trailingNameStore = create<Counter>(slice, {
+    ...spreadOptions,
+    name: 'trailing-name'
+  });
+
+  expectTypeOf<ReturnType<typeof store.getState>['increment']>().toEqualTypeOf<
+    () => Promise<void>
+  >();
+  expectTypeOf<
+    ReturnType<typeof namedSpreadStore.getState>['increment']
+  >().toEqualTypeOf<() => Promise<void>>();
+  expectTypeOf<
+    ReturnType<typeof trailingNameStore.getState>['increment']
+  >().toEqualTypeOf<() => Promise<void>>();
+  expectTypeOf<
+    ReturnType<typeof store.getInitialState>['increment']
+  >().toEqualTypeOf<() => void>();
+  expectTypeOf(store.getState().count).toEqualTypeOf<number>();
+
+  // Client intent must contain a concrete transport-source key, even when
+  // that key deliberately carries `undefined` for local fallback.
+  // @ts-expect-error client options without a source are runtime-ambiguous
+  const missingIntent: ClientStoreOptions<Counter> = { name: 'missing' };
+  void missingIntent;
+
+  const optionalWorker: { name: string; worker?: SharedWorker } = {
+    name: 'optional'
+  };
+  // @ts-expect-error branch first so the options have an explicit client intent
+  create<Counter>(slice, optionalWorker);
+
+  store.destroy();
+  namedSpreadStore.destroy();
+  trailingNameStore.destroy();
+});

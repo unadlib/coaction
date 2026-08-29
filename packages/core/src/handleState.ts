@@ -201,6 +201,7 @@ export const handleState = <T extends CreateState>(
     internal.isBatching = true;
     if (
       !store.share &&
+      !internal.validateState &&
       !(options as StoreOptions<T>).enablePatches &&
       !hasStoreCommitListeners(store) &&
       !internal.mutableInstance &&

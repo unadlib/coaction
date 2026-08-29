@@ -8,7 +8,7 @@
 
 > **LocalCreator** = \{\<`T`\>(`createState`, `options`): `StoreReturn`\<`T`\>; \<`T`\>(`createState`, `options?`): `StoreReturn`\<[`SliceState`](SliceState.md)\<`T`\>\>; \<`T`\>(`createState`, `options?`): `StoreReturn`\<`T`\>; \}
 
-Defined in: [packages/core/src/interface.ts:491](https://github.com/coactionjs/coaction/blob/main/packages/core/src/interface.ts#L491)
+Defined in: [packages/core/src/interface.ts:530](https://github.com/coactionjs/coaction/blob/main/packages/core/src/interface.ts#L530)
 
 Overload set for the transport-free `coaction/local` create function.
 

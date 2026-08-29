@@ -24,16 +24,36 @@ const store = create(source, { worker });
 ```ts
 import { create } from 'coaction/shared';
 
-const worker = globalThis.SharedWorker
-  ? new SharedWorker(new URL('./store.ts', import.meta.url), {
+let worker: SharedWorker | undefined;
+if (typeof SharedWorker !== 'undefined') {
+  try {
+    worker = new SharedWorker(new URL('./store.ts', import.meta.url), {
       type: 'module'
-    })
-  : undefined;
+    });
+  } catch (error) {
+    console.error('SharedWorker construction failed', error);
+    // 只有在允许各标签页持有独立 local state 时，才保留 undefined。
+  }
+}
 
-export const store = create(source, worker ? { worker } : undefined);
+export const store = create(source, { worker });
 ```
 
-每个标签页得到一个 client mirror，SharedWorker 拥有唯一状态实例。浏览器支持与 Worker 生命周期规则仍然适用；只有当每个标签页拥有独立状态可以接受时，才提供 local fallback。
+每个标签页得到一个 client mirror，SharedWorker 拥有唯一状态实例。显式传入值为 `undefined` 的
+`worker` key 时，store 会降级为 local authority。其 `getState()` action 仍返回 Promise，state、
+action 参数与返回值也继续遵守 shared JSON contract，因此 await 后的调用点可以在两种模式间迁移。
+
+<Callout type="warn" title="Fallback 不是 client mirror">
+
+降级后的标签页各自持有独立状态。如果要求所有标签页共享同一状态，请把 SharedWorker 缺失当作
+硬错误处理，而不是依赖降级。降级 store 的 `share === false`，并在本地拥有权威状态，因此底层
+`setState()` 与 `apply()` 仍然可用。请始终通过 `getState()` 调用 action，并在读取结果前 await。
+
+</Callout>
+
+如果 `new SharedWorker(...)` 在调用 `create()` 之前就抛出异常，Coaction 无法捕获。只有当产品
+确实允许 local fallback 时，应用才应自行捕获构造失败并保留 `undefined`。已经存在但在初始化
+期间失败的 worker 或 transport 会显式报错，不会静默改变 authority model。
 
 ## 限制权威端 surface
 

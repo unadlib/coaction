@@ -31,7 +31,8 @@ export type StoreReturn<T extends object> = Omit<Store<T>, 'subscribe'> & {
 export type StoreWithAsyncFunction<
   T extends object,
   D extends true | false = false
-> = Omit<Store<Asyncify<T, D>>, 'subscribe'> & {
+> = Omit<Store<Asyncify<T, D>>, 'getInitialState' | 'subscribe'> & {
+  getInitialState: () => T;
   (): Asyncify<T, D>;
   <P>(selector: (state: Asyncify<T, D>) => P): Readable<P>;
   subscribe: Readable<Asyncify<T, D>>['subscribe'];
@@ -51,18 +52,6 @@ type SingleClientStoreOptions<T extends CreateState> = ClientStoreOptions<T> & {
 export type Creator = {
   <T extends ISlices>(
     createState: T,
-    options: SingleStoreOptions<T>
-  ): StoreReturn<T>;
-  <T extends Record<PropertyKey, Slice<any>>>(
-    createState: T,
-    options?: StoreOptions<T>
-  ): StoreReturn<SliceState<T>>;
-  <T extends ISlices>(
-    createState: Slice<T> | T,
-    options?: StoreOptions<T>
-  ): StoreReturn<T>;
-  <T extends ISlices>(
-    createState: T,
     options: SingleClientStoreOptions<T>
   ): StoreWithAsyncFunction<T>;
   <T extends Record<PropertyKey, Slice<any>>>(
@@ -73,6 +62,18 @@ export type Creator = {
     createState: Slice<T> | T,
     options?: ClientStoreOptions<T>
   ): StoreWithAsyncFunction<T>;
+  <T extends ISlices>(
+    createState: T,
+    options: SingleStoreOptions<T>
+  ): StoreReturn<T>;
+  <T extends Record<PropertyKey, Slice<any>>>(
+    createState: T,
+    options?: StoreOptions<T>
+  ): StoreReturn<SliceState<T>>;
+  <T extends ISlices>(
+    createState: Slice<T> | T,
+    options?: StoreOptions<T>
+  ): StoreReturn<T>;
 };
 
 const createReadable = <T extends object, P>(

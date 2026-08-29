@@ -328,12 +328,23 @@ export type StoreOptions<T extends CreateState> = {
    * - single: force single-store mode.
    */
   sliceMode?: 'auto' | 'slices' | 'single';
+  /** @internal Client transport sources are only accepted by client overloads. */
+  clientTransport?: never;
+  /** @internal Client execution timeouts are only accepted by client overloads. */
+  executeSyncTimeoutMs?: never;
+  /** @internal Worker instances are only accepted by client overloads. */
+  worker?: never;
 };
 
 /** Options accepted by the statically isolated local-store entry point. */
 export type LocalStoreOptions<T extends CreateState> = Omit<
   StoreOptions<T>,
-  'transport' | 'transportPolicy' | 'workerType'
+  | 'clientTransport'
+  | 'executeSyncTimeoutMs'
+  | 'transport'
+  | 'transportPolicy'
+  | 'worker'
+  | 'workerType'
 >;
 
 /**
@@ -342,6 +353,12 @@ export type LocalStoreOptions<T extends CreateState> = Omit<
  * @remarks
  * Methods on the returned store become promise-returning methods because
  * execution happens on the main/shared store.
+ *
+ * Passing an explicit `worker` or `clientTransport` key whose value is
+ * `undefined` degrades to a strict local authority. Its `getState()` actions
+ * remain promise-returning and its state, arguments, and results obey the
+ * shared JSON contract. It is not a client mirror: tabs remain independent
+ * and low-level local-authority mutations stay available.
  */
 export type ClientStoreOptions<T extends CreateState> = {
   /**
@@ -367,7 +384,7 @@ export type ClientStoreOptions<T extends CreateState> = {
 /**
  * Transport-related options for client/shared-store mirrors.
  */
-export interface ClientTransportOptions {
+export type ClientTransportOptions = {
   /**
    * @deprecated Internal worker-mode override retained for compatibility.
    * Prefer passing `clientTransport` or `worker`.
@@ -389,9 +406,25 @@ export interface ClientTransportOptions {
   clientTransport?: Transport<any>;
   /**
    * Build a client transport from a Worker or SharedWorker instance.
+   *
+   * @remarks
+   * `undefined` is accepted when the application explicitly chooses the local
+   * fallback. `getState()` actions still return promises and the shared JSON
+   * contract remains enforced, but the fallback owns independent local state.
+   * Worker-constructor and transport-setup failures are not silently degraded.
    */
   worker?: SharedWorker | Worker;
-}
+} & (
+  | {
+      clientTransport: Transport<any> | undefined;
+    }
+  | {
+      worker: SharedWorker | Worker | undefined;
+    }
+  | {
+      workerType: 'WebWorkerClient' | 'SharedWorkerClient';
+    }
+);
 
 /**
  * Transform store methods into promise-returning methods for client stores.
@@ -420,7 +453,10 @@ export type Asyncify<T extends object, D extends true | false> = {
 export type StoreWithAsyncFunction<
   T extends object,
   D extends true | false = false
-> = Store<Asyncify<T, D>> & (() => Asyncify<T, D>);
+> = Omit<Store<Asyncify<T, D>>, 'getInitialState'> & {
+  /** Return the original synchronous state shape produced at initialization. */
+  getInitialState: () => T;
+} & (() => Asyncify<T, D>);
 
 /**
  * Callable store returned by {@link create} in local or main/shared mode.
@@ -457,22 +493,13 @@ type SingleClientStoreOptions<T extends CreateState> = ClientStoreOptions<T> & {
  * - `Slice` + `ClientStoreOptions` returns an async client store.
  * - slice map + `ClientStoreOptions` returns an async client slices store.
  *
+ * Explicit client source keys with an `undefined` value degrade to a strict
+ * local authority that keeps the async `getState()` action contract.
+ *
  * For object inputs whose enumerable values are all functions, prefer explicit
  * `sliceMode` to avoid ambiguous inference.
  */
 export type Creator = {
-  <T extends ISlices>(
-    createState: T,
-    options: SingleStoreOptions<T>
-  ): StoreReturn<T>;
-  <T extends Record<PropertyKey, Slice<any>>>(
-    createState: T,
-    options?: StoreOptions<T>
-  ): StoreReturn<SliceState<T>>;
-  <T extends ISlices>(
-    createState: Slice<T> | T,
-    options?: StoreOptions<T>
-  ): StoreReturn<T>;
   <T extends ISlices>(
     createState: T,
     options: SingleClientStoreOptions<T>
@@ -485,6 +512,18 @@ export type Creator = {
     createState: Slice<T> | T,
     options?: ClientStoreOptions<T>
   ): StoreWithAsyncFunction<T>;
+  <T extends ISlices>(
+    createState: T,
+    options: SingleStoreOptions<T>
+  ): StoreReturn<T>;
+  <T extends Record<PropertyKey, Slice<any>>>(
+    createState: T,
+    options?: StoreOptions<T>
+  ): StoreReturn<SliceState<T>>;
+  <T extends ISlices>(
+    createState: Slice<T> | T,
+    options?: StoreOptions<T>
+  ): StoreReturn<T>;
 };
 
 /** Overload set for the transport-free `coaction/local` create function. */

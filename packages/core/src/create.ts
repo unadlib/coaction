@@ -15,6 +15,7 @@ import {
   markStoreReady
 } from './lifecycle';
 import {
+  assertSharedJsonValue,
   validateSharedActionPaths,
   validateSharedInitialState,
   validateSharedReplacementSource,
@@ -23,6 +24,19 @@ import {
 import { createStore } from './storeFactory';
 import { validateUpdatePatches } from './transportProtocol';
 import { wrapStore } from './wrapStore';
+
+const wrapAsyncLocalAction = (action: (...args: unknown[]) => unknown) =>
+  function (this: unknown, ...args: unknown[]) {
+    assertSharedJsonValue(args);
+    return Promise.resolve()
+      .then(() => action.apply(this, args))
+      .then((result) => {
+        if (typeof result !== 'undefined') {
+          assertSharedJsonValue(result);
+        }
+        return result;
+      });
+  };
 
 const isMainWorkerType = (
   workerType:
@@ -80,6 +94,24 @@ const validateCreateModeOptions = <T extends CreateState>(
  * Prefer the static `coaction/local` entry when transport support is not
  * required. It excludes the JSON protocol and reconnect runtime from the
  * consumer dependency graph.
+ *
+ * When client options (`worker` / `clientTransport`) are provided but no
+ * transport is available at runtime, the store degrades to a strict local
+ * authority. Its `getState()` actions still return promises and its values
+ * obey the shared JSON contract:
+ *
+ * ```ts
+ * const worker =
+ *   typeof SharedWorker !== 'undefined'
+ *     ? new SharedWorker(new URL('./worker.ts', import.meta.url), {
+ *         type: 'module'
+ *       })
+ *     : undefined;
+ *
+ * // StoreWithAsyncFunction<T> whether or not the worker exists.
+ * const store = create(slice, { worker });
+ * await store.getState().action();
+ * ```
  */
 export const create: Creator = <T extends CreateState>(
   createState: Slice<T> | T,
@@ -93,23 +125,51 @@ export const create: Creator = <T extends CreateState>(
   const storeTransport = (options as StoreOptions<T>).transport;
   const share =
     isMainWorkerType(workerType) || storeTransport ? 'main' : undefined;
-  const buildStore = ({ share }: { share?: 'client' | 'main' }) =>
-    createStore(createState, options, {
+  const clientTransport = (options as ClientStoreOptions<T>).clientTransport;
+  const clientWorker = (options as ClientStoreOptions<T>).worker;
+  /**
+   * Client options were accepted but no transport exists at runtime — e.g.
+   * `create(slice, { worker })` with `worker: undefined` because
+   * `SharedWorker` is unavailable. The store degrades to a local authority
+   * whose `getState()` actions still return promises while state, arguments,
+   * and results keep the shared JSON contract.
+   */
+  const degradeToLocalAsyncActions =
+    !share &&
+    !clientTransport &&
+    !clientWorker &&
+    (Object.prototype.hasOwnProperty.call(options, 'clientTransport') ||
+      Object.prototype.hasOwnProperty.call(options, 'worker'));
+  const buildStore = ({
+    share,
+    wrapLocalAction
+  }: {
+    share?: 'client' | 'main';
+    wrapLocalAction?: typeof wrapAsyncLocalAction;
+  }) => {
+    const sharedContract = Boolean(share || wrapLocalAction);
+    return createStore(createState, options, {
       share,
+      wrapLocalAction,
       clientAction: share === 'client' ? createClientAction : undefined,
       collectActionPaths:
         share === 'main' ? validateSharedActionPaths : undefined,
-      validateInitialState: share ? validateSharedInitialState : undefined,
+      validateInitialState: sharedContract
+        ? validateSharedInitialState
+        : undefined,
       validatePatches: share === 'main' ? validateUpdatePatches : undefined,
-      validateReplacementSource: share
+      validateReplacementSource: sharedContract
         ? validateSharedReplacementSource
         : undefined,
-      validateState: share ? validateSharedStateSerializable : undefined
+      validateState: sharedContract
+        ? validateSharedStateSerializable
+        : undefined
     });
+  };
 
   if (
-    (options as ClientStoreOptions<T>).clientTransport ||
-    (options as ClientStoreOptions<T>).worker ||
+    clientTransport ||
+    clientWorker ||
     isClientWorkerType(options.workerType)
   ) {
     if (checkEnablePatches) {
@@ -124,9 +184,18 @@ export const create: Creator = <T extends CreateState>(
     throw new Error('enablePatches: true is required for the transport');
   }
 
+  if (degradeToLocalAsyncActions && checkEnablePatches) {
+    throw new Error('enablePatches: true is required for the async store');
+  }
+
   let builtStore: ReturnType<typeof buildStore>;
   try {
-    builtStore = buildStore({ share });
+    builtStore = buildStore({
+      share,
+      wrapLocalAction: degradeToLocalAsyncActions
+        ? wrapAsyncLocalAction
+        : undefined
+    });
   } catch (error) {
     return failTransportInitialization(storeTransport, error);
   }

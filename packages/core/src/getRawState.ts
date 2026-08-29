@@ -15,6 +15,10 @@ import { getOwnEnumerableKeys, isUnsafeKey, setOwnEnumerable } from './utils';
 
 const defaultClientExecuteSyncTimeoutMs = 1500;
 
+export type LocalActionWrapper = (
+  action: (...args: unknown[]) => unknown
+) => (...args: unknown[]) => Promise<unknown>;
+
 const lockPublicStateObject = <T extends object>(state: T) => {
   Object.freeze(state);
   return state;
@@ -40,7 +44,8 @@ export const getRawState = <T extends CreateState>(
   internal: Internal<T>,
   initialState: any,
   options: StoreOptions<T> | ClientStoreOptions<T>,
-  createClientAction?: ClientActionFactory
+  createClientAction?: ClientActionFactory,
+  wrapLocalAction?: LocalActionWrapper
 ) => {
   const clientExecuteSyncTimeoutMs = getClientExecuteSyncTimeoutMs(options);
   const rawState = {} as Record<PropertyKey, any>;
@@ -102,7 +107,7 @@ export const getRawState = <T extends CreateState>(
             sliceKey
           });
         } else {
-          descriptor.value = createLocalAction({
+          const localAction = createLocalAction({
             fn: descriptor.value,
             internal,
             key,
@@ -110,6 +115,7 @@ export const getRawState = <T extends CreateState>(
             store,
             sliceKey
           });
+          descriptor.value = wrapLocalAction?.(localAction) ?? localAction;
         }
       }
     });

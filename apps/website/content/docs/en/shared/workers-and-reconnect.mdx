@@ -26,18 +26,40 @@ worker runtime:
 ```ts
 import { create } from 'coaction/shared';
 
-const worker = globalThis.SharedWorker
-  ? new SharedWorker(new URL('./store.ts', import.meta.url), {
+let worker: SharedWorker | undefined;
+if (typeof SharedWorker !== 'undefined') {
+  try {
+    worker = new SharedWorker(new URL('./store.ts', import.meta.url), {
       type: 'module'
-    })
-  : undefined;
+    });
+  } catch (error) {
+    console.error('SharedWorker construction failed', error);
+    // Keep `undefined` only when independent local state is acceptable.
+  }
+}
 
-export const store = create(source, worker ? { worker } : undefined);
+export const store = create(source, { worker });
 ```
 
-Each tab gets a client mirror while the SharedWorker owns one state instance. Browser support and
-worker lifetime rules still apply; provide a local fallback only when independent per-tab state
-is acceptable.
+Each tab gets a client mirror while the SharedWorker owns one state instance. Passing the explicit
+`worker` key with an `undefined` value degrades to a local authority. Its `getState()` actions still
+return promises and its state, action arguments, and action results obey the shared JSON contract,
+so awaited call sites remain portable between modes.
+
+<Callout type="warn" title="Fallback is not a client mirror">
+
+Degraded tabs run independent local state. If every tab must see the same state, treat a missing
+SharedWorker as a hard error instead of relying on the fallback. The degraded store has
+`share === false` and owns its state locally, so its low-level `setState()` and `apply()` methods
+remain available. Always invoke actions through `getState()` and await them before reading their
+effects.
+
+</Callout>
+
+Coaction cannot catch an exception thrown while your code evaluates `new SharedWorker(...)` before
+`create()` is called. Catch that constructor failure yourself only when local fallback is an
+acceptable product decision. A worker or transport that exists but fails during setup is surfaced
+as an error rather than silently changing the authority model.
 
 ## Restrict the authority surface
 
