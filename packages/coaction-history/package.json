@@ -1,6 +1,6 @@
 {
   "name": "@coaction/history",
-  "version": "3.1.0",
+  "version": "3.2.0",
   "description": "A undo/redo middleware for Coaction",
   "keywords": [
     "coaction",
@@ -60,7 +60,7 @@
     "coaction": "workspace:*"
   },
   "peerDependencies": {
-    "coaction": "^3.1.0"
+    "coaction": "^3.2.0"
   },
   "authors": [
     "Michael Lin <unadlib@gmail.com> (https://github.com/unadlib)"

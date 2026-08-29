@@ -1,5 +1,15 @@
 # @coaction/solid
 
+## 3.2.0
+
+### Minor Changes
+
+- 7d77649: Fix client-store type inference in framework creators. Options carrying
+  `worker` or `clientTransport`, including through object spreads, now preserve
+  the async client action types. Calls without client transport options remain
+  synchronous, and `getInitialState()` retains the original synchronous
+  initialization shape.
+
 ## 3.1.0
 
 ### Patch Changes

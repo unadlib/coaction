@@ -1,6 +1,6 @@
 {
   "name": "@coaction/xstate",
-  "version": "3.1.0",
+  "version": "3.2.0",
   "description": "A Coaction integration tool for XState",
   "keywords": [
     "actor",
@@ -55,7 +55,7 @@
     "xstate": "^5.23.0"
   },
   "peerDependencies": {
-    "coaction": "^3.1.0",
+    "coaction": "^3.2.0",
     "xstate": "^5.0.0"
   },
   "authors": [

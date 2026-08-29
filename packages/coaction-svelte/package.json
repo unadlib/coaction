@@ -1,6 +1,6 @@
 {
   "name": "@coaction/svelte",
-  "version": "3.1.0",
+  "version": "3.2.0",
   "description": "A Coaction integration tool for Svelte",
   "keywords": [
     "coaction",
@@ -55,7 +55,7 @@
     "svelte": "^5.53.11"
   },
   "peerDependencies": {
-    "coaction": "^3.1.0",
+    "coaction": "^3.2.0",
     "svelte": "^4.0.0 || ^5.0.0"
   },
   "peerDependenciesMeta": {
