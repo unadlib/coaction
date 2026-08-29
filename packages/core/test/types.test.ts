@@ -92,6 +92,37 @@ test('types async client methods with awaited return values', () => {
   >();
 });
 
+test('types stores without client options as synchronous', () => {
+  type Counter = {
+    count: number;
+    increment: () => void;
+  };
+
+  const slice = (set: any) => ({
+    count: 0,
+    increment() {
+      set((state: Counter) => {
+        state.count += 1;
+      });
+    }
+  });
+  const store = create<Counter>(slice);
+  const explicitLocalStore = create<Counter>(slice, {});
+  const slicesStore = create({ counter: slice });
+
+  expectTypeOf(store.getState().increment).toEqualTypeOf<() => void>();
+  expectTypeOf(explicitLocalStore.getState().increment).toEqualTypeOf<
+    () => void
+  >();
+  expectTypeOf(slicesStore.getState().counter.increment).toEqualTypeOf<
+    () => void
+  >();
+
+  store.destroy();
+  explicitLocalStore.destroy();
+  slicesStore.destroy();
+});
+
 test('types a possibly-undefined worker as a client store', () => {
   type Counter = {
     count: number;

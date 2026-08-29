@@ -56,11 +56,11 @@ export type Creator = {
   ): StoreWithAsyncFunction<T>;
   <T extends Record<PropertyKey, Slice<any>>>(
     createState: T,
-    options?: ClientStoreOptions<T>
+    options: ClientStoreOptions<T>
   ): StoreWithAsyncFunction<SliceState<T>, true>;
   <T extends ISlices>(
     createState: Slice<T> | T,
-    options?: ClientStoreOptions<T>
+    options: ClientStoreOptions<T>
   ): StoreWithAsyncFunction<T>;
   <T extends ISlices>(
     createState: T,

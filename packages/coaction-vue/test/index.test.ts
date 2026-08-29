@@ -26,7 +26,8 @@ test('base', () => {
     expect(state.count).toBe(0);
     expect(count.value).toBe(0);
     expect(double.value).toBe(0);
-    state.increment();
+    const result: void = state.increment();
+    expect(result).toBeUndefined();
     expect(state.count).toBe(1);
     expect(count.value).toBe(1);
     expect(double.value).toBe(2);

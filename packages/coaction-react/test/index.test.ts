@@ -2,6 +2,20 @@ import React from 'react';
 import { act, fireEvent, render, screen } from '@testing-library/react';
 import { create, createSelector, Observer, observer } from '../src';
 
+test('types zero-options actions as synchronous', () => {
+  const useStore = create<{
+    count: number;
+    increment: () => void;
+  }>(() => ({
+    count: 0,
+    increment() {}
+  }));
+
+  const result: void = useStore.getState().increment();
+  expect(result).toBeUndefined();
+  useStore.destroy();
+});
+
 test('updates component with selector and full-state access', () => {
   const useStore = create<{
     count: number;

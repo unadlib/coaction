@@ -18,7 +18,8 @@ test('supports svelte subscribe contract', () => {
     calls.push(state.count);
   });
 
-  store.getState().increment();
+  const result: void = store.getState().increment();
+  expect(result).toBeUndefined();
   store.getState().increment();
   unsubscribe();
 
