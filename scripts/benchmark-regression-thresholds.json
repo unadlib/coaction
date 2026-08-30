@@ -4,6 +4,8 @@
     "Coaction computed with manual deps": 10000000,
     "Coaction mutable update + cached getter": 45000,
     "Coaction mutable update + manual deps": 45000,
+    "Coaction object replacement + cached getter": 120,
+    "Coaction unrelated field replacement": 400000,
     "Coaction with Mutative": 500
   },
   "minRatios": [

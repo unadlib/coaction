@@ -62,6 +62,44 @@ const createCoactionManualDepsStore = () =>
     }
   }));
 
+const createCoactionReplacementStore = () =>
+  createWithCoaction<CartStore>((set, get) => ({
+    items: createItems(),
+    get total() {
+      return sumItems(this.items);
+    },
+    bump(index) {
+      const items = (get() as unknown as CartData).items.slice();
+      items[index] = {
+        ...items[index],
+        quantity: items[index].quantity + 1
+      };
+      set({ items });
+    }
+  }));
+
+const createCoactionUnrelatedFieldStore = () =>
+  createWithCoaction<CartData & { counter: number; bump: () => void }>(
+    (set) => ({
+      items: createItems(),
+      counter: 0,
+      bump() {
+        set({ counter: Math.random() });
+      }
+    })
+  );
+
+const createZustandUnrelatedFieldStore = () =>
+  createWithZustand<CartData & { counter: number; bump: () => void }>(
+    (set) => ({
+      items: createItems(),
+      counter: 0,
+      bump() {
+        set({ counter: Math.random() });
+      }
+    })
+  );
+
 const createZustandSelectorStore = () =>
   createWithZustand<CartData & { bump: (index: number) => void }>(
     (set, get) => ({
@@ -113,6 +151,9 @@ const runSuite = (name: string, suite: Suite) => {
 
 let coactionAccessor = createCoactionAccessorStore();
 let coactionManualDeps = createCoactionManualDepsStore();
+let coactionReplacement = createCoactionReplacementStore();
+let coactionUnrelated = createCoactionUnrelatedFieldStore();
+let zustandUnrelated = createZustandUnrelatedFieldStore();
 let zustandSelector = createZustandSelectorStore();
 let zustandMaintainedTotal = createZustandMaintainedTotalStore();
 
@@ -159,6 +200,41 @@ runSuite(
       {
         onStart: () => {
           coactionManualDeps = createCoactionManualDepsStore();
+        }
+      }
+    )
+    .add(
+      'Coaction object replacement + cached getter',
+      () => {
+        const index = nextIndex();
+        coactionReplacement.getState().bump(index);
+        void coactionReplacement.getState().total;
+      },
+      {
+        onStart: () => {
+          coactionReplacement = createCoactionReplacementStore();
+        }
+      }
+    )
+    .add(
+      'Coaction unrelated field replacement',
+      () => {
+        coactionUnrelated.getState().bump();
+      },
+      {
+        onStart: () => {
+          coactionUnrelated = createCoactionUnrelatedFieldStore();
+        }
+      }
+    )
+    .add(
+      'Zustand unrelated field replacement',
+      () => {
+        zustandUnrelated.getState().bump();
+      },
+      {
+        onStart: () => {
+          zustandUnrelated = createZustandUnrelatedFieldStore();
         }
       }
     )
