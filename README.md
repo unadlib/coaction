@@ -86,7 +86,7 @@ fields they read invalidate together:
 - **Automatic render tracking** — `observer()` re-renders a component only for the fields it
   reads. No selectors, no `useShallow`.
 - **Cached computed by default** — `get value()` getters memoize until a dependency changes.
-  No `useMemo`, no reselect — and **~101x faster** than a Zustand selector that recomputes
+  No `useMemo`, no reselect — and **~96x faster** than a Zustand selector that recomputes
   ([numbers](#reading-derived-state)).
 - **Mutable writes, immutable results** — just `this.count += 1` inside `set()`. Powered by
   [Mutative](https://github.com/unadlib/mutative) (~18x faster than Zustand + Immer in our benchmark).
@@ -454,15 +454,15 @@ Run `pnpm benchmark:zustand-positioning` — higher is better:
 
 | Pattern                                   |     ops/sec | Relative |
 | :---------------------------------------- | ----------: | -------: |
-| **Coaction** cached getter                |  79,491,945 | **1.0x** |
-| **Coaction** `get(deps, selector)`        |  49,122,728 |    0.62x |
-| Zustand selector that recomputes          |     786,517 |   0.010x |
-| Zustand manually maintained `total` field | 111,154,719 |    1.40x |
+| **Coaction** cached getter                |  76,726,880 | **1.0x** |
+| **Coaction** `get(deps, selector)`        |  49,119,723 |    0.64x |
+| Zustand selector that recomputes          |     796,100 |   0.010x |
+| Zustand manually maintained `total` field | 112,175,343 |    1.46x |
 
 Against the pattern most codebases actually write — a selector that recomputes derived data —
-a cached getter is **~101x faster**. The only faster option is a derived field the application
+a cached getter is **~96x faster**. The only faster option is a derived field the application
 maintains by hand inside every action, and that is precisely the consistency work Coaction
-removes. Deleting that bug surface costs about 28% of read throughput.
+removes. Deleting that bug surface costs about 32% of read throughput.
 
 ### Updating, then reading the derived value
 
@@ -470,11 +470,11 @@ Same script, the update-then-read scenario:
 
 | Pattern                                             |   ops/sec | Relative |
 | :-------------------------------------------------- | --------: | -------: |
-| **Coaction** mutable update + cached getter         |    43,177 | **1.0x** |
-| **Coaction** mutable update + `get(deps, selector)` |    42,193 |    0.98x |
-| **Coaction** object replacement + cached getter     |       296 |   0.007x |
-| Zustand immutable update + selector recompute       |    88,217 |    2.04x |
-| Zustand immutable update + maintained field         | 3,293,247 |   76.27x |
+| **Coaction** mutable update + cached getter         |    43,918 | **1.0x** |
+| **Coaction** mutable update + `get(deps, selector)` |    43,660 |    0.99x |
+| **Coaction** object replacement + cached getter     |       342 |   0.008x |
+| Zustand immutable update + selector recompute       |    88,935 |    2.03x |
+| Zustand immutable update + maintained field         | 3,302,630 |    75.2x |
 
 In this 1,000-item update-then-read scenario, Coaction has roughly half the throughput of the
 Zustand selector case and is far behind a hand-maintained field. This result includes both the

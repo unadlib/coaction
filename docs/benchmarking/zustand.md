@@ -57,6 +57,18 @@ remained independently gated. The cached snapshot adds about 0.9 KiB gzip to
 the local entry. These numbers document the reviewed performance/size tradeoff;
 they are not cross-machine performance claims.
 
+## Reading these numbers
+
+Every figure in this document and in the README comes from a **single run** of
+`pnpm benchmark:zustand-positioning` on one machine (Apple M1 Max, Node 24.16,
+`zustand@5.0.11`). Run-to-run spread on that suite is roughly ±1% for the stable read cases and
+as much as ±19% for the object-replacement case, so the trailing digits carry no meaning: quote
+the order of magnitude and the ratio, not the exact value.
+
+Mixing figures from different runs is how these documents drifted out of agreement once already.
+When you refresh them, refresh every table from the same run and update the README in the same
+change.
+
 ## The object-payload write path
 
 `set({ ... })` behaves differently from `set((draft) => { ... })`, and the difference has two
@@ -89,8 +101,8 @@ keys and to break aliasing with objects the caller still holds, so passing in a 
 
 | Update path                                | ops/sec |
 | :----------------------------------------- | ------: |
-| `set((draft) => { ... })` (Mutative draft) |  45,154 |
-| `set({ items })` (object replacement)      |    ~300 |
+| `set((draft) => { ... })` (Mutative draft) |  43,918 |
+| `set({ items })` (object replacement)      |     342 |
 
 This is not a defect and cannot be optimized away without weakening the guarantee. Coaction 1.5.0
 looks dramatically faster here only because it did not make that guarantee; the sanitizer arrived
