@@ -39,6 +39,15 @@ synchronously — optimistic-free flows, render-phase reads of action results, h
 round-trip is a regression — should keep authority local instead of forcing every read through
 a transport.
 
+### Your measured update hot path misses its budget
+
+Do not infer a universal write penalty from one microbenchmark. In the maintained scenario that
+updates one item and then reads a derived total across 1,000 items, Coaction has about half the
+throughput of the equivalent Zustand selector case and is far behind a hand-maintained field. A
+separate bulk benchmark shows that other update shapes can be comparable or favor Mutative. For
+high-frequency drag, animation frames, and streaming tick handlers, benchmark the representative
+operation and skip Coaction when it misses the required budget.
+
 ### You need an ecosystem that already exists
 
 Mature devtools, a large middleware shelf, community answers on every edge case. Coaction is a

@@ -86,13 +86,22 @@ fields they read invalidate together:
 - **Automatic render tracking** — `observer()` re-renders a component only for the fields it
   reads. No selectors, no `useShallow`.
 - **Cached computed by default** — `get value()` getters memoize until a dependency changes.
-  No `useMemo`, no reselect.
+  No `useMemo`, no reselect — and **~101x faster** than a Zustand selector that recomputes
+  ([numbers](#reading-derived-state)).
 - **Mutable writes, immutable results** — just `this.count += 1` inside `set()`. Powered by
   [Mutative](https://github.com/unadlib/mutative) (~18x faster than Zustand + Immer in our benchmark).
 - **`this` + this-bound actions** — natural getters and this-bound actions; methods destructured from
   `getState()` stay bound.
 - **Escape hatches when you want them** — `useStore(selector)`, `useStore.auto()`, and
   `get(deps, selector)` keep explicit control available.
+
+None of those is individually unique — you can assemble the same experience on Zustand with
+`react-tracked` + a computed plugin + auto-selectors + Immer. The difference is that those are
+four mechanisms with four mental models and an N×N compatibility matrix across React and Zustand
+majors, while Coaction keeps tracking and computed invalidation on **one** `alien-signals` graph,
+maintained as a single version contract. That shared substrate — not the feature count — is the
+structural argument, and it is made in full, costs included, in
+[Why Coaction Without Multithreading](./docs/comparison/single-thread.md).
 
 > **And when you need it, the same store scales up.** Built on a transport + patch foundation,
 > the _same_ store source can run in a Worker, SharedWorker, across tabs, or in real-time
@@ -105,15 +114,18 @@ fields they read invalidate together:
 
 Honest answer: **most apps don't need it.** For plain single-tab state, Zustand or Jotai is a
 smaller dependency with a bigger ecosystem — "more powerful" is not a reason to pay switching
-costs. Coaction earns its dependency line when the _shape of your problem_ is more than one
-thread, more than one tab, or more derivation than you want to memoize by hand:
+costs. Coaction earns its dependency line when the _shape of your problem_ is one of these:
 
-- one state instance shared across tabs (SharedWorker authority),
-- heavy compute moved off the main thread (Web Worker authority),
-- or signals-style tracking/computed without leaving the `create()` world.
+- **more derived state than you want to memoize by hand** — cached getters and `this` on one
+  signal graph, instead of `react-tracked` + a computed plugin + auto-selectors;
+- **one state instance shared across tabs** (SharedWorker authority);
+- **heavy compute moved off the main thread** (Web Worker authority).
 
-If your shared state isn't JSON-shaped, your call sites can't `await` actions, or your browser
-matrix punishes SharedWorker, know that before adopting — the full boundary list lives in
+Know the costs before adopting: roughly 11 KB gzip for `coaction/local` before its dependencies,
+and roughly **half the throughput in the maintained 1,000-item update-then-read benchmark** of the
+equivalent Zustand scenario. That benchmark does not isolate pure writes, so measure your actual
+hot path. If your shared state isn't JSON-shaped or your call sites can't `await` actions, that
+matters more — the full boundary list lives in
 [When not to use Coaction](https://coactionjs.github.io/coaction/en/docs/guides/when-not-to-use)
 ([中文](https://coactionjs.github.io/coaction/zh/docs/guides/when-not-to-use)).
 
@@ -147,28 +159,48 @@ npm install coaction @coaction/react
 Works with React, Vue, Angular, Svelte, and Solid, plus adapters for Redux, Zustand, MobX,
 Pinia, Jotai, Valtio, and XState. See [Integration](#integration) for package names and docs.
 
-## Coaction or Zustand?
+## Coaction, Zustand, or MobX?
 
-Coaction keeps a familiar Zustand-style `create` API but chooses a larger, batteries-included
-runtime. Zustand is the smaller, more battle-tested choice when selectors and middleware
-already cover the problem cleanly.
+Getters, `this`, and automatic tracking are not new — MobX has shipped them for a decade, and
+Pinia gives Vue the same shape. What is uncommon is having them on an **immutable** substrate,
+behind a Zustand-style `create()`, across five frameworks.
 
-**Reach for Coaction when:**
+|                                           | Coaction                       | Zustand                       | MobX                      |
+| :---------------------------------------- | :----------------------------- | :---------------------------- | :------------------------ |
+| Function-style `create()`, no decorators  | yes                            | yes                           | `makeAutoObservable`      |
+| Render tracking without selectors         | `observer()`                   | no — selectors + `useShallow` | `observer()`              |
+| `get value()` + `this`                    | yes                            | no                            | yes                       |
+| Derived values memoized                   | across independent reads       | no — `useMemo` / reselect     | while observed by default |
+| Frozen snapshots, structural sharing      | yes                            | via Immer/Mutative            | no — mutable observables  |
+| Patch stream (undo, persist, sync, CRDT)  | built in                       | no                            | `mobx-state-tree`         |
+| Frameworks                                | React/Vue/Angular/Svelte/Solid | React-first                   | framework-agnostic        |
+| Selected entry size (gzip, deps excluded) | 11.1 KB `coaction/local`       | 0.6 KB vanilla + react        | 16.4 KB                   |
 
-- components are selector-heavy or lean on repeated derived state
-- you want derived values cached by default, without `useMemo`/reselect
-- you'd otherwise stack `react-tracked` + a computed plugin + auto-selectors and maintain it yourself
-- Worker / multi-tab / collaboration is on your roadmap
+Sizes are selected published entry files measured on this repository's lockfile, not
+feature-equivalent React bundles. Coaction's excludes `@coaction/react`, `mutative` (~6.7 KB),
+and `alien-signals`; MobX's excludes `mobx-react-lite`; Zustand's includes its vanilla and React
+entries but not React itself. They show the order of magnitude of the selected entries, not the
+total cost of adopting each stack. Zustand really is much smaller, and that is part of the trade.
 
-**Stick with Zustand when:**
+Two rows deserve detail, both verified against `mobx@6.15`:
 
-- you need a small hook store with a few selectors
-- a near-zero-dependency core and bundle minimalism are top priorities
-- your team prefers explicit, magic-free subscriptions
+- **"while observed by default."** A MobX `computed` is suspended between independent unobserved
+  reads by default, so four plain reads evaluate four times. A reaction keeps it cached, a MobX
+  action can reuse it within that transaction, and `keepAlive` opts into retention. Coaction's
+  getters cache until a dependency changes without requiring an observer.
+- **"mutable observables."** MobX mutates in place, so a reference you captured earlier changes
+  underneath you. Coaction's public state is frozen and structurally shared, which is what makes
+  the patch stream — and therefore undo/redo, persistence, worker transport, and CRDT — possible
+  at all. `mobx-state-tree` buys that back, at the cost of a second type system.
 
-See the honest, detailed case in
-[Why Coaction Without Multithreading](./docs/comparison/single-thread.md) and the full
-[Coaction vs Zustand](./docs/comparison/zustand.md) comparison.
+**Stick with Zustand when** you need a small hook store with a few selectors, bundle minimalism is
+a top priority, or your team prefers explicit, magic-free subscriptions. **Stick with MobX when**
+you want a mature, battle-tested reactive graph and mutable observables are a fit — its ecosystem
+and track record are far larger than Coaction's.
+
+The long-form argument, including the honest costs, is in
+[Why Coaction Without Multithreading](./docs/comparison/single-thread.md); the feature-by-feature
+breakdown is in [Coaction vs Zustand](./docs/comparison/zustand.md).
 
 ## Usage
 
@@ -412,9 +444,46 @@ See the [reusable store example](./examples/vanilla-base/src/store.ts) and the
 
 ## Performance
 
-Benchmark updating 50K arrays and 1K objects, higher is better ([source](./scripts/benchmark.ts)):
+Two scenarios matter, and Coaction wins one decisively while paying for it in the other. Both are
+reproducible from this repository. Regenerate before quoting them — microbenchmarks move with CPU,
+runtime, and package versions. Numbers below: Apple M1 Max, Node 24.16, `zustand@5.0.11`.
 
-> Benchmark snapshot from the current `scripts/benchmark.ts` comparison.
+### Reading derived state
+
+Run `pnpm benchmark:zustand-positioning` — higher is better:
+
+| Pattern                                   |     ops/sec | Relative |
+| :---------------------------------------- | ----------: | -------: |
+| **Coaction** cached getter                |  79,491,945 | **1.0x** |
+| **Coaction** `get(deps, selector)`        |  49,122,728 |    0.62x |
+| Zustand selector that recomputes          |     786,517 |   0.010x |
+| Zustand manually maintained `total` field | 111,154,719 |    1.40x |
+
+Against the pattern most codebases actually write — a selector that recomputes derived data —
+a cached getter is **~101x faster**. The only faster option is a derived field the application
+maintains by hand inside every action, and that is precisely the consistency work Coaction
+removes. Deleting that bug surface costs about 28% of read throughput.
+
+### Updating, then reading the derived value
+
+Same script, the update-then-read scenario:
+
+| Pattern                                             |   ops/sec | Relative |
+| :-------------------------------------------------- | --------: | -------: |
+| **Coaction** mutable update + cached getter         |    43,177 | **1.0x** |
+| **Coaction** mutable update + `get(deps, selector)` |    42,193 |    0.98x |
+| Zustand immutable update + selector recompute       |    88,217 |    2.04x |
+| Zustand immutable update + maintained field         | 3,293,247 |   76.27x |
+
+In this 1,000-item update-then-read scenario, Coaction has roughly half the throughput of the
+Zustand selector case and is far behind a hand-maintained field. This result includes both the
+update and the derived read; it does not establish a universal write-path penalty. Stable repeated
+reads are Coaction's strongest path, while update-heavy and mixed workloads should be measured
+with representative state and access patterns.
+
+### Bulk update throughput
+
+Run `pnpm benchmark` — updating 50K arrays and 1K objects ([source](./scripts/benchmark.ts)):
 
 <img src="benchmark.jpg" alt="Benchmark" width="100%" />
 
@@ -425,10 +494,10 @@ Benchmark updating 50K arrays and 1K objects, higher is better ([source](./scrip
 | **Zustand**                |   5,233 |    0.99x |
 | **Zustand** with Immer     |     253 |    0.05x |
 
-Coaction performs on par with Zustand in standard usage. The gap appears with immutable
-helpers: **Coaction with Mutative is ~18.3x faster than Zustand with Immer**.
+Coaction performs on par with Zustand for plain replacement updates. The gap appears with
+immutable helpers: **Coaction with Mutative is ~18.3x faster than Zustand with Immer**.
 
-For the benchmark methodology and derived-state positioning, see
+For methodology, thresholds, and how these gates are maintained, see
 [Zustand-focused benchmarks](./docs/benchmarking/zustand.md).
 
 ## Integration
