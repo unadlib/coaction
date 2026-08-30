@@ -1,6 +1,6 @@
 {
   "name": "@coaction/zustand",
-  "version": "3.2.0",
+  "version": "3.2.1",
   "description": "A Coaction integration tool for Zustand",
   "keywords": [
     "coaction",
@@ -66,7 +66,7 @@
     "zustand": "^5.0.11"
   },
   "peerDependencies": {
-    "coaction": "^3.2.0",
+    "coaction": "^3.2.1",
     "zustand": "^4.0.0 || ^5.0.0"
   },
   "authors": [

@@ -1,6 +1,6 @@
 {
   "name": "coaction-monorepo",
-  "version": "3.2.0",
+  "version": "3.2.1",
   "private": true,
   "description": "An efficient and flexible state management library for building high-performance, multithreading web applications.",
   "homepage": "https://github.com/coactionjs/coaction#readme",
