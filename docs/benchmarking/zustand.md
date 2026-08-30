@@ -57,6 +57,49 @@ remained independently gated. The cached snapshot adds about 0.9 KiB gzip to
 the local entry. These numbers document the reviewed performance/size tradeoff;
 they are not cross-machine performance claims.
 
+## The object-payload write path
+
+`set({ ... })` behaves differently from `set((draft) => { ... })`, and the difference has two
+separate causes. One was a defect and is fixed; the other is the cost of a deliberate guarantee.
+
+### Fixed: cloning the current root was deep
+
+The object-payload commit copied the store's existing root state with a helper that ran every
+value through `sanitizeReplacementState`, a deep recursive clone. That made **every**
+`set({ ... })` O(total state size) — replacing one scalar cost the same as replacing everything,
+because untouched fields were re-cloned on each commit.
+
+Replacing a single scalar in a store that merely holds a 10,000-item array, 400 operations:
+
+|                    |   before | after |
+| :----------------- | -------: | ----: |
+| `set({ counter })` | 1,591 ms |  2 ms |
+
+The store already owns and already sanitized its current state, so re-sanitizing it on every
+commit was redundant. `shallowCloneOwnEnumerable` now copies those own enumerable keys directly;
+nested values keep their identity, matching the structural sharing the Mutative draft path
+already relies on. Incoming payloads are unaffected — see below.
+`Coaction unrelated field replacement` gates this path.
+
+### By design: the incoming payload is deep-sanitized
+
+Whatever you hand to `set({ ... })` is caller-supplied data. It is deep-cloned to strip unsafe
+keys and to break aliasing with objects the caller still holds, so passing in a fresh
+1,000-element array costs O(payload). Measured on an Apple M1 Max with a 1,000-item cart:
+
+| Update path                                | ops/sec |
+| :----------------------------------------- | ------: |
+| `set((draft) => { ... })` (Mutative draft) |  45,154 |
+| `set({ items })` (object replacement)      |    ~300 |
+
+This is not a defect and cannot be optimized away without weakening the guarantee. Coaction 1.5.0
+looks dramatically faster here only because it did not make that guarantee; the sanitizer arrived
+in 2.0.0. `Coaction object replacement + cached getter` gates this path so it cannot get worse.
+
+**Practical rule: prefer `set((draft) => { ... })` whenever the value you are writing is large.**
+The draft path lets Mutative report precise patches, so neither the payload walk nor the cached
+getter's snapshot rebuild is needed.
+
 The blocking regression check uses the transport-free `coaction/local` entry:
 
 ```sh

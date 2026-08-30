@@ -472,6 +472,7 @@ Same script, the update-then-read scenario:
 | :-------------------------------------------------- | --------: | -------: |
 | **Coaction** mutable update + cached getter         |    43,177 | **1.0x** |
 | **Coaction** mutable update + `get(deps, selector)` |    42,193 |    0.98x |
+| **Coaction** object replacement + cached getter     |       296 |   0.007x |
 | Zustand immutable update + selector recompute       |    88,217 |    2.04x |
 | Zustand immutable update + maintained field         | 3,293,247 |   76.27x |
 
@@ -481,21 +482,32 @@ update and the derived read; it does not establish a universal write-path penalt
 reads are Coaction's strongest path, while update-heavy and mixed workloads should be measured
 with representative state and access patterns.
 
+The third row is the cost of a guarantee, not a defect. Whatever you hand to `set({ ... })` is
+caller-supplied data, so it is deep-cloned to strip unsafe keys and break aliasing — passing in a
+fresh 1,000-element array costs O(payload). The draft path avoids it because Mutative reports
+precise patches instead. **Prefer `set((draft) => { ... })` whenever the value you are writing is
+large.**
+
+A separate defect on this path was fixed in 3.2.1: copying the store's _current_ root state was
+also deep, which made every `set({ ... })` O(total state) even for untouched fields. Replacing one
+scalar in a store holding a 10,000-item array went from 1,591 ms to 2 ms per 400 operations. Both
+paths are now gated; details are in
+[Zustand-focused benchmarks](./docs/benchmarking/zustand.md).
+
 ### Bulk update throughput
 
 Run `pnpm benchmark` — updating 50K arrays and 1K objects ([source](./scripts/benchmark.ts)):
 
-<img src="benchmark.jpg" alt="Benchmark" width="100%" />
-
 | Library                    | ops/sec | Relative |
 | :------------------------- | ------: | -------: |
-| **Coaction**               |   5,272 | **1.0x** |
-| **Coaction** with Mutative |   4,626 |    0.88x |
-| **Zustand**                |   5,233 |    0.99x |
-| **Zustand** with Immer     |     253 |    0.05x |
+| **Coaction** with Mutative |   4,648 | **1.0x** |
+| **Zustand**                |   5,886 |    1.27x |
+| **Zustand** with Immer     |     298 |    0.06x |
 
-Coaction performs on par with Zustand for plain replacement updates. The gap appears with
-immutable helpers: **Coaction with Mutative is ~18.3x faster than Zustand with Immer**.
+Coaction's draft path runs ~21% behind Zustand's plain replacement update here, and **~15.6x
+ahead of Zustand with Immer**. Coaction's own `set({ ... })` row is left out: at this state size
+it is dominated by the payload sanitizer described above, so it measures the guarantee rather
+than the update mechanism.
 
 For methodology, thresholds, and how these gates are maintained, see
 [Zustand-focused benchmarks](./docs/benchmarking/zustand.md).
