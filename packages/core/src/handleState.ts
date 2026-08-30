@@ -19,7 +19,7 @@ import {
 } from './immutableState';
 import {
   assertKnownStateShape,
-  cloneOwnEnumerable,
+  shallowCloneOwnEnumerable,
   getOwnEnumerableKeys,
   mergeObject,
   sanitizeCheckedPatches,
@@ -284,7 +284,7 @@ export const handleState = <T extends CreateState>(
             throw error;
           }
         } else {
-          const copy = cloneOwnEnumerable(internal.rootState as T);
+          const copy = shallowCloneOwnEnumerable(internal.rootState as T);
           if (store.isSliceStore) {
             const nextRecord = next as Record<PropertyKey, unknown>;
             const copyRecord = copy as Record<PropertyKey, unknown>;
@@ -300,7 +300,7 @@ export const handleState = <T extends CreateState>(
               if (typeof targetValue !== 'object' || targetValue === null) {
                 continue;
               }
-              const sliceCopy = cloneOwnEnumerable(
+              const sliceCopy = shallowCloneOwnEnumerable(
                 targetValue as Record<PropertyKey, unknown>
               );
               mergeObject(sliceCopy, sourceValue);

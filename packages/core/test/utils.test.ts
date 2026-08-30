@@ -2,6 +2,7 @@ import { vi } from 'vitest';
 import {
   areShallowEqualWithArray,
   cloneOwnEnumerable,
+  shallowCloneOwnEnumerable,
   mergeObject,
   replaceOwnEnumerable,
   sanitizePatches,
@@ -220,6 +221,31 @@ test('sanitizePatches warns about dropped unsafe paths in development', () => {
     process.env.NODE_ENV = previousNodeEnv;
     warn.mockRestore();
   }
+});
+
+test('shallowCloneOwnEnumerable keeps nested identity and skips unsafe keys', () => {
+  const nested = { value: 2 };
+  const source = {
+    count: 1,
+    nested
+  } as Record<PropertyKey, unknown>;
+  Object.defineProperty(source, '__proto__', {
+    configurable: true,
+    enumerable: true,
+    value: { polluted: true },
+    writable: true
+  });
+
+  const clone = shallowCloneOwnEnumerable(source);
+
+  expect(clone).not.toBe(source);
+  expect(clone.count).toBe(1);
+  // Nested values keep identity: this is what makes the copy O(own keys).
+  expect(clone.nested).toBe(nested);
+  expect(Object.prototype.hasOwnProperty.call(clone, '__proto__')).toBe(false);
+  expect(
+    (Object.prototype as Record<string, unknown>).polluted
+  ).toBeUndefined();
 });
 
 test('cloneOwnEnumerable preserves root cycles and shared references', () => {

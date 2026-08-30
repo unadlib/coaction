@@ -448,6 +448,29 @@ export const replaceOwnEnumerable = (
   });
 };
 
+/**
+ * Copy own enumerable keys without re-sanitizing nested values.
+ *
+ * @remarks
+ * Use this for state the store already owns and already sanitized on the way
+ * in. {@link assignOwnEnumerable} deep-clones every value through
+ * {@link sanitizeReplacementState}, which is required for untrusted incoming
+ * payloads but makes copying the current root O(total state size) on every
+ * commit. Nested values keep their identity here, matching the structural
+ * sharing the Mutative draft path already relies on.
+ */
+export const shallowCloneOwnEnumerable = <
+  T extends Record<PropertyKey, unknown>
+>(
+  source: T
+) => {
+  const target = {} as T;
+  for (const key of getOwnEnumerableKeys(source)) {
+    setOwnEnumerable(target, key, source[key]);
+  }
+  return target;
+};
+
 export const cloneOwnEnumerable = <T extends Record<PropertyKey, unknown>>(
   source: T
 ) => {
