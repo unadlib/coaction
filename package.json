@@ -57,7 +57,7 @@
     "@babel/core": "^8.0.1",
     "@babel/plugin-transform-class-properties": "^7.27.1",
     "@babel/preset-env": "^7.29.0",
-    "@babel/preset-react": "^7.28.5",
+    "@babel/preset-react": "^8.0.1",
     "@babel/preset-typescript": "^7.28.5",
     "@changesets/changelog-github": "^0.6.0",
     "@changesets/cli": "^2.31.0",
