@@ -112,7 +112,7 @@ in 2.0.0. `Coaction object replacement + cached getter` gates this path so it ca
 The draft path lets Mutative report precise patches, so neither the payload walk nor the cached
 getter's snapshot rebuild is needed.
 
-The blocking regression check uses the transport-free `coaction/local` entry:
+The blocking regression check uses the transport-free `coaction` entry:
 
 ```sh
 pnpm build

@@ -14,6 +14,6 @@ Create a store without linking the shared transport runtime.
 
 ## Remarks
 
-The public `coaction/local` entry exports this implementation as `create`.
+The default `coaction` entry exports this implementation as `create`.
 `createLocal` is only its internal and documentation name; it is not
 exported by the root `coaction` entry.

@@ -28,9 +28,8 @@ a tracked selector goes from 0.62 ms to 0.013 ms.
 
 Also in this release:
 
-- `@coaction/react` gains `@coaction/react/local` and `@coaction/react/shared`
-  entry points, so an app that never uses a worker no longer bundles the
-  transport runtime. A tracked component now releases its path nodes as soon as
+- `@coaction/react` gains a `@coaction/react/shared` entry point, so an app that
+  never uses a worker no longer bundles the transport runtime. A tracked component now releases its path nodes as soon as
   React unmounts it, instead of holding them for the uncommitted-render window.
 - `@coaction/sync` is new: commit-based local-first synchronization with a
   durable optimistic snapshot and outbox, pre-hydration journaling, conflict

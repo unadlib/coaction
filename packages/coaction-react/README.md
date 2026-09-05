@@ -27,7 +27,7 @@ The repository compiles and runs representative `observer()` and tracked-selecto
 For local-only React stores, prefer the isolated entry so Worker/transport protocol code is not part of the consumer dependency graph:
 
 ```ts
-import { create, observer } from '@coaction/react/local';
+import { create, observer } from '@coaction/react';
 ```
 
 Use `@coaction/react/shared` when the store uses Coaction Worker/SharedWorker/custom transport features. The root `@coaction/react` entry remains backwards compatible and supports both modes.

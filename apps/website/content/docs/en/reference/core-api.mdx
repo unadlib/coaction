@@ -43,7 +43,7 @@ Client options add:
 | `clientTransport?: Transport`     | Inject a client-side transport                                      |
 | `executeSyncTimeoutMs?: number`   | Wait before action catch-up falls back to full sync; default `1500` |
 
-`coaction/local` intentionally omits all transport-only options.
+`coaction` intentionally omits all transport-only options.
 
 ## Store methods and fields
 
@@ -87,7 +87,7 @@ store shape.
 
 ## Signal primitives
 
-`coaction/local` and the compatibility surface re-export advanced `alien-signals` primitives,
+`coaction` and `coaction/shared` re-export advanced `alien-signals` primitives,
 including `signal`, `computed`, `effect`, `effectScope`, batching helpers, and type guards.
 Application state normally uses getters or `get(deps, selector)` instead.
 

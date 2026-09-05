@@ -38,4 +38,4 @@ Framework bindings use this to attach selector-aware readers while
 preserving the underlying store API on the returned function object. Most
 applications should use a public `create` entry instead of calling
 `wrapStore()` directly. Framework authors import this helper from
-`coaction/local` or `coaction/adapter`.
+`coaction` or `coaction/adapter`.

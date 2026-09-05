@@ -21,9 +21,7 @@ change, and the change is the import:
 
 Both sides of a shared store — the worker module and the page — take the same
 entry. TypeScript reports the mistake at the call site, and the runtime error
-names the entry to switch to. `@coaction/react/local` stays as an explicit alias
-of the default, so code already written against it keeps working. See
-`docs/migration/react-entry-points.md`.
+names the entry to switch to. See `docs/migration/react-entry-points.md`.
 
 An option whose value is `undefined` or `null` is no longer treated as a request
 for the shared runtime. `{ worker: maybeWorker }` where the worker is absent —

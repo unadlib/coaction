@@ -12,7 +12,7 @@ instead of treated as timeless numbers.
 For a vanilla local store:
 
 ```ts
-import { create } from 'coaction/local';
+import { create } from 'coaction';
 ```
 
 This static boundary excludes shared protocol, epoch, reconnect, and transport modules from the
@@ -63,7 +63,7 @@ split the state at a meaningful ownership boundary.
 
 ## Practical checklist
 
-- Import `coaction/local` for vanilla local-only state.
+- Import `coaction` for vanilla local-only state.
 - Keep patches off unless shared mode or an integration needs them.
 - Use cached getters for repeated derived reads, not side-effectful work.
 - Use `observer()` where it removes real selector composition.

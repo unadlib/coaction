@@ -8,7 +8,7 @@
 
 > **ReactiveTracker** = `object`
 
-Defined in: [packages/core/src/reactiveTracker.ts:20](https://github.com/coactionjs/coaction/blob/main/packages/core/src/reactiveTracker.ts#L20)
+Defined in: [packages/core/src/reactiveTracker.ts:26](https://github.com/coactionjs/coaction/blob/main/packages/core/src/reactiveTracker.ts#L26)
 
 ## Properties
 
@@ -16,7 +16,7 @@ Defined in: [packages/core/src/reactiveTracker.ts:20](https://github.com/coactio
 
 > **dispose**: () => `void`
 
-Defined in: [packages/core/src/reactiveTracker.ts:24](https://github.com/coactionjs/coaction/blob/main/packages/core/src/reactiveTracker.ts#L24)
+Defined in: [packages/core/src/reactiveTracker.ts:31](https://github.com/coactionjs/coaction/blob/main/packages/core/src/reactiveTracker.ts#L31)
 
 #### Returns
 
@@ -28,7 +28,7 @@ Defined in: [packages/core/src/reactiveTracker.ts:24](https://github.com/coactio
 
 > **getSnapshot**: () => `number`
 
-Defined in: [packages/core/src/reactiveTracker.ts:21](https://github.com/coactionjs/coaction/blob/main/packages/core/src/reactiveTracker.ts#L21)
+Defined in: [packages/core/src/reactiveTracker.ts:27](https://github.com/coactionjs/coaction/blob/main/packages/core/src/reactiveTracker.ts#L27)
 
 #### Returns
 
@@ -36,11 +36,23 @@ Defined in: [packages/core/src/reactiveTracker.ts:21](https://github.com/coactio
 
 ---
 
+### hasDependencies()
+
+> **hasDependencies**: () => `boolean`
+
+Defined in: [packages/core/src/reactiveTracker.ts:28](https://github.com/coactionjs/coaction/blob/main/packages/core/src/reactiveTracker.ts#L28)
+
+#### Returns
+
+`boolean`
+
+---
+
 ### subscribe()
 
 > **subscribe**: (`listener`) => () => `void`
 
-Defined in: [packages/core/src/reactiveTracker.ts:22](https://github.com/coactionjs/coaction/blob/main/packages/core/src/reactiveTracker.ts#L22)
+Defined in: [packages/core/src/reactiveTracker.ts:29](https://github.com/coactionjs/coaction/blob/main/packages/core/src/reactiveTracker.ts#L29)
 
 #### Parameters
 
@@ -62,7 +74,7 @@ Defined in: [packages/core/src/reactiveTracker.ts:22](https://github.com/coactio
 
 > **track**: \<`T`\>(`fn`) => `T`
 
-Defined in: [packages/core/src/reactiveTracker.ts:23](https://github.com/coactionjs/coaction/blob/main/packages/core/src/reactiveTracker.ts#L23)
+Defined in: [packages/core/src/reactiveTracker.ts:30](https://github.com/coactionjs/coaction/blob/main/packages/core/src/reactiveTracker.ts#L30)
 
 #### Type Parameters
 

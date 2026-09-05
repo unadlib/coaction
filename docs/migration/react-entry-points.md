@@ -67,5 +67,6 @@ default entry accepted a `worker`, the transport protocol had to be present in
 every bundle. Splitting the entry is what makes the cost optional, and making
 local the default is what makes the common case free.
 
-`@coaction/react/local` remains as an explicit alias of the default, so code
-already written against it keeps working.
+`@coaction/react/local` was that entry's explicit alias. It has since been
+removed -- the default entry is the local one, so the alias only invited two
+copies to drift. See `docs/migration/default-entry-is-local.md`.

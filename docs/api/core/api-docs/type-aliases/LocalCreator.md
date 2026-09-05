@@ -10,7 +10,7 @@
 
 Defined in: [packages/core/src/interface.ts:530](https://github.com/coactionjs/coaction/blob/main/packages/core/src/interface.ts#L530)
 
-Overload set for the transport-free `coaction/local` create function.
+Overload set for the transport-free `coaction` create function.
 
 ## Call Signature
 

@@ -7,7 +7,7 @@ types and signatures live in the [core API reference](../api/core/index.md).
 
 | Entry              | Purpose                                                                      |
 | ------------------ | ---------------------------------------------------------------------------- |
-| `coaction/local`   | Local stores without transport code. This entry rejects shared-only options. |
+| `coaction`         | Local stores without transport code. This entry rejects shared-only options. |
 | `coaction/shared`  | Local stores, shared authorities, and client mirrors.                        |
 | `coaction/adapter` | Helpers for authors of external-store adapters.                              |
 | `coaction`         | Compatibility entry with the same shared-capable `create()` behavior.        |

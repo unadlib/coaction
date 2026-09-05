@@ -10,7 +10,7 @@ description: 诚实理解 Coaction benchmark，并让本地应用使用无 trans
 Vanilla 本地 store 应写为：
 
 ```ts
-import { create } from 'coaction/local';
+import { create } from 'coaction';
 ```
 
 该静态边界排除共享 protocol、epoch、重连与 transport module。兼容入口 `coaction` 刻意更宽。
@@ -48,7 +48,7 @@ React 中主要的 Coaction 特有优化是 `observer()` 字段追踪。显式 `
 
 ## 实用 checklist
 
-- Vanilla 本地状态导入 `coaction/local`；
+- Vanilla 本地状态导入 `coaction`；
 - 共享模式或集成不需要时保持 patch 关闭；
 - 缓存 getter 用于重复派生读取，不承载副作用；
 - 在确实减少 selector 组合时使用 `observer()`；

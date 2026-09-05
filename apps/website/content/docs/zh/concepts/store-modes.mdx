@@ -14,7 +14,7 @@ description: 理解本地 store、共享权威端、client mirror 与 Coaction �
 ## Local 模式
 
 ```ts
-import { create } from 'coaction/local';
+import { create } from 'coaction';
 
 const store = create(source);
 ```
@@ -51,11 +51,11 @@ Client method 是异步的，因为执行发生在权威端。client 可以读�
 
 | 入口               | 包含内容                                      |
 | ------------------ | --------------------------------------------- |
-| `coaction/local`   | 本地创建、生命周期 helper、signal primitive   |
+| `coaction`         | 本地创建、生命周期 helper、signal primitive   |
 | `coaction/shared`  | 共享创建、JSON protocol、权威/client 同步     |
 | `coaction/adapter` | 外部 store binding 与 state/patch 安全 helper |
 | `coaction`         | 跨越本地与共享选择的兼容 surface              |
 
-框架包暴露自己的 `create()` wrapper，并可能同时支持 local 与 worker option。Vanilla 代码直接选择 `coaction/local` 或 `coaction/shared` 可获得最清楚的 bundle 边界。
+框架包暴露自己的 `create()` wrapper，并可能同时支持 local 与 worker option。Vanilla 代码直接选择 `coaction` 或 `coaction/shared` 可获得最清楚的 bundle 边界。
 
 继续阅读[共享运行时概览](/zh/docs/shared/overview)，了解权威语义与部署规则。

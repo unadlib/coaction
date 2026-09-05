@@ -14,7 +14,7 @@ The same public store contract appears in three runtime modes.
 ## Local mode
 
 ```ts
-import { create } from 'coaction/local';
+import { create } from 'coaction';
 
 const store = create(source);
 ```
@@ -54,13 +54,13 @@ The package exposes static boundaries so a bundler can avoid loading unrelated r
 
 | Entry              | Contains                                                                 |
 | ------------------ | ------------------------------------------------------------------------ |
-| `coaction/local`   | Local creation, lifecycle helpers, signal primitives                     |
+| `coaction`         | Local creation, lifecycle helpers, signal primitives                     |
 | `coaction/shared`  | Shared-capable creation, JSON protocol, authority/client synchronization |
 | `coaction/adapter` | External-store binding and state/patch safety helpers                    |
 | `coaction`         | Compatibility surface spanning local and shared selection                |
 
 Framework packages expose their own `create()` wrapper and may support both local and worker
-options. Vanilla code gets the clearest bundle boundary by choosing `coaction/local` or
+options. Vanilla code gets the clearest bundle boundary by choosing `coaction` or
 `coaction/shared` directly.
 
 Continue with the [shared runtime overview](/en/docs/shared/overview) for authority semantics and

@@ -19,7 +19,7 @@ pnpm add coaction
 ## Usage
 
 ```jsx
-import { create } from 'coaction/local';
+import { create } from 'coaction';
 
 const store = create((set) => ({
   count: 0,
@@ -57,11 +57,11 @@ const store = create((set, get) => ({
 }));
 ```
 
-Local stores can import signal primitives from `coaction/local`. Adapter
-authors use the statically separate `coaction/adapter` entry:
+Local stores can import signal primitives from `coaction`. Adapter authors use
+the statically separate `coaction/adapter` entry:
 
 ```ts
-import { computed, effect, signal } from 'coaction/local';
+import { computed, effect, signal } from 'coaction';
 import { defineExternalStoreAdapter } from 'coaction/adapter';
 ```
 

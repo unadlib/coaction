@@ -14,18 +14,16 @@ pnpm add coaction
 ```
 
 ```ts
-import { create } from 'coaction/local';
+import { create } from 'coaction';
 ```
 
-`coaction/local` 为 bundler 提供硬边界，排除 JSON protocol、epoch、重连与 transport runtime。新的 vanilla 应用如果不使用 Worker，应优先选择它。
+默认入口就是单上下文 runtime。从这里无法触及任何 transport，因此 JSON protocol、epoch、重连与 transport runtime 完全不会进入 bundle。
 
 当状态需要跨越 Worker、SharedWorker 或注入的 transport 边界时，使用共享入口：
 
 ```ts
 import { create } from 'coaction/shared';
 ```
-
-根入口 `coaction` 是兼容入口，保留本地与共享模式选择，但其范围刻意比 `coaction/local` 更宽。
 
 ## 框架包
 
@@ -70,10 +68,9 @@ pnpm add @coaction/yjs yjs
 
 | Import             | 适用对象                                  |
 | ------------------ | ----------------------------------------- |
-| `coaction/local`   | 本地 vanilla store 与 signal primitives   |
+| `coaction`         | 本地 vanilla store 与 signal primitives   |
 | `coaction/shared`  | 本地 store、共享权威端与 client mirror    |
 | `coaction/adapter` | 外部 store adapter 与底层 middleware 作者 |
-| `coaction`         | 具备共享模式选择能力的兼容入口            |
 
 <Callout type="warn" title="共享代码必须同步升级">
   不要让新 shared client 连接仍运行不同 Coaction major

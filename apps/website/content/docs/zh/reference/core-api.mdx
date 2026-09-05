@@ -43,7 +43,7 @@ Client options 额外包含：
 | `clientTransport?: Transport`     | 注入 client-side transport                               |
 | `executeSyncTimeoutMs?: number`   | action catch-up 回退 full sync 前的等待时间；默认 `1500` |
 
-`coaction/local` 刻意排除所有 transport-only option。
+`coaction` 刻意排除所有 transport-only option。
 
 ## Store method 与字段
 
@@ -84,7 +84,7 @@ const source = (set, get) => ({
 
 ## Signal primitives
 
-`coaction/local` 与兼容 surface re-export 高级 `alien-signals` primitive，包括 `signal`、`computed`、`effect`、`effectScope`、batch helper 与 type guard。普通应用派生状态仍应使用 getter 或 `get(deps, selector)`。
+`coaction` 与 `coaction/shared` re-export 高级 `alien-signals` primitive，包括 `signal`、`computed`、`effect`、`effectScope`、batch helper 与 type guard。普通应用派生状态仍应使用 getter 或 `get(deps, selector)`。
 
 ## Adapter 入口
 

@@ -15,7 +15,7 @@ The public API is intentionally small, but the runtime has several distinct laye
 ## Package Layers
 
 - `packages/core`
-  - `coaction/local`: transport-free local creation
+  - `coaction`: transport-free local creation
   - `coaction/shared`: JSON protocol, authority/client synchronization, and reconnect recovery
   - `coaction/adapter`: external runtime integration helpers
   - `coaction`: compatibility entry that retains local and shared mode selection
@@ -51,7 +51,8 @@ The public API is intentionally small, but the runtime has several distinct laye
 ## Design Constraints
 
 - The compatibility `coaction` entry supports multiple modes, while new
-  vanilla code should select `coaction/local` or `coaction/shared` explicitly.
+  vanilla code gets local creation from `coaction` and reaches the transport
+  runtime through `coaction/shared`.
 - Shared mode treats the main store as the single execution authority.
 - Client stores are mirrors, not peers. They may read local mirrored state, but they do not own mutation authority.
 - Binder-backed adapters and Coaction slices solve different composition problems and should not be mixed.

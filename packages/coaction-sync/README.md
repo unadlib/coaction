@@ -3,7 +3,7 @@
 Commit-based local-first synchronization for Coaction.
 
 ```ts
-import { create } from 'coaction/local';
+import { create } from 'coaction';
 import { sync } from '@coaction/sync';
 
 const store = create(

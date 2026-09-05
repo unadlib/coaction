@@ -123,7 +123,7 @@ costs. Coaction earns its dependency line when the _shape of your problem_ is on
 - **one state instance shared across tabs** (SharedWorker authority);
 - **heavy compute moved off the main thread** (Web Worker authority).
 
-Know the costs before adopting: roughly 11 KB gzip for `coaction/local` before its dependencies,
+Know the costs before adopting: roughly 11 KB gzip for `coaction` before its dependencies,
 and roughly **half the throughput in the maintained 1,000-item update-then-read benchmark** of the
 equivalent Zustand scenario. That benchmark does not isolate pure writes, so measure your actual
 hot path. If your shared state isn't JSON-shaped or your call sites can't `await` actions, that
@@ -139,18 +139,17 @@ For the core library without any framework:
 npm install coaction
 ```
 
-Vanilla applications that do not use workers can select the transport-free
-entry explicitly:
-
 ```ts
-import { create } from 'coaction/local';
+import { create } from 'coaction';
 ```
 
-Use `coaction/shared` for a shared-main store or client mirror, and
-`coaction/adapter` when authoring an external-state adapter. The compatibility
-`coaction` entry still supports both local and shared creation, but
-`coaction/local` gives bundlers a hard boundary that excludes the transport,
-JSON protocol, epoch, and reconnect runtime.
+The default entry is the single-context runtime, and no transport is reachable
+from it: the JSON protocol, epoch and reconnect machinery, and `data-transport`
+itself, all stay out of the bundle.
+
+Use `coaction/shared` when state crosses a Worker, an iframe, an Electron
+process or a browser extension, and `coaction/adapter` when authoring an
+external-state adapter.
 
 For React applications:
 
@@ -176,7 +175,7 @@ behind a Zustand-style `create()`, across five frameworks.
 | Frozen snapshots, structural sharing      | yes                            | via Immer/Mutative            | no — mutable observables  |
 | Patch stream (undo, persist, sync, CRDT)  | built in                       | no                            | `mobx-state-tree`         |
 | Frameworks                                | React/Vue/Angular/Svelte/Solid | React-first                   | framework-agnostic        |
-| Selected entry size (gzip, deps excluded) | 11.1 KB `coaction/local`       | 0.6 KB vanilla + react        | 16.4 KB                   |
+| Selected entry size (gzip, deps excluded) | 11.1 KB `coaction`             | 0.6 KB vanilla + react        | 16.4 KB                   |
 
 Sizes are selected published entry files measured on this repository's lockfile, not
 feature-equivalent React bundles. Coaction's excludes `@coaction/react`, `mutative` (~6.7 KB),
@@ -344,7 +343,7 @@ const total = useCart((state) =>
 
 Read the result; never mutate it. It is the store's own data, exactly as `getPureState()`
 returns it, and a write outside `set()` corrupts the store. Import `whole` from the same
-entry you created the store with — `coaction` and `coaction/local` are separate bundles.
+entry you created the store with — `coaction` and `coaction/shared` are separate bundles.
 
 ### Slices
 
@@ -389,11 +388,10 @@ increment(); // still works — `this` stays bound to the slice
 `@coaction/react` links the local runtime. Worker and cross-context stores need
 `@coaction/react/shared`, which adds the transport protocol:
 
-| Import                   | Runtime                               |  Minimal app |
-| :----------------------- | :------------------------------------ | -----------: |
-| `@coaction/react`        | local                                 | 19.9 KB gzip |
-| `@coaction/react/local`  | local — explicit alias of the default | 19.9 KB gzip |
-| `@coaction/react/shared` | local + worker/transport              | 31.9 KB gzip |
+| Import                   | Runtime                  |  Minimal app |
+| :----------------------- | :----------------------- | -----------: |
+| `@coaction/react`        | local                    | 19.9 KB gzip |
+| `@coaction/react/shared` | local + worker/transport | 31.9 KB gzip |
 
 Passing `worker`, `transport`, `clientTransport`, `transportPolicy`,
 `workerType` or `executeSyncTimeoutMs` to the default entry is a type error, and
