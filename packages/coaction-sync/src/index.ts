@@ -291,6 +291,10 @@ export const sync = <T extends object>({
     let hydrated = false;
     let applyingRemote = 0;
     let writeQueue = Promise.resolve();
+    let pullPromise: Promise<void> | undefined;
+    // A pull that failed is work still owed. Retrying only the flush would
+    // report recovery while the remote state was never fetched.
+    let pullOwed = false;
     let flushPromise: Promise<void> | undefined;
     let retryTimer: ReturnType<typeof setTimeout> | undefined;
     let retryDelay = Math.max(1, retry.initialMs ?? 500);
@@ -361,7 +365,8 @@ export const sync = <T extends object>({
       setStatus('offline');
       retryTimer = setTimeout(() => {
         retryTimer = undefined;
-        void flush().catch(() => undefined);
+        const resume = pullOwed ? pull().then(() => flush()) : flush();
+        void resume.catch(() => undefined);
       }, retryDelay);
       retryDelay = Math.min(maxRetry, retryDelay * retryFactor);
     };
@@ -458,7 +463,7 @@ export const sync = <T extends object>({
       await persist();
     };
 
-    const pull = async () => {
+    const doPull = async () => {
       if (destroyed) return;
       await hydration;
       setStatus('syncing');
@@ -466,13 +471,31 @@ export const sync = <T extends object>({
         const result = await adapter.pull({ cursor, revision });
         if (destroyed) return;
         await applyRemoteResult(result);
+        pullOwed = false;
         clearRetryTimer();
         retryDelay = Math.max(1, retry.initialMs ?? 500);
         setStatus('idle');
       } catch (error) {
+        pullOwed = true;
         reportError(error);
         throw error;
       }
+    };
+
+    /**
+     * Overlapping pulls share one request, the way overlapping flushes do.
+     *
+     * Two in flight at once have no ordering: the later response can carry the
+     * older revision and would then overwrite the newer state with it. Sharing
+     * the in-flight promise removes the race rather than trying to referee it.
+     */
+    const pull = () => {
+      if (!pullPromise) {
+        pullPromise = doPull().finally(() => {
+          pullPromise = undefined;
+        });
+      }
+      return pullPromise;
     };
 
     const doFlush = async () => {
@@ -518,6 +541,14 @@ export const sync = <T extends object>({
           // keeps refusing, and calling it idle would strand them until some
           // unrelated commit happens to flush again, so hand them to the
           // backoff timer instead.
+          scheduleRetry();
+          return;
+        }
+        if (pullOwed) {
+          // Sending succeeded, but the remote state this store failed to fetch
+          // is still missing. Clearing the timer here would cancel the retry
+          // that owes a pull and report a synchronised store that never read
+          // the remote at all.
           scheduleRetry();
           return;
         }

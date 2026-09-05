@@ -1007,3 +1007,75 @@ test('an explicit flush does not send before the write has landed', async () => 
   expect(order).toEqual(['persisted', 'pushed']);
   store.destroy();
 });
+
+test('a pull that failed is retried as a pull, not just a flush', async () => {
+  let attempts = 0;
+  const adapter: SyncAdapter = {
+    pull: async () => {
+      attempts += 1;
+      if (attempts === 1) throw new Error('offline');
+      return { patches: [{ op: 'replace', path: ['count'], value: 7 }] };
+    },
+    push: async () => ({})
+  };
+  const statuses: SyncStatus[] = [];
+  const store = create<{ count: number }>(() => ({ count: 0 }), {
+    middlewares: [
+      sync({
+        name: 'pull-retry',
+        storage: createMemoryStorage(),
+        adapter,
+        onError: () => undefined,
+        onStatusChange: (status) => statuses.push(status),
+        retry: { initialMs: 1 }
+      })
+    ]
+  });
+
+  await getSyncApi(store)
+    .pull()
+    .catch(() => undefined);
+  await new Promise((resolve) => setTimeout(resolve, 30));
+  await nextTick();
+
+  // Retrying only the flush would find an empty outbox, report idle, and leave
+  // the remote state unfetched.
+  expect(attempts).toBeGreaterThanOrEqual(2);
+  expect(store.getState().count).toBe(7);
+  expect(statuses[statuses.length - 1]).toBe('idle');
+  store.destroy();
+});
+
+test('overlapping pulls share one request rather than racing', async () => {
+  let started = 0;
+  let release!: (result: SyncPullResult) => void;
+  const adapter: SyncAdapter = {
+    pull: () => {
+      started += 1;
+      return new Promise<SyncPullResult>((resolve) => {
+        release = resolve;
+      });
+    },
+    push: async () => ({})
+  };
+  const store = create<{ count: number }>(() => ({ count: 0 }), {
+    middlewares: [
+      sync({ name: 'pull-race', storage: createMemoryStorage(), adapter })
+    ]
+  });
+  await nextTick();
+
+  const first = getSyncApi(store).pull();
+  const second = getSyncApi(store).pull();
+  await nextTick();
+
+  // Two in flight have no ordering: the later response can carry the older
+  // revision and overwrite the newer state with it.
+  expect(started).toBe(1);
+  release({ patches: [{ op: 'replace', path: ['count'], value: 3 }] });
+  await Promise.all([first, second]);
+  await nextTick();
+
+  expect(store.getState().count).toBe(3);
+  store.destroy();
+});
