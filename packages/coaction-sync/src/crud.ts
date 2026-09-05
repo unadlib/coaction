@@ -86,8 +86,14 @@ export type CrudOperationContext = {
   /** Queued mutations this write carries, in the order they were made. */
   mutationIds: readonly string[];
   /**
-   * A stable key for this write. Replaying the same queued work produces the
-   * same key, so it can be sent as an idempotency token.
+   * A stable key for this write, naming the queued work and the record.
+   *
+   * `operation` is deliberately not part of it. Which call a mutation becomes
+   * is decided against the baseline at send time, and the baseline can move
+   * between two attempts at the same queued work -- a realtime update reporting
+   * the row the first attempt created turns a retried create into an update.
+   * Folding that in would give the same work two identities and defeat the
+   * deduplication this key exists for.
    */
   idempotencyKey: string;
 };
@@ -404,7 +410,7 @@ export const createCrudSyncAdapter = <TRecord extends object>({
           operation,
           recordId: id,
           mutationIds: ids,
-          idempotencyKey: `${ids.join('.')}:${operation}:${id}`
+          idempotencyKey: `${ids.join('.')}:${id}`
         };
       };
       for (const [id, intent] of intents) {

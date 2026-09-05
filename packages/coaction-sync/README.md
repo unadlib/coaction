@@ -131,7 +131,10 @@ const store = create(
 
 Every handler receives a second argument describing the write: the operation,
 the record's key, the queued mutations it carries, and an `idempotencyKey`
-stable across retries. There is always a window between the remote committing a
+naming that queued work. The key does not include the operation, because which
+call a mutation becomes is decided against the adapter's view of the remote at
+send time and that can move between attempts — a retried create can go out as
+an update, and it is still the same queued work. There is always a window between the remote committing a
 write and the acknowledgement being persisted locally, and everything in it is
 replayed on restart -- so a remote that dedupes on that key is what makes a
 crash there safe. Send it as an `Idempotency-Key` header, a unique column, or

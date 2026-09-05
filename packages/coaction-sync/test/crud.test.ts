@@ -621,8 +621,8 @@ test('handlers receive the queued mutations a write carries', async () => {
   // Each write names the queued mutation it carries, so a remote that dedupes
   // on the key survives a retry after a crash.
   expect(seen[0].ids).toHaveLength(1);
-  expect(seen[0].key).toBe(`${seen[0].ids[0]}:create:a`);
-  expect(seen[1].key).toBe(`${seen[1].ids[0]}:update:a`);
+  expect(seen[0].key).toBe(`${seen[0].ids[0]}:a`);
+  expect(seen[1].key).toBe(`${seen[1].ids[0]}:a`);
   expect(seen[0].ids[0]).not.toBe(seen[1].ids[0]);
   store.destroy();
 });
@@ -738,5 +738,78 @@ test('what the remote made of a write replaces the optimistic record', async () 
   // Keeping the optimistic value leaves the store disagreeing with the row it
   // just wrote until some later pull happens to correct it.
   expect(store.getState().todos.a.title).toBe('DRAFT');
+  store.destroy();
+});
+
+test('the idempotency key survives a reclassification between attempts', async () => {
+  const keys: string[] = [];
+  let attempts = 0;
+  let emit: ((u: any) => void) | undefined;
+  const base = createCrudSyncAdapter<Todo>({
+    path: ['todos'],
+    list: async () => [],
+    create: async (_r, ctx) => {
+      keys.push(ctx.idempotencyKey);
+      attempts += 1;
+      // The remote took it; the answer never arrived.
+      throw new Error('network');
+    },
+    update: async (_r, ctx) => {
+      keys.push(ctx.idempotencyKey);
+      attempts += 1;
+      return undefined;
+    }
+  });
+  const store = create<{ todos: Record<string, Todo>; add: (t: Todo) => void }>(
+    (set) => ({
+      todos: {},
+      add(todo) {
+        set(() => {
+          this.todos[todo.id] = todo;
+        });
+      }
+    }),
+    {
+      middlewares: [
+        sync({
+          name: 'p1a',
+          storage: createMemoryStorage(),
+          onError: () => undefined,
+          adapter: {
+            ...base,
+            subscribe(l) {
+              emit = l as never;
+            }
+          },
+          retry: { initialMs: 5 }
+        })
+      ]
+    }
+  );
+  await nextTick();
+
+  store.getState().add({ id: 'a', title: 'draft', done: false });
+  await nextTick();
+  expect(attempts).toBe(1);
+
+  // Realtime reports the row the remote did create, so the baseline now holds it.
+  emit!({
+    patches: [
+      {
+        op: 'replace',
+        path: ['todos', 'a'],
+        value: { id: 'a', title: 'draft', done: false }
+      }
+    ]
+  });
+  await nextTick();
+
+  await getSyncApi(store)
+    .flush()
+    .catch(() => undefined);
+  await nextTick();
+
+  expect(attempts).toBeGreaterThan(1);
+  expect(keys[1]).toBe(keys[0]);
   store.destroy();
 });
