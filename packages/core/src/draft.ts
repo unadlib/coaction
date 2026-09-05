@@ -186,31 +186,26 @@ const runArrayMethod = (node: Node, method: string) =>
       current(node) as Record<PropertyKey, unknown>
     ) as unknown as unknown[];
     const copy = ensureCopy(node) as unknown as unknown[];
-    // A comparator is handed elements straight off the copy, which for
-    // anything untouched are still the base's objects. Detached drafts make a
-    // comparator that writes -- which no comparator should -- reach nothing.
-    const detached = new Map<object, unknown>();
-    const forCallback = (element: unknown) => {
-      if (!isPatchTraversable(element)) return element;
-      const existing = detached.get(element);
-      if (existing) return existing;
-      const draft = detach(element);
-      detached.set(element, draft);
-      return draft;
-    };
-    const prepared =
-      method === 'sort' && typeof args[0] === 'function'
-        ? [
-            (left: unknown, right: unknown) =>
-              (args[0] as (a: unknown, b: unknown) => number)(
-                forCallback(left),
-                forCallback(right)
-              )
-          ]
-        : args.map((argument) => unwrapDraft(argument));
-    const result = (Array.prototype as never as Record<string, Function>)[
-      method
-    ].apply(copy, prepared);
+    let result: unknown;
+    if (method === 'sort') {
+      sortThroughViews(copy, args[0] as never);
+      result = copy;
+    } else {
+      // What is removed leaves the tree, and a leaf has no detached form, so
+      // the array is left untouched rather than mutated and then complained
+      // about -- a caught error should not leave the removal behind.
+      for (const element of wouldRemove(copy, method, args)) {
+        if (!isPatchTraversable(element) && isObject(element)) {
+          refuseLeaf(element as object);
+        }
+      }
+      result = (Array.prototype as never as Record<string, Function>)[
+        method
+      ].apply(
+        copy,
+        args.map((argument) => unwrapDraft(argument))
+      );
+    }
     node.children.clear();
     const path = pathOf(node);
     const { patches, inversePatches } = diffPatches(
@@ -255,6 +250,93 @@ const runArrayMethod = (node: Node, method: string) =>
     if (Array.isArray(result)) return result.map(handOut);
     return handOut(result);
   };
+
+const isObject = (value: unknown) =>
+  typeof value === 'object' && value !== null;
+
+/** Which elements a mutating method would take out of the array. */
+const wouldRemove = (
+  array: unknown[],
+  method: string,
+  args: unknown[]
+): unknown[] => {
+  if (method === 'pop') return array.length ? [array[array.length - 1]] : [];
+  if (method === 'shift') return array.length ? [array[0]] : [];
+  if (method !== 'splice') return [];
+  const start =
+    args.length === 0
+      ? array.length
+      : Math.max(
+          0,
+          Math.min(
+            array.length,
+            Number(args[0]) < 0
+              ? array.length + Number(args[0])
+              : Number(args[0])
+          )
+        );
+  const count =
+    args.length <= 1
+      ? array.length - start
+      : Math.max(0, Math.min(array.length - start, Number(args[1])));
+  return array.slice(start, start + count);
+};
+
+/**
+ * Sort through views of the elements rather than the elements themselves.
+ *
+ * `sort` is the one mutating method that hands elements to code outside the
+ * draft -- a comparator, or the string coercion the default ordering uses.
+ * Both used to receive the base's own objects, so a comparator that writes, or
+ * an element whose `toString` has an effect, changed the base with nothing
+ * recorded. Ordering is decided over detached drafts and the raw values are
+ * rearranged to match; a leaf has no view to offer, so an array holding one
+ * cannot be sorted through a draft.
+ */
+const sortThroughViews = (
+  array: unknown[],
+  comparator?: (left: unknown, right: unknown) => number
+) => {
+  const views = new Map<unknown, unknown>();
+  const viewOf = (value: unknown) => {
+    if (!isPatchTraversable(value)) {
+      if (isObject(value)) refuseLeaf(value as object);
+      return value;
+    }
+    const existing = views.get(value);
+    if (existing !== undefined) return existing;
+    const view = detach(value as object);
+    views.set(value, view);
+    return view;
+  };
+
+  // Present and defined, then explicit undefined, then holes -- the order the
+  // language specifies, which sorting the array as a whole would lose.
+  const present: unknown[] = [];
+  let undefineds = 0;
+  let holes = 0;
+  for (let index = 0; index < array.length; index += 1) {
+    if (!Object.prototype.hasOwnProperty.call(array, index)) holes += 1;
+    else if (array[index] === undefined) undefineds += 1;
+    else present.push(array[index]);
+  }
+  const entries = present.map((value) => ({ value, view: viewOf(value) }));
+  entries.sort((left, right) => {
+    if (comparator) return comparator(left.view, right.view);
+    const a = String(left.view);
+    const b = String(right.view);
+    return a < b ? -1 : a > b ? 1 : 0;
+  });
+  for (let index = 0; index < entries.length; index += 1) {
+    array[index] = entries[index].value;
+  }
+  for (let index = 0; index < undefineds; index += 1) {
+    array[entries.length + index] = undefined;
+  }
+  for (let index = 0; index < holes; index += 1) {
+    delete array[entries.length + undefineds + index];
+  }
+};
 
 /**
  * A draft over a value that is no longer part of the tree.
@@ -473,15 +555,27 @@ const cloneWithout = (
   const existing = done.get(value as object);
   if (existing !== undefined) return existing;
   const source = value as Record<PropertyKey, unknown>;
-  const copy = shallowCopy(source);
-  // Registered before its children are walked, so an object reached twice --
-  // an alias, or a cycle -- resolves to the same clone both times instead of
-  // being returned as itself with a draft still inside it.
+  // Built empty and registered before its children are walked, so an object
+  // reached twice -- an alias, or a cycle -- resolves to the same clone both
+  // times. Defined property by property rather than copied and then
+  // overwritten, because a read-only property cannot be assigned to afterwards.
+  const copy = Array.isArray(source)
+    ? ([] as unknown as Record<PropertyKey, unknown>)
+    : (Object.create(Object.getPrototypeOf(source)) as Record<
+        PropertyKey,
+        unknown
+      >);
   done.set(source, copy);
   for (const key of Reflect.ownKeys(source)) {
-    const child = source[key];
-    const replaced = cloneWithout(child, done);
-    if (!Object.is(child, replaced)) copy[key] = replaced;
+    const descriptor = Object.getOwnPropertyDescriptor(source, key)!;
+    if ('get' in descriptor || 'set' in descriptor) {
+      Object.defineProperty(copy, key, descriptor);
+      continue;
+    }
+    Object.defineProperty(copy, key, {
+      ...descriptor,
+      value: cloneWithout(descriptor.value, done)
+    });
   }
   return copy;
 };

@@ -120,3 +120,41 @@ test('a change in shape rather than value replaces the container', () => {
     { op: 'replace', path: ['held'], value: hidden }
   ]);
 });
+
+test('a property patches cannot describe replaces the container', () => {
+  // Arriving non-enumerable, read-only or as an accessor, or leaving when it
+  // cannot be deleted: a patch carries a value and says none of that.
+  const arriving = {} as { x?: number };
+  Object.defineProperty(arriving, 'x', {
+    value: 1,
+    enumerable: false,
+    writable: false,
+    configurable: false
+  });
+  const added = applyPatchesTo({}, diffPatches({}, arriving).patches);
+  expect(Object.getOwnPropertyDescriptor(added, 'x')).toEqual(
+    Object.getOwnPropertyDescriptor(arriving, 'x')
+  );
+
+  const stuck = {} as { x?: number };
+  Object.defineProperty(stuck, 'x', {
+    value: 1,
+    enumerable: true,
+    writable: true,
+    configurable: false
+  });
+  // Deleting it is impossible, so the patch must not try.
+  expect(applyPatchesTo(stuck, diffPatches(stuck, {}).patches)).toEqual({});
+
+  const one = {};
+  Object.defineProperty(one, 'x', { get: () => 1, configurable: true });
+  const other = {};
+  Object.defineProperty(other, 'x', {
+    get: function different() {
+      return 1;
+    },
+    configurable: true
+  });
+  // Same value, different accessor: not the same object.
+  expect(diffPatches(one, other).patches).toHaveLength(1);
+});

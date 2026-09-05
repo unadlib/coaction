@@ -406,3 +406,64 @@ test('a wrapper that holds one draft twice unwraps it once', () => {
   expect(wrapper.self.user.name).toBe('A');
   expect(wrapper.self).toBe(wrapper);
 });
+
+test('sorting cannot reach the base, through a comparator or through coercion', () => {
+  const items = [{ v: 2 }, { v: 1 }];
+  const base = { items };
+  const { state } = scopeDraft(base, (draft) => {
+    draft.items.sort((left: any, right: any) => {
+      left.flag = true;
+      return left.v - right.v;
+    });
+  });
+  expect(items.some((item: any) => item.flag)).toBe(false);
+  expect(state.items.map((item) => item.v)).toEqual([1, 2]);
+
+  // The default ordering coerces elements to strings, which runs their own code.
+  class Box {
+    constructor(public value: number) {}
+    toString() {
+      this.value += 10;
+      return String(this.value);
+    }
+  }
+  const boxes = [new Box(2), new Box(1)];
+  expect(() =>
+    scopeDraft({ boxes }, (draft: any) => {
+      draft.boxes.sort();
+    })
+  ).toThrow(/cannot describe a change inside one/);
+  expect(boxes.map((box) => box.value)).toEqual([2, 1]);
+});
+
+test('a refused removal leaves the array as it was', () => {
+  const base = { xs: [new Date(0)] };
+  const { state } = scopeDraft(base, (draft: any) => {
+    try {
+      draft.xs.pop();
+    } catch {
+      // A caught error must not leave the removal behind.
+    }
+  });
+  expect(state.xs).toHaveLength(1);
+  expect(base.xs).toHaveLength(1);
+});
+
+test('a wrapper with a read-only property unwraps', () => {
+  const base = { user: { name: 'A' }, copy: null as unknown };
+  const { state } = scopeDraft(base, (draft: any) => {
+    const wrapper = {};
+    Object.defineProperty(wrapper, 'user', {
+      value: draft.user,
+      writable: false,
+      enumerable: true,
+      configurable: true
+    });
+    draft.copy = wrapper;
+  });
+  // Copying the descriptor and then assigning the unwrapped value would throw.
+  expect((state as any).copy.user.name).toBe('A');
+  expect(
+    Object.getOwnPropertyDescriptor((state as any).copy, 'user')?.writable
+  ).toBe(false);
+});

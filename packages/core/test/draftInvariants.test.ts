@@ -8,6 +8,62 @@ import { isCoactionDraft, scopeDraft } from '../src/draft';
  * underneath, and reconstructing intent from the assignments is how inverse
  * patches came to name indexes that had already moved.
  */
+/**
+ * Report the first sequence that breaks, rather than asserting on every one.
+ *
+ * Twenty thousand sequences times five checks is a hundred thousand assertion
+ * calls, and the framework's bookkeeping for them costs more than the code
+ * under test. Comparing directly and raising once keeps the failure message
+ * while leaving the suite fast enough to run under coverage.
+ */
+const failed = (label: string, seed: number, detail?: unknown): never => {
+  throw new Error(
+    `${label} (seed ${seed})${detail === undefined ? '' : `: ${JSON.stringify(detail)}`}`
+  );
+};
+
+/** Deep equality that survives the cycles these sequences build. */
+const same = (
+  left: unknown,
+  right: unknown,
+  seen = new Map<object, object>()
+): boolean => {
+  if (Object.is(left, right)) return true;
+  if (
+    typeof left !== 'object' ||
+    typeof right !== 'object' ||
+    left === null ||
+    right === null
+  ) {
+    return false;
+  }
+  const paired = seen.get(left);
+  if (paired) return paired === right;
+  seen.set(left, right);
+  if (Array.isArray(left) !== Array.isArray(right)) return false;
+  if (Array.isArray(left) && left.length !== (right as unknown[]).length) {
+    return false;
+  }
+  const keys = new Set([...Reflect.ownKeys(left), ...Reflect.ownKeys(right)]);
+  for (const key of keys) {
+    const inLeft = Object.prototype.hasOwnProperty.call(left, key);
+    if (inLeft !== Object.prototype.hasOwnProperty.call(right, key)) {
+      return false;
+    }
+    if (!inLeft) continue;
+    if (
+      !same(
+        (left as Record<PropertyKey, unknown>)[key],
+        (right as Record<PropertyKey, unknown>)[key],
+        seen
+      )
+    ) {
+      return false;
+    }
+  }
+  return true;
+};
+
 const seeded = (seed: number) => () => {
   seed = (seed * 1103515245 + 12345) & 0x7fffffff;
   return seed / 0x7fffffff;
@@ -49,12 +105,16 @@ test('array mutation sequences round-trip through their patches', () => {
       for (const step of chosen) step(draft.xs, random);
     });
 
-    expect(applyPatchesTo(base, patches)).toEqual(state);
-    expect(applyPatchesTo(state, inversePatches)).toEqual(base);
+    if (!same(applyPatchesTo(base, patches), state)) {
+      failed('patches did not produce the state', seed);
+    }
+    if (!same(applyPatchesTo(state, inversePatches), base)) {
+      failed('the inverse did not return to the base', seed);
+    }
     checked += 1;
   }
   expect(checked).toBe(2000);
-});
+}, 30_000);
 
 test('nested object mutation sequences round-trip through their patches', () => {
   for (let seed = 1; seed <= 2000; seed += 1) {
@@ -79,10 +139,15 @@ test('nested object mutation sequences round-trip through their patches', () => 
         }
       }
     );
-    expect(applyPatchesTo(base, patches)).toEqual(state);
-    expect(applyPatchesTo(state, inversePatches)).toEqual(base);
+    if (!same(applyPatchesTo(base, patches), state)) {
+      failed('patches did not produce the state', seed);
+    }
+    if (!same(applyPatchesTo(state, inversePatches), base)) {
+      failed('the inverse did not return to the base', seed);
+    }
   }
-});
+  expect(true).toBe(true);
+}, 30_000);
 
 test('the base is never modified', () => {
   for (let seed = 1; seed <= 500; seed += 1) {
@@ -95,7 +160,7 @@ test('the base is never modified', () => {
     });
     expect(JSON.stringify(base)).toBe(snapshot);
   }
-});
+}, 30_000);
 
 test('no draft ever reaches the published state', () => {
   const hasDraft = (value: unknown, seen = new Set<object>()): boolean => {
@@ -124,9 +189,10 @@ test('no draft ever reaches the published state', () => {
     });
     // A draft inside the state is a live handle on it that throws on read once
     // finalized, which is how one escaping shows up much later and elsewhere.
-    expect(hasDraft(state)).toBe(false);
+    if (hasDraft(state)) failed('a draft reached the state', seed);
   }
-});
+  expect(true).toBe(true);
+}, 30_000);
 
 test('every invariant holds across generated mutation sequences', () => {
   const hasDraft = (value: unknown, seen = new Set<object>()): boolean => {
@@ -150,7 +216,7 @@ test('every invariant holds across generated mutation sequences', () => {
       untouched: { keep: true },
       out: null as unknown
     };
-    const snapshot = JSON.stringify(base);
+    const snapshot = structuredClone(base);
     const untouched = base.untouched;
 
     const { state, patches, inversePatches } = scopeDraft(
@@ -187,15 +253,21 @@ test('every invariant holds across generated mutation sequences', () => {
       }
     );
 
-    expect(JSON.stringify(base)).toBe(snapshot);
-    expect(hasDraft(state)).toBe(false);
-    expect(applyPatchesTo(base, patches)).toEqual(state);
-    expect(applyPatchesTo(state, inversePatches)).toEqual(base);
-    expect((state as typeof base).untouched).toBe(untouched);
+    if (!same(base, snapshot)) failed('the base changed', seed);
+    if (hasDraft(state)) failed('a draft reached the state', seed);
+    if (!same(applyPatchesTo(base, patches), state)) {
+      failed('patches did not produce the state', seed);
+    }
+    if (!same(applyPatchesTo(state, inversePatches), base)) {
+      failed('the inverse did not return to the base', seed);
+    }
+    if ((state as typeof base).untouched !== untouched) {
+      failed('an untouched branch lost its identity', seed);
+    }
     sequences += 1;
   }
   expect(sequences).toBe(20000);
-});
+}, 30_000);
 
 test('the invariants hold for sparse arrays and unusual descriptors too', () => {
   const marker = Symbol('marker');
@@ -268,15 +340,19 @@ test('the invariants hold for sparse arrays and unusual descriptors too', () => 
       }
     );
 
-    expect(sameShape(base.xs, snapshot)).toBe(true);
-    expect(base.hidden).toBe(7);
+    if (!sameShape(base.xs, snapshot)) failed('the base changed', seed);
+    if (base.hidden !== 7) failed('the base lost a hidden property', seed);
     const forward = applyPatchesTo(base, patches) as typeof base;
-    expect(sameShape(forward.xs, state.xs)).toBe(true);
-    expect(forward.count).toBe(state.count);
+    if (!sameShape(forward.xs, state.xs)) {
+      failed('patches did not produce the state', seed);
+    }
+    if (forward.count !== state.count) failed('a value did not carry', seed);
     // A non-enumerable property is state, and has to come through both ways.
-    expect(forward.hidden).toBe(7);
+    if (forward.hidden !== 7) failed('a hidden property did not carry', seed);
     const back = applyPatchesTo(state, inversePatches) as typeof base;
-    expect(sameShape(back.xs, snapshot)).toBe(true);
-    expect(back.hidden).toBe(7);
+    if (!sameShape(back.xs, snapshot)) {
+      failed('the inverse did not return to the base', seed);
+    }
+    if (back.hidden !== 7) failed('the inverse lost a hidden property', seed);
   }
-});
+}, 30_000);

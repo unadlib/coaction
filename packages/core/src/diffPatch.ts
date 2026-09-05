@@ -117,17 +117,24 @@ const walk = (
       if (skip(key)) continue;
       const had = Object.getOwnPropertyDescriptor(before, key);
       const has = Object.getOwnPropertyDescriptor(after, key);
+      // A patch carries a value: an ordinary property appearing or vanishing is
+      // describable, but one that arrives non-enumerable, read-only or as an
+      // accessor is not, and neither is one that cannot be deleted.
       if (!had || !has) {
-        // An own property on one side that the other inherits is a shape
-        // change; one the other does not have at all is an ordinary add or
-        // remove, which patches do describe.
         if ((!had && key in before) || (!has && key in after)) return true;
+        const only = had ?? has!;
+        if ('get' in only || 'set' in only) return true;
+        if (!only.enumerable || !only.writable || !only.configurable) {
+          return true;
+        }
         continue;
       }
       if (
         had.enumerable !== has.enumerable ||
         had.writable !== has.writable ||
-        had.configurable !== has.configurable
+        had.configurable !== has.configurable ||
+        had.get !== has.get ||
+        had.set !== has.set
       ) {
         return true;
       }
