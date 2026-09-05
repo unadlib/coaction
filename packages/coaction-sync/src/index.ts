@@ -19,10 +19,10 @@ export type SyncStorage = {
 };
 
 export type SyncMutation = {
-  id: string;
-  patches: Patches;
-  inversePatches: Patches;
-  createdAt: number;
+  readonly id: string;
+  readonly patches: Patches;
+  readonly inversePatches: Patches;
+  readonly createdAt: number;
 };
 
 export type SyncPullResult = {
@@ -194,6 +194,26 @@ const createMutationId = () =>
 
 const clonePatches = (patches: Patches) =>
   sanitizeReplacementState(patches) as Patches;
+
+/**
+ * A mutation to hand to somebody outside.
+ *
+ * The outbox is what this client owes the remote, and the rebase reads it back
+ * as its own working set. Handing out the live objects made every reader a
+ * writer: `getPending().splice(0)` emptied the queue, and an adapter that
+ * normalised the patches it was given rewrote what would be replayed after the
+ * next pull -- a lost write with no error anywhere. The `readonly` on the type
+ * says so, but only to callers written in TypeScript who are looking.
+ *
+ * The cost is one deep copy of the patches at each boundary crossing, which is
+ * where they are about to be serialised or read anyway.
+ */
+const cloneMutation = (mutation: SyncMutation): SyncMutation => ({
+  id: mutation.id,
+  patches: clonePatches(mutation.patches),
+  inversePatches: clonePatches(mutation.inversePatches),
+  createdAt: mutation.createdAt
+});
 
 const mergeMutationsById = (...groups: readonly SyncMutation[][]) => {
   const order: string[] = [];
@@ -633,6 +653,13 @@ export const sync = <T extends object>({
         createInversePatches(working, remotePatches) as Patches
       );
 
+      // A resolver is called in the middle of the rebase, over the mutations
+      // about to be replayed and the patches about to be applied, so it is
+      // shown copies -- reaching into either would be editing the rebase's own
+      // working set while it runs. The remote patches are copied once for the
+      // whole pass rather than per conflicting mutation; that copy belongs to
+      // the caller, so what one call does to it the next call sees.
+      let remotePatchesForResolver: Patches | undefined;
       const retained = previousOutbox.filter((mutation) => {
         const overlappingRemotePatches = getOverlappingRemotePatches(
           mutation,
@@ -642,9 +669,10 @@ export const sync = <T extends object>({
         const resolution =
           typeof conflict === 'function'
             ? conflict({
-                mutation,
-                remotePatches,
-                overlappingRemotePatches
+                mutation: cloneMutation(mutation),
+                remotePatches: (remotePatchesForResolver ??=
+                  clonePatches(remotePatches)),
+                overlappingRemotePatches: clonePatches(overlappingRemotePatches)
               })
             : conflict === 'remote-wins'
               ? 'remote'
@@ -800,7 +828,10 @@ export const sync = <T extends object>({
           // Stable mutation ids make retry after an ack-persist crash safe when
           // the remote treats ids idempotently.
           const epoch = remoteEpoch;
-          const result = await adapter.push(submitted, { cursor, revision });
+          const result = await adapter.push(submitted.map(cloneMutation), {
+            cursor,
+            revision
+          });
           if (destroyed) return;
           const ack = new Set(result.ack ?? submitted.map(({ id }) => id));
           declined ||= submitted.some(({ id }) => !ack.has(id));
@@ -1008,7 +1039,7 @@ export const sync = <T extends object>({
         await persist();
         await storage.removeItem(hydrationJournalName);
       },
-      getPending: () => outbox,
+      getPending: () => outbox.map(cloneMutation),
       getStatus: () => status,
       subscribe: (listener) => {
         statusListeners.add(listener);

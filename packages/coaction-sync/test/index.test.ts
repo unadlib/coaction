@@ -5,6 +5,7 @@ import {
   getSyncApi,
   sync,
   type SyncAdapter,
+  type SyncMutation,
   type SyncPullResult,
   type SyncStatus,
   type SyncStorage
@@ -1560,5 +1561,148 @@ test('a slow push answer does not overwrite a newer event that already arrived',
   // value back over the newer one, with both requests having succeeded.
   expect(store.getState().theirs).toBe(2);
   expect(store.getState().mine).toBe(1);
+  store.destroy();
+});
+
+/**
+ * The outbox is what this client owes the remote, and the rebase reads it back
+ * as its own working set. Every way it reaches the outside has to hand over a
+ * copy: a caller that reached into it -- deliberately or by normalising the
+ * patches it was handed -- would be editing what is about to be replayed, and
+ * the result is a write that disappears with no error anywhere.
+ */
+test('pending mutations handed to a caller cannot reach the outbox', async () => {
+  const store = create(
+    (set) => ({
+      count: 0,
+      increment() {
+        set(() => {
+          this.count += 1;
+        });
+      }
+    }),
+    {
+      middlewares: [
+        sync({
+          name: 'pending-boundary',
+          storage: createMemoryStorage(),
+          adapter: { pull: async () => ({}), push: pendingPush }
+        })
+      ]
+    }
+  );
+  await nextTick();
+  store.getState().increment();
+  await nextTick();
+
+  const api = getSyncApi(store);
+  expect(api.getPending()).toHaveLength(1);
+
+  (api.getPending() as SyncMutation[]).splice(0);
+  expect(api.getPending()).toHaveLength(1);
+
+  const [pending] = api.getPending() as unknown as Array<{
+    id: string;
+    patches: unknown[];
+  }>;
+  const id = pending.id;
+  pending.id = 'rewritten';
+  pending.patches.length = 0;
+
+  const [intact] = api.getPending();
+  expect(intact.id).toBe(id);
+  expect(intact.patches).toHaveLength(1);
+  store.destroy();
+});
+
+test('an adapter that edits the mutations it is pushed sees them intact on retry', async () => {
+  const attempts: Array<{ id: string; patches: number }> = [];
+  const adapter: SyncAdapter = {
+    pull: async () => ({}),
+    push: async (mutations) => {
+      attempts.push({
+        id: mutations[0].id,
+        patches: mutations[0].patches.length
+      });
+      // An adapter that maps patches onto its own wire format is entitled to
+      // work in place on what it was given.
+      (mutations as SyncMutation[]).forEach((mutation) => {
+        (mutation as { id: string }).id = 'adapter-local';
+        (mutation.patches as unknown[]).length = 0;
+      });
+      if (attempts.length === 1) throw new Error('offline');
+      return { ack: [] };
+    }
+  };
+  const store = create(
+    (set) => ({
+      count: 0,
+      increment() {
+        set(() => {
+          this.count += 1;
+        });
+      }
+    }),
+    {
+      middlewares: [
+        sync({
+          name: 'push-boundary',
+          storage: createMemoryStorage(),
+          adapter,
+          retry: { initialMs: 1, maxMs: 1 }
+        })
+      ]
+    }
+  );
+  await nextTick();
+  store.getState().increment();
+  await waitUntil(() => attempts.length >= 2);
+
+  expect(attempts[1].id).toBe(attempts[0].id);
+  expect(attempts[1].patches).toBe(1);
+  store.destroy();
+});
+
+test('a conflict resolver that edits its context does not disturb the rebase', async () => {
+  const adapter: SyncAdapter = {
+    pull: async () => ({
+      patches: [{ op: 'replace', path: ['doc', 'title'], value: 'remote' }]
+    }),
+    push: pendingPush
+  };
+  const store = create(
+    (set) => ({
+      doc: { title: 'base', body: 'base' },
+      editTitle() {
+        set(() => {
+          this.doc.title = 'local';
+        });
+      }
+    }),
+    {
+      middlewares: [
+        sync({
+          name: 'conflict-boundary',
+          storage: createMemoryStorage(),
+          adapter,
+          conflict: ({ mutation, remotePatches, overlappingRemotePatches }) => {
+            (mutation.patches as unknown[]).length = 0;
+            (remotePatches as unknown[]).length = 0;
+            (overlappingRemotePatches as unknown[]).length = 0;
+            return 'local';
+          }
+        })
+      ]
+    }
+  );
+  await nextTick();
+  store.getState().editTitle();
+  await nextTick();
+  await getSyncApi(store).pull();
+
+  // The local edit survives the resolver having emptied its own copy of it,
+  // and the remote patches the resolver emptied were still applied.
+  expect(store.getState().doc.title).toBe('local');
+  expect(getSyncApi(store).getPending()).toHaveLength(1);
   store.destroy();
 });
