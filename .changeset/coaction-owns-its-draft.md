@@ -31,3 +31,13 @@ describe.
 fails on any shipped module importing Mutative. It stays a development
 dependency, because the tests that matter for the draft, the applier and the
 diff are the ones comparing against it.
+
+The draft holds the guarantees the abstraction implies, each one reproduced
+before it was fixed: a finalized draft is dead rather than a live handle on the
+published state; an array's own mutating methods produce transitions whose
+inverse returns exactly to the base, checked over four thousand generated
+mutation sequences; a `Map`, `Set` or `Date` cannot be edited through a draft,
+because a patch cannot describe a change inside one; `defineProperty`,
+`setPrototypeOf` and `preventExtensions` are refused instead of reaching the
+base; and copying preserves array holes, an array's own properties, and a
+null prototype. Each refusal raises `UnsupportedDraftOperationError`.

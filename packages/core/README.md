@@ -65,6 +65,24 @@ import { computed, effect, signal } from 'coaction';
 import { defineExternalStoreAdapter } from 'coaction/adapter';
 ```
 
+### What a draft permits
+
+`set()` hands you a draft: write it like a plain object and Coaction publishes
+an immutable result. It covers the tree a patch can describe — plain objects and
+dense arrays, including holes and any ordinary or symbol properties an array
+carries — and refuses what it cannot describe honestly:
+
+- A `Map`, `Set` or `Date` read through a draft. These keep their contents in
+  internal slots, so editing one changes the state with nothing to record. Read
+  it from the state and assign a replacement.
+- `Object.defineProperty`, `Object.setPrototypeOf`, `Object.preventExtensions`.
+  Build the value you want and assign it.
+- Any write after the draft is finalized. Its result is already the published
+  state, so a late write would change the store with no commit behind it.
+
+Each of these throws `UnsupportedDraftOperationError` rather than quietly
+producing a state no patch describes.
+
 ### Transitions
 
 A state change becomes a commit: the next state, the patches that produced it,
