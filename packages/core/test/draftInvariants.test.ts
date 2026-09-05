@@ -169,9 +169,14 @@ test('every invariant holds across generated mutation sequences', () => {
           } else if (pick === 7) {
             draft.items.push({ v: Math.floor(random() * 9) });
           } else if (pick === 8) {
-            draft.out = draft.items.slice();
+            // A wrapper holding one draft at two paths, and one holding itself:
+            // both used to leave a draft behind on the second visit.
+            const shared = { user: draft.user };
+            draft.out = { a: shared, b: shared };
           } else if (pick === 9) {
-            draft.out = { ...draft.user };
+            const wrapper: any = { items: draft.items, user: draft.user };
+            wrapper.self = wrapper;
+            draft.out = wrapper;
           } else if (pick === 10) {
             const removed = draft.items.pop();
             if (removed) removed.v = 99;

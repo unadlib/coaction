@@ -65,3 +65,10 @@ plain are reached into, and anything a constructor built is replaced whole.
 A cycle is refused, since a path has no way to describe one. Aliasing stays a
 documented contract: finding every alias would mean scanning the state on every
 write.
+
+A fourth pass closed the last routes from a recipe back to the base: leaves
+handed out by `pop` and `splice`, elements passed to a `sort` comparator, and a
+wrapper holding one draft at two paths, which unwrapped it once and left the
+other branch pointing at a finalized draft. `diffPatches` also stops describing
+a change of shape as a change of value — a property that is own on one side and
+inherited on the other, or whose descriptor differs, replaces the container.
