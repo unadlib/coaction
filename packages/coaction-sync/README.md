@@ -163,10 +163,21 @@ stored as JSON, so state JSON cannot represent is not persisted — it is quietl
 changed. A `Date` comes back a string, a `Map` comes back `{}`, and nothing says
 so until something downstream reads the wrong type.
 
-`sync()` therefore refuses state it cannot store, with the path to the value,
-and reports a write that introduces one. It is the same contract the shared
-transport enforces, checked the same way. Keep dates as ISO strings or epoch
-numbers, keyed collections as records, and sets as arrays.
+`sync()` therefore refuses state it cannot store, with the path to the value.
+A write that introduces one is refused before it is committed, so the error
+reaches the `setState` that caused it and the store keeps the state it can
+carry. Committing it and reporting afterwards would leave the store serving a
+value the remote will never hear about, with every write after it a delta from
+a baseline only this client has.
+
+It is the same contract the shared transport enforces, checked the same way.
+Keep dates as ISO strings or epoch numbers, keyed collections as records, and
+sets as arrays.
+
+The one place this still arrives late is an external mutable adapter — MobX,
+Valtio, Pinia — where the object has already changed by the time Coaction has a
+commit to inspect. There the write is reported through `onError` rather than
+refused.
 
 ## Delivery semantics
 

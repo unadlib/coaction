@@ -37,6 +37,10 @@ type StoreCommitPrepareListener<T extends CreateState> = (
   commit: StoreCommit<T>
 ) => boolean | void;
 
+type StoreCommitValidator<T extends CreateState> = (
+  commit: StoreCommit<T>
+) => void;
+
 type StorePatchReplayer<T extends CreateState> = (
   transition: StorePatchTransition,
   setState?: Store<T>['setState']
@@ -46,6 +50,7 @@ type StoreCommitRuntime = {
   disposed: boolean;
   listeners: Set<StoreCommitListener<any>>;
   prepareListeners: Set<StoreCommitPrepareListener<any>>;
+  validators: Set<StoreCommitValidator<any>>;
   source?: StoreCommitSource;
   replay?: StorePatchReplayer<any>;
 };
@@ -63,7 +68,8 @@ const getStoreCommitRuntime = (store: object, create = false) => {
   const runtime: StoreCommitRuntime = {
     disposed: false,
     listeners: new Set(),
-    prepareListeners: new Set()
+    prepareListeners: new Set(),
+    validators: new Set()
   };
   Object.defineProperty(target, storeCommitRuntimeSymbol, {
     configurable: true,
@@ -129,6 +135,46 @@ export const onStoreCommitPrepare = <T extends CreateState>(
 };
 
 /**
+ * Refuse a state transition before it is committed.
+ *
+ * @remarks
+ * A validator that throws aborts the transition: the error reaches whoever
+ * called `setState`, and the store is left exactly as it was. This is the hook
+ * for a middleware whose state space is narrower than Coaction's own -- one
+ * that has to put the state somewhere Coaction does not, over a wire or into
+ * storage, and so cannot represent everything a local write can produce.
+ *
+ * Learning about such a write from {@link onStoreCommit} is too late. By then
+ * the store holds a value the middleware cannot carry, subscribers have
+ * rendered it, and refusing it after the fact only means the two disagree from
+ * there on with nothing left to say so.
+ *
+ * A validator sees the same commit a listener does. It must not write to the
+ * store, and it runs on every local transition, so keep it proportional to the
+ * patches rather than to the size of the state.
+ */
+export const onStoreCommitValidate = <T extends CreateState>(
+  store: Store<T>,
+  validator: StoreCommitValidator<T>
+) => {
+  const runtime = getStoreCommitRuntime(store, true)!;
+  if (runtime.disposed) {
+    throw new Error(
+      'onStoreCommitValidate() cannot be called after store.destroy().'
+    );
+  }
+  runtime.validators.add(validator);
+  let active = true;
+  return () => {
+    if (!active) {
+      return;
+    }
+    active = false;
+    runtime.validators.delete(validator);
+  };
+};
+
+/**
  * Replay a patch pair through Coaction validation, patch middleware, adapters,
  * subscriptions, and transports.
  */
@@ -147,9 +193,17 @@ export const replayStorePatches = <T extends CreateState>(
   return replay(transition, options.setState);
 };
 
-/** @internal */
-export const hasStoreCommitListeners = (store: object) =>
-  Boolean(getStoreCommitRuntime(store)?.listeners.size);
+/**
+ * @internal
+ * Validators need the patch pair too, so they count the same as listeners when
+ * deciding whether a transition has to produce one.
+ */
+export const hasStoreCommitListeners = (store: object) => {
+  const runtime = getStoreCommitRuntime(store);
+  return Boolean(
+    runtime && (runtime.listeners.size || runtime.validators.size)
+  );
+};
 
 /** @internal */
 export const publishStoreCommit = <T extends CreateState>(
@@ -162,6 +216,20 @@ export const publishStoreCommit = <T extends CreateState>(
   }
   for (const listener of [...runtime.listeners]) {
     listener(commit);
+  }
+};
+
+/** @internal */
+export const validateStoreCommit = <T extends CreateState>(
+  store: Store<T>,
+  commit: StoreCommit<T>
+) => {
+  const runtime = getStoreCommitRuntime(store);
+  if (!runtime || runtime.disposed || !runtime.validators.size) {
+    return;
+  }
+  for (const validator of runtime.validators) {
+    validator(commit);
   }
 };
 
@@ -221,6 +289,7 @@ export const disposeStoreCommitRuntime = (store: object) => {
   runtime.disposed = true;
   runtime.listeners.clear();
   runtime.prepareListeners.clear();
+  runtime.validators.clear();
   runtime.source = undefined;
   runtime.replay = undefined;
 };

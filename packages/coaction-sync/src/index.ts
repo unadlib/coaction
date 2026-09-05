@@ -4,6 +4,7 @@ import {
   assertSharedJsonValue,
   createInversePatches,
   onStoreCommit,
+  onStoreCommitValidate,
   onStoreReady,
   replayStorePatches,
   sanitizeReplacementState,
@@ -194,6 +195,18 @@ const createMutationId = () =>
 
 const clonePatches = (patches: Patches) =>
   sanitizeReplacementState(patches) as Patches;
+
+/**
+ * Name the write in a rejection. The check runs on the patch value, so on its
+ * own it can only say the value was wrong at its own root -- which for
+ * `this.updatedAt = new Date()` is no help at all in a state of any size.
+ */
+const describeWrite = (patch: Patches[number]) => {
+  const path = normalizePatchPath(patch.path);
+  return path.length
+    ? `the write at ${path.map(String).join('.')}`
+    : 'this write';
+};
 
 /**
  * A mutation to hand to somebody outside.
@@ -990,8 +1003,25 @@ export const sync = <T extends object>({
     void hydration.catch(() => undefined);
 
     let unsubscribeCommit: (() => void) | undefined;
+    let unsubscribeValidate: (() => void) | undefined;
     const cancelReady = onStoreReady(store, () => {
       assertJsonState(store.getPureState(), 'this store');
+      // Refuse a write this store could not carry, rather than report it after
+      // the fact. A rejected write used to be committed locally and then
+      // dropped from the outbox, so the store went on serving a value the
+      // remote would never hear about and every later write was a delta from a
+      // baseline only this client had. Nothing said so: the state looked fine,
+      // sync looked idle, and the two agreed about the past forever after.
+      unsubscribeValidate = onStoreCommitValidate<T>(store, (commit) => {
+        if (destroyed || applyingRemote) return;
+        // Per patch rather than over the whole state: proportional to the
+        // change, and it catches a value introduced after the store was built,
+        // which the check at startup cannot see.
+        for (const patch of commit.patches) {
+          if ('value' in patch)
+            assertJsonState(patch.value, describeWrite(patch));
+        }
+      });
       unsubscribeCommit = onStoreCommit<T>(store, (commit: StoreCommit<T>) => {
         // `applyingRemote` covers every replay this middleware makes, so the
         // commit source is not consulted: a replay from anywhere else is a user
@@ -999,11 +1029,13 @@ export const sync = <T extends object>({
         if (destroyed || applyingRemote) return;
         if (!commit.patches.length) return;
         try {
-          // Per patch rather than over the whole state: proportional to the
-          // change, and it catches a value introduced after the store was
-          // built, which the check at startup cannot see.
+          // A write that reaches here without having passed the validator got
+          // in through a path that commits before Coaction can refuse it -- an
+          // external mutable adapter, where the object has already changed by
+          // the time the commit exists. Reporting it is all that is left.
           for (const patch of commit.patches) {
-            if ('value' in patch) assertJsonState(patch.value, 'this write');
+            if ('value' in patch)
+              assertJsonState(patch.value, describeWrite(patch));
           }
         } catch (error) {
           onError?.(error);
@@ -1056,6 +1088,7 @@ export const sync = <T extends object>({
       statusListeners.clear();
       cancelReady();
       unsubscribeCommit?.();
+      unsubscribeValidate?.();
       unsubscribeCommit = undefined;
       if (typeof unsubscribeRemote === 'function') unsubscribeRemote();
       baseDestroy();

@@ -1706,3 +1706,73 @@ test('a conflict resolver that edits its context does not disturb the rebase', a
   expect(getSyncApi(store).getPending()).toHaveLength(1);
   store.destroy();
 });
+
+/**
+ * A store this middleware is attached to keeps its state as JSON, in the
+ * outbox, in the snapshot and on the wire. A write that JSON cannot carry used
+ * to be committed anyway and then dropped on its way to the outbox: the store
+ * went on serving a value the remote would never hear about, and every write
+ * after it was a delta from a baseline only this client had. Nothing said so.
+ * The state looked fine and sync stayed idle.
+ */
+test('a write JSON cannot carry is refused instead of committed', async () => {
+  const errors: unknown[] = [];
+  const store = create(
+    (set) => ({
+      count: 0,
+      updatedAt: '1970-01-01',
+      touch() {
+        set(() => {
+          this.count += 1;
+          (this as { updatedAt: unknown }).updatedAt = new Date(0);
+        });
+      }
+    }),
+    {
+      middlewares: [
+        sync({
+          name: 'json-contract',
+          storage: createMemoryStorage(),
+          adapter: { pull: async () => ({}), push: pendingPush },
+          onError: (error) => errors.push(error)
+        })
+      ]
+    }
+  );
+  await nextTick();
+
+  expect(() => store.getState().touch()).toThrow(/the write at updatedAt/);
+  // Nothing from the refused transition landed -- not the illegal value, and
+  // not the legal write that shared it.
+  expect(store.getState().updatedAt).toBe('1970-01-01');
+  expect(store.getState().count).toBe(0);
+  expect(getSyncApi(store).getPending()).toHaveLength(0);
+  expect(errors).toHaveLength(0);
+
+  // The store is still usable afterwards, and still in sync with itself.
+  store.setState({ count: 5 });
+  await nextTick();
+  expect(store.getState().count).toBe(5);
+  expect(getSyncApi(store).getPending()).toHaveLength(1);
+  store.destroy();
+});
+
+test('a replacement JSON cannot carry is refused too', async () => {
+  const store = create(() => ({ when: '1970-01-01' }), {
+    middlewares: [
+      sync({
+        name: 'json-contract-replace',
+        storage: createMemoryStorage(),
+        adapter: { pull: async () => ({}), push: pendingPush }
+      })
+    ]
+  });
+  await nextTick();
+
+  expect(() =>
+    store.setState({ when: new Date(0) as unknown as string })
+  ).toThrow(/stores state as JSON/);
+  expect(store.getState().when).toBe('1970-01-01');
+  expect(getSyncApi(store).getPending()).toHaveLength(0);
+  store.destroy();
+});

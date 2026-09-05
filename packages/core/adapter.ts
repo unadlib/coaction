@@ -20,6 +20,7 @@ export { replaceExternalStoreState } from './src/replaceExternalStoreState';
 export {
   onStoreCommit,
   onStoreCommitPrepare,
+  onStoreCommitValidate,
   replayStorePatches
 } from './src/storeCommit';
 export type {

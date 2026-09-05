@@ -46,7 +46,7 @@ test('state JSON cannot represent is refused rather than quietly rewritten', () 
   ).toThrow(/stores state as JSON.*index/s);
 });
 
-test('a value introduced after the store was built is reported, not stored', async () => {
+test('a value introduced after the store was built is refused, not stored', async () => {
   const errors: unknown[] = [];
   const store = create<{ stamp: string | Date; set: () => void }>(
     (set) => ({
@@ -70,16 +70,17 @@ test('a value introduced after the store was built is reported, not stored', asy
   );
   await nextTick();
 
-  store.getState().set();
+  // The startup check cannot see this one. The transition is refused before it
+  // is committed, so the error reaches the caller and the store keeps the
+  // value it could carry.
+  expect(() => store.getState().set()).toThrow(/stores state as JSON/);
   await nextTick();
-
-  // The startup check cannot see this one, so the per-commit check has to.
-  expect(errors).toHaveLength(1);
-  expect((errors[0] as Error).message).toMatch(/stores state as JSON/);
+  expect(store.getState().stamp).toBe('');
+  expect(errors).toHaveLength(0);
   store.destroy();
 });
 
-test('a value JSON cannot encode does not throw back out of the write', async () => {
+test('a value JSON cannot encode is refused at the write that makes it', async () => {
   const errors: unknown[] = [];
   const store = create<{ big: number | bigint; set: () => void }>(
     (set) => ({
@@ -103,10 +104,13 @@ test('a value JSON cannot encode does not throw back out of the write', async ()
   );
   await nextTick();
 
-  // Encoding used to run synchronously inside the commit listener, so
-  // `JSON.stringify` threw out of the `set()` that had already committed.
-  expect(() => store.getState().set()).not.toThrow();
+  // The check used to run after the commit, which left only two bad options:
+  // throw out of a `set()` whose write had already landed, or report the error
+  // to `onError` and leave the store holding a value it can never sync. It now
+  // runs before the commit, where refusing costs nothing.
+  expect(() => store.getState().set()).toThrow(/stores state as JSON/);
   await nextTick();
-  expect(errors).toHaveLength(1);
+  expect(store.getState().big).toBe(0);
+  expect(errors).toHaveLength(0);
   store.destroy();
 });
