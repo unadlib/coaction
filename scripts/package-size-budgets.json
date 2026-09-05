@@ -166,12 +166,12 @@
         "maxGzipBytes": 1550
       },
       "dist/supabase.mjs": {
-        "baselineGzipBytes": 5085,
-        "maxGzipBytes": 5600
+        "baselineGzipBytes": 5250,
+        "maxGzipBytes": 5800
       },
       "dist/supabase.js": {
-        "baselineGzipBytes": 5132,
-        "maxGzipBytes": 5650
+        "baselineGzipBytes": 5295,
+        "maxGzipBytes": 5850
       },
       "dist/query.mjs": {
         "baselineGzipBytes": 4112,
@@ -182,12 +182,12 @@
         "maxGzipBytes": 4600
       },
       "dist/firestore.mjs": {
-        "baselineGzipBytes": 4238,
-        "maxGzipBytes": 4700
+        "baselineGzipBytes": 4354,
+        "maxGzipBytes": 4800
       },
       "dist/firestore.js": {
-        "baselineGzipBytes": 4291,
-        "maxGzipBytes": 4750
+        "baselineGzipBytes": 4405,
+        "maxGzipBytes": 4850
       }
     }
   },

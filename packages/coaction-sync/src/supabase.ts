@@ -116,6 +116,12 @@ const unwrap = <TRecord>(result: SupabaseResult<TRecord>) => {
  * the create/update/delete decisions live there, and this adds the Postgrest
  * calls, an optional changes-since cursor, and optional realtime.
  *
+ * Writes are last-write-wins under replay. `create` upserts so a retry after a
+ * crash cannot fail on the primary key, but a retry that succeeds still writes
+ * the queued mutation's value over whatever is there. Pass your own handlers
+ * built on `idempotencyKey` when concurrent editors need more than that -- see
+ * "Delivery semantics" in the README.
+ *
  * ```ts
  * sync({
  *   name: 'todos',

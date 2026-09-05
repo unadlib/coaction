@@ -82,6 +82,10 @@ export type FirestoreSyncAdapterOptions = {
 /**
  * Sync a keyed collection with a Firestore collection.
  *
+ * Writes are last-write-wins under replay. `setDoc` overwrites, so a retry
+ * after a crash cannot fail -- and still writes the queued mutation's value
+ * over whatever is there. See "Delivery semantics" in the README.
+ *
  * Built on {@link createCrudSyncAdapter}. What it adds beyond the CRUD calls is
  * the part that is easy to get wrong: a Firestore document does not contain its
  * own id, so the id is merged into the record on the way in and removed again

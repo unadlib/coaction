@@ -153,6 +153,51 @@ A failed write rejects the whole push instead of acknowledging part of it, so
 the outbox keeps every mutation the remote did not take and the retry schedule
 decides when to try again.
 
+## Delivery semantics
+
+Mutations are delivered **at least once**. The window between a remote
+committing a write and the acknowledgement reaching durable storage cannot be
+closed from the client: a crash inside it leaves a mutation the remote has
+already taken still queued, and the restart sends it again. What happens then is
+the backend's decision, not this library's.
+
+The built-in Supabase and Firestore adapters are **last-write-wins** under that
+replay. They are written so a retry cannot fail -- Supabase upserts on the id,
+Firestore's `setDoc` overwrites -- but a retry that succeeds is still the old
+mutation's value landing on the row:
+
+```text
+client A creates todo "hello"   -> remote takes it
+client A crashes before the acknowledgement is durable
+client B changes it to "goodbye"
+client A restarts and replays   -> remote holds "hello" again
+```
+
+A delete replays the same way, removing a record someone recreated at that id in
+the meantime. For an application where two clients edit the same record, this is
+the behaviour to design around, or to replace.
+
+Replacing it needs the remote to recognise a mutation it has already applied,
+which is what `idempotencyKey` is for. A handler that carries it lets the
+backend decide once:
+
+```ts
+createCrudSyncAdapter<Todo>({
+  path: ['todos'],
+  list: () => api.listTodos(),
+  // A single transaction: apply the write and record the key, or return the
+  // earlier result if the key is already there.
+  create: (todo, { idempotencyKey }) => api.applyOnce(idempotencyKey, todo),
+  update: (todo, { idempotencyKey }) => api.applyOnce(idempotencyKey, todo),
+  delete: (todo, id, { idempotencyKey }) => api.deleteOnce(idempotencyKey, id)
+});
+```
+
+On Supabase that is an RPC over a table of applied mutation ids; on Firestore, a
+transaction that writes the document and the id together. Either turns the
+replay into a no-op, which is the difference between at-least-once delivery and
+exactly-once effect.
+
 ## Storage backends
 
 `sync()` persists through a `SyncStorage`: `getItem`, `setItem`, `removeItem`,
