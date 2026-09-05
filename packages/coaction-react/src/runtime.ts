@@ -111,11 +111,24 @@ const trackReturnedStateValues = (value: unknown) => {
       current.forEach(visit);
       return;
     }
-    if (!React.isValidElement(current)) return;
-    const props = current.props as Record<PropertyKey, unknown> | null;
-    if (!props) return;
-    for (const key of Reflect.ownKeys(props)) {
-      visit(props[key]);
+    if (React.isValidElement(current)) {
+      const props = current.props as Record<PropertyKey, unknown> | null;
+      if (!props) return;
+      for (const key of Reflect.ownKeys(props)) {
+        visit(props[key]);
+      }
+      return;
+    }
+    // A plain object the caller built -- `{ user: state.user, name: ... }` --
+    // carries state values out with it. Without walking it, reading a deeper
+    // leaf makes path minimisation drop the ancestor as a mere traversal step,
+    // and the object in the result then never invalidates. Traversal stops at
+    // the first state value, so this only walks what the caller wrote.
+    const prototype = Object.getPrototypeOf(current);
+    if (prototype !== Object.prototype && prototype !== null) return;
+    const record = current as Record<PropertyKey, unknown>;
+    for (const key of Reflect.ownKeys(record)) {
+      visit(record[key]);
     }
   };
   visit(value);
@@ -344,6 +357,11 @@ const createSelectorTrackerState = <TState extends object>(
         const selected = selector(store.getState());
         if (trackReadonlyStateValue(selected)) {
           stateObjectVersion = getReadonlyStateValueVersion(selected);
+        } else {
+          // A composite result carries state values inside a wrapper the
+          // selector built; they need the same terminal dependency the
+          // directly returned one gets.
+          trackReturnedStateValues(selected);
         }
         return selected;
       });
