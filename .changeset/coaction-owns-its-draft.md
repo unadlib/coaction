@@ -72,3 +72,11 @@ wrapper holding one draft at two paths, which unwrapped it once and left the
 other branch pointing at a finalized draft. `diffPatches` also stops describing
 a change of shape as a change of value — a property that is own on one side and
 inherited on the other, or whose descriptor differs, replaces the container.
+
+A fifth pass closed sorting, which was the one mutating method that handed
+elements to code outside the draft -- a comparator, or the string coercion the
+default ordering runs -- and made a refused removal leave the array alone rather
+than happening and then complaining. The graph clone builds each property from
+its descriptor, so read-only and non-enumerable properties survive being carried
+through an unwrap, and `diffPatches` replaces the container for any property
+shape a patch cannot carry.
