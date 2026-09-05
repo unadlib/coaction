@@ -69,4 +69,27 @@ for (const { dir, json } of readPackages()) {
   ]);
 }
 
+/**
+ * Every workspace package needs a tsconfig path mapping to its source.
+ *
+ * Without one, `tsc` resolves its types through `dist`, which a clean checkout
+ * does not have -- and `pnpm check` typechecks before it builds. The failure
+ * only appears on CI, because a developer's tree has been built before.
+ */
+const tsconfigPaths = JSON.parse(
+  readFileSync(join(rootDir, 'tsconfig.json'), 'utf8')
+    .split('\n')
+    .filter((line) => !line.trim().startsWith('//'))
+    .join('\n')
+).compilerOptions.paths;
+const unmapped = readPackages()
+  .map(({ json }) => json.name)
+  .filter((name) => !tsconfigPaths[name]);
+if (unmapped.length) {
+  console.error(
+    `\nMissing tsconfig path mappings for: ${unmapped.join(', ')}\nAdd them to tsconfig.json "paths" so typecheck resolves source rather than dist.`
+  );
+  process.exit(1);
+}
+
 console.log('\nPackage quality checks passed.');

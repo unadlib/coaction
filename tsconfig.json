@@ -5,9 +5,32 @@
     "moduleResolution": "bundler",
     "module": "esnext",
     "baseUrl": ".",
+    // Every workspace package resolves to its source. Types otherwise
+    // resolve through `dist`, which does not exist until `pnpm build`
+    // runs -- and `pnpm check` typechecks first, so a clean checkout
+    // failed on any cross-package import while a rebuilt tree passed.
     "paths": {
       "coaction": ["packages/core/index.ts"],
-      "coaction/*": ["packages/core/*.ts"]
+      "coaction/*": ["packages/core/*.ts"],
+      "@coaction/history": ["packages/coaction-history/index.ts"],
+      "@coaction/jotai": ["packages/coaction-jotai/index.ts"],
+      "@coaction/logger": ["packages/coaction-logger/index.ts"],
+      "@coaction/mobx": ["packages/coaction-mobx/index.ts"],
+      "@coaction/ng": ["packages/coaction-ng/index.ts"],
+      "@coaction/persist": ["packages/coaction-persist/index.ts"],
+      "@coaction/pinia": ["packages/coaction-pinia/index.ts"],
+      "@coaction/react": ["packages/coaction-react/index.ts"],
+      "@coaction/react/*": ["packages/coaction-react/*.ts"],
+      "@coaction/redux": ["packages/coaction-redux/index.ts"],
+      "@coaction/solid": ["packages/coaction-solid/index.ts"],
+      "@coaction/svelte": ["packages/coaction-svelte/index.ts"],
+      "@coaction/sync": ["packages/coaction-sync/index.ts"],
+      "@coaction/sync/*": ["packages/coaction-sync/*.ts"],
+      "@coaction/valtio": ["packages/coaction-valtio/index.ts"],
+      "@coaction/vue": ["packages/coaction-vue/index.ts"],
+      "@coaction/xstate": ["packages/coaction-xstate/index.ts"],
+      "@coaction/yjs": ["packages/coaction-yjs/index.ts"],
+      "@coaction/zustand": ["packages/coaction-zustand/index.ts"]
     },
     "allowImportingTsExtensions": true,
     "noEmit": true,
