@@ -1364,3 +1364,41 @@ test('a pull answered against a base that has since moved is not applied', async
   expect(pullCalls).toBeGreaterThan(1);
   store.destroy();
 });
+
+test('a runtime without localStorage is refused rather than silently non-durable', async () => {
+  const original = globalThis.localStorage;
+  // A worker, a Node process and an SSR render all look like this.
+  Reflect.deleteProperty(globalThis, 'localStorage');
+  try {
+    expect(() =>
+      create<{ count: number }>(() => ({ count: 0 }), {
+        middlewares: [
+          sync({
+            name: 'no-storage',
+            adapter: { pull: async () => ({}), push: async () => ({}) }
+          })
+        ]
+      })
+    ).toThrow(/no localStorage to write to/);
+
+    // Saying so explicitly is allowed; it just has to be said.
+    const store = create<{ count: number }>(() => ({ count: 0 }), {
+      middlewares: [
+        sync({
+          name: 'no-storage-ok',
+          storage: false,
+          adapter: { pull: async () => ({}), push: async () => ({}) }
+        })
+      ]
+    });
+    await nextTick();
+    expect(store.getState().count).toBe(0);
+    store.destroy();
+  } finally {
+    Object.defineProperty(globalThis, 'localStorage', {
+      value: original,
+      configurable: true,
+      writable: true
+    });
+  }
+});

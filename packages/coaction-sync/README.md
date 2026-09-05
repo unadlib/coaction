@@ -56,7 +56,11 @@ does not fit any of the above is a `SyncAdapter`: two methods, `pull` and
 
 ## Conflict policies and durable state
 
-`sync()` persists the optimistic state snapshot and the mutation outbox by default. Pending commits that happen while asynchronous storage hydration is still running are rebased over the durable snapshot instead of being overwritten.
+`sync()` persists the optimistic state snapshot and the mutation outbox by
+default, to `localStorage`. A runtime without one — a Worker, Node, an SSR
+render — is refused rather than quietly running with a memory-only outbox; pass
+a `storage` of your own, or `storage: false` to say the outbox need not survive
+the process. Pending commits that happen while asynchronous storage hydration is still running are rebased over the durable snapshot instead of being overwritten.
 
 ```ts
 sync({

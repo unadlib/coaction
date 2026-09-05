@@ -96,7 +96,15 @@ type Patches = StoreCommit<any>['patches'];
 export type SyncOptions = {
   name: string;
   adapter: SyncAdapter;
-  storage?: SyncStorage;
+  /**
+   * Where the outbox and snapshot are written. Defaults to `localStorage`.
+   *
+   * Pass `false` to accept an outbox that does not survive the process. There
+   * is no silent fallback: a runtime without `localStorage` and without a
+   * storage of its own is refused, because the outbox is the reason a crash
+   * between an optimistic write and its delivery is recoverable.
+   */
+  storage?: SyncStorage | false;
   /** Persist the optimistic local snapshot alongside the durable outbox. */
   persistState?: boolean;
   /** Resolve overlapping remote/local patch paths during rebase. */
@@ -135,16 +143,47 @@ type PersistedSyncState<T extends object = object> = {
   adapter?: unknown;
 };
 
-const createDefaultStorage = (): SyncStorage => ({
-  getItem: (name) =>
-    typeof localStorage === 'undefined' ? null : localStorage.getItem(name),
-  setItem: (name, value) => {
-    if (typeof localStorage !== 'undefined') localStorage.setItem(name, value);
-  },
-  removeItem: (name) => {
-    if (typeof localStorage !== 'undefined') localStorage.removeItem(name);
+const createMemoryStorage = (): SyncStorage => {
+  const map = new Map<string, string>();
+  return {
+    getItem: (name) => map.get(name) ?? null,
+    setItem: (name, value) => {
+      map.set(name, value);
+    },
+    removeItem: (name) => {
+      map.delete(name);
+    }
+  };
+};
+
+/**
+ * A worker, a Node process and an SSR render all lack `localStorage`, and the
+ * default storage used to no-op there. The outbox then lived only in memory
+ * while every comment and guarantee around it said "durable" -- a crash lost
+ * exactly the writes the outbox exists to survive, silently. Running without
+ * durability is a decision the caller makes, not one taken on their behalf.
+ */
+const resolveStorage = (
+  storage: SyncStorage | false | undefined,
+  name: string
+): SyncStorage => {
+  if (storage) return storage;
+  if (storage === false) return createMemoryStorage();
+  if (typeof localStorage === 'undefined') {
+    throw new Error(
+      `sync({ name: '${name}' }) has no localStorage to write to. Pass a storage, or storage: false to accept an outbox that does not survive the process.`
+    );
   }
-});
+  return {
+    getItem: (key) => localStorage.getItem(key),
+    setItem: (key, value) => {
+      localStorage.setItem(key, value);
+    },
+    removeItem: (key) => {
+      localStorage.removeItem(key);
+    }
+  };
+};
 
 let mutationSequence = 0;
 const createMutationId = () =>
@@ -293,7 +332,7 @@ export const createFetchSyncAdapter = ({
 export const sync = <T extends object>({
   name,
   adapter,
-  storage = createDefaultStorage(),
+  storage: storageOption,
   persistState = true,
   conflict = 'local-wins',
   retry = {},
@@ -306,6 +345,7 @@ export const sync = <T extends object>({
         'sync() is not supported on a client mirror. Attach it to the local or authoritative main store.'
       );
     }
+    const storage = resolveStorage(storageOption, name);
     adapter.bind?.(store);
     let outbox: SyncMutation[] = [];
     let cursor: string | undefined;
