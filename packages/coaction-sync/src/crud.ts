@@ -377,7 +377,15 @@ export const createCrudSyncAdapter = <TRecord extends object>({
       }
 
       if (authoritativeList) {
-        for (const id of Object.keys(collection())) {
+        // What a complete answer omits is what the remote no longer has, and
+        // the question is which records it was believed to have -- the durable
+        // baseline, not whatever the store happens to hold. Reading the store
+        // gets it wrong from both directions: with `persistState: false` a
+        // restarted store is empty, so nothing is removed and the baseline
+        // keeps claiming records that are gone; and a record created locally
+        // but never sent produces a removal for something the remote never had,
+        // which is not a deletion but an absence.
+        for (const id of remoteIds) {
           if (seen.has(id)) continue;
           patches.push({
             op: 'remove',

@@ -813,3 +813,115 @@ test('the idempotency key survives a reclassification between attempts', async (
   expect(keys[1]).toBe(keys[0]);
   store.destroy();
 });
+
+test('an authoritative pull forgets a record the remote dropped, even without a persisted state', async () => {
+  const storage = createMemoryStorage();
+  const remoteRows = new Map<string, Todo>([
+    ['a', { id: 'a', title: 'first', done: false }]
+  ]);
+  const calls: string[] = [];
+  const makeStore = () =>
+    create<{ todos: Record<string, Todo>; add: (t: Todo) => void }>(
+      (set) => ({
+        todos: {},
+        add(todo) {
+          set(() => {
+            this.todos[todo.id] = todo;
+          });
+        }
+      }),
+      {
+        middlewares: [
+          sync({
+            name: 'p1b',
+            storage,
+            persistState: false,
+            onError: () => undefined,
+            adapter: createCrudSyncAdapter<Todo>({
+              path: ['todos'],
+              authoritativeList: true,
+              list: async () => [...remoteRows.values()],
+              create: async (r) => {
+                calls.push(`create:${r.id}`);
+                remoteRows.set(r.id, r);
+                return r;
+              },
+              update: async (r) => {
+                calls.push(`update:${r.id}`);
+                remoteRows.set(r.id, r);
+                return r;
+              }
+            })
+          })
+        ]
+      }
+    );
+
+  const first = makeStore();
+  await nextTick();
+  await getSyncApi(first).pull();
+  await nextTick();
+  first.destroy();
+
+  // The remote drops it while the app is closed. State was not persisted, so
+  // the restarted store is empty and only the baseline remembers "a".
+  remoteRows.delete('a');
+  const restarted = makeStore();
+  await nextTick();
+  await getSyncApi(restarted).pull();
+  await nextTick();
+  calls.length = 0;
+
+  restarted.getState().add({ id: 'a', title: 'mine', done: false });
+  await nextTick();
+
+  expect(calls).toEqual(['create:a']);
+  restarted.destroy();
+});
+
+test('a record created locally but never sent is not reported as a remote deletion', async () => {
+  const remote = createRemote();
+  const store = create<{
+    todos: Record<string, Todo>;
+    add: (todo: Todo) => void;
+  }>(
+    (set) => ({
+      todos: {},
+      add(todo) {
+        set(() => {
+          this.todos[todo.id] = todo;
+        });
+      }
+    }),
+    {
+      middlewares: [
+        sync({
+          name: 'crud-fresh',
+          storage: createMemoryStorage(),
+          // Under local-wins a spurious removal is undone by the rebase and
+          // nothing shows. The remote is not deleting anything here, so the
+          // policy should never be asked in the first place.
+          conflict: 'remote-wins',
+          adapter: createCrudSyncAdapter<Todo>({
+            path: ['todos'],
+            authoritativeList: true,
+            list: async () => [...remote.records.values()],
+            // Hold the push so the record stays local and unsent.
+            create: () => new Promise<never>(() => undefined)
+          })
+        })
+      ]
+    }
+  );
+  await nextTick();
+
+  store.getState().add({ id: 'fresh', title: 'mine', done: false });
+  await nextTick();
+  await getSyncApi(store).pull();
+  await nextTick();
+
+  // The remote has never seen it, so its absence from a complete answer is an
+  // absence, not a deletion.
+  expect(store.getState().todos.fresh).toBeDefined();
+  store.destroy();
+});
