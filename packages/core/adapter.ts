@@ -40,6 +40,7 @@ export {
   StateSchemaError
 } from './src/utils';
 export type { Patch, PatchOperation, Patches } from './src/patch';
+export { producePatches } from './src/producePatch';
 export { assertSharedJsonValue } from './src/sharedState';
 export { wrapStore } from './src/wrapStore';
 

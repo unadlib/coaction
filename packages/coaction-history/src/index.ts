@@ -7,13 +7,10 @@ import {
   type Middleware,
   type StoreCommit,
   type Store,
+  applyPatches,
+  producePatches,
   type Patches
 } from 'coaction/adapter';
-import {
-  apply as applyWithMutative,
-  create as createWithMutative,
-  type Draft
-} from 'mutative';
 import {
   createTravelJournal,
   type TravelJournal,
@@ -610,7 +607,7 @@ const createPatchHistory = <T extends object>(
     state,
     patches
   }: TravelsControlledTransition<object, CoactionPatchOptions>) => {
-    const nextState = applyWithMutative(state, patches) as object;
+    const nextState = applyPatches(state, patches) as object;
     baseSetState((draft) => {
       applyPartialSnapshot(
         draft as Record<PropertyKey, unknown>,
@@ -643,16 +640,13 @@ const createPatchHistory = <T extends object>(
     if (isEqual(previous, current)) {
       return;
     }
-    const update = (draft: Draft<object>) => {
+    const { patches, inversePatches } = producePatches(previous, (draft) => {
       applyHistorySnapshot(
         draft as Record<PropertyKey, unknown>,
         current,
         previous
       );
-    };
-    const [, patches, inversePatches] = createWithMutative(previous, update, {
-      enablePatches: true
-    }) as [object, Patches, Patches];
+    });
     journal.recordPatches(current, { patches, inversePatches });
   };
 
@@ -854,14 +848,14 @@ const createPatchHistory = <T extends object>(
     const snapshots: object[] = [];
     if (side === 'past') {
       for (let index = position - 1; index >= 0; index -= 1) {
-        state = applyWithMutative(state, entries[index].inversePatches);
+        state = applyPatches(state, entries[index].inversePatches);
         snapshots.push(toSnapshot(state));
       }
       snapshots.reverse();
       return snapshots;
     }
     for (let index = position; index < entries.length; index += 1) {
-      state = applyWithMutative(state, entries[index].patches);
+      state = applyPatches(state, entries[index].patches);
       snapshots.push(toSnapshot(state));
     }
     snapshots.reverse();

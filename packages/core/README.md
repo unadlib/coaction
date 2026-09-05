@@ -65,6 +65,19 @@ import { computed, effect, signal } from 'coaction';
 import { defineExternalStoreAdapter } from 'coaction/adapter';
 ```
 
+### Transitions
+
+A state change becomes a commit: the next state, the patches that produced it,
+and their inverses. That format is Coaction's, declared in `Patch` / `Patches`,
+and it is what `@coaction/history`, `@coaction/sync`, the shared transport and
+reactive invalidation all read.
+
+Mutative is the producer, not the format. `coaction/adapter` publishes the two
+operations a middleware needs — `applyPatches(state, patches)` and
+`producePatches(base, write)` — so nothing downstream reaches for a draft
+library of its own, and swapping how transitions are produced stays a change in
+one place.
+
 ### Adapter and Middleware Utilities
 
 `coaction/adapter` exports utilities for adapter and middleware authors. These are not needed for normal application state updates, but they are part of the supported integration surface used by the official packages:

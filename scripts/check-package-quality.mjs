@@ -92,4 +92,35 @@ if (unmapped.length) {
   process.exit(1);
 }
 
+/**
+ * Only the producer may reach for the draft library.
+ *
+ * Everything else consumes commits -- patches, inverse patches, a source -- and
+ * a package that imports Mutative to read or write one has taken a position on
+ * how transitions are made, which is the coupling the patch IR exists to
+ * remove. `coaction` itself is where the producer lives.
+ */
+const commitConsumers = readPackages().filter(
+  ({ json }) => json.name !== 'coaction'
+);
+const coupled = commitConsumers.filter(({ dir }) => {
+  const srcDir = join(dir, 'src');
+  if (!existsSync(srcDir)) return false;
+  return readdirSync(srcDir).some(
+    (file) =>
+      file.endsWith('.ts') &&
+      /from 'mutative'/.test(readFileSync(join(srcDir, file), 'utf8'))
+  );
+});
+if (coupled.length) {
+  console.error(
+    `\nThese packages import Mutative directly: ${coupled
+      .map(({ json }) => json.name)
+      .join(
+        ', '
+      )}\nConsume commits through coaction/adapter (applyPatches, producePatches, Patches) instead.`
+  );
+  process.exit(1);
+}
+
 console.log('\nPackage quality checks passed.');

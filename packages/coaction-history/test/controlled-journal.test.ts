@@ -1,5 +1,5 @@
 import { create } from 'coaction';
-import type { Patches } from 'mutative';
+import type { Patches } from 'coaction/adapter';
 import { expect, test, vi } from 'vitest';
 
 type Entry = {

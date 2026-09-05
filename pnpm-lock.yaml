@@ -227,9 +227,6 @@ importers:
 
   packages/coaction-history:
     dependencies:
-      mutative:
-        specifier: ^1.3.0
-        version: 1.3.0
       travels:
         specifier: ^2.1.0
         version: 2.1.0(mutative@1.3.0)
