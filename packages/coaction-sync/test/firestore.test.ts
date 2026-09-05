@@ -311,3 +311,25 @@ test('a narrowed read is not treated as the whole collection', async () => {
   expect(store.getState().todos.a).toBeDefined();
   store.destroy();
 });
+
+test('a document that arrived by realtime can be deleted remotely', async () => {
+  const fake = createFakeFirestore();
+  const store = createTodoStore(fake, { realtime: true });
+  await nextTick();
+
+  // No pull ever happened: the store learns about the document from the
+  // snapshot listener alone.
+  fake.emitChanges([['added', 'a', { title: 'first', done: false }]]);
+  await nextTick();
+  expect(store.getState().todos.a).toBeDefined();
+  fake.writes.length = 0;
+
+  store.getState().drop('a');
+  await nextTick();
+
+  // Without the baseline knowing the document exists, the delete is skipped
+  // and the mutation acknowledged: gone locally, still there in Firestore.
+  expect(fake.writes).toEqual(['delete:a']);
+  expect(fake.documents.has('a')).toBe(false);
+  store.destroy();
+});

@@ -169,7 +169,15 @@ export const createFirestoreSyncAdapter = <TRecord extends object>({
               value: toRecord(change.doc)
             } as NonNullable<Patches>[number]);
           }
-          if (patches.length) listener({ patches });
+          if (!patches.length) return;
+          // Realtime writes bypass `pull`, so the baseline has to be told about
+          // them or the first local delete of such a record is skipped. A
+          // removal from a narrowed read is not proof the document is gone --
+          // it may only have stopped matching the query.
+          crud.observeRemotePatches(patches, {
+            removalMeansGone: query === undefined
+          });
+          listener({ patches });
         },
         onError
       );

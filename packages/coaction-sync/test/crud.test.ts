@@ -509,3 +509,53 @@ test('a mutation needing a handler the adapter lacks is not acknowledged', async
   expect((errors[0] as Error).message).toMatch(/no "update" handler/);
   store.destroy();
 });
+
+test('a removal from a narrowed read does not forget the record exists', async () => {
+  const remote = createRemote();
+  const adapter = createCrudSyncAdapter<Todo>({
+    path: ['todos'],
+    list: remote.list,
+    create: remote.create,
+    update: remote.update,
+    delete: remote.delete
+  });
+  const store = create<{
+    todos: Record<string, Todo>;
+    put: (todo: Todo) => void;
+  }>(
+    (set) => ({
+      todos: {},
+      put(todo) {
+        set(() => {
+          this.todos[todo.id] = todo;
+        });
+      }
+    }),
+    {
+      middlewares: [
+        sync({ name: 'crud-narrow', storage: createMemoryStorage(), adapter })
+      ]
+    }
+  );
+  await nextTick();
+
+  const record = { id: 'a', title: 'from server', done: false };
+  remote.records.set('a', record);
+  adapter.observeRemotePatches([
+    { op: 'replace', path: ['todos', 'a'], value: record }
+  ] as never);
+  // The record leaves the query without leaving the remote.
+  adapter.observeRemotePatches(
+    [{ op: 'remove', path: ['todos', 'a'] }] as never,
+    {
+      removalMeansGone: false
+    }
+  );
+  remote.calls.length = 0;
+
+  store.getState().put({ id: 'a', title: 'edited', done: false });
+  await nextTick();
+
+  expect(remote.calls).toEqual(['update:a']);
+  store.destroy();
+});

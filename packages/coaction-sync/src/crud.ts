@@ -54,7 +54,19 @@ export class UnsupportedCrudOperationError extends Error {
  * remote holds when records arrive by some route other than `pull`.
  */
 export type CrudSyncAdapter = SyncAdapter & {
-  observeRemotePatches(patches: Patches): void;
+  observeRemotePatches(
+    patches: Patches,
+    options?: {
+      /**
+       * Whether a removal proves the record is gone from the remote.
+       *
+       * False when the patches come from a narrowed read: a record can leave a
+       * query while still existing, and forgetting it there would send the next
+       * write as a create.
+       */
+      removalMeansGone?: boolean;
+    }
+  ): void;
 };
 
 export type CrudSyncAdapterOptions<TRecord> = {
@@ -168,13 +180,16 @@ export const createCrudSyncAdapter = <TRecord extends object>({
    * without this the baseline would never hear about them: the next local edit
    * to such a record would be sent as a create.
    */
-  const observeRemotePatches = (patches: Patches) => {
+  const observeRemotePatches = (
+    patches: Patches,
+    { removalMeansGone = true }: { removalMeansGone?: boolean } = {}
+  ) => {
     for (const patch of patches ?? []) {
       const patchPath = normalizePatchPath(patch.path);
       const id = childKeyUnder(patchPath, path);
       if (id === undefined || patchPath.length !== path.length + 1) continue;
       if (patch.op === 'remove') {
-        forgetRemoteRecord(id);
+        if (removalMeansGone) forgetRemoteRecord(id);
         continue;
       }
       seeRemoteRecord(id, (patch as { value?: TRecord }).value);
