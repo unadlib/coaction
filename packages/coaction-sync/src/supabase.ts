@@ -210,12 +210,15 @@ export const createSupabaseSyncAdapter = <TRecord extends object>({
         const data = unwrap<TRecord>(await query);
         const rows = Array.isArray(data) ? data : data ? [data] : [];
         records.push(...rows);
-        if (rows.length < pageSize) break;
+        // Before the break, not after: a run that ends on a short page would
+        // otherwise return more than the ceiling allows without saying so,
+        // which is the case the ceiling exists to catch.
         if (records.length > maxRecords) {
           throw new Error(
             `@coaction/sync: reading "${table}" passed ${maxRecords} rows. Set maxRecords higher, or pass changesSince so pulls are incremental.`
           );
         }
+        if (rows.length < pageSize) break;
         const last = rows[rows.length - 1] as Record<string, unknown>;
         if (changesSince === undefined) {
           lastId = String(last[idColumn]);

@@ -552,3 +552,30 @@ test('a row removed mid-pull does not drop the row after it', async () => {
   expect(Object.keys(store.getState().todos)).toContain('c');
   store.destroy();
 });
+
+test('the record ceiling also catches a run that ends on a short page', async () => {
+  const seed = ['a', 'b', 'c', 'd', 'e'].map((id) => ({
+    id,
+    title: id,
+    updated_at: '2026-01-01'
+  }));
+  const supabase = createFakeSupabase(seed, { responseLimit: 3 });
+  const errors: unknown[] = [];
+  const store = createTodoStore(
+    supabase,
+    { pageSize: 3, maxRecords: 3 },
+    createMemoryStorage(),
+    errors
+  );
+  await nextTick();
+  await getSyncApi(store)
+    .pull()
+    .catch(() => undefined);
+  await nextTick();
+
+  // 5 rows past a ceiling of 3, delivered as 3 + 2. Checking after the break
+  // let the short final page through and returned a partial set as if whole.
+  expect(errors.map(String).join()).toMatch(/passed 3 rows/);
+  expect(Object.keys(store.getState().todos)).toHaveLength(0);
+  store.destroy();
+});
