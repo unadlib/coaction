@@ -9,8 +9,8 @@
  * restores removed elements, which paths are refused) are decided here rather
  * than inherited.
  *
- * Structurally compatible with Mutative's patches, which is what lets Mutative
- * remain one producer among possible others rather than the definition.
+ * Structurally compatible with what general-purpose immutable libraries emit,
+ * so a transition can come from somewhere other than the built-in producer.
  *
  * A path traverses plain objects and dense arrays, and nothing else. A `Date`,
  * a `Map`, a `Set` or an instance of a class is a leaf: it can be replaced

@@ -458,7 +458,7 @@ export const replaceOwnEnumerable = (
  * {@link sanitizeReplacementState}, which is required for untrusted incoming
  * payloads but makes copying the current root O(total state size) on every
  * commit. Nested values keep their identity here, matching the structural
- * sharing the Mutative draft path already relies on.
+ * sharing the draft path already relies on.
  */
 export const shallowCloneOwnEnumerable = <
   T extends Record<PropertyKey, unknown>

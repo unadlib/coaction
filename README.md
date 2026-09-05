@@ -90,8 +90,8 @@ fields they read invalidate together:
 - **Cached computed by default** — `get value()` getters memoize until a dependency changes.
   No `useMemo`, no reselect — and **~96x faster** than a Zustand selector that recomputes
   ([numbers](#reading-derived-state)).
-- **Mutable writes, immutable results** — just `this.count += 1` inside `set()`. Powered by
-  [Mutative](https://github.com/unadlib/mutative) (~18x faster than Zustand + Immer in our benchmark).
+- **Mutable writes, immutable results** — just `this.count += 1` inside `set()`, on Coaction's own
+  copy-on-write draft: no dependency, and nothing copied until it is written to.
 - **`this` + this-bound actions** — natural getters and this-bound actions; methods destructured from
   `getState()` stay bound.
 - **Escape hatches when you want them** — `useStore(selector)`, `useStore.auto()`, and
@@ -178,7 +178,7 @@ behind a Zustand-style `create()`, across five frameworks.
 | Selected entry size (gzip, deps excluded) | 11.1 KB `coaction`             | 0.6 KB vanilla + react        | 16.4 KB                   |
 
 Sizes are selected published entry files measured on this repository's lockfile, not
-feature-equivalent React bundles. Coaction's excludes `@coaction/react`, `mutative` (~6.7 KB),
+feature-equivalent React bundles. Coaction's excludes `@coaction/react`,
 and `alien-signals`; MobX's excludes `mobx-react-lite`; Zustand's includes its vanilla and React
 entries but not React itself. They show the order of magnitude of the selected entries, not the
 total cost of adopting each stack. Zustand really is much smaller, and that is part of the trade.
@@ -530,7 +530,7 @@ with representative state and access patterns.
 
 The third row is the cost of a guarantee, not a defect. Whatever you hand to `set({ ... })` is
 caller-supplied data, so it is deep-cloned to strip unsafe keys and break aliasing — passing in a
-fresh 1,000-element array costs O(payload). The draft path avoids it because Mutative reports
+fresh 1,000-element array costs O(payload). The draft path avoids it because a draft reports
 precise patches instead. **Prefer `set((draft) => { ... })` whenever the value you are writing is
 large.**
 
@@ -544,11 +544,11 @@ paths are now gated; details are in
 
 Run `pnpm benchmark` — updating 50K arrays and 1K objects ([source](./scripts/benchmark.ts)):
 
-| Library                    | ops/sec | Relative |
-| :------------------------- | ------: | -------: |
-| **Coaction** with Mutative |   4,648 | **1.0x** |
-| **Zustand**                |   5,886 |    1.27x |
-| **Zustand** with Immer     |     298 |    0.06x |
+| Library                   | ops/sec | Relative |
+| :------------------------ | ------: | -------: |
+| **Coaction** draft writes |   4,648 | **1.0x** |
+| **Zustand**               |   5,886 |    1.27x |
+| **Zustand** with Immer    |     298 |    0.06x |
 
 Coaction's draft path runs ~21% behind Zustand's plain replacement update here, and **~15.6x
 ahead of Zustand with Immer**. Coaction's own `set({ ... })` row is left out: at this state size
@@ -642,8 +642,11 @@ app state; import signal primitives from `coaction` only for advanced integratio
 <details>
 <summary><b>Why is Coaction faster than Zustand with Immer?</b></summary>
 
-Coaction uses [Mutative](https://github.com/unadlib/mutative), which allows mutable instances
-for performance. Immer's copy-on-write path is significantly slower.
+Coaction's draft copies a node the first time it is written and links the copy into its parent,
+so nothing is copied until it is written to and an untouched branch keeps its identity. It also
+knows the tree a Coaction patch can describe — plain objects and dense arrays — so it carries none
+of the machinery a general-purpose immutable library needs for `Map`, `Set` and class instances.
+Immer's copy-on-write path is significantly slower.
 
 </details>
 

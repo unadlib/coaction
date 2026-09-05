@@ -72,11 +72,10 @@ and their inverses. That format is Coaction's, declared in `Patch` / `Patches`,
 and it is what `@coaction/history`, `@coaction/sync`, the shared transport and
 reactive invalidation all read.
 
-Mutative is the producer, not the format. `coaction/adapter` publishes the two
-operations a middleware needs — `applyPatches(state, patches)` and
-`producePatches(base, write)` — so nothing downstream reaches for a draft
-library of its own, and swapping how transitions are produced stays a change in
-one place.
+Coaction produces and applies them itself, over that tree and no wider.
+`coaction/adapter` publishes what a middleware needs — `applyPatches`,
+`diffPatches`, `producePatches`, `scopeDraft`, `openDraft` — so nothing
+downstream reaches for a draft library of its own.
 
 ### Adapter and Middleware Utilities
 

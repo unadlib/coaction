@@ -8,7 +8,7 @@
 
 > **TransportPolicy** = `object`
 
-Defined in: [packages/core/src/interface.ts:196](https://github.com/coactionjs/coaction/blob/main/packages/core/src/interface.ts#L196)
+Defined in: [packages/core/src/interface.ts:197](https://github.com/coactionjs/coaction/blob/main/packages/core/src/interface.ts#L197)
 
 ## Properties
 
@@ -16,7 +16,7 @@ Defined in: [packages/core/src/interface.ts:196](https://github.com/coactionjs/c
 
 > `optional` **allowedActions**: readonly readonly `string`[][]
 
-Defined in: [packages/core/src/interface.ts:198](https://github.com/coactionjs/coaction/blob/main/packages/core/src/interface.ts#L198)
+Defined in: [packages/core/src/interface.ts:199](https://github.com/coactionjs/coaction/blob/main/packages/core/src/interface.ts#L199)
 
 Further restrict action paths declared by the authoritative store.
 
@@ -26,7 +26,7 @@ Further restrict action paths declared by the authoritative store.
 
 > `optional` **authorize**: (`request`) => `boolean` \| `Promise`\<`boolean`\>
 
-Defined in: [packages/core/src/interface.ts:200](https://github.com/coactionjs/coaction/blob/main/packages/core/src/interface.ts#L200)
+Defined in: [packages/core/src/interface.ts:201](https://github.com/coactionjs/coaction/blob/main/packages/core/src/interface.ts#L201)
 
 Authorize a decoded JSON request before serving it.
 
@@ -46,7 +46,7 @@ Authorize a decoded JSON request before serving it.
 
 > `optional` **mapError**: (`error`, `request`) => `string` \| `undefined` \| `Promise`\<`string` \| `undefined`\>
 
-Defined in: [packages/core/src/interface.ts:205](https://github.com/coactionjs/coaction/blob/main/packages/core/src/interface.ts#L205)
+Defined in: [packages/core/src/interface.ts:206](https://github.com/coactionjs/coaction/blob/main/packages/core/src/interface.ts#L206)
 
 Map a caught execute error to an explicitly client-visible message.
 Returning `undefined` keeps the generic redacted message.

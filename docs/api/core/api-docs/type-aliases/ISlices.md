@@ -8,7 +8,7 @@
 
 > **ISlices**\<`T`\> = `Record`\<`PropertyKey`, `T`\>
 
-Defined in: [packages/core/src/interface.ts:8](https://github.com/coactionjs/coaction/blob/main/packages/core/src/interface.ts#L8)
+Defined in: [packages/core/src/interface.ts:9](https://github.com/coactionjs/coaction/blob/main/packages/core/src/interface.ts#L9)
 
 Generic object shape used by stores and slices.
 

@@ -13,7 +13,7 @@ pnpm benchmark
 That benchmark compares update throughput for:
 
 - Coaction object replacement
-- Coaction mutable draft updates through Mutative
+- Coaction mutable draft updates
 - Zustand object replacement
 - Zustand with Immer
 
@@ -45,7 +45,7 @@ The update-plus-read cases also enforce Coaction's immutable public-state
 boundary. External reads remain behind readonly proxies so actions cannot
 mutate nested values outside `set()`. Cached getter evaluation uses a separate
 frozen snapshot: its first evaluation snapshots the immutable state and later
-updates apply only the paths reported by Mutative. This keeps computed traversal
+updates apply only the paths the draft reported. This keeps computed traversal
 safe without paying one proxy trap per array element and field. Stable cached
 reads and large Mutative updates remain separate cases so regressions in those
 paths are visible independently.

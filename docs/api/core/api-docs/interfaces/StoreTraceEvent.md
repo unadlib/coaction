@@ -6,7 +6,7 @@
 
 # Interface: StoreTraceEvent
 
-Defined in: [packages/core/src/interface.ts:34](https://github.com/coactionjs/coaction/blob/main/packages/core/src/interface.ts#L34)
+Defined in: [packages/core/src/interface.ts:35](https://github.com/coactionjs/coaction/blob/main/packages/core/src/interface.ts#L35)
 
 Trace envelope emitted before and after a store method executes.
 
@@ -16,7 +16,7 @@ Trace envelope emitted before and after a store method executes.
 
 > **id**: `string`
 
-Defined in: [packages/core/src/interface.ts:38](https://github.com/coactionjs/coaction/blob/main/packages/core/src/interface.ts#L38)
+Defined in: [packages/core/src/interface.ts:39](https://github.com/coactionjs/coaction/blob/main/packages/core/src/interface.ts#L39)
 
 The id of the method.
 
@@ -26,7 +26,7 @@ The id of the method.
 
 > **method**: `string`
 
-Defined in: [packages/core/src/interface.ts:42](https://github.com/coactionjs/coaction/blob/main/packages/core/src/interface.ts#L42)
+Defined in: [packages/core/src/interface.ts:43](https://github.com/coactionjs/coaction/blob/main/packages/core/src/interface.ts#L43)
 
 The method name.
 
@@ -36,7 +36,7 @@ The method name.
 
 > `optional` **parameters**: `any`[]
 
-Defined in: [packages/core/src/interface.ts:50](https://github.com/coactionjs/coaction/blob/main/packages/core/src/interface.ts#L50)
+Defined in: [packages/core/src/interface.ts:51](https://github.com/coactionjs/coaction/blob/main/packages/core/src/interface.ts#L51)
 
 The parameters of the method.
 
@@ -46,7 +46,7 @@ The parameters of the method.
 
 > `optional` **result**: `any`
 
-Defined in: [packages/core/src/interface.ts:54](https://github.com/coactionjs/coaction/blob/main/packages/core/src/interface.ts#L54)
+Defined in: [packages/core/src/interface.ts:55](https://github.com/coactionjs/coaction/blob/main/packages/core/src/interface.ts#L55)
 
 The result of the method.
 
@@ -56,6 +56,6 @@ The result of the method.
 
 > `optional` **sliceKey**: `PropertyKey`
 
-Defined in: [packages/core/src/interface.ts:46](https://github.com/coactionjs/coaction/blob/main/packages/core/src/interface.ts#L46)
+Defined in: [packages/core/src/interface.ts:47](https://github.com/coactionjs/coaction/blob/main/packages/core/src/interface.ts#L47)
 
 The slice key.
