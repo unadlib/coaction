@@ -1,6 +1,7 @@
 import { normalizePatchPath, readAtPath } from './paths';
 import {
   applyPatches,
+  assertSharedJsonValue,
   createInversePatches,
   onStoreCommit,
   onStoreReady,
@@ -346,6 +347,23 @@ export const sync = <T extends object>({
       );
     }
     const storage = resolveStorage(storageOption, name);
+    /**
+     * The outbox, the snapshot and the adapter's baseline are all stored as
+     * JSON, so state JSON cannot represent is not persisted -- it is quietly
+     * changed. A `Date` comes back a string, a `Map` comes back `{}`, and
+     * nothing says so until something downstream reads the wrong type. The
+     * contract is the one the shared transport already enforces, so it is the
+     * same check.
+     */
+    const assertJsonState = (value: unknown, what: string) => {
+      try {
+        assertSharedJsonValue(value);
+      } catch (error) {
+        throw new TypeError(
+          `sync({ name: '${name}' }) stores state as JSON, and ${what} cannot be. ${(error as Error).message}`
+        );
+      }
+    };
     adapter.bind?.(store);
     let outbox: SyncMutation[] = [];
     let cursor: string | undefined;
@@ -405,10 +423,13 @@ export const sync = <T extends object>({
         : undefined
     });
     const persist = () => {
-      const payload = JSON.stringify(serialize());
+      // Encoding inside the queued work, not before it: a value JSON cannot
+      // represent would otherwise throw straight back out of the `set()` that
+      // committed it, after the state had already changed. Here it fails the
+      // write like any other storage failure, and `onError` reports it.
       writeQueue = writeQueue
         .catch(() => undefined)
-        .then(() => storage.setItem(name, payload));
+        .then(() => storage.setItem(name, JSON.stringify(serialize())));
       return writeQueue;
     };
     const persistPreHydration = () => {
@@ -924,12 +945,24 @@ export const sync = <T extends object>({
 
     let unsubscribeCommit: (() => void) | undefined;
     const cancelReady = onStoreReady(store, () => {
+      assertJsonState(store.getPureState(), 'this store');
       unsubscribeCommit = onStoreCommit<T>(store, (commit: StoreCommit<T>) => {
         // `applyingRemote` covers every replay this middleware makes, so the
         // commit source is not consulted: a replay from anywhere else is a user
         // action, and `@coaction/history` undo and redo arrive that way.
         if (destroyed || applyingRemote) return;
         if (!commit.patches.length) return;
+        try {
+          // Per patch rather than over the whole state: proportional to the
+          // change, and it catches a value introduced after the store was
+          // built, which the check at startup cannot see.
+          for (const patch of commit.patches) {
+            if ('value' in patch) assertJsonState(patch.value, 'this write');
+          }
+        } catch (error) {
+          onError?.(error);
+          return;
+        }
         outbox.push({
           id: createMutationId(),
           patches: clonePatches(commit.patches),

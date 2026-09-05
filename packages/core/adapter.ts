@@ -39,6 +39,7 @@ export {
   sanitizeReplacementState,
   StateSchemaError
 } from './src/utils';
+export { assertSharedJsonValue } from './src/sharedState';
 export { wrapStore } from './src/wrapStore';
 
 export type {

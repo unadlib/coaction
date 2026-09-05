@@ -19,7 +19,7 @@ const formatPath = (path: JsonPath) =>
 
 const unsupported = (label: string, path: JsonPath): never => {
   throw new TypeError(
-    `${label} is not supported in shared store mode because transport synchronization uses JSON. Found unsupported value at ${formatPath(path)}.`
+    `${label} is not supported because this state is synchronized as JSON. Found unsupported value at ${formatPath(path)}.`
   );
 };
 
@@ -120,7 +120,7 @@ const assertSharedJsonWork = (work: JsonWork[], isSliceStore = false) => {
         unsupported('Function-valued state', path);
       case 'symbol':
         throw new TypeError(
-          `Symbol-valued state is not supported in shared store mode because transport synchronization uses JSON. Found symbol value at ${formatPath(path)}.`
+          `Symbol-valued state is not supported because this state is synchronized as JSON. Found symbol value at ${formatPath(path)}.`
         );
       default:
         break;
@@ -149,7 +149,7 @@ const assertSharedJsonWork = (work: JsonWork[], isSliceStore = false) => {
         }
         if (typeof key === 'symbol') {
           throw new TypeError(
-            `Symbol-keyed state is not supported in shared store mode because transport synchronization uses JSON and string action paths. Found symbol key at ${formatPath([...path, key])}.`
+            `Symbol-keyed state is not supported because this state is synchronized as JSON with string paths. Found symbol key at ${formatPath([...path, key])}.`
           );
         }
         if (!isArrayIndex(key, length)) {
@@ -170,7 +170,7 @@ const assertSharedJsonWork = (work: JsonWork[], isSliceStore = false) => {
     for (const key of Reflect.ownKeys(descriptors)) {
       if (typeof key === 'symbol') {
         throw new TypeError(
-          `Symbol-keyed state is not supported in shared store mode because transport synchronization uses JSON and string action paths. Found symbol key at ${formatPath([...path, key])}.`
+          `Symbol-keyed state is not supported because this state is synchronized as JSON with string paths. Found symbol key at ${formatPath([...path, key])}.`
         );
       }
       if (isUnsafeKey(key)) {
@@ -268,7 +268,7 @@ export const validateSharedActionPaths = (
     for (const key of Reflect.ownKeys(descriptors)) {
       if (typeof key === 'symbol') {
         throw new TypeError(
-          `Symbol-keyed state is not supported in shared store mode because transport synchronization uses JSON and string action paths. Found symbol key at ${formatPath([...path, key])}.`
+          `Symbol-keyed state is not supported because this state is synchronized as JSON with string paths. Found symbol key at ${formatPath([...path, key])}.`
         );
       }
       const descriptor = descriptors[key];

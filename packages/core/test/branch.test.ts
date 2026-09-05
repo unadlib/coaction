@@ -1058,7 +1058,7 @@ test('create rejects symbol keyed state in main shared store mode', () => {
       } as any
     );
   }).toThrow(
-    'Symbol-keyed state is not supported in shared store mode because transport synchronization uses JSON and string action paths. Found symbol key at Symbol(shared-slice).'
+    'Symbol-keyed state is not supported because this state is synchronized as JSON with string paths. Found symbol key at Symbol(shared-slice).'
   );
 });
 
@@ -1077,7 +1077,7 @@ test('create rejects nested symbol keyed state in client shared store mode', () 
       } as any
     );
   }).toThrow(
-    'Symbol-keyed state is not supported in shared store mode because transport synchronization uses JSON and string action paths. Found symbol key at nested.Symbol(nested-state).'
+    'Symbol-keyed state is not supported because this state is synchronized as JSON with string paths. Found symbol key at nested.Symbol(nested-state).'
   );
 });
 
@@ -1094,7 +1094,7 @@ test('create rejects symbol valued state in shared store mode', () => {
       } as any
     );
   }).toThrow(
-    'Symbol-valued state is not supported in shared store mode because transport synchronization uses JSON. Found symbol value at nested.value.'
+    'Symbol-valued state is not supported because this state is synchronized as JSON. Found symbol value at nested.value.'
   );
 });
 
@@ -1102,22 +1102,22 @@ test.each([
   [
     'BigInt',
     { value: 1n },
-    'BigInt-valued state is not supported in shared store mode because transport synchronization uses JSON. Found unsupported value at value.'
+    'BigInt-valued state is not supported because this state is synchronized as JSON. Found unsupported value at value.'
   ],
   [
     'undefined object value',
     { value: undefined },
-    'Undefined-valued state is not supported in shared store mode because transport synchronization uses JSON. Found unsupported value at value.'
+    'Undefined-valued state is not supported because this state is synchronized as JSON. Found unsupported value at value.'
   ],
   [
     'NaN',
     { value: Number.NaN },
-    'NaN or infinite number state is not supported in shared store mode because transport synchronization uses JSON. Found unsupported value at value.'
+    'NaN or infinite number state is not supported because this state is synchronized as JSON. Found unsupported value at value.'
   ],
   [
     'Infinity',
     { value: Infinity },
-    'NaN or infinite number state is not supported in shared store mode because transport synchronization uses JSON. Found unsupported value at value.'
+    'NaN or infinite number state is not supported because this state is synchronized as JSON. Found unsupported value at value.'
   ],
   [
     'nested function data',
@@ -1126,12 +1126,12 @@ test.each([
         fn: () => undefined
       }
     },
-    'Function-valued state is not supported in shared store mode because transport synchronization uses JSON. Found unsupported value at nested.fn.'
+    'Function-valued state is not supported because this state is synchronized as JSON. Found unsupported value at nested.fn.'
   ],
   [
     'Date',
     { value: new Date('2024-01-01T00:00:00.000Z') },
-    'Non-plain object state is not supported in shared store mode because transport synchronization uses JSON. Found unsupported value at value.'
+    'Non-plain object state is not supported because this state is synchronized as JSON. Found unsupported value at value.'
   ]
 ])('create rejects %s state in shared store mode', (_, state, message) => {
   expect(() => {
@@ -1189,7 +1189,7 @@ test('shared store rejects runtime symbol keyed state before emitting patches', 
   );
 
   expect(() => store.getState().addSymbol()).toThrow(
-    'Symbol-keyed state is not supported in shared store mode because transport synchronization uses JSON and string action paths. Found symbol key at nested.Symbol(runtime-state).'
+    'Symbol-keyed state is not supported because this state is synchronized as JSON with string paths. Found symbol key at nested.Symbol(runtime-state).'
   );
   expect(
     Object.getOwnPropertySymbols(store.getPureState().nested)
@@ -1219,7 +1219,7 @@ test('shared store rejects runtime symbol valued state before emitting patches',
   );
 
   expect(() => store.getState().setSymbol()).toThrow(
-    'Symbol-valued state is not supported in shared store mode because transport synchronization uses JSON. Found symbol value at value.'
+    'Symbol-valued state is not supported because this state is synchronized as JSON. Found symbol value at value.'
   );
   expect(store.getPureState().value).toBe(0);
   expect(transport.emit).not.toHaveBeenCalled();
@@ -1395,7 +1395,7 @@ test('shared store validates state again before fullSync serialization', async (
   await expect(
     handlers.get('fullSync')!(encodeFullSyncRequest())
   ).rejects.toThrow(
-    'Symbol-valued state is not supported in shared store mode because transport synchronization uses JSON. Found symbol value at value.'
+    'Symbol-valued state is not supported because this state is synchronized as JSON. Found symbol value at value.'
   );
 });
 
@@ -1422,7 +1422,7 @@ test('shared store validates BigInt again before fullSync serialization', async 
   await expect(
     handlers.get('fullSync')!(encodeFullSyncRequest())
   ).rejects.toThrow(
-    'BigInt-valued state is not supported in shared store mode because transport synchronization uses JSON. Found unsupported value at value.'
+    'BigInt-valued state is not supported because this state is synchronized as JSON. Found unsupported value at value.'
   );
 });
 

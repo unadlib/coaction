@@ -156,6 +156,18 @@ A failed write rejects the whole push instead of acknowledging part of it, so
 the outbox keeps every mutation the remote did not take and the retry schedule
 decides when to try again.
 
+## State has to be JSON
+
+The outbox, the optimistic snapshot and the adapter's view of the remote are all
+stored as JSON, so state JSON cannot represent is not persisted — it is quietly
+changed. A `Date` comes back a string, a `Map` comes back `{}`, and nothing says
+so until something downstream reads the wrong type.
+
+`sync()` therefore refuses state it cannot store, with the path to the value,
+and reports a write that introduces one. It is the same contract the shared
+transport enforces, checked the same way. Keep dates as ISO strings or epoch
+numbers, keyed collections as records, and sets as arrays.
+
 ## Delivery semantics
 
 Mutations are delivered **at least once**. The window between a remote

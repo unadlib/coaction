@@ -142,12 +142,12 @@
   "@coaction/sync": {
     "files": {
       "dist/index.mjs": {
-        "baselineGzipBytes": 6778,
-        "maxGzipBytes": 7500
+        "baselineGzipBytes": 7093,
+        "maxGzipBytes": 7850
       },
       "dist/index.js": {
-        "baselineGzipBytes": 6823,
-        "maxGzipBytes": 7550
+        "baselineGzipBytes": 7136,
+        "maxGzipBytes": 7850
       },
       "dist/crud.mjs": {
         "baselineGzipBytes": 3635,
@@ -262,20 +262,20 @@
         "maxGzipBytes": 16600
       },
       "dist/shared.mjs": {
-        "baselineGzipBytes": 21635,
+        "baselineGzipBytes": 21624,
         "maxGzipBytes": 23800
       },
       "dist/shared.js": {
-        "baselineGzipBytes": 21741,
+        "baselineGzipBytes": 21730,
         "maxGzipBytes": 23950
       },
       "dist/adapter.mjs": {
-        "baselineGzipBytes": 8585,
-        "maxGzipBytes": 9450
+        "baselineGzipBytes": 10104,
+        "maxGzipBytes": 11150
       },
       "dist/adapter.js": {
-        "baselineGzipBytes": 9069,
-        "maxGzipBytes": 10000
+        "baselineGzipBytes": 10603,
+        "maxGzipBytes": 11700
       }
     }
   }

@@ -30,7 +30,7 @@ test('shared store rejects non-JSON values from adapter snapshots', () => {
       } as any
     })
   ).toThrow(
-    'Non-plain object state is not supported in shared store mode because transport synchronization uses JSON. Found unsupported value at stamp.'
+    'Non-plain object state is not supported because this state is synchronized as JSON. Found unsupported value at stamp.'
   );
 });
 
