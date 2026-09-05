@@ -90,8 +90,20 @@ const runObserverRender = <T>(render: () => T) => {
   }
 };
 
+/**
+ * Record the state values a selector result carries, and fold their versions
+ * into one token.
+ *
+ * The dependency alone is not enough when the result is a wrapper the selector
+ * reuses. The subscription fires, the selector runs again, and the comparison
+ * then sees the same wrapper reference and concludes nothing changed -- exactly
+ * what `stateObjectVersion` already compensates for when the state value is
+ * returned directly. The fold is sensitive to each version, to how many values
+ * there are, and to the order they were found in.
+ */
 const trackReturnedStateValues = (value: unknown) => {
   const seen = new WeakSet<object>();
+  let aggregate = 0;
   const visit = (current: unknown) => {
     if (
       (typeof current !== 'object' && typeof current !== 'function') ||
@@ -106,6 +118,10 @@ const trackReturnedStateValues = (value: unknown) => {
     // Do not traverse large state arrays/objects merely because they escaped
     // through a React prop.
     if (trackReadonlyStateValue(current)) {
+      const version = getReadonlyStateValueVersion(current);
+      if (version !== undefined) {
+        aggregate = (Math.imul(aggregate, 31) + version) | 0;
+      }
       return;
     }
     if (Array.isArray(current)) {
@@ -133,6 +149,7 @@ const trackReturnedStateValues = (value: unknown) => {
     }
   };
   visit(value);
+  return aggregate;
 };
 
 const getObserverDisplayName = (Component: ObserverRender<object>) =>
@@ -360,9 +377,11 @@ const createSelectorTrackerState = <TState extends object>(
           stateObjectVersion = getReadonlyStateValueVersion(selected);
         } else {
           // A composite result carries state values inside a wrapper the
-          // selector built; they need the same terminal dependency the
-          // directly returned one gets.
-          trackReturnedStateValues(selected);
+          // selector built; they need the same terminal dependency -- and the
+          // same version comparison -- the directly returned one gets, or a
+          // wrapper the selector reuses hides every change inside it.
+          const carried = trackReturnedStateValues(selected);
+          if (carried !== 0) stateObjectVersion = carried;
         }
         return selected;
       });

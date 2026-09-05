@@ -86,20 +86,20 @@
   "@coaction/react": {
     "files": {
       "dist/index.mjs": {
-        "baselineGzipBytes": 3716,
-        "maxGzipBytes": 4100
+        "baselineGzipBytes": 4046,
+        "maxGzipBytes": 4500
       },
       "dist/index.js": {
-        "baselineGzipBytes": 4242,
-        "maxGzipBytes": 4700
+        "baselineGzipBytes": 4581,
+        "maxGzipBytes": 5050
       },
       "dist/shared.mjs": {
-        "baselineGzipBytes": 3574,
-        "maxGzipBytes": 3950
+        "baselineGzipBytes": 3910,
+        "maxGzipBytes": 4350
       },
       "dist/shared.js": {
-        "baselineGzipBytes": 4102,
-        "maxGzipBytes": 4550
+        "baselineGzipBytes": 4448,
+        "maxGzipBytes": 4900
       }
     }
   },

@@ -65,3 +65,38 @@ test('@coaction/react drives a component through its selector', () => {
 test('@coaction/react/shared drives a component through its selector', () => {
   assertEntryBehaviour('shared-name', createShared(entryState) as any);
 });
+
+test('a wrapper the selector reuses does not hide a change inside it', () => {
+  const useStore = createDefault(
+    (set: any) =>
+      ({
+        user: { name: 'Michael' },
+        rename(name: string) {
+          set(() => {
+            (this as any).user.name = name;
+          });
+        }
+      }) as any
+  ) as any;
+  // The selector returns the same object every time, so reference equality can
+  // never report the change; only the carried state value's version can.
+  const wrapper = { user: null as any };
+  const App = () => {
+    const held = useStore((state: any) => {
+      wrapper.user = state.user;
+      return wrapper;
+    });
+    return React.createElement(
+      'span',
+      { 'data-testid': 'wrapped' },
+      held.user.name
+    );
+  };
+  render(React.createElement(App));
+  expect(screen.getByTestId('wrapped').textContent).toBe('Michael');
+  act(() => {
+    useStore.getState().rename('Lin');
+  });
+  expect(screen.getByTestId('wrapped').textContent).toBe('Lin');
+  useStore.destroy();
+});
