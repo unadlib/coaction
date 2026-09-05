@@ -579,3 +579,23 @@ test('the record ceiling also catches a run that ends on a short page', async ()
   expect(Object.keys(store.getState().todos)).toHaveLength(0);
   store.destroy();
 });
+
+test('a full pull can be told not to treat its answer as the whole table', async () => {
+  const supabase = createFakeSupabase([
+    { id: 'a', title: 'first', updated_at: '2026-01-01' }
+  ]);
+  const store = createTodoStore(supabase, { authoritativeList: false });
+  await nextTick();
+  await getSyncApi(store).pull();
+  await nextTick();
+  expect(store.getState().todos.a).toBeDefined();
+
+  supabase.rows.delete('a');
+  await getSyncApi(store).pull();
+  await nextTick();
+
+  // Several requests are several reads, so a row missing from the answer is
+  // not proof it is gone -- an application that writes during a pull can say so.
+  expect(store.getState().todos.a).toBeDefined();
+  store.destroy();
+});

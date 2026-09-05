@@ -90,6 +90,16 @@ export type SupabaseSyncAdapterOptions = {
    */
   maxRecords?: number;
   /**
+   * Treat a full pull as the whole truth, deleting records it does not mention.
+   * Defaults to true for a full pull and false for an incremental one.
+   *
+   * A paged pull is several requests, not one snapshot: a row written behind
+   * the cursor while the walk is past it is absent from the answer without
+   * being gone. Turn this off when writes land during a pull and a wrong
+   * deletion costs more than a stale record.
+   */
+  authoritativeList?: boolean;
+  /**
    * Pull only rows changed since the last pull, using this column as the
    * cursor — `updated_at`, typically. A deleted row simply stops appearing, so
    * incremental pulls cannot report deletions; pair this with `realtime`, or
@@ -161,6 +171,7 @@ export const createSupabaseSyncAdapter = <TRecord extends object>({
   idColumn = 'id',
   schema = 'public',
   pageSize = 1000,
+  authoritativeList,
   maxRecords = 100_000,
   changesSince,
   realtime = false,
@@ -185,14 +196,17 @@ export const createSupabaseSyncAdapter = <TRecord extends object>({
   const crud = createCrudSyncAdapter<TRecord>({
     path,
     getId,
-    // A full pull is paged to exhaustion below, so it really is the whole
-    // table and omission really does mean the row is gone.
-    authoritativeList: changesSince === undefined,
+    authoritativeList: authoritativeList ?? changesSince === undefined,
     list: async ({ cursor }) => {
-      // Keyset paging, not offset. A row inserted or removed between two
-      // requests shifts every offset after it, and a full pull is
-      // authoritative -- a row skipped that way is read as deleted and removed
-      // locally. Walking by key is stable under concurrent writes.
+      // Keyset paging, not offset. A row removed between two requests shifts
+      // every offset after it, so the next page starts late and the row it
+      // steps over is never returned -- which an authoritative pull reads as a
+      // deletion. Walking by key cannot skip that way.
+      //
+      // It does not make the pages one snapshot. Several requests are several
+      // reads, and a row written behind the cursor after the walk passed it is
+      // absent from the answer while still existing. `authoritativeList` is the
+      // switch for applications where that matters.
       let position = decodeCursor(cursor);
       let lastId: string | undefined;
       const records: TRecord[] = [];

@@ -263,6 +263,15 @@ pull asks only for rows newer than the last cursor, and an omitted row means
 Combine `changesSince` with `realtime`, or with a soft-delete column, when
 deletions have to propagate.
 
+A full pull is paged, by key rather than by offset, so a row removed while the
+walk is running cannot push the row behind it out of the answer. It is still
+several requests and not one database snapshot: a row written behind the cursor
+after the walk has passed that point is absent from the answer without being
+gone, and an authoritative pull reads absent as deleted. Set
+`authoritativeList: false` where writes land during pulls and a wrong deletion
+costs more than a stale record, or move to `changesSince` so omission stops
+meaning anything at all.
+
 ## TanStack Query
 
 `@coaction/sync/query` connects the two halves rather than duplicating either.
