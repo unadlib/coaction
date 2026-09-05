@@ -88,11 +88,17 @@ refuses what it cannot describe honestly, each with
 - Any write after the draft is finalized. Its result is already the published
   state, so a late write would change the store with no commit behind it.
 
-One boundary is a contract rather than a check. A patch names a path, so it
-cannot say that two paths hold the same object: writing through one of two
-aliases changes that position and leaves the other holding the old value.
-Finding every alias would mean scanning the whole state on every write, so
-Coaction does not — replace the whole branch when a shared object has to change.
+Two boundaries are contracts rather than checks:
+
+- **Aliasing.** A patch names a path, so it cannot say that two paths hold the
+  same object: writing through one of two aliases changes that position and
+  leaves the other holding the old value. Finding every alias would mean
+  scanning the whole state on every write, so Coaction does not — replace the
+  whole branch when a shared object has to change. A wrapper you build inside a
+  recipe is handled: assigning one keeps its aliases and cycles intact.
+- **Properties hung off a function.** A method reached through a draft is the
+  function itself, because that is what an action is, and nothing intercepts a
+  read of a property on it. Keep state in the state, not on a function.
 
 ### Transitions
 

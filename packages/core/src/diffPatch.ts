@@ -103,6 +103,41 @@ const walk = (
   const structural = Array.isArray(previous);
   const skip = (key: PropertyKey) =>
     structural && (key === 'length' || asArrayIndex(key) !== undefined);
+
+  // A patch carries a value, not a descriptor, and says nothing about whether a
+  // property is own or inherited. When either changes, replaying key-by-key
+  // would reach the right values on the wrong shape, so the container is
+  // replaced whole -- the same answer sparse arrays already get.
+  const reshaped = () => {
+    const keys = new Set([
+      ...Reflect.ownKeys(before),
+      ...Reflect.ownKeys(after)
+    ]);
+    for (const key of keys) {
+      if (skip(key)) continue;
+      const had = Object.getOwnPropertyDescriptor(before, key);
+      const has = Object.getOwnPropertyDescriptor(after, key);
+      if (!had || !has) {
+        // An own property on one side that the other inherits is a shape
+        // change; one the other does not have at all is an ordinary add or
+        // remove, which patches do describe.
+        if ((!had && key in before) || (!has && key in after)) return true;
+        continue;
+      }
+      if (
+        had.enumerable !== has.enumerable ||
+        had.writable !== has.writable ||
+        had.configurable !== has.configurable
+      ) {
+        return true;
+      }
+    }
+    return false;
+  };
+  if (reshaped()) {
+    replaceAt(path, previous, next, patches, inversePatches);
+    return;
+  }
   for (const key of Reflect.ownKeys(before)) {
     if (skip(key)) continue;
     if (!(key in after)) {

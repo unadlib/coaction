@@ -96,3 +96,27 @@ test('random state pairs round-trip', () => {
     roundTrips(build(seed), build(seed + 1));
   }
 });
+
+test('a change in shape rather than value replaces the container', () => {
+  const proto = { x: 1 };
+  const previous = Object.create(proto) as { x: number };
+  previous.x = 1;
+  const next = Object.create(proto) as { x: number };
+  // Same value, read the same way, different object: one owns `x`, one
+  // inherits it. A patch carries a value and cannot say which.
+  const { patches } = diffPatches({ held: previous }, { held: next });
+  expect(patches).toEqual([{ op: 'replace', path: ['held'], value: next }]);
+  roundTrips({ held: previous }, { held: next });
+
+  const enumerable = { a: 1 };
+  const hidden = {} as { a: number };
+  Object.defineProperty(hidden, 'a', {
+    value: 1,
+    enumerable: false,
+    writable: true,
+    configurable: true
+  });
+  expect(diffPatches({ held: enumerable }, { held: hidden }).patches).toEqual([
+    { op: 'replace', path: ['held'], value: hidden }
+  ]);
+});

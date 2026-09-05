@@ -342,3 +342,67 @@ test('a cycle has no transition to describe', () => {
     })
   ).toThrow(/runs back through an object it already passed/);
 });
+
+test('a leaf taken out of an array is not handed over either', () => {
+  // The read trap refuses these; answering with one from `pop` would be the
+  // same hole through a different door.
+  for (const leaf of [new Date(0), new Map([['a', 1]]), new Set([1])]) {
+    const base = { xs: [leaf] };
+    expect(() =>
+      scopeDraft(base, (draft: any) => {
+        draft.xs.pop();
+      })
+    ).toThrow(/cannot describe a change inside one/);
+    expect(() =>
+      scopeDraft(base, (draft: any) => {
+        draft.xs.splice(0, 1);
+      })
+    ).toThrow(/cannot describe a change inside one/);
+  }
+  const stamp = new Date(0);
+  const held = { xs: [stamp] };
+  try {
+    scopeDraft(held, (draft: any) => draft.xs.pop().setTime(1000));
+  } catch {
+    // The point is the base, not the throw.
+  }
+  expect(stamp.getTime()).toBe(0);
+});
+
+test('a comparator cannot write to the base through the elements it compares', () => {
+  const base = { xs: [{ v: 2 }, { v: 1 }] };
+  const { state } = scopeDraft(base, (draft) => {
+    draft.xs.sort((left: any, right: any) => {
+      // No comparator should do this, and it must not reach the base if one does.
+      left.flag = true;
+      return left.v - right.v;
+    });
+  });
+  expect(base.xs.some((item: any) => item.flag)).toBe(false);
+  expect(state.xs.map((item) => item.v)).toEqual([1, 2]);
+});
+
+test('a wrapper that holds one draft twice unwraps it once', () => {
+  const base = { user: { name: 'A' }, copy: null as unknown };
+  const aliased = scopeDraft(base, (draft: any) => {
+    const shared = { user: draft.user };
+    draft.copy = { a: shared, b: shared };
+  });
+  const copy = (aliased.state as any).copy;
+  // Visiting the shared wrapper a second time used to return it unchanged,
+  // leaving a finalized draft on that branch to throw whenever it was read.
+  expect(copy.b.user.name).toBe('A');
+  expect(copy.a).toBe(copy.b);
+
+  const cyclic = scopeDraft(
+    { user: { name: 'A' }, copy: null as unknown },
+    (draft: any) => {
+      const wrapper: any = { user: draft.user };
+      wrapper.self = wrapper;
+      draft.copy = wrapper;
+    }
+  );
+  const wrapper = (cyclic.state as any).copy;
+  expect(wrapper.self.user.name).toBe('A');
+  expect(wrapper.self).toBe(wrapper);
+});

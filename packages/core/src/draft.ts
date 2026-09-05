@@ -186,12 +186,31 @@ const runArrayMethod = (node: Node, method: string) =>
       current(node) as Record<PropertyKey, unknown>
     ) as unknown as unknown[];
     const copy = ensureCopy(node) as unknown as unknown[];
+    // A comparator is handed elements straight off the copy, which for
+    // anything untouched are still the base's objects. Detached drafts make a
+    // comparator that writes -- which no comparator should -- reach nothing.
+    const detached = new Map<object, unknown>();
+    const forCallback = (element: unknown) => {
+      if (!isPatchTraversable(element)) return element;
+      const existing = detached.get(element);
+      if (existing) return existing;
+      const draft = detach(element);
+      detached.set(element, draft);
+      return draft;
+    };
+    const prepared =
+      method === 'sort' && typeof args[0] === 'function'
+        ? [
+            (left: unknown, right: unknown) =>
+              (args[0] as (a: unknown, b: unknown) => number)(
+                forCallback(left),
+                forCallback(right)
+              )
+          ]
+        : args.map((argument) => unwrapDraft(argument));
     const result = (Array.prototype as never as Record<string, Function>)[
       method
-    ].apply(
-      copy,
-      args.map((argument) => unwrapDraft(argument))
-    );
+    ].apply(copy, prepared);
     node.children.clear();
     const path = pathOf(node);
     const { patches, inversePatches } = diffPatches(
@@ -221,12 +240,20 @@ const runArrayMethod = (node: Node, method: string) =>
     // still the base's objects. Writing to one would change the base with
     // nothing recorded, so what comes back is detached: its own draft, rooted
     // nowhere, whose writes reach neither the array nor the state.
-    if (Array.isArray(result)) {
-      return result.map((element) =>
-        isPatchTraversable(element) ? detach(element as object) : element
-      );
-    }
-    return isPatchTraversable(result) ? detach(result as object) : result;
+    // Elements taken out are still the base's objects. A traversable one comes
+    // back detached, so writing to it reaches nothing; a leaf has no detached
+    // form -- copying one by its properties makes something else -- so handing
+    // it out is the same hole the read trap refuses, and is refused the same
+    // way.
+    const handOut = (element: unknown) => {
+      if (isPatchTraversable(element)) return detach(element as object);
+      if (typeof element === 'object' && element !== null) {
+        return refuseLeaf(element);
+      }
+      return element;
+    };
+    if (Array.isArray(result)) return result.map(handOut);
+    return handOut(result);
   };
 
 /**
@@ -427,21 +454,53 @@ const getNode = (value: unknown): Node | undefined => {
  * been finalized. Only what the caller assigns is walked, and a container with
  * nothing to replace is returned unchanged so identity survives.
  */
-const unwrapDraft = (value: unknown, seen = new Set<object>()): unknown => {
+const containsDraft = (value: unknown, seen = new Set<object>()): boolean => {
+  if (getNode(value)) return true;
+  if (!isPatchTraversable(value) || seen.has(value as object)) return false;
+  seen.add(value as object);
+  return Reflect.ownKeys(value as object).some((key) =>
+    containsDraft((value as Record<PropertyKey, unknown>)[key], seen)
+  );
+};
+
+const cloneWithout = (
+  value: unknown,
+  done: WeakMap<object, unknown>
+): unknown => {
   const node = getNode(value);
   if (node) return node.copy ?? node.base;
-  if (!isPatchTraversable(value) || seen.has(value as object)) return value;
-  seen.add(value as object);
+  if (!isPatchTraversable(value)) return value;
+  const existing = done.get(value as object);
+  if (existing !== undefined) return existing;
   const source = value as Record<PropertyKey, unknown>;
-  let copy: Record<PropertyKey, unknown> | undefined;
+  const copy = shallowCopy(source);
+  // Registered before its children are walked, so an object reached twice --
+  // an alias, or a cycle -- resolves to the same clone both times instead of
+  // being returned as itself with a draft still inside it.
+  done.set(source, copy);
   for (const key of Reflect.ownKeys(source)) {
     const child = source[key];
-    const unwrapped = unwrapDraft(child, seen);
-    if (Object.is(child, unwrapped)) continue;
-    copy ??= shallowCopy(source);
-    copy[key] = unwrapped;
+    const replaced = cloneWithout(child, done);
+    if (!Object.is(child, replaced)) copy[key] = replaced;
   }
-  return copy ?? value;
+  return copy;
+};
+
+/**
+ * Replace every draft inside a value with what it stands for.
+ *
+ * Shallow unwrapping is not enough: `draft.copy = draft.items.slice()` builds
+ * an ordinary array out of child drafts and `{ ...draft.user }` an ordinary
+ * object, and neither is a draft itself. A value with no draft anywhere in it
+ * is returned as it is, so identity survives the common case; one that has any
+ * is cloned as a graph, which is what keeps an alias pointing at one object and
+ * a cycle a cycle rather than leaving a draft behind on the second visit.
+ */
+const unwrapDraft = (value: unknown): unknown => {
+  const node = getNode(value);
+  if (node) return node.copy ?? node.base;
+  if (!containsDraft(value)) return value;
+  return cloneWithout(value, new WeakMap());
 };
 
 export const isCoactionDraft = (value: unknown) => Boolean(getNode(value));
