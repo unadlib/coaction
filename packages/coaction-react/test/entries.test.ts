@@ -100,3 +100,40 @@ test('a wrapper the selector reuses does not hide a change inside it', () => {
   expect(screen.getByTestId('wrapped').textContent).toBe('Lin');
   useStore.destroy();
 });
+
+test('a reused wrapper that swaps which state object it carries re-renders', () => {
+  const useStore = createDefault(
+    (set: any) =>
+      ({
+        useA: true,
+        userA: { name: 'Ann' },
+        userB: { name: 'Bo' },
+        toggle() {
+          set(() => {
+            (this as any).useA = !(this as any).useA;
+          });
+        }
+      }) as any
+  ) as any;
+  // Neither user has ever been written to, so both have the same version. Only
+  // identity separates them.
+  const wrapper = { user: null as any };
+  const App = () => {
+    const held = useStore((state: any) => {
+      wrapper.user = state.useA ? state.userA : state.userB;
+      return wrapper;
+    });
+    return React.createElement(
+      'span',
+      { 'data-testid': 'swapped' },
+      held.user.name
+    );
+  };
+  render(React.createElement(App));
+  expect(screen.getByTestId('swapped').textContent).toBe('Ann');
+  act(() => {
+    useStore.getState().toggle();
+  });
+  expect(screen.getByTestId('swapped').textContent).toBe('Bo');
+  useStore.destroy();
+});

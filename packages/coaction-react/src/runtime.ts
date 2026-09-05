@@ -42,11 +42,37 @@ type TrackedRender = {
   tracker: ReactiveTracker;
   snapshot: number;
 };
+/** A state value a selector result carried out, with the version it had. */
+type CarriedStateValue = { value: object; version: number };
 type TrackedSelection<TState extends object, TValue> = TrackedRender & {
   selector: SelectorFn<TState, TValue>;
   value: TValue;
   stateObjectVersion?: number;
+  carried?: CarriedStateValue[];
   reactive: boolean;
+};
+
+/**
+ * Whether the state values a selector result carries have changed.
+ *
+ * Identity as well as version: a version is a sum of path versions, so two
+ * objects that have not been written to share one. A selector that swaps which
+ * sibling it carries -- `useA ? state.a : state.b` -- would otherwise compare
+ * equal, and with a reused wrapper there is nothing else left to compare.
+ */
+const carriedChanged = (
+  previous: CarriedStateValue[] | undefined,
+  next: CarriedStateValue[] | undefined
+) => {
+  if (previous === undefined || next === undefined) {
+    return previous !== next;
+  }
+  if (previous.length !== next.length) return true;
+  return next.some(
+    (entry, index) =>
+      entry.value !== previous[index].value ||
+      entry.version !== previous[index].version
+  );
 };
 type SelectorTrackerState<TState extends object> = {
   getSnapshot: () => number;
@@ -103,7 +129,7 @@ const runObserverRender = <T>(render: () => T) => {
  */
 const trackReturnedStateValues = (value: unknown) => {
   const seen = new WeakSet<object>();
-  let aggregate = 0;
+  const carried: CarriedStateValue[] = [];
   const visit = (current: unknown) => {
     if (
       (typeof current !== 'object' && typeof current !== 'function') ||
@@ -119,9 +145,7 @@ const trackReturnedStateValues = (value: unknown) => {
     // through a React prop.
     if (trackReadonlyStateValue(current)) {
       const version = getReadonlyStateValueVersion(current);
-      if (version !== undefined) {
-        aggregate = (Math.imul(aggregate, 31) + version) | 0;
-      }
+      if (version !== undefined) carried.push({ value: object, version });
       return;
     }
     if (Array.isArray(current)) {
@@ -149,7 +173,7 @@ const trackReturnedStateValues = (value: unknown) => {
     }
   };
   visit(value);
-  return aggregate;
+  return carried;
 };
 
 const getObserverDisplayName = (Component: ObserverRender<object>) =>
@@ -371,6 +395,7 @@ const createSelectorTrackerState = <TState extends object>(
     const tracker = createReactiveTracker();
     try {
       let stateObjectVersion: number | undefined;
+      let carried: CarriedStateValue[] | undefined;
       const value = tracker.track(() => {
         const selected = selector(store.getState());
         if (trackReadonlyStateValue(selected)) {
@@ -380,8 +405,7 @@ const createSelectorTrackerState = <TState extends object>(
           // selector built; they need the same terminal dependency -- and the
           // same version comparison -- the directly returned one gets, or a
           // wrapper the selector reuses hides every change inside it.
-          const carried = trackReturnedStateValues(selected);
-          if (carried !== 0) stateObjectVersion = carried;
+          carried = trackReturnedStateValues(selected);
         }
         return selected;
       });
@@ -391,6 +415,7 @@ const createSelectorTrackerState = <TState extends object>(
         selector,
         value,
         stateObjectVersion,
+        carried,
         reactive: tracker.hasDependencies()
       };
     } catch (error) {
@@ -456,7 +481,8 @@ const createSelectorTrackerState = <TState extends object>(
     const changed =
       !Object.is(previous.value, next.value) ||
       (next.stateObjectVersion !== undefined &&
-        next.stateObjectVersion !== previous.stateObjectVersion);
+        next.stateObjectVersion !== previous.stateObjectVersion) ||
+      carriedChanged(previous.carried, next.carried);
     disposeSelection(previous);
     if (changed) {
       notify();
@@ -517,7 +543,8 @@ const createSelectorTrackerState = <TState extends object>(
         renderedValueStale =
           !Object.is(rendered.value, refreshed.value) ||
           (refreshed.stateObjectVersion !== undefined &&
-            refreshed.stateObjectVersion !== rendered.stateObjectVersion);
+            refreshed.stateObjectVersion !== rendered.stateObjectVersion) ||
+          carriedChanged(rendered.carried, refreshed.carried);
         disposeSelection(rendered);
         next = refreshed;
       }
