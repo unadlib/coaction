@@ -356,3 +356,47 @@ test('the invariants hold for sparse arrays and unusual descriptors too', () => 
     if (back.hidden !== 7) failed('the inverse lost a hidden property', seed);
   }
 }, 30_000);
+
+test('an array method costs what the change costs, not what the array costs', () => {
+  // Comparing the whole array before and after is right for a method that
+  // rearranges it and quadratic for one that touches an end. A push onto twenty
+  // thousand elements copied and compared all of them, at roughly 33ms each.
+  const size = 20000;
+  const base = { xs: Array.from({ length: size }, (_, index) => index) };
+  const started = performance.now();
+  for (let round = 0; round < 10; round += 1) {
+    scopeDraft(base, (draft) => {
+      draft.xs.push(round);
+      draft.xs.pop();
+      draft.xs.unshift(round);
+      draft.xs.shift();
+      draft.xs.splice(5, 1, round);
+    });
+  }
+  const elapsed = performance.now() - started;
+  expect(base.xs).toHaveLength(size);
+  // Well under what the per-call comparison cost, and well above anything a
+  // slower machine would need.
+  expect(elapsed).toBeLessThan(2000);
+}, 30_000);
+
+test('a method that touches an end describes only what it touched', () => {
+  const base: { xs: unknown[] } = {
+    xs: Array.from({ length: 500 }, (_, index) => index)
+  };
+  const pushed = scopeDraft(base, (draft) => {
+    draft.xs.push(1, 2);
+  });
+  // Two additions and a length restore, not five hundred comparisons.
+  expect(pushed.patches).toHaveLength(2);
+  expect(pushed.inversePatches).toHaveLength(1);
+  expect(applyPatchesTo(base, pushed.patches)).toEqual(pushed.state);
+  expect(applyPatchesTo(pushed.state, pushed.inversePatches)).toEqual(base);
+
+  const spliced = scopeDraft(base, (draft: { xs: unknown[] }) => {
+    draft.xs.splice(10, 2, 'a', 'b', 'c');
+  });
+  expect(spliced.patches).toHaveLength(5);
+  expect(applyPatchesTo(base, spliced.patches)).toEqual(spliced.state);
+  expect(applyPatchesTo(spliced.state, spliced.inversePatches)).toEqual(base);
+}, 30_000);

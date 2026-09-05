@@ -61,10 +61,26 @@ const shallowCopy = (value: unknown, path: readonly PropertyKey[]) => {
   }
   const source = value as Record<PropertyKey, unknown>;
   if (Array.isArray(source)) {
-    // Descriptors, so holes survive and the ordinary and symbol properties an
-    // array can carry come with it.
-    const copy: unknown[] = [];
-    Object.defineProperties(copy, Object.getOwnPropertyDescriptors(source));
+    // `slice` preserves holes and is far cheaper than building a descriptor
+    // for every index; what it drops is the ordinary and symbol properties an
+    // array can also carry, which are copied after it and are almost always
+    // none.
+    const copy = source.slice() as unknown[];
+    for (const key of Object.getOwnPropertyNames(source)) {
+      if (key === 'length' || asArrayIndex(key) !== undefined) continue;
+      Object.defineProperty(
+        copy,
+        key,
+        Object.getOwnPropertyDescriptor(source, key)!
+      );
+    }
+    for (const key of Object.getOwnPropertySymbols(source)) {
+      Object.defineProperty(
+        copy,
+        key,
+        Object.getOwnPropertyDescriptor(source, key)!
+      );
+    }
     return copy as unknown as Record<PropertyKey, unknown>;
   }
   const copy = Object.create(Object.getPrototypeOf(source)) as Record<

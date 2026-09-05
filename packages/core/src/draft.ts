@@ -74,8 +74,26 @@ const mutatingArrayMethods = new Set([
  */
 const shallowCopy = (base: Record<PropertyKey, unknown>) => {
   if (Array.isArray(base)) {
-    const copy: unknown[] = [];
-    Object.defineProperties(copy, Object.getOwnPropertyDescriptors(base));
+    // `slice` preserves holes and is far cheaper than building a descriptor
+    // for every index; what it drops is the ordinary and symbol properties an
+    // array can also carry, which are copied after it and are almost always
+    // none.
+    const copy = base.slice() as unknown[];
+    for (const key of Object.getOwnPropertyNames(base)) {
+      if (key === 'length' || asArrayIndex(key) !== undefined) continue;
+      Object.defineProperty(
+        copy,
+        key,
+        Object.getOwnPropertyDescriptor(base, key)!
+      );
+    }
+    for (const key of Object.getOwnPropertySymbols(base)) {
+      Object.defineProperty(
+        copy,
+        key,
+        Object.getOwnPropertyDescriptor(base, key)!
+      );
+    }
     return copy as unknown as Record<PropertyKey, unknown>;
   }
   const copy = Object.create(Object.getPrototypeOf(base)) as Record<
@@ -179,6 +197,87 @@ const childNode = (node: Node, key: PropertyKey, value: object): Node => {
  * moved. Letting the array do its own work and describing what changed keeps
  * the two directions consistent, because they come from the same comparison.
  */
+/**
+ * The transition a method makes, when it follows from the method itself.
+ *
+ * `push`, `pop`, `shift`, `unshift` and `splice` touch a known region, so the
+ * patches can be written from the arguments and the elements involved --
+ * proportional to the change rather than to the array. `reverse`, `sort`,
+ * `fill` and `copyWithin` rearrange, and comparing before and after is both
+ * the right answer and no worse than the work they already do.
+ *
+ * Undefined when the region is not dense: a removed hole has no value for the
+ * inverse to restore, and only a comparison can describe that honestly.
+ */
+const directTransition = (
+  array: readonly unknown[],
+  method: string,
+  args: readonly unknown[]
+): { patches: Patches; inversePatches: Patches } | undefined => {
+  const length = array.length;
+  const patches: Patches = [];
+  const inversePatches: Patches = [];
+  const present = (index: number) =>
+    Object.prototype.hasOwnProperty.call(array, index);
+
+  if (method === 'push') {
+    if (!args.length) return { patches, inversePatches };
+    args.forEach((value, offset) => {
+      patches.push({ op: 'add', path: [length + offset], value });
+    });
+    inversePatches.push({ op: 'replace', path: ['length'], value: length });
+    return { patches, inversePatches };
+  }
+  if (method === 'unshift') {
+    if (!args.length) return { patches, inversePatches };
+    args.forEach((value, offset) => {
+      patches.push({ op: 'add', path: [offset], value });
+    });
+    for (let offset = 0; offset < args.length; offset += 1) {
+      inversePatches.push({ op: 'remove', path: [0] });
+    }
+    return { patches, inversePatches };
+  }
+  if (method === 'pop' || method === 'shift') {
+    if (!length) return { patches, inversePatches };
+    const index = method === 'pop' ? length - 1 : 0;
+    if (!present(index)) return undefined;
+    patches.push({ op: 'remove', path: [index] });
+    inversePatches.push({ op: 'add', path: [index], value: array[index] });
+    return { patches, inversePatches };
+  }
+  if (method !== 'splice') return undefined;
+  const removed = wouldRemove(array as unknown[], method, args as unknown[]);
+  const start = length
+    ? Math.max(
+        0,
+        Math.min(
+          length,
+          ((args[0] as number | undefined) ?? 0) < 0
+            ? length + ((args[0] as number | undefined) ?? 0)
+            : ((args[0] as number | undefined) ?? 0)
+        )
+      )
+    : 0;
+  for (let offset = 0; offset < removed.length; offset += 1) {
+    if (!present(start + offset)) return undefined;
+  }
+  const inserted = args.slice(2);
+  for (let offset = 0; offset < removed.length; offset += 1) {
+    patches.push({ op: 'remove', path: [start] });
+  }
+  inserted.forEach((value, offset) => {
+    patches.push({ op: 'add', path: [start + offset], value });
+  });
+  for (let offset = 0; offset < inserted.length; offset += 1) {
+    inversePatches.push({ op: 'remove', path: [start] });
+  }
+  removed.forEach((value, offset) => {
+    inversePatches.push({ op: 'add', path: [start + offset], value });
+  });
+  return { patches, inversePatches };
+};
+
 const runArrayMethod = (node: Node, method: string) =>
   function (this: unknown, ...args: unknown[]) {
     assertActive(node.root);
@@ -205,9 +304,17 @@ const runArrayMethod = (node: Node, method: string) =>
         }
       }
     }
-    const before = shallowCopy(
-      current(node) as Record<PropertyKey, unknown>
-    ) as unknown as unknown[];
+    // Comparing the whole array before and after is right for a method that
+    // rearranges it, and quadratic for one that touches an end: a `push` onto
+    // twenty thousand elements copied and compared all of them. When the
+    // transition follows from the method and its arguments, it is written
+    // directly and costs what the change costs.
+    const direct = directTransition(source, method, prepared);
+    const before = direct
+      ? undefined
+      : (shallowCopy(
+          current(node) as Record<PropertyKey, unknown>
+        ) as unknown as unknown[]);
     const copy = ensureCopy(node) as unknown as unknown[];
     let result: unknown;
     if (method === 'sort') {
@@ -220,12 +327,14 @@ const runArrayMethod = (node: Node, method: string) =>
     }
     node.children.clear();
     const path = pathOf(node);
-    const { patches, inversePatches } = diffPatches(
-      before,
-      shallowCopy(
-        copy as unknown as Record<PropertyKey, unknown>
-      ) as unknown as unknown[]
-    );
+    const { patches, inversePatches } =
+      direct ??
+      diffPatches(
+        before!,
+        shallowCopy(
+          copy as unknown as Record<PropertyKey, unknown>
+        ) as unknown as unknown[]
+      );
     for (const patch of patches) {
       node.root.patches.push({
         ...patch,
