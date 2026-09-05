@@ -150,12 +150,12 @@
         "maxGzipBytes": 6500
       },
       "dist/crud.mjs": {
-        "baselineGzipBytes": 3026,
-        "maxGzipBytes": 3350
+        "baselineGzipBytes": 3306,
+        "maxGzipBytes": 3650
       },
       "dist/crud.js": {
-        "baselineGzipBytes": 3075,
-        "maxGzipBytes": 3400
+        "baselineGzipBytes": 3360,
+        "maxGzipBytes": 3700
       },
       "dist/indexeddb.mjs": {
         "baselineGzipBytes": 1346,
@@ -166,28 +166,28 @@
         "maxGzipBytes": 1550
       },
       "dist/supabase.mjs": {
-        "baselineGzipBytes": 3904,
-        "maxGzipBytes": 4300
+        "baselineGzipBytes": 4179,
+        "maxGzipBytes": 4600
       },
       "dist/supabase.js": {
-        "baselineGzipBytes": 3951,
-        "maxGzipBytes": 4350
+        "baselineGzipBytes": 4225,
+        "maxGzipBytes": 4650
       },
       "dist/query.mjs": {
-        "baselineGzipBytes": 3564,
-        "maxGzipBytes": 3950
+        "baselineGzipBytes": 3831,
+        "maxGzipBytes": 4250
       },
       "dist/query.js": {
-        "baselineGzipBytes": 3617,
-        "maxGzipBytes": 4000
+        "baselineGzipBytes": 3880,
+        "maxGzipBytes": 4300
       },
       "dist/firestore.mjs": {
-        "baselineGzipBytes": 3650,
-        "maxGzipBytes": 4050
+        "baselineGzipBytes": 3921,
+        "maxGzipBytes": 4350
       },
       "dist/firestore.js": {
-        "baselineGzipBytes": 3697,
-        "maxGzipBytes": 4100
+        "baselineGzipBytes": 3966,
+        "maxGzipBytes": 4400
       }
     }
   },

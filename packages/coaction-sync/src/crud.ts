@@ -31,6 +31,25 @@ export type CrudListResult<TRecord> = {
 };
 
 /**
+ * A mutation needed an operation the adapter was not given a handler for.
+ *
+ * Skipping it would let the push succeed, which acknowledges the mutation and
+ * drops it from the outbox -- the remote never hears about the change and
+ * nothing reports that it did not.
+ */
+export class UnsupportedCrudOperationError extends Error {
+  constructor(
+    readonly operation: 'create' | 'update' | 'delete',
+    readonly recordId: string
+  ) {
+    super(
+      `@coaction/sync: the CRUD adapter has no "${operation}" handler, so record "${recordId}" cannot be synchronized. The mutation stays in the outbox.`
+    );
+    this.name = 'UnsupportedCrudOperationError';
+  }
+}
+
+/**
  * A CRUD adapter, plus the hook a wrapping adapter uses to tell it what the
  * remote holds when records arrive by some route other than `pull`.
  */
@@ -48,6 +67,11 @@ export type CrudSyncAdapterOptions<TRecord> = {
   list: (
     context: CrudListContext
   ) => Promise<TRecord[] | CrudListResult<TRecord>>;
+  /**
+   * Handlers are optional only in the sense that an adapter may not need one.
+   * A mutation that does need a missing handler fails the push rather than
+   * being acknowledged, so the outbox keeps it.
+   */
   create?: (record: TRecord) => Promise<TRecord | void>;
   update?: (record: TRecord) => Promise<TRecord | void>;
   /** Receives the last record known for the id, which may be stale. */
@@ -313,19 +337,19 @@ export const createCrudSyncAdapter = <TRecord extends object>({
             continue;
           }
           if (!remoteIds.has(id)) continue;
+          if (!remove) throw new UnsupportedCrudOperationError('delete', id);
           const last = known.get(id) ?? lastKnownValue.get(id);
-          if (remove) await remove(last as TRecord, id);
+          await remove(last as TRecord, id);
           forgetRemoteRecord(id);
           continue;
         }
         if (remoteIds.has(id)) {
-          if (update) {
-            const returned = await update(record);
-            seeRemoteRecord(id, (returned as TRecord) ?? record);
-          }
+          if (!update) throw new UnsupportedCrudOperationError('update', id);
+          const returned = await update(record);
+          seeRemoteRecord(id, (returned as TRecord) ?? record);
           continue;
         }
-        if (!create) continue;
+        if (!create) throw new UnsupportedCrudOperationError('create', id);
         try {
           const returned = await create(record);
           seeRemoteRecord(id, (returned as TRecord) ?? record);

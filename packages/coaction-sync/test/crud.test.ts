@@ -463,3 +463,49 @@ test('a record that arrived by realtime is updated, not created', async () => {
   expect(remote.calls).toEqual(['update:a']);
   store.destroy();
 });
+
+test('a mutation needing a handler the adapter lacks is not acknowledged', async () => {
+  const errors: unknown[] = [];
+  const remote = createRemote([{ id: 'a', title: 'old', done: false }]);
+  const storage = createMemoryStorage();
+  const store = create<{
+    todos: Record<string, Todo>;
+    rename: (id: string, title: string) => void;
+  }>(
+    (set) => ({
+      todos: {},
+      rename(id, title) {
+        set(() => {
+          this.todos[id].title = title;
+        });
+      }
+    }),
+    {
+      middlewares: [
+        sync({
+          name: 'crud-no-update',
+          storage,
+          onError: (error) => errors.push(error),
+          adapter: createCrudSyncAdapter<Todo>({
+            path: ['todos'],
+            list: remote.list
+            // No update handler.
+          })
+        })
+      ]
+    }
+  );
+  await nextTick();
+  await getSyncApi(store).pull();
+  await nextTick();
+
+  store.getState().rename('a', 'new');
+  await nextTick();
+
+  // Silently skipping the write would acknowledge the mutation and drop it.
+  expect(remote.records.get('a')?.title).toBe('old');
+  expect(getSyncApi(store).getPending()).toHaveLength(1);
+  expect((errors[0] as Error).name).toBe('UnsupportedCrudOperationError');
+  expect((errors[0] as Error).message).toMatch(/no "update" handler/);
+  store.destroy();
+});
