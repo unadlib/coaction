@@ -41,3 +41,18 @@ because a patch cannot describe a change inside one; `defineProperty`,
 `setPrototypeOf` and `preventExtensions` are refused instead of reaching the
 base; and copying preserves array holes, an array's own properties, and a
 null prototype. Each refusal raises `UnsupportedDraftOperationError`.
+
+A second hardening pass closed the ways a draft could still reach past its own
+boundary: a draft riding into the published state inside a container built by
+`slice()` or a spread; filling an array hole or deleting an index, which as
+patches meant insert and close-the-gap rather than what they do; array methods
+that answer with the array itself handing back an untracked copy; elements taken
+out by `pop` or `splice` still being the base's objects; and a leaf boundary
+written as a list of five types, which missed typed arrays and everything else
+with internal slots while wrongly excluding objects that merely have a prototype
+of their own.
+
+The invariants are now checked over twenty thousand generated mutation
+sequences: the base is never modified, no draft reaches the state, the patches
+produce the state, the inverse returns to the base, and untouched branches keep
+their identity.
