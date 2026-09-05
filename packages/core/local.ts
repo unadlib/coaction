@@ -2,6 +2,19 @@ export { createLocal as create } from './src/createLocal';
 export { onStoreReady } from './src/lifecycle';
 export { whole } from './src/getRawStateStateProperty';
 export { wrapStore } from './src/wrapStore';
+// Patch and schema handling is how a store validates and replays its own
+// state; none of it is transport-specific, and all of it is already in this
+// entry's graph because the local runtime uses it.
+export {
+  applyPatches,
+  assertSafePatches,
+  isStateSchemaError,
+  sanitizeInitialStateValue,
+  sanitizePatches,
+  sanitizeReplacementState,
+  StateSchemaError,
+  UnsafePatchPathError
+} from './src/utils';
 export {
   computed,
   effect,
