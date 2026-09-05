@@ -1,14 +1,14 @@
 {
   "adapter": {
-    "baselineGzipBytes": 2304,
-    "maxGzipBytes": 2550
+    "baselineGzipBytes": 3297,
+    "maxGzipBytes": 3650
   },
   "index": {
-    "baselineGzipBytes": 9718,
-    "maxGzipBytes": 10700
+    "baselineGzipBytes": 10609,
+    "maxGzipBytes": 11700
   },
   "shared": {
-    "baselineGzipBytes": 13926,
-    "maxGzipBytes": 15350
+    "baselineGzipBytes": 14868,
+    "maxGzipBytes": 16400
   }
 }

@@ -56,12 +56,42 @@ const isTraversable = (value: unknown) => {
   return prototype === Object.prototype || prototype === null;
 };
 
+/**
+ * `0`, `1`, `2`... -- a position in a sequence. A property that merely looks
+ * numeric, or one that does not, is an ordinary key: an array can carry both.
+ */
+const asArrayIndex = (key: PropertyKey) => {
+  if (typeof key === 'number') {
+    return Number.isInteger(key) && key >= 0 ? key : undefined;
+  }
+  if (typeof key !== 'string' || !/^(0|[1-9]\d*)$/.test(key)) return undefined;
+  return Number(key);
+};
+
+/**
+ * Copy without losing what the value was: descriptors rather than a spread or
+ * `slice`, so a sparse array keeps its holes, an array keeps the properties
+ * hung off it, and a null-prototype object stays one.
+ */
 const shallowCopy = (value: unknown, path: readonly PropertyKey[]) => {
-  if (Array.isArray(value)) return value.slice();
   if (!isTraversable(value)) {
     throw new UnsupportedPatchContainerError(value, path);
   }
-  return { ...(value as Record<PropertyKey, unknown>) };
+  const source = value as Record<PropertyKey, unknown>;
+  if (Array.isArray(source)) {
+    // Descriptors, so holes survive and the ordinary and symbol properties an
+    // array can carry come with it.
+    const copy: unknown[] = [];
+    Object.defineProperties(copy, Object.getOwnPropertyDescriptors(source));
+    return copy as unknown as Record<PropertyKey, unknown>;
+  }
+  // Assignment rather than descriptors, so an accessor is read once and becomes
+  // a value: a computed getter belongs to the state it was defined on, and
+  // carrying it across would leave the copy reading from the original.
+  return Object.assign(
+    Object.create(Object.getPrototypeOf(source)),
+    source
+  ) as Record<PropertyKey, unknown>;
 };
 
 /**
@@ -103,18 +133,27 @@ const applyAt = (
     copy[key] = applyAt(copy[key], segments, depth + 1, patch, owned);
     return copy;
   }
-  if (Array.isArray(copy) && typeof key !== 'symbol') {
-    // An index names a position in a sequence, so adding and removing shift the
-    // entries after it rather than leaving a hole.
+  if (Array.isArray(copy)) {
     if (key === 'length') {
       copy.length = patch.value as number;
       return copy;
     }
-    const index = Number(key);
-    if (patch.op === 'add') copy.splice(index, 0, patch.value);
-    else if (patch.op === 'remove') copy.splice(index, 1);
-    else copy[index] = patch.value;
-    return copy;
+    const index = asArrayIndex(key);
+    if (index !== undefined) {
+      // An index names a position in a sequence, so adding and removing shift
+      // the entries after it -- except past the end, where there is no
+      // sequence to shift and the assignment extends the array instead.
+      if (patch.op === 'add') {
+        if (index >= copy.length) copy[index] = patch.value;
+        else copy.splice(index, 0, patch.value);
+      } else if (patch.op === 'remove') {
+        copy.splice(index, 1);
+      } else {
+        copy[index] = patch.value;
+      }
+      return copy;
+    }
+    // Anything else on an array is an ordinary property, which arrays can carry.
   }
   if (patch.op === 'remove') delete copy[key];
   else copy[key] = patch.value;

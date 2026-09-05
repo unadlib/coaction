@@ -19,6 +19,10 @@ const isTraversable = (value: unknown) => {
   return prototype === Object.prototype || prototype === null;
 };
 
+/** `0`, `1`, `2`... A property that merely looks numeric is an ordinary key. */
+const isArrayIndex = (key: PropertyKey) =>
+  typeof key === 'string' && /^(0|[1-9]\d*)$/.test(key);
+
 const replaceAt = (
   path: PropertyKey[],
   previous: unknown,
@@ -77,12 +81,17 @@ const walk = (
         value: previous
       });
     }
-    return;
   }
 
   const before = previous as Record<PropertyKey, unknown>;
   const after = next as Record<PropertyKey, unknown>;
+  // Reached for arrays too, once their indexes have been compared: an array can
+  // carry ordinary and symbol properties, and losing them is a change.
+  const structural = Array.isArray(previous);
+  const skip = (key: PropertyKey) =>
+    structural && (key === 'length' || isArrayIndex(key));
   for (const key of Reflect.ownKeys(before)) {
+    if (skip(key)) continue;
     if (!(key in after)) {
       patches.push({ op: 'remove', path: [...path, key] });
       inversePatches.unshift({
@@ -95,7 +104,7 @@ const walk = (
     walk(before[key], after[key], [...path, key], patches, inversePatches);
   }
   for (const key of Reflect.ownKeys(after)) {
-    if (key in before) continue;
+    if (skip(key) || key in before) continue;
     patches.push({ op: 'add', path: [...path, key], value: after[key] });
     inversePatches.unshift({ op: 'remove', path: [...path, key] });
   }
