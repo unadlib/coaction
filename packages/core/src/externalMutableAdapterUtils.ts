@@ -1,5 +1,6 @@
 import type { Store } from './interface';
-import { apply as applyWithMutative, type Patches } from 'mutative';
+import { apply as applyWithMutative } from 'mutative';
+import type { Patches } from './patch';
 import {
   assertSafePatches,
   isUnsafeKey,

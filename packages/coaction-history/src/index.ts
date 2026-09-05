@@ -6,13 +6,13 @@ import {
   replayStorePatches,
   type Middleware,
   type StoreCommit,
-  type Store
+  type Store,
+  type Patches
 } from 'coaction/adapter';
 import {
   apply as applyWithMutative,
   create as createWithMutative,
-  type Draft,
-  type Patches
+  type Draft
 } from 'mutative';
 import {
   createTravelJournal,

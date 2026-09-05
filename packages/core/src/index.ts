@@ -45,3 +45,4 @@ export type {
 } from './interface';
 
 export type { JsonPrimitive, JsonValue } from './jsonTypes';
+export type { Patch, PatchOperation, Patches } from './patch';

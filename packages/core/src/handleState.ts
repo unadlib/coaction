@@ -2,9 +2,9 @@ import {
   apply as applyWithMutative,
   type Draft,
   create as createWithMutative,
-  isDraft,
-  Patches
+  isDraft
 } from 'mutative';
+import type { Patches } from './patch';
 import type {
   ClientStoreOptions,
   CreateState,

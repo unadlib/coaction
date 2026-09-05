@@ -1,5 +1,5 @@
 import { endBatch, getActiveSub, signal, startBatch } from 'alien-signals';
-import type { Patches } from 'mutative';
+import type { Patches } from './patch';
 import type { CreateState } from './interface';
 import type { Internal } from './internal';
 import { sharedRegistry } from './sharedRegistry';

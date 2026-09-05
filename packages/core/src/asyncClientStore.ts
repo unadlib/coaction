@@ -1,5 +1,5 @@
 import { createTransport } from 'data-transport';
-import type { Patches } from 'mutative';
+import type { Patches } from './patch';
 import type {
   ClientTransport,
   ClientTransportOptions,

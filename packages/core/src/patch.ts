@@ -1,0 +1,24 @@
+/**
+ * The transition format every part of Coaction speaks.
+ *
+ * A commit carries patches and their inverses, and history, sync, the shared
+ * transport and reactive invalidation all read them. That makes this the
+ * protocol between those systems, not an implementation detail of whichever
+ * producer happened to generate the transition -- and the semantics that have
+ * needed fixing (what a truncating `length` write invalidates, how an inverse
+ * restores removed elements, which paths are refused) are decided here rather
+ * than inherited.
+ *
+ * Structurally compatible with Mutative's patches, which is what lets Mutative
+ * remain one producer among possible others rather than the definition.
+ */
+export type PatchOperation = 'add' | 'remove' | 'replace';
+
+export type Patch = {
+  op: PatchOperation;
+  /** Array form, or an RFC 6901 pointer when a producer emits one. */
+  path: (string | number)[] | string;
+  value?: unknown;
+};
+
+export type Patches = Patch[];

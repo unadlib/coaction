@@ -1,4 +1,4 @@
-import type { Patches } from 'mutative';
+import type { Patches } from './patch';
 import type { CreateState, Store } from './interface';
 
 export type StoreCommitSource =

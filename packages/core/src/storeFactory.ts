@@ -1,4 +1,5 @@
-import { apply as applyWithMutative, type Patches } from 'mutative';
+import { apply as applyWithMutative } from 'mutative';
+import type { Patches } from './patch';
 import { applyMiddlewares } from './applyMiddlewares';
 import { invalidateReactivePaths } from './reactivePath';
 import { defaultName } from './constant';

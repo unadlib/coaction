@@ -1,9 +1,5 @@
-import {
-  create as createWithMutative,
-  type Draft,
-  isDraft,
-  type Patches
-} from 'mutative';
+import { create as createWithMutative, type Draft, isDraft } from 'mutative';
+import type { Patches } from './patch';
 import { handleDraft } from './handleDraft';
 import type {
   ClientStoreOptions,

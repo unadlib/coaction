@@ -59,3 +59,4 @@ export type {
   StoreTraceEvent
 } from './src/interface';
 export type { JsonPrimitive, JsonValue } from './src/jsonTypes';
+export type { Patch, PatchOperation, Patches } from './src/patch';

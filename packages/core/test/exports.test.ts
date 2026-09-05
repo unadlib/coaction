@@ -71,3 +71,25 @@ test('adapter lifecycle observes stores created by a separate entry bundle', () 
   expect(ready).toHaveBeenCalledTimes(1);
   store.destroy();
 });
+
+test("the patch IR is Coaction's own, not a re-export", async () => {
+  // The commit format is the protocol between history, sync, the shared
+  // transport and reactive invalidation. Sourcing its type from the draft
+  // producer made that producer the definition rather than one implementation.
+  const { readFileSync } = await import('node:fs');
+  const { fileURLToPath } = await import('node:url');
+  const read = (relative: string) =>
+    readFileSync(fileURLToPath(new URL(relative, import.meta.url)), 'utf8');
+
+  expect(read('../src/patch.ts')).toMatch(/export type Patch = \{/);
+  expect(read('../src/patch.ts')).not.toMatch(/from 'mutative'/);
+
+  for (const file of [
+    '../src/storeCommit.ts',
+    '../src/reactivePath.ts',
+    '../src/transportProtocol.ts',
+    '../../coaction-history/src/index.ts'
+  ]) {
+    expect(read(file)).not.toMatch(/Patches[^;]*from 'mutative'/);
+  }
+});

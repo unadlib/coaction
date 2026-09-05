@@ -1,4 +1,5 @@
-import { apply as applyWithMutative, type Patches } from 'mutative';
+import { apply as applyWithMutative } from 'mutative';
+import type { Patches } from './patch';
 import type { MiddlewareStore } from './interface';
 
 const isEqual = (x: unknown, y: unknown) => {

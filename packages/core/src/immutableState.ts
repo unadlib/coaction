@@ -1,4 +1,4 @@
-import type { Patches } from 'mutative';
+import type { Patches } from './patch';
 
 export const isImmutableStateObject = (value: unknown): value is object => {
   if (typeof value !== 'object' || value === null) {

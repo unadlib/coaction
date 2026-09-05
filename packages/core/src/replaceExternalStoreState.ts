@@ -1,4 +1,5 @@
-import { create as createWithMutative, type Patches } from 'mutative';
+import { create as createWithMutative } from 'mutative';
+import type { Patches } from './patch';
 import type { CreateState, MiddlewareStore } from './interface';
 import type { Internal } from './internal';
 import { replaceOwnEnumerable, sanitizeCheckedPatches } from './utils';
