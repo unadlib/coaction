@@ -37,3 +37,21 @@ export type Patch = {
 };
 
 export type Patches = Patch[];
+
+/**
+ * Values a patch path may traverse: arrays, and ordinary objects.
+ *
+ * Ordinary means "carries its contents in properties". An object with a
+ * prototype of its own is included, because that is ordinary Coaction state --
+ * a slice, a class instance, anything built with `Object.create`. What is
+ * excluded keeps its contents somewhere a property path cannot reach: a `Map`,
+ * a `Set`, a `Date`, a typed array. Those are leaves, replaced whole.
+ */
+const opaqueKinds = [Map, Set, WeakMap, WeakSet, Date, RegExp, Promise];
+
+export const isPatchTraversable = (value: unknown): value is object => {
+  if (Array.isArray(value)) return true;
+  if (typeof value !== 'object' || value === null) return false;
+  if (ArrayBuffer.isView(value) || value instanceof ArrayBuffer) return false;
+  return !opaqueKinds.some((kind) => value instanceof kind);
+};

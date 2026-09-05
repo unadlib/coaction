@@ -133,28 +133,36 @@ test('a batch of array patches applies in order without re-copying', () => {
   expect(state.items[1999]).toBe(1999);
 });
 
-test('a patch cannot describe the inside of a non-plain container', () => {
-  // Spreading these into a plain object produced something else entirely: a Map
-  // became `{}` with its entries as keys, a class instance lost its prototype
-  // and every getter on it, a Date stopped being a Date -- all silently.
-  const cases: Array<[string, object]> = [
-    ['Map', new Map([['a', 1]])],
-    ['Set', new Set([1])],
-    ['Date', new Date(0)],
-    [
-      'class',
-      new (class Node {
-        x = 1;
-      })()
-    ]
+test('a patch cannot describe the inside of a value with internal slots', () => {
+  // These keep their contents somewhere a property path cannot reach, so
+  // copying one as an ordinary object produced something else entirely: a Map
+  // became `{}`, a Date stopped being a Date -- all silently.
+  const cases: object[] = [
+    new Map([['a', 1]]),
+    new Set([1]),
+    new Date(0),
+    new Uint8Array([1])
   ];
-  for (const [, container] of cases) {
+  for (const container of cases) {
     expect(() =>
       applyPatchesTo({ held: container }, [
         { op: 'replace', path: ['held', 'x'], value: 2 }
       ])
     ).toThrow(/cannot describe the inside of/);
   }
+});
+
+test('an object with a prototype of its own is ordinary state', () => {
+  class Node {
+    x = 1;
+  }
+  const state = { held: new Node() };
+  const next = applyPatchesTo(state, [
+    { op: 'replace', path: ['held', 'x'], value: 2 }
+  ]);
+  expect(next.held.x).toBe(2);
+  expect(next.held).toBeInstanceOf(Node);
+  expect(state.held.x).toBe(1);
 });
 
 test('a non-plain container can still be replaced whole', () => {

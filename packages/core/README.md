@@ -72,9 +72,12 @@ an immutable result. It covers the tree a patch can describe — plain objects a
 dense arrays, including holes and any ordinary or symbol properties an array
 carries — and refuses what it cannot describe honestly:
 
-- A `Map`, `Set` or `Date` read through a draft. These keep their contents in
-  internal slots, so editing one changes the state with nothing to record. Read
-  it from the state and assign a replacement.
+- A `Map`, `Set`, `Date`, typed array or similar read through a draft. These
+  keep their contents somewhere a property path cannot reach, so editing one
+  changes the state with nothing to record. Read it from the state and assign a
+  replacement. An object with a prototype of its own is not in this group: it
+  carries its contents in properties, so it is ordinary state and a draft
+  reaches into it normally.
 - `Object.defineProperty`, `Object.setPrototypeOf`, `Object.preventExtensions`.
   Build the value you want and assign it.
 - Any write after the draft is finalized. Its result is already the published

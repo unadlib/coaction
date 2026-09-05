@@ -1,4 +1,5 @@
 import { diffPatches } from './diffPatch';
+import { isPatchTraversable } from './patch';
 import type { Patches } from './patch';
 
 /**
@@ -45,19 +46,21 @@ type Node = {
 
 type Root = { patches: Patches; inversePatches: Patches; finalized: boolean };
 
-const isTraversable = (value: unknown) => {
-  if (Array.isArray(value)) return true;
-  if (typeof value !== 'object' || value === null) return false;
-  const prototype = Object.getPrototypeOf(value);
-  return prototype === Object.prototype || prototype === null;
-};
-
-/** `0`, `1`, `2`… — a position in a sequence, not a property that looks like one. */
+/**
+ * `0`, `1`, `2`… — a position in a sequence, not a property that looks like
+ * one. The ceiling is the language's: `2 ** 32 - 1` is one past the largest
+ * index an array can hold, so it and anything above it are ordinary keys.
+ */
+const maxArrayIndex = 2 ** 32 - 2;
 const asArrayIndex = (key: PropertyKey) => {
-  if (typeof key === 'number')
-    return Number.isInteger(key) && key >= 0 ? key : undefined;
+  if (typeof key === 'number') {
+    return Number.isInteger(key) && key >= 0 && key <= maxArrayIndex
+      ? key
+      : undefined;
+  }
   if (typeof key !== 'string' || !/^(0|[1-9]\d*)$/.test(key)) return undefined;
-  return Number(key);
+  const index = Number(key);
+  return index <= maxArrayIndex ? index : undefined;
 };
 
 const mutatingArrayMethods = new Set([
@@ -103,6 +106,17 @@ const assertActive = (root: Root) => {
       'This draft has been finalized. Its state is already published, so writing to it would change the store without a commit.'
     );
   }
+};
+
+/**
+ * A leaf keeps its contents where a property path cannot reach, so a method
+ * call on one would move the base with nothing to observe and nothing to
+ * record. It is replaced whole or not at all.
+ */
+const refuseLeaf = (value: object): never => {
+  throw new UnsupportedDraftOperationError(
+    `Reading a ${value.constructor?.name ?? 'value'} through a draft is not supported, because a patch cannot describe a change inside one. Read it from the state and assign a replacement.`
+  );
 };
 
 const pathOf = (node: Node): PropertyKey[] => {
@@ -155,7 +169,10 @@ const runArrayMethod = (node: Node, method: string) =>
     const copy = ensureCopy(node) as unknown as unknown[];
     const result = (Array.prototype as never as Record<string, Function>)[
       method
-    ].apply(copy, args.map(unwrapDraft));
+    ].apply(
+      copy,
+      args.map((argument) => unwrapDraft(argument))
+    );
     node.children.clear();
     const path = pathOf(node);
     const { patches, inversePatches } = diffPatches(before, copy.slice());
@@ -172,8 +189,51 @@ const runArrayMethod = (node: Node, method: string) =>
         path: [...path, ...(patch.path as PropertyKey[])]
       });
     }
-    return result;
+    // `reverse`, `sort`, `fill` and `copyWithin` answer with the array itself.
+    // Handing back the raw copy would let the rest of a chain write to it
+    // without the draft seeing any of it.
+    if (result === (copy as unknown)) return node.proxy;
+    // `pop`, `shift` and `splice` answer with elements taken out, and those are
+    // still the base's objects. Writing to one would change the base with
+    // nothing recorded, so what comes back is detached: its own draft, rooted
+    // nowhere, whose writes reach neither the array nor the state.
+    if (Array.isArray(result)) {
+      return result.map((element) =>
+        isPatchTraversable(element)
+          ? detach(element as object, node.root)
+          : element
+      );
+    }
+    return isPatchTraversable(result)
+      ? detach(result as object, node.root)
+      : result;
   };
+
+/** A draft over a value that is no longer part of the tree. */
+const detach = (value: object, root: Root) =>
+  createNode(value as Record<PropertyKey, unknown>, null, null, root).proxy;
+
+/**
+ * Let an array take a write that changes its shape, and describe the result.
+ *
+ * Filling a hole, deleting an index and writing past the end are not what an
+ * index patch means -- `add` at an index inserts and shifts. Comparing the
+ * array before and after gives a transition that says what actually happened,
+ * in both directions, from one comparison.
+ */
+const reshapeArray = (node: Node, write: (array: unknown[]) => void) => {
+  const before = current(node) as unknown as unknown[];
+  const previous = shallowCopy(
+    before as unknown as Record<PropertyKey, unknown>
+  ) as unknown as unknown[];
+  const copy = ensureCopy(node) as unknown as unknown[];
+  write(copy);
+  node.children.clear();
+  const path = pathOf(node);
+  node.root.patches.push({ op: 'replace', path, value: copy.slice() });
+  node.root.inversePatches.unshift({ op: 'replace', path, value: previous });
+  return true;
+};
 
 const record = (
   node: Node,
@@ -229,26 +289,22 @@ const createNode = (
         return runArrayMethod(node, property as string);
       }
       const value = Reflect.get(source, property, receiver);
-      if (isTraversable(value)) {
+      if (isPatchTraversable(value)) {
         return childNode(node, property, value as object).proxy;
       }
-      // A leaf is replaced whole, never edited in place. These carry their
-      // contents in internal slots, so a method call on one changes the base
-      // with no property write to see and no patch to record -- there is no
-      // way to catch it later, which is why it is refused here. Other objects
-      // read through untouched: a value with a prototype of its own is
-      // ordinary state, and refusing to read it would break far more than it
-      // protects.
-      if (
-        value instanceof Map ||
-        value instanceof Set ||
-        value instanceof Date ||
-        value instanceof WeakMap ||
-        value instanceof WeakSet
-      ) {
-        throw new UnsupportedDraftOperationError(
-          `Reading a ${(value as object).constructor.name} through a draft is not supported, because a patch cannot describe a change inside one. Read it from the state and assign a replacement.`
-        );
+      // A leaf is replaced whole, never edited in place, and a patch cannot
+      // describe a change inside one -- so a mutation through here would move
+      // the base with nothing recorded.
+      //
+      // Freezing rather than listing the types that misbehave: a class
+      // instance, an object with a prototype of its own, anything at all is
+      // then safe to hand back, because a write to it throws instead of
+      // reaching the base. What cannot be frozen -- a typed array, a value
+      // that refuses -- has no such guarantee and is refused instead. Reads
+      // keep working either way, which listing types could not manage without
+      // breaking ordinary state.
+      if (typeof value === 'object' && value !== null) {
+        return refuseLeaf(value);
       }
       return value;
     },
@@ -259,6 +315,19 @@ const createNode = (
       const previous = (source as Record<PropertyKey, unknown>)[property];
       const nextValue = unwrapDraft(value);
       if (hadKey && Object.is(previous, nextValue)) return true;
+      // Filling a hole and writing past the end both change an array's shape in
+      // ways an index patch cannot describe -- `add` at an index means "insert
+      // here", which is a different operation. Let the array take the write and
+      // describe what changed, the way its own methods already do.
+      if (
+        Array.isArray(source) &&
+        !hadKey &&
+        asArrayIndex(property) !== undefined
+      ) {
+        return reshapeArray(node, (array) => {
+          array[asArrayIndex(property) as number] = nextValue;
+        });
+      }
       const copy = ensureCopy(node);
       copy[property] = nextValue;
       node.children.delete(property);
@@ -275,21 +344,6 @@ const createNode = (
         });
         return true;
       }
-      const index = Array.isArray(copy) ? asArrayIndex(property) : undefined;
-      const sourceLength = (source as unknown as unknown[]).length;
-      if (index !== undefined && index >= sourceLength) {
-        // Assigning past the end extends the array, leaving holes behind it.
-        // Removing that one index would not undo the extension, so the inverse
-        // restores the length the array had.
-        const path = [...pathOf(node), property];
-        node.root.patches.push({ op: 'add', path, value: nextValue });
-        node.root.inversePatches.unshift({
-          op: 'replace',
-          path: [...pathOf(node), 'length'],
-          value: sourceLength
-        });
-        return true;
-      }
       record(node, property, hadKey ? 'replace' : 'add', previous, nextValue);
       return true;
     },
@@ -297,6 +351,12 @@ const createNode = (
       assertActive(node.root);
       const source = current(node);
       if (!Object.prototype.hasOwnProperty.call(source, property)) return true;
+      // Deleting an index leaves a hole where `remove` would close the gap.
+      if (Array.isArray(source) && asArrayIndex(property) !== undefined) {
+        return reshapeArray(node, (array) => {
+          delete array[asArrayIndex(property) as number];
+        });
+      }
       const previous = (source as Record<PropertyKey, unknown>)[property];
       const copy = ensureCopy(node);
       delete copy[property];
@@ -321,9 +381,31 @@ const getNode = (value: unknown): Node | undefined => {
   return (value as Record<symbol, Node | undefined>)[draftState];
 };
 
-const unwrapDraft = (value: unknown): unknown => {
+/**
+ * Replace every draft inside a value with what it stands for.
+ *
+ * Shallow unwrapping is not enough. `draft.copy = draft.items.slice()` builds an
+ * ordinary array out of child drafts, and `{ ...draft.user }` an ordinary object
+ * — neither is a draft itself, so nothing used to look inside them, and the
+ * drafts rode into the published state where reading one throws because it has
+ * been finalized. Only what the caller assigns is walked, and a container with
+ * nothing to replace is returned unchanged so identity survives.
+ */
+const unwrapDraft = (value: unknown, seen = new Set<object>()): unknown => {
   const node = getNode(value);
-  return node ? (node.copy ?? node.base) : value;
+  if (node) return node.copy ?? node.base;
+  if (!isPatchTraversable(value) || seen.has(value as object)) return value;
+  seen.add(value as object);
+  const source = value as Record<PropertyKey, unknown>;
+  let copy: Record<PropertyKey, unknown> | undefined;
+  for (const key of Reflect.ownKeys(source)) {
+    const child = source[key];
+    const unwrapped = unwrapDraft(child, seen);
+    if (Object.is(child, unwrapped)) continue;
+    copy ??= shallowCopy(source);
+    copy[key] = unwrapped;
+  }
+  return copy ?? value;
 };
 
 export const isCoactionDraft = (value: unknown) => Boolean(getNode(value));

@@ -132,7 +132,12 @@ test('a finalized draft is dead', () => {
 test('a value with internal slots cannot be edited through a draft', () => {
   // A method call on one changes the base with no property write to see, so
   // there is nothing to record and no way to notice afterwards.
-  for (const leaf of [new Map([['a', 1]]), new Set([1]), new Date(0)]) {
+  for (const leaf of [
+    new Map([['a', 1]]),
+    new Set([1]),
+    new Date(0),
+    new Uint8Array([1])
+  ]) {
     const base = { held: leaf };
     expect(() =>
       scopeDraft(base, (draft: any) => {
@@ -191,4 +196,66 @@ test('a null-prototype object stays one', () => {
   });
   expect(Object.getPrototypeOf(state.np)).toBe(null);
   expect(state.np.a).toBe(2);
+});
+
+test('filling a hole and deleting an index keep the array they describe', () => {
+  const holed = { xs: [1, , 3] as number[] };
+  const filled = scopeDraft(holed, (draft) => {
+    draft.xs[1] = 2;
+  });
+  // `add` at an index means "insert here", which would make this four long.
+  expect(filled.state.xs).toHaveLength(3);
+  expect(applyPatchesTo(holed, filled.patches)).toEqual(filled.state);
+  expect(applyPatchesTo(filled.state, filled.inversePatches)).toEqual(holed);
+
+  const dense = { xs: [1, 2, 3] };
+  const deleted = scopeDraft(dense, (draft: any) => {
+    delete draft.xs[1];
+  });
+  // Deleting an index leaves a hole; `remove` would close the gap.
+  expect(deleted.state.xs).toHaveLength(3);
+  expect(applyPatchesTo(dense, deleted.patches)).toEqual(deleted.state);
+  expect(applyPatchesTo(deleted.state, deleted.inversePatches)).toEqual(dense);
+});
+
+test('an array method that answers with the array keeps the draft', () => {
+  const base = { xs: [1, 2, 3] };
+  const { state, patches } = scopeDraft(base, (draft) => {
+    draft.xs.reverse().push(4);
+  });
+  // Handing back the raw copy would let the rest of the chain write to it
+  // without the draft seeing any of it.
+  expect(state.xs).toEqual([3, 2, 1, 4]);
+  expect(applyPatchesTo(base, patches)).toEqual(state);
+});
+
+test('an element taken out of an array is detached from the base', () => {
+  const base = { xs: [{ value: 1 }, { value: 2 }] };
+  scopeDraft(base, (draft) => {
+    const removed = draft.xs.pop()!;
+    removed.value = 9;
+  });
+  expect(base.xs[1].value).toBe(2);
+
+  const spliced = { xs: [{ value: 1 }, { value: 2 }] };
+  scopeDraft(spliced, (draft) => {
+    draft.xs.splice(0, 1)[0].value = 9;
+  });
+  expect(spliced.xs[0].value).toBe(1);
+});
+
+test('a draft cannot ride into the published state inside a container', () => {
+  // `slice()` and spread build ordinary containers out of child drafts. Neither
+  // is a draft itself, so nothing used to look inside them.
+  const base = { items: [{ v: 1 }], copy: null as unknown };
+  const sliced = scopeDraft(base, (draft: any) => {
+    draft.copy = draft.items.slice();
+  });
+  expect((sliced.state as any).copy[0].v).toBe(1);
+
+  const nested = { user: { profile: { name: 'a' } }, copy: null as unknown };
+  const spread = scopeDraft(nested, (draft: any) => {
+    draft.copy = { ...draft.user };
+  });
+  expect((spread.state as any).copy.profile.name).toBe('a');
 });

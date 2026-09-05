@@ -1,5 +1,5 @@
 import { applyPatchesTo } from '../src/applyPatch';
-import { scopeDraft } from '../src/draft';
+import { isCoactionDraft, scopeDraft } from '../src/draft';
 
 /**
  * The properties a draft has to hold, checked over generated mutation
@@ -94,5 +94,36 @@ test('the base is never modified', () => {
       draft.nested.v = 2;
     });
     expect(JSON.stringify(base)).toBe(snapshot);
+  }
+});
+
+test('no draft ever reaches the published state', () => {
+  const hasDraft = (value: unknown, seen = new Set<object>()): boolean => {
+    if (typeof value !== 'object' || value === null) return false;
+    if (seen.has(value)) return false;
+    seen.add(value);
+    if (isCoactionDraft(value)) return true;
+    return Reflect.ownKeys(value).some((key) =>
+      hasDraft((value as Record<PropertyKey, unknown>)[key], seen)
+    );
+  };
+  for (let seed = 1; seed <= 500; seed += 1) {
+    const random = seeded(seed * 17);
+    const base = {
+      items: [{ v: 1 }, { v: 2 }],
+      user: { profile: { name: 'a' } },
+      out: null as unknown
+    };
+    const { state } = scopeDraft(base, (draft: any) => {
+      const pick = Math.floor(random() * 5);
+      if (pick === 0) draft.out = draft.items.slice();
+      else if (pick === 1) draft.out = { ...draft.user };
+      else if (pick === 2) draft.out = [draft.items[0], draft.user];
+      else if (pick === 3) draft.out = { nested: { deep: draft.user.profile } };
+      else draft.out = draft.items.map((item: any) => item);
+    });
+    // A draft inside the state is a live handle on it that throws on read once
+    // finalized, which is how one escaping shows up much later and elsewhere.
+    expect(hasDraft(state)).toBe(false);
   }
 });

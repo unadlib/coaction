@@ -1,3 +1,4 @@
+import { isPatchTraversable } from './patch';
 import type { Patch, Patches } from './patch';
 
 /**
@@ -12,13 +13,6 @@ import type { Patch, Patches } from './patch';
  * The patch domain is the one `applyPatch` traverses, so anything that is not a
  * plain object or an array is compared by identity and replaced whole.
  */
-const isTraversable = (value: unknown) => {
-  if (Array.isArray(value)) return true;
-  if (typeof value !== 'object' || value === null) return false;
-  const prototype = Object.getPrototypeOf(value);
-  return prototype === Object.prototype || prototype === null;
-};
-
 /** `0`, `1`, `2`... A property that merely looks numeric is an ordinary key. */
 const isArrayIndex = (key: PropertyKey) =>
   typeof key === 'string' && /^(0|[1-9]\d*)$/.test(key);
@@ -43,8 +37,8 @@ const walk = (
 ) => {
   if (Object.is(previous, next)) return;
   if (
-    !isTraversable(previous) ||
-    !isTraversable(next) ||
+    !isPatchTraversable(previous) ||
+    !isPatchTraversable(next) ||
     Array.isArray(previous) !== Array.isArray(next)
   ) {
     replaceAt(path, previous, next, patches, inversePatches);

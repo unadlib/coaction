@@ -1,3 +1,4 @@
+import { isPatchTraversable } from './patch';
 import type { Patch, Patches } from './patch';
 import { isUnsafeKey } from './utils';
 
@@ -49,13 +50,6 @@ export class UnsupportedPatchContainerError extends TypeError {
   }
 }
 
-const isTraversable = (value: unknown) => {
-  if (Array.isArray(value)) return true;
-  if (typeof value !== 'object' || value === null) return false;
-  const prototype = Object.getPrototypeOf(value);
-  return prototype === Object.prototype || prototype === null;
-};
-
 /**
  * `0`, `1`, `2`... -- a position in a sequence. A property that merely looks
  * numeric, or one that does not, is an ordinary key: an array can carry both.
@@ -74,7 +68,7 @@ const asArrayIndex = (key: PropertyKey) => {
  * hung off it, and a null-prototype object stays one.
  */
 const shallowCopy = (value: unknown, path: readonly PropertyKey[]) => {
-  if (!isTraversable(value)) {
+  if (!isPatchTraversable(value)) {
     throw new UnsupportedPatchContainerError(value, path);
   }
   const source = value as Record<PropertyKey, unknown>;
