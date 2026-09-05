@@ -24,8 +24,15 @@ export type PatchOperation = 'add' | 'remove' | 'replace';
 
 export type Patch = {
   op: PatchOperation;
-  /** Array form, or an RFC 6901 pointer when a producer emits one. */
-  path: (string | number)[] | string;
+  /**
+   * Array form, or an RFC 6901 pointer when a producer emits one.
+   *
+   * A local store may key state by symbol, so a path segment is a
+   * `PropertyKey`. The shared transport refuses symbol keys separately, since
+   * they have no JSON form -- that is a boundary check, not a limit on what a
+   * transition can describe here.
+   */
+  path: PropertyKey[] | string;
   value?: unknown;
 };
 

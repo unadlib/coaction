@@ -14,14 +14,28 @@ import type { Patches } from './patch';
  * Nothing is copied until it is written to, so an untouched branch keeps its
  * identity and the cost is the size of what changed.
  */
+/**
+ * The writable view of a state tree a recipe receives.
+ *
+ * Deeply mutable, and stops at anything a patch cannot describe the inside of:
+ * a function stays a function, and a leaf stays a leaf.
+ */
+export type Draft<T> = T extends (...args: never[]) => unknown
+  ? T
+  : T extends readonly (infer Element)[]
+    ? Draft<Element>[]
+    : T extends object
+      ? { -readonly [Key in keyof T]: Draft<T[Key]> }
+      : T;
+
 const draftState = Symbol('coaction.draft');
 
 type Node = {
   base: Record<PropertyKey, unknown>;
   copy: Record<PropertyKey, unknown> | null;
   parent: Node | null;
-  key: string | number | null;
-  children: Map<string | number, Node>;
+  key: PropertyKey | null;
+  children: Map<PropertyKey, Node>;
   proxy: unknown;
   root: Root;
 };
@@ -39,8 +53,8 @@ const isTraversable = (value: unknown) => {
   return prototype === Object.prototype || prototype === null;
 };
 
-const pathOf = (node: Node): (string | number)[] => {
-  const path: (string | number)[] = [];
+const pathOf = (node: Node): PropertyKey[] => {
+  const path: PropertyKey[] = [];
   let current: Node | null = node;
   while (current?.parent) {
     path.unshift(current.key as string | number);
@@ -68,7 +82,7 @@ const current = (node: Node) => node.copy ?? node.base;
 
 const record = (
   node: Node,
-  key: string | number,
+  key: PropertyKey,
   op: 'add' | 'remove' | 'replace',
   hadKey: boolean,
   previous: unknown,
@@ -87,7 +101,7 @@ const record = (
   );
 };
 
-const childNode = (node: Node, key: string | number, value: object): Node => {
+const childNode = (node: Node, key: PropertyKey, value: object): Node => {
   const existing = node.children.get(key);
   if (existing && existing.base === value) return existing;
   const child = createNode(
@@ -103,7 +117,7 @@ const childNode = (node: Node, key: string | number, value: object): Node => {
 const createNode = (
   base: Record<PropertyKey, unknown>,
   parent: Node | null,
-  key: string | number | null,
+  key: PropertyKey | null,
   root: Root
 ): Node => {
   const node: Node = {
@@ -120,15 +134,11 @@ const createNode = (
       if (property === draftState) return node;
       const source = current(node);
       const value = Reflect.get(source, property, receiver);
-      if (typeof property === 'symbol' || !isTraversable(value)) return value;
+      if (!isTraversable(value)) return value;
       // Arrays report `length` and index keys; only real containers descend.
-      return childNode(node, property as string, value as object).proxy;
+      return childNode(node, property, value as object).proxy;
     },
     set(_target, property, value) {
-      if (typeof property === 'symbol') {
-        ensureCopy(node)[property] = value;
-        return true;
-      }
       const source = current(node);
       const hadKey = Object.prototype.hasOwnProperty.call(source, property);
       const previous = (source as Record<PropertyKey, unknown>)[property];
@@ -136,7 +146,7 @@ const createNode = (
       if (hadKey && Object.is(previous, nextValue)) return true;
       const copy = ensureCopy(node);
       copy[property] = nextValue;
-      node.children.delete(property as string);
+      node.children.delete(property);
       // `length` on an array is a truncation or an extension, not a field.
       if (Array.isArray(copy) && property === 'length') {
         node.root.patches.push({
@@ -151,21 +161,17 @@ const createNode = (
         });
         return true;
       }
-      record(node, property as string, 'replace', hadKey, previous, nextValue);
+      record(node, property, 'replace', hadKey, previous, nextValue);
       return true;
     },
     deleteProperty(_target, property) {
-      if (typeof property === 'symbol') {
-        delete ensureCopy(node)[property];
-        return true;
-      }
       const source = current(node);
       if (!Object.prototype.hasOwnProperty.call(source, property)) return true;
       const previous = (source as Record<PropertyKey, unknown>)[property];
       const copy = ensureCopy(node);
       delete copy[property];
-      node.children.delete(property as string);
-      record(node, property as string, 'remove', true, previous, undefined);
+      node.children.delete(property);
+      record(node, property, 'remove', true, previous, undefined);
       return true;
     },
     has: (_target, property) => Reflect.has(current(node) as object, property),

@@ -1,4 +1,4 @@
-import { create as createWithMutative } from 'mutative';
+import { scopeDraft } from './draft';
 import type { Patches } from './patch';
 import type { CreateState, MiddlewareStore } from './interface';
 import type { Internal } from './internal';
@@ -16,15 +16,13 @@ export const replaceExternalStoreState = <T extends CreateState>(
   { syncImmutable = true }: ReplaceExternalStoreStateOptions = {}
 ) => {
   internal.validateReplacementSource?.(source);
-  const [nextState, patches, inversePatches] = createWithMutative(
-    internal.rootState,
-    (draft) => {
-      replaceOwnEnumerable(draft as Record<PropertyKey, unknown>, source);
-    },
-    {
-      enablePatches: true
-    }
-  ) as [T, Patches, Patches];
+  const {
+    state: nextState,
+    patches,
+    inversePatches
+  } = scopeDraft(internal.rootState as unknown as T & object, (draft) => {
+    replaceOwnEnumerable(draft as Record<PropertyKey, unknown>, source);
+  });
   internal.validateState?.(nextState);
   const finalPatches = store.patch
     ? store.patch({ patches, inversePatches })

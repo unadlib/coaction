@@ -1,4 +1,4 @@
-import { type Draft, create as createWithMutative, isDraft } from 'mutative';
+import { type Draft, isCoactionDraft, openDraft, scopeDraft } from './draft';
 import { applyPatchesTo } from './applyPatch';
 import type { Patches } from './patch';
 import type {
@@ -97,18 +97,12 @@ export const handleState = <T extends CreateState>(
     let patches: Patches;
     let inversePatches: Patches;
     try {
-      const result = createWithMutative(
-        internal.rootState,
-        (draft) => {
-          internal.rootState = draft as Draft<T>;
-          return fn.apply(null);
-        },
-        {
-          enablePatches: true
-        }
-      );
+      const result = scopeDraft(internal.rootState as T & object, (draft) => {
+        internal.rootState = draft as Draft<T>;
+        return fn.apply(null);
+      });
       assertKnownStateShape(
-        result[0],
+        result.state,
         internal.backupState,
         internal.stateSchema,
         store.isSliceStore,
@@ -116,10 +110,10 @@ export const handleState = <T extends CreateState>(
           requireSliceRoots: true
         }
       );
-      internal.validateState?.(internal.getTransportState?.() ?? result[0]);
-      producedState = result[0] as T;
-      patches = result[1];
-      inversePatches = result[2];
+      internal.validateState?.(internal.getTransportState?.() ?? result.state);
+      producedState = result.state as T;
+      patches = result.patches;
+      inversePatches = result.inversePatches;
     } finally {
       internal.rootState = internal.backupState;
     }
@@ -218,8 +212,8 @@ export const handleState = <T extends CreateState>(
               internal.rootState as unknown as object
             );
             const updateSnapshot = Boolean(snapshot && snapshotCache);
-            const produced = createWithMutative(
-              internal.rootState,
+            const produced = scopeDraft(
+              internal.rootState as T & object,
               (draft) => {
                 internal.rootState = draft as Draft<T>;
                 const returnValue = next(internal.module);
@@ -242,14 +236,9 @@ export const handleState = <T extends CreateState>(
                     store.isSliceStore
                   );
                 }
-              },
-              {
-                enablePatches: updateSnapshot
               }
             );
-            const nextState = updateSnapshot
-              ? (produced as [T, Patches, Patches])[0]
-              : (produced as T);
+            const nextState = produced.state as T;
             assertKnownStateShape(
               nextState,
               internal.backupState,
@@ -260,7 +249,7 @@ export const handleState = <T extends CreateState>(
               }
             );
             if (updateSnapshot) {
-              const patches = (produced as [T, Patches, Patches])[1];
+              const patches = produced.patches;
               const snapshotPatches = createImmutableSnapshotPatches(
                 patches,
                 snapshotCache!
@@ -332,7 +321,8 @@ export const handleState = <T extends CreateState>(
     }
     let result: void | [] | [any, Patches, Patches];
     try {
-      const isDrafted = internal.mutableInstance && isDraft(internal.rootState);
+      const isDrafted =
+        internal.mutableInstance && isCoactionDraft(internal.rootState);
       if (isDrafted) {
         handleDraft(store, internal);
       }
@@ -357,13 +347,10 @@ export const handleState = <T extends CreateState>(
       }
       if (isDrafted) {
         internal.backupState = internal.rootState;
-        const [draft, finalize] = createWithMutative(
-          internal.rootState as any,
-          {
-            enablePatches: true
-          }
+        const [draft, finalize] = openDraft(
+          internal.rootState as unknown as T & object
         );
-        internal.finalizeDraft = finalize;
+        internal.finalizeDraft = finalize as () => [T, Patches, Patches];
         internal.rootState = draft;
       }
     } finally {

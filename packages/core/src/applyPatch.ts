@@ -13,7 +13,7 @@ import { isUnsafeKey } from './utils';
  * Everything outside the touched paths keeps its identity, which is what makes
  * reference comparison meaningful for readers downstream.
  */
-const asSegments = (path: Patch['path']): (string | number)[] => {
+const asSegments = (path: Patch['path']): PropertyKey[] => {
   if (Array.isArray(path)) return path;
   if (path === '') return [];
   return path
@@ -34,7 +34,7 @@ const asSegments = (path: Patch['path']): (string | number)[] => {
 export class UnsupportedPatchContainerError extends TypeError {
   constructor(
     readonly container: unknown,
-    readonly path: readonly (string | number)[]
+    readonly path: readonly PropertyKey[]
   ) {
     const described =
       container === null
@@ -43,7 +43,7 @@ export class UnsupportedPatchContainerError extends TypeError {
           ? ((container as object).constructor?.name ?? 'an object')
           : typeof container;
     super(
-      `A patch cannot describe the inside of ${described}. Replace it whole instead. Path: ${path.length ? path.join('.') : '<root>'}.`
+      `A patch cannot describe the inside of ${described}. Replace it whole instead. Path: ${path.length ? path.map(String).join('.') : '<root>'}.`
     );
     this.name = 'UnsupportedPatchContainerError';
   }
@@ -56,7 +56,7 @@ const isTraversable = (value: unknown) => {
   return prototype === Object.prototype || prototype === null;
 };
 
-const shallowCopy = (value: unknown, path: readonly (string | number)[]) => {
+const shallowCopy = (value: unknown, path: readonly PropertyKey[]) => {
   if (Array.isArray(value)) return value.slice();
   if (!isTraversable(value)) {
     throw new UnsupportedPatchContainerError(value, path);
@@ -75,7 +75,7 @@ const shallowCopy = (value: unknown, path: readonly (string | number)[]) => {
  */
 const applyAt = (
   node: unknown,
-  segments: (string | number)[],
+  segments: PropertyKey[],
   depth: number,
   patch: Patch,
   owned: WeakSet<object>
@@ -103,7 +103,7 @@ const applyAt = (
     copy[key] = applyAt(copy[key], segments, depth + 1, patch, owned);
     return copy;
   }
-  if (Array.isArray(copy)) {
+  if (Array.isArray(copy) && typeof key !== 'symbol') {
     // An index names a position in a sequence, so adding and removing shift the
     // entries after it rather than leaving a hole.
     if (key === 'length') {

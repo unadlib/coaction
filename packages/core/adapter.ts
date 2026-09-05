@@ -41,6 +41,9 @@ export {
 } from './src/utils';
 export type { Patch, PatchOperation, Patches } from './src/patch';
 export { producePatches } from './src/producePatch';
+export { diffPatches } from './src/diffPatch';
+export { isCoactionDraft, openDraft, scopeDraft } from './src/draft';
+export type { Draft } from './src/draft';
 export { UnsupportedPatchContainerError } from './src/applyPatch';
 export { assertSharedJsonValue } from './src/sharedState';
 export { wrapStore } from './src/wrapStore';

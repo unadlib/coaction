@@ -1,4 +1,4 @@
-import { create as createWithMutative } from 'mutative';
+import { scopeDraft } from './draft';
 import type { Patches } from './patch';
 
 /**
@@ -14,12 +14,8 @@ export const producePatches = <T extends object>(
   base: T,
   write: (draft: T) => void
 ): { state: T; patches: Patches; inversePatches: Patches } => {
-  const [state, patches, inversePatches] = createWithMutative(
-    base,
-    (draft) => {
-      write(draft as T);
-    },
-    { enablePatches: true }
-  ) as [T, Patches, Patches];
+  const { state, patches, inversePatches } = scopeDraft(base, (draft) => {
+    write(draft);
+  });
   return { state, patches, inversePatches };
 };

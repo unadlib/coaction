@@ -1,4 +1,4 @@
-import { create as createWithMutative, type Draft, isDraft } from 'mutative';
+import { type Draft, isCoactionDraft, openDraft } from './draft';
 import type { Patches } from './patch';
 import { handleDraft } from './handleDraft';
 import type {
@@ -90,21 +90,21 @@ export const createLocalAction = <T extends CreateState>({
           handleDraft(store, internal);
           if (isDrafted) {
             internal.backupState = internal.rootState;
-            const [draft, finalize] = createWithMutative(internal.rootState, {
-              enablePatches: true
-            });
+            const [draft, finalize] = openDraft(
+              internal.rootState as unknown as T & object
+            );
             internal.finalizeDraft = finalize as () => [T, Patches, Patches];
             internal.rootState = draft as Draft<T>;
           }
         };
-        const isDrafted = isDraft(internal.rootState);
+        const isDrafted = isCoactionDraft(internal.rootState);
         if (isDrafted) {
           handleResult();
         }
         internal.backupState = internal.rootState;
-        const [draft, finalize] = createWithMutative(internal.rootState, {
-          enablePatches: true
-        });
+        const [draft, finalize] = openDraft(
+          internal.rootState as unknown as T & object
+        );
         internal.finalizeDraft = finalize as () => [T, Patches, Patches];
         internal.rootState = draft as Draft<T>;
         let asyncResult: Promise<unknown> | undefined;

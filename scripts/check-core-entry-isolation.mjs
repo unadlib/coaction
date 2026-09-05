@@ -12,7 +12,9 @@ const fixtureDir = join(scriptDir, 'fixtures/core-entry-size');
 const budgets = JSON.parse(
   readFileSync(join(scriptDir, 'core-entry-size-budgets.json'), 'utf8')
 );
-const externalDependencies = ['alien-signals', 'data-transport', 'mutative'];
+// Mutative is gone: Coaction produces and applies its own transitions, so that
+// code is now measured here instead of being excluded as someone else's.
+const externalDependencies = ['alien-signals', 'data-transport'];
 const forbiddenLocalRuntime = [
   'Client transport',
   'Remote action',

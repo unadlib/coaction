@@ -1,4 +1,4 @@
-import type { Draft } from 'mutative';
+import type { Draft } from './draft';
 import type { Patches } from './patch';
 import type { CreateState, Listener } from './interface';
 import type { ReactivePathNode } from './reactivePath';

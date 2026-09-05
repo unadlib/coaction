@@ -93,17 +93,15 @@ if (unmapped.length) {
 }
 
 /**
- * Only the producer may reach for the draft library.
+ * Nothing ships the draft library any more.
  *
- * Everything else consumes commits -- patches, inverse patches, a source -- and
- * a package that imports Mutative to read or write one has taken a position on
- * how transitions are made, which is the coupling the patch IR exists to
- * remove. `coaction` itself is where the producer lives.
+ * Coaction produces and applies its own transitions, over the tree its patches
+ * can describe. Mutative stays a development dependency, because the tests that
+ * matter for both are the ones comparing against it -- but no shipped module
+ * may reach for it, or the runtime it defines comes back with whichever import
+ * did.
  */
-const commitConsumers = readPackages().filter(
-  ({ json }) => json.name !== 'coaction'
-);
-const coupled = commitConsumers.filter(({ dir }) => {
+const coupled = readPackages().filter(({ dir }) => {
   const srcDir = join(dir, 'src');
   if (!existsSync(srcDir)) return false;
   return readdirSync(srcDir).some(

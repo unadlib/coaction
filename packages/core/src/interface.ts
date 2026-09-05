@@ -1,5 +1,5 @@
 import type { Transport } from 'data-transport';
-import type { Draft } from 'mutative';
+import type { Draft } from './draft';
 import type { Patches } from './patch';
 import type { JsonValue } from './jsonTypes';
 

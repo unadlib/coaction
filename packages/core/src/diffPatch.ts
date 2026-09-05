@@ -20,7 +20,7 @@ const isTraversable = (value: unknown) => {
 };
 
 const replaceAt = (
-  path: (string | number)[],
+  path: PropertyKey[],
   previous: unknown,
   next: unknown,
   patches: Patches,
@@ -33,7 +33,7 @@ const replaceAt = (
 const walk = (
   previous: unknown,
   next: unknown,
-  path: (string | number)[],
+  path: PropertyKey[],
   patches: Patches,
   inversePatches: Patches
 ) => {
@@ -80,9 +80,9 @@ const walk = (
     return;
   }
 
-  const before = previous as Record<string, unknown>;
-  const after = next as Record<string, unknown>;
-  for (const key of Object.keys(before)) {
+  const before = previous as Record<PropertyKey, unknown>;
+  const after = next as Record<PropertyKey, unknown>;
+  for (const key of Reflect.ownKeys(before)) {
     if (!(key in after)) {
       patches.push({ op: 'remove', path: [...path, key] });
       inversePatches.unshift({
@@ -94,7 +94,7 @@ const walk = (
     }
     walk(before[key], after[key], [...path, key], patches, inversePatches);
   }
-  for (const key of Object.keys(after)) {
+  for (const key of Reflect.ownKeys(after)) {
     if (key in before) continue;
     patches.push({ op: 'add', path: [...path, key], value: after[key] });
     inversePatches.unshift({ op: 'remove', path: [...path, key] });
@@ -107,13 +107,13 @@ export const diffPatches = <T>(
 ): { patches: Patches; inversePatches: Patches } => {
   const patches: Patches = [];
   const inversePatches: Patches = [];
-  walk(previous, next, [], patches, inversePatches);
+  walk(previous, next, [] as PropertyKey[], patches, inversePatches);
   return { patches, inversePatches };
 };
 
 /** The patch a single terminal write amounts to, without walking anything. */
 export const writePatch = (
-  path: (string | number)[],
+  path: PropertyKey[],
   previous: unknown,
   next: unknown
 ): { patch: Patch; inverse: Patch } => ({

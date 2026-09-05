@@ -647,7 +647,13 @@ const createPatchHistory = <T extends object>(
         previous
       );
     });
-    journal.recordPatches(current, { patches, inversePatches });
+    // `travels` types its journal with the draft library's patch type, whose
+    // paths cannot hold a symbol. Coaction's can, and the journal only stores
+    // them, so the shape is compatible where it is used.
+    journal.recordPatches(current, {
+      patches,
+      inversePatches
+    } as never);
   };
 
   const resetJournal = (state: T) => {
@@ -719,7 +725,7 @@ const createPatchHistory = <T extends object>(
       switchToSnapshotCompatibility(state);
       return;
     }
-    journal.recordPatches(state, { patches, inversePatches });
+    journal.recordPatches(state, { patches, inversePatches } as never);
   };
   if (!partialize) {
     unsubscribeCommit = onStoreCommit(store, recordCommit);
