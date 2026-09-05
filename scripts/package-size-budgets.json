@@ -150,11 +150,11 @@
   "@coaction/sync": {
     "files": {
       "dist/index.mjs": {
-        "baselineGzipBytes": 4415,
+        "baselineGzipBytes": 4422,
         "maxGzipBytes": 4900
       },
       "dist/index.js": {
-        "baselineGzipBytes": 4458,
+        "baselineGzipBytes": 4465,
         "maxGzipBytes": 4950
       },
       "dist/crud.mjs": {
@@ -166,11 +166,11 @@
         "maxGzipBytes": 2850
       },
       "dist/indexeddb.mjs": {
-        "baselineGzipBytes": 1315,
-        "maxGzipBytes": 1450
+        "baselineGzipBytes": 1346,
+        "maxGzipBytes": 1500
       },
       "dist/indexeddb.js": {
-        "baselineGzipBytes": 1365,
+        "baselineGzipBytes": 1395,
         "maxGzipBytes": 1550
       },
       "dist/supabase.mjs": {

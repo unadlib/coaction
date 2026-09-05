@@ -486,6 +486,15 @@ export const sync = <T extends object>({
         const attempted = new Set<string>();
         let declined = false;
         while (!destroyed) {
+          // Nothing goes to the remote before it is durable. The commit path
+          // persists then flushes, but an explicit `flush()` does not go
+          // through it, and a crash between sending and persisting would leave
+          // a mutation the remote has and the outbox does not. Waiting on the
+          // write queue here makes the ordering a property of the sender
+          // rather than of how it was called; a failed write rejects and the
+          // retry schedule owns what happens next.
+          await writeQueue;
+          if (destroyed) return;
           const submitted = outbox.filter(({ id }) => !attempted.has(id));
           if (!submitted.length) break;
           submitted.forEach(({ id }) => attempted.add(id));

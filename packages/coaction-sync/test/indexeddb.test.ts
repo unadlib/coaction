@@ -135,3 +135,39 @@ test('sync() persists its snapshot and outbox through IndexedDB', async () => {
   expect(getSyncApi(second).getPending()).toHaveLength(1);
   second.destroy();
 });
+
+test('a write resolves no earlier than its transaction completes', async () => {
+  const real = new IDBFactory();
+  const order: string[] = [];
+  const observing = {
+    open: ((...args: Parameters<IDBFactory['open']>) => {
+      const opening = real.open(...args);
+      opening.addEventListener('success', () => {
+        const database = opening.result;
+        const openTransaction = database.transaction.bind(database);
+        database.transaction = ((
+          ...txArgs: Parameters<IDBDatabase['transaction']>
+        ) => {
+          const transaction = openTransaction(...txArgs);
+          transaction.addEventListener('complete', () => {
+            order.push('transaction complete');
+          });
+          return transaction;
+        }) as IDBDatabase['transaction'];
+      });
+      return opening;
+    }) as IDBFactory['open']
+  } as IDBFactory;
+
+  const storage = createIndexedDbSyncStorage({
+    indexedDB: observing,
+    database: 'ordering'
+  });
+  await storage.setItem('a', 'value');
+  order.push('setItem resolved');
+
+  // A request can succeed and its transaction still abort afterwards, undoing
+  // the write, so resolving on the request would report a durable write that
+  // never happened.
+  expect(order).toEqual(['transaction complete', 'setItem resolved']);
+});

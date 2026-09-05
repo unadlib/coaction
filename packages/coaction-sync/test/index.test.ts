@@ -955,3 +955,55 @@ test('sync() refuses a client mirror and getSyncApi refuses a plain store', () =
   );
   plain.destroy();
 });
+
+test('an explicit flush does not send before the write has landed', async () => {
+  const order: string[] = [];
+  const pendingWrites: Array<() => void> = [];
+  let holding = true;
+  const releaseWrites = () => {
+    order.push('persisted');
+    holding = false;
+    while (pendingWrites.length) pendingWrites.shift()!();
+  };
+  const slowStorage: SyncStorage = {
+    getItem: () => null,
+    setItem: () =>
+      holding
+        ? new Promise<void>((resolve) => {
+            pendingWrites.push(resolve);
+          })
+        : Promise.resolve(),
+    removeItem: () => undefined
+  };
+  const adapter: SyncAdapter = {
+    pull: async () => ({}),
+    push: async () => {
+      order.push('pushed');
+      return {};
+    }
+  };
+  const store = create(
+    (set) => ({
+      count: 0,
+      increment() {
+        set(() => {
+          this.count += 1;
+        });
+      }
+    }),
+    { middlewares: [sync({ name: 'durable', storage: slowStorage, adapter })] }
+  );
+  await nextTick();
+
+  store.getState().increment();
+  const flushing = getSyncApi(store).flush();
+  await nextTick();
+
+  // The write is still outstanding, so nothing may have reached the remote.
+  expect(order).toEqual([]);
+
+  releaseWrites();
+  await flushing;
+  expect(order).toEqual(['persisted', 'pushed']);
+  store.destroy();
+});

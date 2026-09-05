@@ -116,11 +116,18 @@ export const createIndexedDbSyncStorage = ({
     const transaction = opened.transaction(storeName, mode);
     const result = request(run(transaction.objectStore(storeName)));
     return new Promise<T>((resolve, reject) => {
+      let value: T;
+      // A request can succeed and its transaction still abort afterwards,
+      // which undoes the write. Resolving on the request would report a
+      // durable write that never happened, so completion is the boundary.
+      transaction.oncomplete = () => resolve(value);
       transaction.onerror = () =>
         reject(transaction.error ?? new Error('IndexedDB transaction failed'));
       transaction.onabort = () =>
         reject(transaction.error ?? new Error('IndexedDB transaction aborted'));
-      result.then(resolve, reject);
+      result.then((resolved) => {
+        value = resolved;
+      }, reject);
     });
   };
 
