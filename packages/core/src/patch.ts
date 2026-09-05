@@ -39,19 +39,55 @@ export type Patch = {
 export type Patches = Patch[];
 
 /**
- * Values a patch path may traverse: arrays, and ordinary objects.
+ * `0`, `1`, `2`… — a position in a sequence, not a property that looks like
+ * one. The ceiling is the language's: an array cannot hold an index at
+ * `2 ** 32 - 1`, so that and anything above it are ordinary keys.
  *
- * Ordinary means "carries its contents in properties". An object with a
- * prototype of its own is included, because that is ordinary Coaction state --
- * a slice, a class instance, anything built with `Object.create`. What is
- * excluded keeps its contents somewhere a property path cannot reach: a `Map`,
- * a `Set`, a `Date`, a typed array. Those are leaves, replaced whole.
+ * One definition, because the draft, the applier and the diff have to agree
+ * about which keys mean "position" or they describe different arrays.
  */
-const opaqueKinds = [Map, Set, WeakMap, WeakSet, Date, RegExp, Promise];
+const maxArrayIndex = 2 ** 32 - 2;
 
+export const asArrayIndex = (key: PropertyKey) => {
+  if (typeof key === 'number') {
+    return Number.isInteger(key) && key >= 0 && key <= maxArrayIndex
+      ? key
+      : undefined;
+  }
+  if (typeof key !== 'string' || !/^(0|[1-9]\d*)$/.test(key)) return undefined;
+  const index = Number(key);
+  return index <= maxArrayIndex ? index : undefined;
+};
+
+/**
+ * Values a patch path may traverse: arrays, and objects made of nothing but
+ * properties.
+ *
+ * "Nothing but properties" means the whole prototype chain is plain — so an
+ * object built with `Object.create` over a plain prototype is included, since
+ * that is ordinary Coaction state. Anything a constructor built is not: a
+ * `Map` keeps its entries in internal slots, a `URL` in private fields, an
+ * `Error` in non-enumerable properties its prototype expects. Copying one by
+ * its properties produces something that is no longer that thing, so a patch
+ * does not describe its interior and it is replaced whole instead.
+ *
+ * Deliberately narrow. A boundary that can be stated in a sentence is one that
+ * cannot silently corrupt state, which matters more here than covering every
+ * shape JavaScript can express.
+ */
 export const isPatchTraversable = (value: unknown): value is object => {
   if (Array.isArray(value)) return true;
   if (typeof value !== 'object' || value === null) return false;
-  if (ArrayBuffer.isView(value) || value instanceof ArrayBuffer) return false;
-  return !opaqueKinds.some((kind) => value instanceof kind);
+  let prototype: unknown = Object.getPrototypeOf(value);
+  while (prototype !== null) {
+    if (prototype === Object.prototype) return true;
+    if (
+      typeof prototype !== 'object' ||
+      Object.getOwnPropertyDescriptor(prototype, 'constructor') !== undefined
+    ) {
+      return false;
+    }
+    prototype = Object.getPrototypeOf(prototype);
+  }
+  return true;
 };

@@ -1,3 +1,46 @@
+test('an object built over a plain prototype is ordinary state', () => {
+  // `Object.create` over a plain object is made of nothing but properties, so a
+  // path reaches into it. A class instance is not: its prototype belongs to a
+  // constructor, and copying it by its properties makes something else.
+  const proto = { inherited: 1 };
+  const held = Object.create(proto) as { own: number; inherited: number };
+  held.own = 1;
+  const state = { held };
+  const next = applyPatchesTo(state, [
+    { op: 'replace', path: ['held', 'own'], value: 2 }
+  ]);
+  expect(next.held.own).toBe(2);
+  expect(next.held.inherited).toBe(1);
+  expect(Object.getPrototypeOf(next.held)).toBe(proto);
+  expect(state.held.own).toBe(1);
+
+  class Node {
+    x = 1;
+  }
+  expect(() =>
+    applyPatchesTo({ held: new Node() }, [
+      { op: 'replace', path: ['held', 'x'], value: 2 }
+    ])
+  ).toThrow(/cannot describe the inside of/);
+});
+
+test('a non-enumerable property survives a patch', () => {
+  const state = { count: 1 } as { count: number; hidden?: number };
+  Object.defineProperty(state, 'hidden', {
+    value: 7,
+    enumerable: false,
+    writable: true,
+    configurable: true
+  });
+  const next = applyPatchesTo(state, [
+    { op: 'replace', path: ['count'], value: 2 }
+  ]);
+  // Assignment copies only enumerable properties, which drops state Coaction
+  // keeps.
+  expect(next.hidden).toBe(7);
+  expect(Object.keys(next)).toEqual(['count']);
+});
+
 import { apply as applyWithMutative } from 'mutative';
 import { applyPatchesTo } from '../src/applyPatch';
 import type { Patches } from '../src/patch';
@@ -150,19 +193,6 @@ test('a patch cannot describe the inside of a value with internal slots', () => 
       ])
     ).toThrow(/cannot describe the inside of/);
   }
-});
-
-test('an object with a prototype of its own is ordinary state', () => {
-  class Node {
-    x = 1;
-  }
-  const state = { held: new Node() };
-  const next = applyPatchesTo(state, [
-    { op: 'replace', path: ['held', 'x'], value: 2 }
-  ]);
-  expect(next.held.x).toBe(2);
-  expect(next.held).toBeInstanceOf(Node);
-  expect(state.held.x).toBe(1);
 });
 
 test('a non-plain container can still be replaced whole', () => {

@@ -1,4 +1,4 @@
-import { isPatchTraversable } from './patch';
+import { asArrayIndex, isPatchTraversable } from './patch';
 import type { Patch, Patches } from './patch';
 import { isUnsafeKey } from './utils';
 
@@ -51,18 +51,6 @@ export class UnsupportedPatchContainerError extends TypeError {
 }
 
 /**
- * `0`, `1`, `2`... -- a position in a sequence. A property that merely looks
- * numeric, or one that does not, is an ordinary key: an array can carry both.
- */
-const asArrayIndex = (key: PropertyKey) => {
-  if (typeof key === 'number') {
-    return Number.isInteger(key) && key >= 0 ? key : undefined;
-  }
-  if (typeof key !== 'string' || !/^(0|[1-9]\d*)$/.test(key)) return undefined;
-  return Number(key);
-};
-
-/**
  * Copy without losing what the value was: descriptors rather than a spread or
  * `slice`, so a sparse array keeps its holes, an array keeps the properties
  * hung off it, and a null-prototype object stays one.
@@ -79,13 +67,28 @@ const shallowCopy = (value: unknown, path: readonly PropertyKey[]) => {
     Object.defineProperties(copy, Object.getOwnPropertyDescriptors(source));
     return copy as unknown as Record<PropertyKey, unknown>;
   }
-  // Assignment rather than descriptors, so an accessor is read once and becomes
-  // a value: a computed getter belongs to the state it was defined on, and
-  // carrying it across would leave the copy reading from the original.
-  return Object.assign(
-    Object.create(Object.getPrototypeOf(source)),
-    source
-  ) as Record<PropertyKey, unknown>;
+  const copy = Object.create(Object.getPrototypeOf(source)) as Record<
+    PropertyKey,
+    unknown
+  >;
+  for (const key of Reflect.ownKeys(source)) {
+    const descriptor = Object.getOwnPropertyDescriptor(source, key)!;
+    if ('get' in descriptor || 'set' in descriptor) {
+      // Read an accessor once and store what it gave: carrying the accessor
+      // across would leave the copy reading from the original.
+      Object.defineProperty(copy, key, {
+        value: Reflect.get(source, key),
+        writable: true,
+        enumerable: descriptor.enumerable,
+        configurable: true
+      });
+      continue;
+    }
+    // Descriptors rather than assignment: a non-enumerable property is state
+    // Coaction keeps, and assignment drops it.
+    Object.defineProperty(copy, key, descriptor);
+  }
+  return copy;
 };
 
 /**

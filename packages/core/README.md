@@ -68,23 +68,31 @@ import { defineExternalStoreAdapter } from 'coaction/adapter';
 ### What a draft permits
 
 `set()` hands you a draft: write it like a plain object and Coaction publishes
-an immutable result. It covers the tree a patch can describe — plain objects and
-dense arrays, including holes and any ordinary or symbol properties an array
-carries — and refuses what it cannot describe honestly:
+an immutable result. What it reaches into is deliberately narrow — arrays, and
+objects made of nothing but properties, which includes anything built with
+`Object.create` over a plain prototype. Array holes and the ordinary and symbol
+properties an array carries survive, and so do non-enumerable properties.
 
-- A `Map`, `Set`, `Date`, typed array or similar read through a draft. These
-  keep their contents somewhere a property path cannot reach, so editing one
-  changes the state with nothing to record. Read it from the state and assign a
-  replacement. An object with a prototype of its own is not in this group: it
-  carries its contents in properties, so it is ordinary state and a draft
-  reaches into it normally.
+Everything else is a leaf: replaced whole, never edited in place. A draft
+refuses what it cannot describe honestly, each with
+`UnsupportedDraftOperationError`:
+
+- Reading a value a constructor built — a `Map`, `Set`, `Date`, typed array,
+  `URL`, `Error`, or an instance of your own class. These keep state a property
+  copy would not carry, so editing one changes the store with nothing recorded.
+  Read it from the state and assign a replacement.
 - `Object.defineProperty`, `Object.setPrototypeOf`, `Object.preventExtensions`.
   Build the value you want and assign it.
+- A path that runs back through an object it already passed. A patch names a
+  path, so a cycle has no transition to describe.
 - Any write after the draft is finalized. Its result is already the published
   state, so a late write would change the store with no commit behind it.
 
-Each of these throws `UnsupportedDraftOperationError` rather than quietly
-producing a state no patch describes.
+One boundary is a contract rather than a check. A patch names a path, so it
+cannot say that two paths hold the same object: writing through one of two
+aliases changes that position and leaves the other holding the old value.
+Finding every alias would mean scanning the whole state on every write, so
+Coaction does not — replace the whole branch when a shared object has to change.
 
 ### Transitions
 

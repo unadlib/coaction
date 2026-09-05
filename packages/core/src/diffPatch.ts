@@ -1,4 +1,4 @@
-import { isPatchTraversable } from './patch';
+import { asArrayIndex, isPatchTraversable } from './patch';
 import type { Patch, Patches } from './patch';
 
 /**
@@ -13,10 +13,6 @@ import type { Patch, Patches } from './patch';
  * The patch domain is the one `applyPatch` traverses, so anything that is not a
  * plain object or an array is compared by identity and replaced whole.
  */
-/** `0`, `1`, `2`... A property that merely looks numeric is an ordinary key. */
-const isArrayIndex = (key: PropertyKey) =>
-  typeof key === 'string' && /^(0|[1-9]\d*)$/.test(key);
-
 const replaceAt = (
   path: PropertyKey[],
   previous: unknown,
@@ -46,6 +42,29 @@ const walk = (
   }
 
   if (Array.isArray(previous) && Array.isArray(next)) {
+    // A hole and an explicit `undefined` read the same but are not the same
+    // array, and the difference cannot be described by an index patch: `add`
+    // there means insert. Any change in which indexes exist is reported as a
+    // replacement of the array.
+    const holesMoved = (): boolean => {
+      const length = Math.max(previous.length, next.length);
+      for (let index = 0; index < length; index += 1) {
+        const had = Object.prototype.hasOwnProperty.call(previous, index);
+        const has = Object.prototype.hasOwnProperty.call(next, index);
+        if (had !== has && index < Math.min(previous.length, next.length)) {
+          return true;
+        }
+        if (!has && index < next.length && index >= previous.length)
+          return true;
+        if (!had && index < previous.length && index >= next.length)
+          return true;
+      }
+      return false;
+    };
+    if (holesMoved()) {
+      replaceAt(path, previous, next, patches, inversePatches);
+      return;
+    }
     const shared = Math.min(previous.length, next.length);
     for (let index = 0; index < shared; index += 1) {
       walk(
@@ -83,7 +102,7 @@ const walk = (
   // carry ordinary and symbol properties, and losing them is a change.
   const structural = Array.isArray(previous);
   const skip = (key: PropertyKey) =>
-    structural && (key === 'length' || isArrayIndex(key));
+    structural && (key === 'length' || asArrayIndex(key) !== undefined);
   for (const key of Reflect.ownKeys(before)) {
     if (skip(key)) continue;
     if (!(key in after)) {

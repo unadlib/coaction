@@ -1,5 +1,5 @@
 import { diffPatches } from './diffPatch';
-import { isPatchTraversable } from './patch';
+import { asArrayIndex, isPatchTraversable } from './patch';
 import type { Patches } from './patch';
 
 /**
@@ -42,25 +42,14 @@ type Node = {
   children: Map<PropertyKey, Node>;
   proxy: unknown;
   root: Root;
+  /** Set when this path runs back through an object it already passed. */
+  cyclic: boolean;
 };
 
-type Root = { patches: Patches; inversePatches: Patches; finalized: boolean };
-
-/**
- * `0`, `1`, `2`… — a position in a sequence, not a property that looks like
- * one. The ceiling is the language's: `2 ** 32 - 1` is one past the largest
- * index an array can hold, so it and anything above it are ordinary keys.
- */
-const maxArrayIndex = 2 ** 32 - 2;
-const asArrayIndex = (key: PropertyKey) => {
-  if (typeof key === 'number') {
-    return Number.isInteger(key) && key >= 0 && key <= maxArrayIndex
-      ? key
-      : undefined;
-  }
-  if (typeof key !== 'string' || !/^(0|[1-9]\d*)$/.test(key)) return undefined;
-  const index = Number(key);
-  return index <= maxArrayIndex ? index : undefined;
+type Root = {
+  patches: Patches;
+  inversePatches: Patches;
+  finalized: boolean;
 };
 
 const mutatingArrayMethods = new Set([
@@ -85,19 +74,32 @@ const mutatingArrayMethods = new Set([
  */
 const shallowCopy = (base: Record<PropertyKey, unknown>) => {
   if (Array.isArray(base)) {
-    // Descriptors, so holes survive and the ordinary and symbol properties an
-    // array can carry come with it.
     const copy: unknown[] = [];
     Object.defineProperties(copy, Object.getOwnPropertyDescriptors(base));
     return copy as unknown as Record<PropertyKey, unknown>;
   }
-  // Assignment rather than descriptors, so an accessor is read once and becomes
-  // a value: a computed getter belongs to the state it was defined on, and
-  // carrying it across would leave the copy reading from the original.
-  return Object.assign(
-    Object.create(Object.getPrototypeOf(base)),
-    base
-  ) as Record<PropertyKey, unknown>;
+  const copy = Object.create(Object.getPrototypeOf(base)) as Record<
+    PropertyKey,
+    unknown
+  >;
+  for (const key of Reflect.ownKeys(base)) {
+    const descriptor = Object.getOwnPropertyDescriptor(base, key)!;
+    if ('get' in descriptor || 'set' in descriptor) {
+      // Read an accessor once and store what it gave: carrying the accessor
+      // across would leave the copy reading from the original.
+      Object.defineProperty(copy, key, {
+        value: Reflect.get(base, key),
+        writable: true,
+        enumerable: descriptor.enumerable,
+        configurable: true
+      });
+      continue;
+    }
+    // Descriptors, not assignment: a non-enumerable property is state Coaction
+    // keeps, and assignment drops it.
+    Object.defineProperty(copy, key, descriptor);
+  }
+  return copy;
 };
 
 const assertActive = (root: Root) => {
@@ -129,8 +131,23 @@ const pathOf = (node: Node): PropertyKey[] => {
   return path;
 };
 
+/** Whether `base` is already on this node's path back to the root. */
+const isAncestor = (node: Node | null, base: object) => {
+  let current = node;
+  while (current) {
+    if (current.base === base) return true;
+    current = current.parent;
+  }
+  return false;
+};
+
 const ensureCopy = (node: Node): Record<PropertyKey, unknown> => {
   if (node.copy) return node.copy;
+  if (node.cyclic) {
+    throw new UnsupportedDraftOperationError(
+      'This path runs back through an object it already passed. A patch names a path, so a cycle has no transition to describe. Replace the whole branch instead.'
+    );
+  }
   node.copy = shallowCopy(node.base);
   if (node.parent) {
     ensureCopy(node.parent)[node.key as PropertyKey] = node.copy;
@@ -165,7 +182,9 @@ const childNode = (node: Node, key: PropertyKey, value: object): Node => {
 const runArrayMethod = (node: Node, method: string) =>
   function (this: unknown, ...args: unknown[]) {
     assertActive(node.root);
-    const before = (current(node) as unknown as unknown[]).slice();
+    const before = shallowCopy(
+      current(node) as Record<PropertyKey, unknown>
+    ) as unknown as unknown[];
     const copy = ensureCopy(node) as unknown as unknown[];
     const result = (Array.prototype as never as Record<string, Function>)[
       method
@@ -175,7 +194,12 @@ const runArrayMethod = (node: Node, method: string) =>
     );
     node.children.clear();
     const path = pathOf(node);
-    const { patches, inversePatches } = diffPatches(before, copy.slice());
+    const { patches, inversePatches } = diffPatches(
+      before,
+      shallowCopy(
+        copy as unknown as Record<PropertyKey, unknown>
+      ) as unknown as unknown[]
+    );
     for (const patch of patches) {
       node.root.patches.push({
         ...patch,
@@ -237,7 +261,11 @@ const reshapeArray = (node: Node, write: (array: unknown[]) => void) => {
   write(copy);
   node.children.clear();
   const path = pathOf(node);
-  node.root.patches.push({ op: 'replace', path, value: copy.slice() });
+  node.root.patches.push({
+    op: 'replace',
+    path,
+    value: shallowCopy(copy as unknown as Record<PropertyKey, unknown>)
+  });
   node.root.inversePatches.unshift({ op: 'replace', path, value: previous });
   return true;
 };
@@ -277,7 +305,8 @@ const createNode = (
     key,
     children: new Map(),
     proxy: undefined,
-    root
+    root,
+    cyclic: isAncestor(parent, base)
   };
   const refuse = (what: string) => (): never => {
     throw new UnsupportedDraftOperationError(
@@ -424,7 +453,11 @@ export const isCoactionDraft = (value: unknown) => Boolean(getNode(value));
 export const openDraft = <T extends object>(
   base: T
 ): [draft: T, finalize: () => [T, Patches, Patches]] => {
-  const root: Root = { patches: [], inversePatches: [], finalized: false };
+  const root: Root = {
+    patches: [],
+    inversePatches: [],
+    finalized: false
+  };
   const node = createNode(
     base as Record<PropertyKey, unknown>,
     null,

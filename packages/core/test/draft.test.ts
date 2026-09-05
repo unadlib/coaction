@@ -259,3 +259,86 @@ test('a draft cannot ride into the published state inside a container', () => {
   });
   expect((spread.state as any).copy.profile.name).toBe('a');
 });
+
+test('an array keeps its own properties through a shape change', () => {
+  const list: number[] & { foo?: string } = [];
+  list.length = 3;
+  list[0] = 1;
+  list[2] = 3;
+  list.foo = 'hello';
+  const marker = Symbol('marker');
+  (list as never as Record<symbol, string>)[marker] = 'kept';
+
+  const base = { list };
+  const { state, patches, inversePatches } = scopeDraft(base, (draft) => {
+    draft.list[1] = 2;
+  });
+  // Snapshotting the array with `slice` would have dropped both of these.
+  const applied = applyPatchesTo(base, patches) as typeof base;
+  expect(applied.list.foo).toBe('hello');
+  expect((applied.list as never as Record<symbol, string>)[marker]).toBe(
+    'kept'
+  );
+  expect(applied).toEqual(state);
+  expect(applyPatchesTo(state, inversePatches)).toEqual(base);
+});
+
+test('a hole and an explicit undefined are not the same array', () => {
+  const base = { xs: [, 2] as unknown[] };
+  const { state, patches, inversePatches } = scopeDraft(base, (draft) => {
+    draft.xs.reverse();
+  });
+  const applied = applyPatchesTo(base, patches) as typeof base;
+  expect(0 in applied.xs).toBe(0 in state.xs);
+  expect(1 in applied.xs).toBe(1 in state.xs);
+  expect(applyPatchesTo(state, inversePatches)).toEqual(base);
+  expect(0 in (applyPatchesTo(state, inversePatches) as typeof base).xs).toBe(
+    false
+  );
+});
+
+test('a non-enumerable property survives a draft write', () => {
+  const base = { count: 1 } as { count: number; hidden?: number };
+  Object.defineProperty(base, 'hidden', {
+    value: 7,
+    enumerable: false,
+    writable: true,
+    configurable: true
+  });
+  const { state } = scopeDraft(base, (draft) => {
+    draft.count = 2;
+  });
+  expect(state.hidden).toBe(7);
+  expect(Object.keys(state)).toEqual(['count']);
+});
+
+test('only objects made of properties are reached into', () => {
+  // `Object.create` over a plain prototype is ordinary state.
+  const proto = { inherited: 1 };
+  const held = Object.create(proto) as { own: number };
+  held.own = 1;
+  const { state } = scopeDraft({ held }, (draft) => {
+    draft.held.own = 2;
+  });
+  expect(state.held.own).toBe(2);
+  expect(Object.getPrototypeOf(state.held)).toBe(proto);
+
+  // Anything a constructor built keeps state a property copy would not carry.
+  for (const built of [new URL('https://a.test/p'), new Error('boom')]) {
+    expect(() =>
+      scopeDraft({ built }, (draft: any) => {
+        void draft.built;
+      })
+    ).toThrow(/cannot describe a change inside one/);
+  }
+});
+
+test('a cycle has no transition to describe', () => {
+  const base: { v: number; self?: unknown } = { v: 1 };
+  base.self = base;
+  expect(() =>
+    scopeDraft(base, (draft: any) => {
+      draft.self.v = 2;
+    })
+  ).toThrow(/runs back through an object it already passed/);
+});
