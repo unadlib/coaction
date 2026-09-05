@@ -1,5 +1,5 @@
 import type { Store } from './interface';
-import { apply as applyWithMutative } from 'mutative';
+import { applyPatchesTo } from './applyPatch';
 import type { Patches } from './patch';
 import {
   assertSafePatches,
@@ -131,10 +131,10 @@ export const applyMutableAdapterPatches = (
 ) => {
   assertSafePatches(patches, 'mutable adapter apply()');
   const patchBase = baseState === publicState ? rawState : baseState;
-  const nextState = applyWithMutative(
+  const nextState = applyPatchesTo(
     toMutableAdapterSnapshot(patchBase) as Record<PropertyKey, unknown>,
     patches
-  ) as Record<PropertyKey, unknown>;
+  );
   validateState?.(nextState);
   replaceMutableAdapterState(rawState, mutableState, publicState, nextState);
 };

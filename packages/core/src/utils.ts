@@ -1,4 +1,4 @@
-import { apply as applyWithMutative } from 'mutative';
+import { applyPatchesTo } from './applyPatch';
 import type { Patches } from './patch';
 import type { MiddlewareStore } from './interface';
 
@@ -630,7 +630,7 @@ export const createInversePatches = <T>(
         value: sanitizeReplacementState(target.value)
       } as Patches[number]);
     }
-    current = applyWithMutative(current as any, [patch] as Patches);
+    current = applyPatchesTo(current, [patch] as Patches);
   }
   return inverse;
 };
@@ -643,7 +643,7 @@ export const createInversePatches = <T>(
  * commit -- needs the intermediate states without the store ever showing them.
  */
 export const applyPatches = <T>(state: T, patches: Patches): T =>
-  applyWithMutative(state as any, patches) as T;
+  applyPatchesTo(state, patches);
 
 export const sanitizeInitialStateValue = <T>(
   source: T,

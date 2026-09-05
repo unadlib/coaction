@@ -1,4 +1,4 @@
-import { apply as applyWithMutative } from 'mutative';
+import { applyPatchesTo } from './applyPatch';
 import type { Patches } from './patch';
 import { applyMiddlewares } from './applyMiddlewares';
 import { invalidateReactivePaths } from './reactivePath';
@@ -171,7 +171,7 @@ export const createStore = <T extends CreateState>(
         validateReplacementSource?.(baseState);
       }
       const appliedState = safePatches
-        ? (applyWithMutative(baseState, safePatches) as T)
+        ? applyPatchesTo(baseState, safePatches)
         : baseState;
       const nextState = prepared
         ? appliedState

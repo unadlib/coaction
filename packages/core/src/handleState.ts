@@ -1,9 +1,5 @@
-import {
-  apply as applyWithMutative,
-  type Draft,
-  create as createWithMutative,
-  isDraft
-} from 'mutative';
+import { type Draft, create as createWithMutative, isDraft } from 'mutative';
+import { applyPatchesTo } from './applyPatch';
 import type { Patches } from './patch';
 import type {
   ClientStoreOptions,
@@ -269,7 +265,7 @@ export const handleState = <T extends CreateState>(
                 patches,
                 snapshotCache!
               );
-              const nextSnapshot = applyWithMutative(
+              const nextSnapshot = applyPatchesTo(
                 snapshot as T,
                 snapshotPatches
               );

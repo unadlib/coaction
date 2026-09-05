@@ -1,0 +1,88 @@
+import { apply as applyWithMutative } from 'mutative';
+import { applyPatchesTo } from '../src/applyPatch';
+import type { Patches } from '../src/patch';
+
+/**
+ * The applier replaces one that was in use, so the test that matters is
+ * whether they agree. Every case runs through both.
+ */
+const agrees = (state: unknown, patches: Patches) => {
+  const mine = applyPatchesTo(state, patches);
+  const theirs = applyWithMutative(state as never, patches as never);
+  expect(mine).toEqual(theirs);
+  return mine;
+};
+
+const base = () => ({
+  count: 0,
+  user: { name: 'Michael', tags: ['a', 'b'] },
+  items: [{ id: 'x' }, { id: 'y' }, { id: 'z' }],
+  flags: { on: true }
+});
+
+test('replacing, adding and removing object properties', () => {
+  agrees(base(), [{ op: 'replace', path: ['count'], value: 5 }]);
+  agrees(base(), [{ op: 'replace', path: ['user', 'name'], value: 'Lin' }]);
+  agrees(base(), [{ op: 'add', path: ['flags', 'off'], value: false }]);
+  agrees(base(), [{ op: 'remove', path: ['flags', 'on'] }]);
+});
+
+test('array insert, remove and replace shift the entries after them', () => {
+  agrees(base(), [{ op: 'add', path: ['items', 0], value: { id: 'w' } }]);
+  agrees(base(), [{ op: 'add', path: ['items', 3], value: { id: 'w' } }]);
+  agrees(base(), [{ op: 'remove', path: ['items', 1] }]);
+  agrees(base(), [{ op: 'replace', path: ['items', 2], value: { id: 'q' } }]);
+  agrees(base(), [{ op: 'replace', path: ['user', 'tags', 0], value: 'c' }]);
+});
+
+test('a truncating length write drops the entries past it', () => {
+  const next = agrees(base(), [
+    { op: 'replace', path: ['items', 'length'], value: 1 }
+  ]) as ReturnType<typeof base>;
+  expect(next.items).toHaveLength(1);
+  expect(next.items[0].id).toBe('x');
+});
+
+test('several patches apply in order', () => {
+  agrees(base(), [
+    { op: 'replace', path: ['count'], value: 1 },
+    { op: 'add', path: ['items', 0], value: { id: 'w' } },
+    { op: 'remove', path: ['items', 2] },
+    { op: 'replace', path: ['user', 'name'], value: 'Lin' }
+  ]);
+});
+
+test('replacing the root', () => {
+  agrees(base(), [{ op: 'replace', path: [], value: { count: 9 } }]);
+});
+
+test('an RFC 6901 pointer names the same place as its array form', () => {
+  const pointer = applyPatchesTo(base(), [
+    { op: 'replace', path: '/user/name', value: 'Lin' }
+  ]);
+  const array = applyPatchesTo(base(), [
+    { op: 'replace', path: ['user', 'name'], value: 'Lin' }
+  ]);
+  expect(pointer).toEqual(array);
+});
+
+test('untouched branches keep their identity', () => {
+  const state = base();
+  const next = applyPatchesTo(state, [
+    { op: 'replace', path: ['user', 'name'], value: 'Lin' }
+  ]);
+  expect(next).not.toBe(state);
+  expect(next.user).not.toBe(state.user);
+  // Nothing on this path changed, so nothing about it should have been copied.
+  expect(next.items).toBe(state.items);
+  expect(next.flags).toBe(state.flags);
+  expect(next.user.tags).toBe(state.user.tags);
+});
+
+test('an unsafe path segment is refused', () => {
+  expect(() =>
+    applyPatchesTo(base(), [
+      { op: 'replace', path: ['__proto__', 'polluted'], value: 1 }
+    ])
+  ).toThrow(/Unsafe patch path/);
+});
