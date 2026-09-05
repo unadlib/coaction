@@ -2,6 +2,7 @@ import { endBatch, getActiveSub, signal, startBatch } from 'alien-signals';
 import type { Patches } from 'mutative';
 import type { CreateState } from './interface';
 import type { Internal } from './internal';
+import { sharedRegistry } from './sharedRegistry';
 
 export type ReactivePath = readonly PropertyKey[];
 
@@ -30,7 +31,11 @@ type ReactiveSubscriberState = {
   next?: Map<ReactivePathNode, number>;
 };
 
-const reactiveSubscribers = new WeakMap<object, ReactiveSubscriberState>();
+// Shared across entry points; see sharedRegistry.ts.
+const reactiveSubscribers = sharedRegistry.reactiveSubscribers as WeakMap<
+  object,
+  ReactiveSubscriberState
+>;
 
 const createNode = (
   owner: Internal<any>,

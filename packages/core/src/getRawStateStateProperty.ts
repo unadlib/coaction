@@ -6,6 +6,7 @@ import {
   indexImmutableStateSnapshot,
   isImmutableStateObject
 } from './immutableState';
+import { sharedRegistry } from './sharedRegistry';
 import { sanitizeInitialStateValue } from './utils';
 import {
   getReactivePathVersion,
@@ -27,9 +28,14 @@ type ReactivePathMeta = {
   paths: ReactivePath[];
 };
 
-const publicStatePathMeta = new WeakMap<object, ReactivePathMeta>();
+// Shared across entry points: a value created by `coaction/local` is read
+// through `coaction/adapter`, and a per-bundle map would not recognise it.
+const publicStatePathMeta = sharedRegistry.publicStatePathMeta as WeakMap<
+  object,
+  ReactivePathMeta
+>;
 /** Reverse of the readonly proxy cache, so a proxy can hand back its source. */
-const readonlyProxySource = new WeakMap<object, object>();
+const readonlyProxySource = sharedRegistry.readonlyProxySource;
 
 const areReactivePathsEqual = (left: ReactivePath, right: ReactivePath) =>
   left.length === right.length &&
@@ -186,10 +192,10 @@ const assertImmutableStateMutationAllowed = <T extends CreateState>(
 // Key the cache by the immutable source object so obsolete snapshots and their
 // dynamic dictionary paths can be reclaimed together, and so one source object
 // keeps one proxy no matter how many paths reach it.
-const readonlyProxyCache = new WeakMap<
+const readonlyProxyCache = sharedRegistry.readonlyProxyCache as WeakMap<
   Internal<any>,
   WeakMap<object, object>
->();
+>;
 
 const getReadonlyProxyCache = <T extends CreateState>(
   internal: Internal<T>

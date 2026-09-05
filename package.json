@@ -33,7 +33,7 @@
     "package:quality": "node ./scripts/check-package-quality.mjs",
     "package:size": "node ./scripts/check-package-size.mjs && node ./scripts/check-core-entry-isolation.mjs && node ./scripts/check-react-entry-isolation.mjs",
     "package:check": "pnpm build && pnpm package:quality && pnpm package:size",
-    "check": "turbo run quality && pnpm typecheck && pnpm build && pnpm package:quality && pnpm package:size && pnpm test:react-compiler && pnpm test",
+    "check": "turbo run quality && pnpm typecheck && pnpm build && pnpm package:quality && pnpm package:size && pnpm test:entries && pnpm test:react-compiler && pnpm test",
     "test": "turbo run test && pnpm run test:e2e",
     "test:e2e": "vitest run examples/e2e/test",
     "test:e2e:browser": "playwright test -c playwright.config.ts",
@@ -50,7 +50,8 @@
     "benchmark": "NODE_ENV='production' tsx ./scripts/benchmark.ts",
     "docs:api": "node ./scripts/generate-api-docs.js",
     "docs:api:check": "pnpm run docs:api && node ./scripts/check-clean-path.js docs/api/core",
-    "prepare": "husky"
+    "prepare": "husky",
+    "test:entries": "node ./scripts/check-entry-runtime-interop.mjs"
   },
   "devDependencies": {
     "@actions/exec": "^3.0.0",
