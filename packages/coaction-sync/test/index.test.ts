@@ -1402,3 +1402,110 @@ test('a runtime without localStorage is refused rather than silently non-durable
     });
   }
 });
+
+test('a push that answers with no patches still invalidates an in-flight pull', async () => {
+  let releasePull!: (result: SyncPullResult) => void;
+  let pulls = 0;
+  const adapter: SyncAdapter = {
+    pull: () => {
+      pulls += 1;
+      if (pulls > 1) return Promise.resolve({});
+      return new Promise<SyncPullResult>((resolve) => {
+        releasePull = resolve;
+      });
+    },
+    // What every built-in CRUD adapter returns.
+    push: async () => ({})
+  };
+  const store = create<{ count: number; bump: () => void }>(
+    (set) => ({
+      count: 0,
+      bump() {
+        set(() => {
+          this.count += 1;
+        });
+      }
+    }),
+    {
+      middlewares: [
+        sync({ name: 'epoch', storage: createMemoryStorage(), adapter })
+      ]
+    }
+  );
+  await nextTick();
+
+  const pulled = getSyncApi(store).pull();
+  await nextTick();
+
+  store.getState().bump();
+  await nextTick();
+  expect(store.getState().count).toBe(1);
+  expect(getSyncApi(store).getPending()).toHaveLength(0);
+
+  // The pull read the server before the push landed there.
+  releasePull({ patches: [{ op: 'replace', path: ['count'], value: 0 }] });
+  await pulled;
+  await nextTick();
+
+  expect(store.getState().count).toBe(1);
+  store.destroy();
+});
+
+test('a subscription that has arrived invalidates a pull returning behind it', async () => {
+  let releasePull!: (result: SyncPullResult) => void;
+  let pulls = 0;
+  let emit: ((update: SyncPullResult) => void) | undefined;
+  let releaseSubscriptionWrite!: () => void;
+  const gate = new Promise<void>((resolve) => {
+    releaseSubscriptionWrite = resolve;
+  });
+  let gated = false;
+  const storage = createMemoryStorage();
+  const adapter: SyncAdapter = {
+    pull: () => {
+      pulls += 1;
+      if (pulls > 1) return Promise.resolve({});
+      return new Promise<SyncPullResult>((resolve) => {
+        releasePull = resolve;
+      });
+    },
+    push: async () => ({}),
+    subscribe: (listener) => {
+      emit = listener;
+    }
+  };
+  const store = create<{ count: number }>(() => ({ count: 0 }), {
+    middlewares: [
+      sync({
+        name: 'toctou',
+        storage: {
+          ...storage,
+          setItem: async (name, value) => {
+            // Hold the subscription's checkpoint so its apply is still in the
+            // lane when the stale pull returns.
+            if (gated) await gate;
+            return storage.setItem(name, value);
+          }
+        },
+        adapter
+      })
+    ]
+  });
+  await nextTick();
+
+  const pulled = getSyncApi(store).pull();
+  await nextTick();
+
+  gated = true;
+  emit!({ patches: [{ op: 'replace', path: ['count'], value: 5 }] });
+  await nextTick();
+
+  // The subscription has arrived but its apply has not finished.
+  releasePull({ patches: [{ op: 'replace', path: ['count'], value: 0 }] });
+  releaseSubscriptionWrite();
+  await pulled;
+  await nextTick();
+
+  expect(store.getState().count).toBe(5);
+  store.destroy();
+});

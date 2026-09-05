@@ -357,10 +357,10 @@ export const sync = <T extends object>({
     let writeQueue = Promise.resolve();
     let pullPromise: Promise<void> | undefined;
     let remoteLane = Promise.resolve();
-    // Counts remote results actually applied. A request captures it at the
-    // start and compares on return: a change means the state it was computed
+    // Counts remote facts that have arrived. A request captures it when it is
+    // sent and compares on return: a change means the state it was computed
     // against is gone.
-    let remoteGeneration = 0;
+    let remoteEpoch = 0;
     // A pull that failed is work still owed. Retrying only the flush would
     // report recovery while the remote state was never fetched.
     let pullOwed = false;
@@ -662,21 +662,49 @@ export const sync = <T extends object>({
     /**
      * One lane for every remote result, whatever produced it.
      *
-     * A pull, a push that answers with patches, and a subscription are three
-     * sources writing the same state. Applied independently they interleave --
-     * one rebase reading a working copy another is part-way through replacing
-     * -- and the order the store ends up in is whichever finished last.
-     * Serialising them makes arrival order the only order.
+     * A pull, a push and a subscription are three sources writing the same
+     * state. Applied independently they interleave -- one rebase reading a
+     * working copy another is part-way through replacing -- and the order the
+     * store ends up in is whichever finished last. Serialising them makes
+     * arrival order the only order.
+     */
+    const enqueueRemote = (work: () => Promise<void>) => {
+      remoteLane = remoteLane.catch(() => undefined).then(work);
+      return remoteLane;
+    };
+
+    /**
+     * A remote result the store should take.
+     *
+     * The epoch moves on arrival rather than on application. A fact that has
+     * arrived is a fact whatever is still in flight was computed without, even
+     * if it is still queued behind other work -- counting it only once applied
+     * leaves a window where a pull returning inside it looks current.
      */
     const applyRemote = (result: SyncPullResult) => {
-      remoteLane = remoteLane
-        .catch(() => undefined)
-        .then(async () => {
-          if (destroyed) return;
-          await applyRemoteResult(result);
-          remoteGeneration += 1;
-        });
-      return remoteLane;
+      remoteEpoch += 1;
+      return enqueueRemote(async () => {
+        if (destroyed) return;
+        await applyRemoteResult(result);
+      });
+    };
+
+    /**
+     * A pull's answer, which is only true of the base it was asked about.
+     *
+     * The check runs inside the lane rather than before entering it: between a
+     * check outside and the work it guards, another result can arrive, and the
+     * answer would then be applied over it.
+     */
+    const applyPullResult = async (result: SyncPullResult, epoch: number) => {
+      let applied = false;
+      await enqueueRemote(async () => {
+        if (destroyed || epoch !== remoteEpoch) return;
+        remoteEpoch += 1;
+        await applyRemoteResult(result);
+        applied = true;
+      });
+      return applied;
     };
 
     const doPull = async () => {
@@ -685,13 +713,10 @@ export const sync = <T extends object>({
       setStatus('syncing');
       try {
         for (let attempt = 0; ; attempt += 1) {
-          const generation = remoteGeneration;
+          const epoch = remoteEpoch;
           const result = await adapter.pull({ cursor, revision });
           if (destroyed) return;
-          if (generation === remoteGeneration) {
-            await applyRemote(result);
-            break;
-          }
+          if (await applyPullResult(result, epoch)) break;
           // Something else advanced the remote state while this was in flight.
           // A pull answers "what changed since the cursor I sent", and that
           // cursor has moved, so applying the answer would rewind. Ask again
@@ -758,17 +783,16 @@ export const sync = <T extends object>({
           const ack = new Set(result.ack ?? submitted.map(({ id }) => id));
           declined ||= submitted.some(({ id }) => !ack.has(id));
           outbox = outbox.filter(({ id }) => !ack.has(id));
-          if (result.patches?.length) {
-            await applyRemote({
-              patches: result.patches,
-              cursor: result.cursor,
-              revision: result.revision
-            });
-          } else {
-            cursor = result.cursor ?? cursor;
-            revision = result.revision ?? revision;
-            await persist();
-          }
+          // Every answer from the remote goes through the same lane, patches
+          // or not. A push that reports nothing but success is still the remote
+          // telling this client something it did not know -- and a pull in
+          // flight asked its question before it. Which is exactly what the
+          // built-in CRUD adapters return.
+          await applyRemote({
+            patches: result.patches,
+            cursor: result.cursor,
+            revision: result.revision
+          });
         }
         if (declined) {
           // The remote took some mutations and refused others. Re-sending the
