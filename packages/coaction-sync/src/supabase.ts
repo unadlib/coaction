@@ -24,6 +24,10 @@ export type SupabaseLikeClient = {
 export type SupabaseQueryBuilder = {
   select(columns?: string): SupabaseQueryBuilder;
   insert(values: unknown): SupabaseQueryBuilder;
+  upsert(
+    values: unknown,
+    options?: { onConflict?: string }
+  ): SupabaseQueryBuilder;
   update(values: unknown): SupabaseQueryBuilder;
   delete(): SupabaseQueryBuilder;
   eq(column: string, value: unknown): SupabaseQueryBuilder;
@@ -206,8 +210,16 @@ export const createSupabaseSyncAdapter = <TRecord extends object>({
       };
     },
     create: async (record) => {
+      // Upsert rather than insert: the window between the remote committing a
+      // write and the acknowledgement being persisted is replayed on restart,
+      // and an insert replayed against its own row is a primary key collision
+      // rather than the write succeeding a second time.
       const data = unwrap<TRecord>(
-        await client.from(table).insert(record).select(select).single()
+        await client
+          .from(table)
+          .upsert(record, { onConflict: idColumn })
+          .select(select)
+          .single()
       );
       return (data as TRecord) ?? record;
     },

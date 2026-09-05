@@ -166,12 +166,12 @@
         "maxGzipBytes": 1550
       },
       "dist/supabase.mjs": {
-        "baselineGzipBytes": 4903,
-        "maxGzipBytes": 5400
+        "baselineGzipBytes": 4915,
+        "maxGzipBytes": 5450
       },
       "dist/supabase.js": {
-        "baselineGzipBytes": 4949,
-        "maxGzipBytes": 5450
+        "baselineGzipBytes": 4960,
+        "maxGzipBytes": 5500
       },
       "dist/query.mjs": {
         "baselineGzipBytes": 4092,

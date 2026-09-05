@@ -49,7 +49,7 @@ const createFakeSupabase = (
 
   const builder = (table: string) => {
     const state: {
-      op: 'select' | 'insert' | 'update' | 'delete';
+      op: 'select' | 'insert' | 'upsert' | 'update' | 'delete';
       values?: Todo;
       filters: Array<[string, string, unknown]>;
       or?: { value: string; id: string; column: string };
@@ -66,6 +66,19 @@ const createFakeSupabase = (
       }
       calls.push(`${state.op}:${table}`);
       if (state.op === 'insert') {
+        // A primary key is unique: inserting over an existing row fails.
+        if (rows.has(state.values!.id)) {
+          return {
+            data: null,
+            error: {
+              message: `duplicate key value violates unique constraint on "${table}"`
+            }
+          };
+        }
+        rows.set(state.values!.id, state.values!);
+        return { data: state.values, error: null };
+      }
+      if (state.op === 'upsert') {
         rows.set(state.values!.id, state.values!);
         return { data: state.values, error: null };
       }
@@ -116,6 +129,11 @@ const createFakeSupabase = (
       select: () => api,
       insert: (values: Todo) => {
         state.op = 'insert';
+        state.values = values;
+        return api;
+      },
+      upsert: (values: Todo) => {
+        state.op = 'upsert';
         state.values = values;
         return api;
       },
@@ -192,7 +210,9 @@ const createFakeSupabase = (
 
 const createTodoStore = (
   supabase: ReturnType<typeof createFakeSupabase>,
-  options: Partial<Parameters<typeof createSupabaseSyncAdapter>[0]> = {}
+  options: Partial<Parameters<typeof createSupabaseSyncAdapter>[0]> = {},
+  storage: SyncStorage = createMemoryStorage(),
+  errors?: unknown[]
 ) =>
   create<{
     todos: Record<string, Todo>;
@@ -222,7 +242,8 @@ const createTodoStore = (
       middlewares: [
         sync({
           name: 'supabase',
-          storage: createMemoryStorage(),
+          storage,
+          onError: (error) => errors?.push(error),
           adapter: createSupabaseSyncAdapter<Todo>({
             client: supabase.client,
             table: 'todos',
@@ -248,14 +269,14 @@ test('selects rows into the collection', async () => {
   store.destroy();
 });
 
-test('inserts, updates and deletes rows as the store changes', async () => {
+test('upserts, updates and deletes rows as the store changes', async () => {
   const supabase = createFakeSupabase();
   const store = createTodoStore(supabase);
   await nextTick();
 
   store.getState().add({ id: 'a', title: 'draft', updated_at: '2026-01-01' });
   await nextTick();
-  expect(supabase.calls).toContain('insert:todos');
+  expect(supabase.calls).toContain('upsert:todos');
   expect(supabase.rows.get('a')?.title).toBe('draft');
 
   store.getState().rename('a', 'renamed');
@@ -430,4 +451,41 @@ test('an incremental cursor does not step over rows sharing a timestamp', async 
 
   expect(Object.keys(store.getState().todos).sort()).toEqual(['a', 'b', 'c']);
   store.destroy();
+});
+
+test('a create replayed after a lost acknowledgement does not collide', async () => {
+  const supabase = createFakeSupabase();
+  const map = new Map<string, string>();
+  const storage: SyncStorage = {
+    getItem: (name) => map.get(name) ?? null,
+    setItem: (name, value) => {
+      // The crash window: the remote has committed and the write that would
+      // record the acknowledgement never lands.
+      if (value.includes('"outbox":[]')) {
+        throw new Error('storage unavailable');
+      }
+      map.set(name, value);
+    },
+    removeItem: (name) => {
+      map.delete(name);
+    }
+  };
+  const errors: unknown[] = [];
+  const first = createTodoStore(supabase, {}, storage, errors);
+  await nextTick();
+  first.getState().add({ id: 'a', title: 'draft', updated_at: '2026-01-01' });
+  await nextTick();
+  expect(supabase.rows.has('a')).toBe(true);
+  first.destroy();
+
+  // Restart: the outbox still holds the create the remote already took.
+  supabase.calls.length = 0;
+  errors.length = 0;
+  const restarted = createTodoStore(supabase, {}, storage, errors);
+  await nextTick();
+
+  expect(supabase.calls).toContain('upsert:todos');
+  expect(errors.map(String).join()).not.toMatch(/duplicate key/);
+  expect(supabase.rows.get('a')?.title).toBe('draft');
+  restarted.destroy();
 });
