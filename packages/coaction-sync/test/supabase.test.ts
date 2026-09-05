@@ -40,6 +40,7 @@ const createFakeSupabase = (
   const rows = new Map(seed.map((row) => [row.id, row]));
   const calls: string[] = [];
   const schemas: string[] = [];
+  let onSelect: (() => void) | undefined;
   let failNext: string | undefined;
   let emit: (payload: {
     eventType: 'INSERT' | 'UPDATE' | 'DELETE';
@@ -93,6 +94,7 @@ const createFakeSupabase = (
         }
         return { data: null, error: null };
       }
+      onSelect?.();
       let data = [...rows.values()];
       for (const [column, operator, value] of state.filters) {
         if (operator === 'gt') {
@@ -185,6 +187,9 @@ const createFakeSupabase = (
     rows,
     calls,
     schemas,
+    onSelect: (hook: () => void) => {
+      onSelect = hook;
+    },
     failWith: (message: string) => {
       failNext = message;
     },
@@ -523,4 +528,27 @@ test('a non-default schema without client support is refused', () => {
       schema: 'private'
     })
   ).toThrow(/needs a client with schema\(\)/);
+});
+
+test('a row removed mid-pull does not drop the row after it', async () => {
+  const seed = ['a', 'b', 'c', 'd', 'e'].map((id) => ({
+    id,
+    title: id,
+    updated_at: '2026-01-01'
+  }));
+  const supabase = createFakeSupabase(seed, { responseLimit: 2 });
+  let selects = 0;
+  supabase.onSelect(() => {
+    // A row the store has already read is deleted. Every offset after it moves
+    // back one, so the next page starts a row late -- and a full pull is
+    // authoritative, so the row it steps over is read as deleted too.
+    if ((selects += 1) === 2) supabase.rows.delete('a');
+  });
+  const store = createTodoStore(supabase, { pageSize: 2 });
+  await nextTick();
+  await getSyncApi(store).pull();
+  await nextTick();
+
+  expect(Object.keys(store.getState().todos)).toContain('c');
+  store.destroy();
 });

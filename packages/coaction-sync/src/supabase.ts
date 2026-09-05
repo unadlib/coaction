@@ -183,23 +183,30 @@ export const createSupabaseSyncAdapter = <TRecord extends object>({
     // table and omission really does mean the row is gone.
     authoritativeList: changesSince === undefined,
     list: async ({ cursor }) => {
-      const position = decodeCursor(cursor);
+      // Keyset paging, not offset. A row inserted or removed between two
+      // requests shifts every offset after it, and a full pull is
+      // authoritative -- a row skipped that way is read as deleted and removed
+      // locally. Walking by key is stable under concurrent writes.
+      let position = decodeCursor(cursor);
+      let lastId: string | undefined;
       const records: TRecord[] = [];
-      for (let page = 0; ; page += 1) {
+      for (;;) {
         let query = from(table).select(select);
-        if (changesSince !== undefined && position) {
-          // Rows sharing the boundary timestamp are not skipped: the second
-          // clause walks them by id, which is what makes the cursor total.
-          query = query.or(
-            `${changesSince}.gt.${position.value},and(${changesSince}.eq.${position.value},${idColumn}.gt.${position.id})`
-          );
-        }
         if (changesSince !== undefined) {
+          if (position) {
+            // Rows sharing the boundary timestamp are not skipped: the second
+            // clause walks them by id, which is what makes the cursor total.
+            query = query.or(
+              `${changesSince}.gt.${position.value},and(${changesSince}.eq.${position.value},${idColumn}.gt.${position.id})`
+            );
+          }
           query = query.order(changesSince, { ascending: true });
+        } else if (lastId !== undefined) {
+          query = query.gt(idColumn, lastId);
         }
         query = query
           .order(idColumn, { ascending: true })
-          .range(page * pageSize, page * pageSize + pageSize - 1);
+          .range(0, pageSize - 1);
         const data = unwrap<TRecord>(await query);
         const rows = Array.isArray(data) ? data : data ? [data] : [];
         records.push(...rows);
@@ -208,6 +215,15 @@ export const createSupabaseSyncAdapter = <TRecord extends object>({
           throw new Error(
             `@coaction/sync: reading "${table}" passed ${maxRecords} rows. Set maxRecords higher, or pass changesSince so pulls are incremental.`
           );
+        }
+        const last = rows[rows.length - 1] as Record<string, unknown>;
+        if (changesSince === undefined) {
+          lastId = String(last[idColumn]);
+        } else {
+          position = {
+            value: String(last[changesSince]),
+            id: String(last[idColumn])
+          };
         }
       }
       if (changesSince === undefined) {
