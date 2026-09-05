@@ -191,3 +191,87 @@ test('every invariant holds across generated mutation sequences', () => {
   }
   expect(sequences).toBe(20000);
 });
+
+test('the invariants hold for sparse arrays and unusual descriptors too', () => {
+  const marker = Symbol('marker');
+  const sameShape = (a: unknown[], b: unknown[]) => {
+    if (a.length !== b.length) return false;
+    for (let index = 0; index < a.length; index += 1) {
+      const inA = Object.prototype.hasOwnProperty.call(a, index);
+      if (inA !== Object.prototype.hasOwnProperty.call(b, index)) return false;
+      if (inA && !Object.is(a[index], b[index])) return false;
+    }
+    return (
+      (a as never as Record<string, unknown>).label ===
+        (b as never as Record<string, unknown>).label &&
+      (a as never as Record<symbol, unknown>)[marker] ===
+        (b as never as Record<symbol, unknown>)[marker]
+    );
+  };
+
+  for (let seed = 1; seed <= 5000; seed += 1) {
+    const random = seeded(seed * 31);
+    const xs: unknown[] & { label?: string } = [];
+    xs.length = 2 + Math.floor(random() * 4);
+    for (let index = 0; index < xs.length; index += 1) {
+      // Leave some positions as holes rather than as undefined.
+      if (random() < 0.5) xs[index] = index;
+    }
+    xs.label = 'kept';
+    (xs as never as Record<symbol, string>)[marker] = 'kept';
+
+    const base = { xs, count: 1 } as {
+      xs: typeof xs;
+      count: number;
+      hidden?: number;
+    };
+    Object.defineProperty(base, 'hidden', {
+      value: 7,
+      enumerable: false,
+      writable: true,
+      configurable: true
+    });
+    // `slice` drops the properties hung off an array, so the snapshot has to
+    // be taken by descriptor or it never matches to begin with.
+    const snapshot: unknown[] = [];
+    Object.defineProperties(
+      snapshot,
+      Object.getOwnPropertyDescriptors(base.xs)
+    );
+
+    const { state, patches, inversePatches } = scopeDraft(
+      base,
+      (draft: any) => {
+        const steps = 1 + Math.floor(random() * 3);
+        for (let step = 0; step < steps; step += 1) {
+          const pick = Math.floor(random() * 8);
+          if (pick < 5) {
+            operations[Math.floor(random() * operations.length)](
+              draft.xs,
+              random
+            );
+          } else if (pick === 5) {
+            draft.xs[Math.floor(random() * (draft.xs.length + 2))] = 9;
+          } else if (pick === 6) {
+            if (draft.xs.length) {
+              delete draft.xs[Math.floor(random() * draft.xs.length)];
+            }
+          } else {
+            draft.count += 1;
+          }
+        }
+      }
+    );
+
+    expect(sameShape(base.xs, snapshot)).toBe(true);
+    expect(base.hidden).toBe(7);
+    const forward = applyPatchesTo(base, patches) as typeof base;
+    expect(sameShape(forward.xs, state.xs)).toBe(true);
+    expect(forward.count).toBe(state.count);
+    // A non-enumerable property is state, and has to come through both ways.
+    expect(forward.hidden).toBe(7);
+    const back = applyPatchesTo(state, inversePatches) as typeof base;
+    expect(sameShape(back.xs, snapshot)).toBe(true);
+    expect(back.hidden).toBe(7);
+  }
+});
