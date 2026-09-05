@@ -12,5 +12,6 @@ one patch per change.
 
 Firestore's modular API is tree-shakable functions rather than methods, so they
 are passed in as `firestore: { getDocs, doc, setDoc, deleteDoc, onSnapshot }`,
-which also keeps `firebase` out of this package's dependencies. `collection` may
-be a `Query` rather than a whole collection when only part of it should sync.
+which also keeps `firebase` out of this package's dependencies. `collection` is
+the `CollectionReference` documents are written to; pass a `query` alongside it
+to read something narrower.

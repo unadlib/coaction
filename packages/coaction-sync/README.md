@@ -288,5 +288,4 @@ A Firestore document does not contain its own id, so the id is merged into the
 record on read and removed again on write — set `idField` when the record names
 it something other than `id`. `setDoc` writes the whole document, so a create
 and an update are the same call. A `docChanges()` batch becomes one patch per
-change, and `collection` may be a `Query` rather than a whole collection when
-only part of it should sync.
+change.
