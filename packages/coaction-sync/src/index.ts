@@ -305,6 +305,11 @@ export const sync = <T extends object>({
     let applyingRemote = 0;
     let writeQueue = Promise.resolve();
     let pullPromise: Promise<void> | undefined;
+    let remoteLane = Promise.resolve();
+    // Counts remote results actually applied. A request captures it at the
+    // start and compares on return: a change means the state it was computed
+    // against is gone.
+    let remoteGeneration = 0;
     // A pull that failed is work still owed. Retrying only the flush would
     // report recovery while the remote state was never fetched.
     let pullOwed = false;
@@ -602,14 +607,50 @@ export const sync = <T extends object>({
       await persist();
     };
 
+    /**
+     * One lane for every remote result, whatever produced it.
+     *
+     * A pull, a push that answers with patches, and a subscription are three
+     * sources writing the same state. Applied independently they interleave --
+     * one rebase reading a working copy another is part-way through replacing
+     * -- and the order the store ends up in is whichever finished last.
+     * Serialising them makes arrival order the only order.
+     */
+    const applyRemote = (result: SyncPullResult) => {
+      remoteLane = remoteLane
+        .catch(() => undefined)
+        .then(async () => {
+          if (destroyed) return;
+          await applyRemoteResult(result);
+          remoteGeneration += 1;
+        });
+      return remoteLane;
+    };
+
     const doPull = async () => {
       if (destroyed) return;
       await hydration;
       setStatus('syncing');
       try {
-        const result = await adapter.pull({ cursor, revision });
-        if (destroyed) return;
-        await applyRemoteResult(result);
+        for (let attempt = 0; ; attempt += 1) {
+          const generation = remoteGeneration;
+          const result = await adapter.pull({ cursor, revision });
+          if (destroyed) return;
+          if (generation === remoteGeneration) {
+            await applyRemote(result);
+            break;
+          }
+          // Something else advanced the remote state while this was in flight.
+          // A pull answers "what changed since the cursor I sent", and that
+          // cursor has moved, so applying the answer would rewind. Ask again
+          // from where the store actually is -- but not forever: a busy
+          // subscription would otherwise starve the pull.
+          if (attempt >= 2) {
+            pullOwed = true;
+            scheduleRetry();
+            return;
+          }
+        }
         pullOwed = false;
         clearRetryTimer();
         retryDelay = Math.max(1, retry.initialMs ?? 500);
@@ -666,11 +707,16 @@ export const sync = <T extends object>({
           declined ||= submitted.some(({ id }) => !ack.has(id));
           outbox = outbox.filter(({ id }) => !ack.has(id));
           if (result.patches?.length) {
-            rebase(result.patches);
+            await applyRemote({
+              patches: result.patches,
+              cursor: result.cursor,
+              revision: result.revision
+            });
+          } else {
+            cursor = result.cursor ?? cursor;
+            revision = result.revision ?? revision;
+            await persist();
           }
-          cursor = result.cursor ?? cursor;
-          revision = result.revision ?? revision;
-          await persist();
         }
         if (declined) {
           // The remote took some mutations and refused others. Re-sending the
@@ -826,7 +872,7 @@ export const sync = <T extends object>({
     });
 
     const unsubscribeRemote = adapter.subscribe?.((update) => {
-      void hydration.then(() => applyRemoteResult(update)).catch(reportError);
+      void hydration.then(() => applyRemote(update)).catch(reportError);
     });
 
     const api: SyncApi = {

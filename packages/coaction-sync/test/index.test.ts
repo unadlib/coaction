@@ -1291,3 +1291,59 @@ test('a remote insert moves pending array edits with the entity they named', asy
   expect(byId).toEqual({ z: 'Z', a: 'A', b: 'edited' });
   store.destroy();
 });
+
+test('a pull answered against a base that has since moved is not applied', async () => {
+  let releasePull!: (result: SyncPullResult) => void;
+  let pullCalls = 0;
+  const adapter: SyncAdapter = {
+    pull: () => {
+      pullCalls += 1;
+      if (pullCalls > 1) {
+        return Promise.resolve({
+          patches: [{ op: 'replace', path: ['count'], value: 30 }]
+        });
+      }
+      return new Promise<SyncPullResult>((resolve) => {
+        releasePull = resolve;
+      });
+    },
+    push: async () => ({
+      patches: [{ op: 'replace', path: ['count'], value: 20 }]
+    })
+  };
+  const store = create<{ count: number; bump: () => void }>(
+    (set) => ({
+      count: 0,
+      bump() {
+        set(() => {
+          this.count += 1;
+        });
+      }
+    }),
+    {
+      middlewares: [
+        sync({ name: 'stale-pull', storage: createMemoryStorage(), adapter })
+      ]
+    }
+  );
+  await nextTick();
+
+  const pulled = getSyncApi(store).pull();
+  await nextTick();
+
+  // A push lands while the pull is still out, moving the state past the base
+  // the pull was computed against.
+  store.getState().bump();
+  await nextTick();
+  expect(store.getState().count).toBe(20);
+
+  releasePull({ patches: [{ op: 'replace', path: ['count'], value: 10 }] });
+  await pulled;
+  await nextTick();
+
+  // Applying the stale answer would rewind 20 to 10 with both requests having
+  // succeeded, so it is discarded and the pull is asked again.
+  expect(store.getState().count).toBe(30);
+  expect(pullCalls).toBeGreaterThan(1);
+  store.destroy();
+});

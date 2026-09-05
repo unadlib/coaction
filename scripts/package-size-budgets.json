@@ -142,12 +142,12 @@
   "@coaction/sync": {
     "files": {
       "dist/index.mjs": {
-        "baselineGzipBytes": 5823,
-        "maxGzipBytes": 6450
+        "baselineGzipBytes": 6151,
+        "maxGzipBytes": 6800
       },
       "dist/index.js": {
-        "baselineGzipBytes": 5866,
-        "maxGzipBytes": 6500
+        "baselineGzipBytes": 6193,
+        "maxGzipBytes": 6850
       },
       "dist/crud.mjs": {
         "baselineGzipBytes": 3306,
