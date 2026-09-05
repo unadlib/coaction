@@ -17,6 +17,7 @@ export type SupabaseResult<TRecord> = {
  */
 export type SupabaseLikeClient = {
   from(table: string): SupabaseQueryBuilder;
+  schema?(name: string): { from(table: string): SupabaseQueryBuilder };
   channel?(name: string): SupabaseChannel;
   removeChannel?(channel: SupabaseChannel): unknown;
 };
@@ -67,7 +68,13 @@ export type SupabaseSyncAdapterOptions = {
   select?: string;
   /** Primary key column. Defaults to `id`. */
   idColumn?: string;
-  /** Schema the table lives in. Defaults to `public`. */
+  /**
+   * Schema the table lives in. Defaults to `public`.
+   *
+   * Applies to reads, writes and the realtime filter alike. A non-default
+   * schema needs a client exposing `schema()`, since `from()` alone resolves
+   * against whatever the client was built with.
+   */
   schema?: string;
   /**
    * Rows per request. PostgREST caps what one response may return, and a full
@@ -153,6 +160,19 @@ export const createSupabaseSyncAdapter = <TRecord extends object>({
   realtime = false,
   channel: channelName
 }: SupabaseSyncAdapterOptions): SyncAdapter => {
+  if (schema !== 'public' && !client.schema) {
+    throw new Error(
+      `createSupabaseSyncAdapter({ schema: '${schema}' }) needs a client with schema(). Without it, reads and writes would go to the client's default schema while realtime watched "${schema}".`
+    );
+  }
+  // `from()` resolves against the schema the client was built with, so naming
+  // one has to route every read and write through it as well -- otherwise the
+  // option moved only the realtime subscription.
+  const from = (table: string) =>
+    schema === 'public'
+      ? client.from(table)
+      : client.schema!(schema).from(table);
+
   const getId = (record: TRecord) =>
     String((record as Record<string, unknown>)[idColumn]);
 
@@ -166,7 +186,7 @@ export const createSupabaseSyncAdapter = <TRecord extends object>({
       const position = decodeCursor(cursor);
       const records: TRecord[] = [];
       for (let page = 0; ; page += 1) {
-        let query = client.from(table).select(select);
+        let query = from(table).select(select);
         if (changesSince !== undefined && position) {
           // Rows sharing the boundary timestamp are not skipped: the second
           // clause walks them by id, which is what makes the cursor total.
@@ -215,8 +235,7 @@ export const createSupabaseSyncAdapter = <TRecord extends object>({
       // and an insert replayed against its own row is a primary key collision
       // rather than the write succeeding a second time.
       const data = unwrap<TRecord>(
-        await client
-          .from(table)
+        await from(table)
           .upsert(record, { onConflict: idColumn })
           .select(select)
           .single()
@@ -225,8 +244,7 @@ export const createSupabaseSyncAdapter = <TRecord extends object>({
     },
     update: async (record) => {
       const data = unwrap<TRecord>(
-        await client
-          .from(table)
+        await from(table)
           .update(record)
           .eq(idColumn, getId(record))
           .select(select)
@@ -235,7 +253,7 @@ export const createSupabaseSyncAdapter = <TRecord extends object>({
       return (data as TRecord) ?? record;
     },
     delete: async (_record, id) => {
-      unwrap(await client.from(table).delete().eq(idColumn, id));
+      unwrap(await from(table).delete().eq(idColumn, id));
     }
   });
 

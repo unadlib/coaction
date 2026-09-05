@@ -39,6 +39,7 @@ const createFakeSupabase = (
 ) => {
   const rows = new Map(seed.map((row) => [row.id, row]));
   const calls: string[] = [];
+  const schemas: string[] = [];
   let failNext: string | undefined;
   let emit: (payload: {
     eventType: 'INSERT' | 'UPDATE' | 'DELETE';
@@ -183,6 +184,7 @@ const createFakeSupabase = (
   return {
     rows,
     calls,
+    schemas,
     failWith: (message: string) => {
       failNext = message;
     },
@@ -190,6 +192,10 @@ const createFakeSupabase = (
     isChannelClosed: () => channelClosed,
     client: {
       from: builder,
+      schema: (name: string) => {
+        if (!schemas.includes(name)) schemas.push(name);
+        return { from: builder };
+      },
       channel: () => {
         const channel: any = {
           on: (_event: string, _filter: unknown, handler: typeof emit) => {
@@ -488,4 +494,33 @@ test('a create replayed after a lost acknowledgement does not collide', async ()
   expect(errors.map(String).join()).not.toMatch(/duplicate key/);
   expect(supabase.rows.get('a')?.title).toBe('draft');
   restarted.destroy();
+});
+
+test('a non-default schema is used for reads and writes, not only realtime', async () => {
+  const supabase = createFakeSupabase([
+    { id: 'a', title: 'first', updated_at: '2026-01-01' }
+  ]);
+  const store = createTodoStore(supabase, { schema: 'private' });
+  await nextTick();
+  await getSyncApi(store).pull();
+  await nextTick();
+  store.getState().rename('a', 'renamed');
+  await nextTick();
+
+  // Naming a schema that only reached the realtime filter would leave every
+  // read and write pointed at the client's default one.
+  expect(supabase.schemas).toEqual(['private']);
+  store.destroy();
+});
+
+test('a non-default schema without client support is refused', () => {
+  const supabase = createFakeSupabase();
+  expect(() =>
+    createSupabaseSyncAdapter({
+      client: { from: supabase.client.from },
+      table: 'todos',
+      path: ['todos'],
+      schema: 'private'
+    })
+  ).toThrow(/needs a client with schema\(\)/);
 });
