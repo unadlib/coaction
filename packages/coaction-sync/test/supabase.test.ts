@@ -31,7 +31,12 @@ const createMemoryStorage = (): SyncStorage => {
  * A Postgrest-shaped fake: the builder collects the chained calls and resolves
  * when awaited, which is how the real client behaves.
  */
-const createFakeSupabase = (seed: Todo[] = []) => {
+const createFakeSupabase = (
+  seed: Todo[] = [],
+  // PostgREST caps how many rows one response may return, whatever the client
+  // asked for. Without that cap here, a client that never pages looks correct.
+  { responseLimit = Number.MAX_SAFE_INTEGER }: { responseLimit?: number } = {}
+) => {
   const rows = new Map(seed.map((row) => [row.id, row]));
   const calls: string[] = [];
   let failNext: string | undefined;
@@ -47,9 +52,11 @@ const createFakeSupabase = (seed: Todo[] = []) => {
       op: 'select' | 'insert' | 'update' | 'delete';
       values?: Todo;
       filters: Array<[string, string, unknown]>;
-      order?: string;
+      or?: { value: string; id: string; column: string };
+      order: string[];
+      range?: [number, number];
       single: boolean;
-    } = { op: 'select', filters: [], single: false };
+    } = { op: 'select', filters: [], order: [], single: false };
 
     const run = () => {
       if (failNext) {
@@ -81,12 +88,26 @@ const createFakeSupabase = (seed: Todo[] = []) => {
           );
         }
       }
-      if (state.order) {
+      if (state.or) {
+        // `col > v OR (col = v AND id > lastId)` — the compound cursor.
+        const { column, value, id } = state.or;
+        data = data.filter((row) => {
+          const at = String((row as Record<string, unknown>)[column]);
+          return at > value || (at === value && String(row.id) > id);
+        });
+      }
+      for (const column of state.order) {
         data = [...data].sort((a, b) =>
-          String((a as Record<string, unknown>)[state.order!]).localeCompare(
-            String((b as Record<string, unknown>)[state.order!])
+          String((a as Record<string, unknown>)[column]).localeCompare(
+            String((b as Record<string, unknown>)[column])
           )
         );
+      }
+      if (state.range) {
+        data = data.slice(state.range[0], state.range[1] + 1);
+      }
+      if (state.op === 'select' && !state.single) {
+        data = data.slice(0, responseLimit);
       }
       return { data: state.single ? (data[0] ?? null) : data, error: null };
     };
@@ -115,8 +136,20 @@ const createFakeSupabase = (seed: Todo[] = []) => {
         state.filters.push([column, 'gt', value]);
         return api;
       },
+      or: (filter: string) => {
+        // `updated_at.gt.V,and(updated_at.eq.V,id.gt.ID)`
+        const match =
+          /^(\w+)\.gt\.(.*),and\(\w+\.eq\..*,(\w+)\.gt\.(.*)\)$/.exec(filter);
+        if (match)
+          state.or = { column: match[1], value: match[2], id: match[4] };
+        return api;
+      },
+      range: (from: number, to: number) => {
+        state.range = [from, to];
+        return api;
+      },
       order: (column: string) => {
-        state.order = column;
+        state.order.push(column);
         return api;
       },
       single: () => {
@@ -354,4 +387,47 @@ test('realtime needs a client that can open channels', () => {
   expect(() =>
     adapter.subscribe?.(() => undefined as unknown as SyncPullResult)
   ).toThrow(/needs a client with channel/);
+});
+
+test('a full pull pages past the response limit instead of deleting the rest', async () => {
+  const seed = Array.from({ length: 7 }, (_, index) => ({
+    id: `t${index}`,
+    title: `todo ${index}`,
+    updated_at: '2026-01-01'
+  }));
+  const supabase = createFakeSupabase(seed, { responseLimit: 3 });
+  const store = createTodoStore(supabase, { pageSize: 3 });
+  await nextTick();
+  await getSyncApi(store).pull();
+  await nextTick();
+
+  // A single response returns at most a page. Treating that page as the whole
+  // table would delete every row past it, because a full pull is authoritative.
+  expect(Object.keys(store.getState().todos)).toHaveLength(7);
+  store.destroy();
+});
+
+test('an incremental cursor does not step over rows sharing a timestamp', async () => {
+  const supabase = createFakeSupabase(
+    [
+      { id: 'a', title: 'a', updated_at: '2026-01-01T10:00:00.123Z' },
+      { id: 'b', title: 'b', updated_at: '2026-01-01T10:00:00.123Z' },
+      { id: 'c', title: 'c', updated_at: '2026-01-01T10:00:00.123Z' }
+    ],
+    { responseLimit: 2 }
+  );
+  const store = createTodoStore(supabase, {
+    changesSince: 'updated_at',
+    pageSize: 2
+  });
+  await nextTick();
+  await getSyncApi(store).pull();
+  await nextTick();
+  // The first pull ends mid-timestamp; `updated_at > cursor` would skip the
+  // rest of that instant forever.
+  await getSyncApi(store).pull();
+  await nextTick();
+
+  expect(Object.keys(store.getState().todos).sort()).toEqual(['a', 'b', 'c']);
+  store.destroy();
 });

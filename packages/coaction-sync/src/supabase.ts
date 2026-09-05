@@ -28,6 +28,8 @@ export type SupabaseQueryBuilder = {
   delete(): SupabaseQueryBuilder;
   eq(column: string, value: unknown): SupabaseQueryBuilder;
   gt(column: string, value: unknown): SupabaseQueryBuilder;
+  or(filters: string): SupabaseQueryBuilder;
+  range(from: number, to: number): SupabaseQueryBuilder;
   order(
     column: string,
     options?: { ascending?: boolean }
@@ -63,6 +65,19 @@ export type SupabaseSyncAdapterOptions = {
   idColumn?: string;
   /** Schema the table lives in. Defaults to `public`. */
   schema?: string;
+  /**
+   * Rows per request. PostgREST caps what one response may return, and a full
+   * pull is paged to exhaustion rather than trusting a single response to be
+   * the whole table. Defaults to 1000.
+   */
+  pageSize?: number;
+  /**
+   * Ceiling on a single full pull, as a guard against paging a table nobody
+   * meant to synchronize whole. Exceeding it fails the pull -- returning a
+   * partial set would let an authoritative list delete the rest. Defaults to
+   * 100000.
+   */
+  maxRecords?: number;
   /**
    * Pull only rows changed since the last pull, using this column as the
    * cursor — `updated_at`, typically. A deleted row simply stops appearing, so
@@ -103,6 +118,24 @@ const unwrap = <TRecord>(result: SupabaseResult<TRecord>) => {
  * });
  * ```
  */
+/**
+ * A changes-since cursor names a row, not an instant.
+ *
+ * Many rows can share a timestamp, and `updated_at > cursor` steps straight
+ * over the ones that share the last row's. The id breaks the tie. A cursor
+ * written before this existed is a bare timestamp and still works.
+ */
+const cursorSeparator = '\u0000';
+const encodeCursor = (value: string, id: string) =>
+  `${value}${cursorSeparator}${id}`;
+const decodeCursor = (cursor?: string) => {
+  if (cursor === undefined) return undefined;
+  const index = cursor.indexOf(cursorSeparator);
+  return index === -1
+    ? { value: cursor, id: '' }
+    : { value: cursor.slice(0, index), id: cursor.slice(index + 1) };
+};
+
 export const createSupabaseSyncAdapter = <TRecord extends object>({
   client,
   table,
@@ -110,6 +143,8 @@ export const createSupabaseSyncAdapter = <TRecord extends object>({
   select = '*',
   idColumn = 'id',
   schema = 'public',
+  pageSize = 1000,
+  maxRecords = 100_000,
   changesSince,
   realtime = false,
   channel: channelName
@@ -120,31 +155,54 @@ export const createSupabaseSyncAdapter = <TRecord extends object>({
   const crud = createCrudSyncAdapter<TRecord>({
     path,
     getId,
-    // Without a cursor column every pull is the whole table, which is then the
-    // whole truth and may remove rows the store still holds.
+    // A full pull is paged to exhaustion below, so it really is the whole
+    // table and omission really does mean the row is gone.
     authoritativeList: changesSince === undefined,
     list: async ({ cursor }) => {
-      let query = client.from(table).select(select);
-      if (changesSince !== undefined && cursor !== undefined) {
-        query = query.gt(changesSince, cursor);
+      const position = decodeCursor(cursor);
+      const records: TRecord[] = [];
+      for (let page = 0; ; page += 1) {
+        let query = client.from(table).select(select);
+        if (changesSince !== undefined && position) {
+          // Rows sharing the boundary timestamp are not skipped: the second
+          // clause walks them by id, which is what makes the cursor total.
+          query = query.or(
+            `${changesSince}.gt.${position.value},and(${changesSince}.eq.${position.value},${idColumn}.gt.${position.id})`
+          );
+        }
+        if (changesSince !== undefined) {
+          query = query.order(changesSince, { ascending: true });
+        }
+        query = query
+          .order(idColumn, { ascending: true })
+          .range(page * pageSize, page * pageSize + pageSize - 1);
+        const data = unwrap<TRecord>(await query);
+        const rows = Array.isArray(data) ? data : data ? [data] : [];
+        records.push(...rows);
+        if (rows.length < pageSize) break;
+        if (records.length > maxRecords) {
+          throw new Error(
+            `@coaction/sync: reading "${table}" passed ${maxRecords} rows. Set maxRecords higher, or pass changesSince so pulls are incremental.`
+          );
+        }
       }
-      if (changesSince !== undefined) {
-        query = query.order(changesSince, { ascending: true });
-      }
-      const data = unwrap<TRecord>(await query);
-      const records = Array.isArray(data) ? data : data ? [data] : [];
       if (changesSince === undefined) {
         return { records };
       }
-      // The rows are ordered, so the last one carries the newest cursor. An
-      // empty page leaves the cursor where it was.
+      // The rows are ordered, so the last one carries the newest position. An
+      // empty response leaves the cursor where it was.
       const latest = records[records.length - 1] as
         | Record<string, unknown>
         | undefined;
-      const next = latest?.[changesSince];
       return {
         records,
-        cursor: next === undefined ? cursor : String(next)
+        cursor:
+          latest === undefined
+            ? cursor
+            : encodeCursor(
+                String(latest[changesSince]),
+                String(latest[idColumn])
+              )
       };
     },
     create: async (record) => {
