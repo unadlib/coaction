@@ -56,3 +56,12 @@ The invariants are now checked over twenty thousand generated mutation
 sequences: the base is never modified, no draft reaches the state, the patches
 produce the state, the inverse returns to the base, and untouched branches keep
 their identity.
+
+A third pass aligned the draft with the state shapes Coaction already supports:
+sparse arrays keep their holes and the properties hung off them, non-enumerable
+properties survive a write, and the leaf boundary is stated as a rule rather
+than a list of types to exclude — arrays and objects whose prototype chain is
+plain are reached into, and anything a constructor built is replaced whole.
+A cycle is refused, since a path has no way to describe one. Aliasing stays a
+documented contract: finding every alias would mean scanning the state on every
+write.
