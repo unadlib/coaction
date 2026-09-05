@@ -46,3 +46,27 @@ calling it durable. Pass `storage: false` to choose that deliberately.
 version.** A version is a sum of path versions, so two untouched siblings share
 one: a reused wrapper swapping between them compared equal and skipped the
 render.
+
+**A remote fact counts when it arrives, not when it finishes applying.** A
+successful push that answered without patches never advanced the staleness
+guard, so a pull already in flight was judged current on return and rolled back
+a write the remote had committed and the outbox had acknowledged — and `{}` is
+what every built-in CRUD adapter returns from `push`. The check was also a
+check-then-act, so a subscription that had arrived and was still queued left it
+unchanged too. The epoch now moves on arrival, the check runs inside the apply
+lane, and every push result goes through that lane whether or not it carries
+patches.
+
+**CRUD writes return what the backend made of them.** A `create` or `update`
+that answers with the stored record now produces patches, so the store stops
+disagreeing with the row it just wrote until some later pull corrects it.
+
+**Delivery semantics are written down.** Mutations are at-least-once, and the
+built-in Supabase and Firestore adapters are last-write-wins under replay —
+retry-safe, which is not the same as idempotent. The README shows the replay
+that surprises people and what a handler built on `idempotencyKey` looks like
+instead.
+
+**A Supabase full pull can decline to be authoritative.** Keyset paging removed
+offset drift; it does not make several requests one snapshot, so
+`authoritativeList` is now an option rather than a derived value.
