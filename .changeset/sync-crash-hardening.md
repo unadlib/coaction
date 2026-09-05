@@ -70,3 +70,16 @@ instead.
 **A Supabase full pull can decline to be authoritative.** Keyset paging removed
 offset drift; it does not make several requests one snapshot, so
 `authoritativeList` is now an option rather than a derived value.
+
+**A mutation's idempotency key no longer changes when it is reclassified.** The
+key included the operation, which is decided against the adapter's baseline at
+send time — so a create whose answer was lost, retried after realtime reported
+the row it made, went out as an update under a different key. A ledger keyed on
+the first one would apply the write twice, which is the failure the key exists
+to prevent.
+
+**Authoritative deletions come from the durable baseline, not the current
+store.** With `persistState: false` a restarted store is empty, so a record the
+remote had dropped produced no removal and the baseline kept claiming it; and a
+record created locally but never sent produced a removal for something the
+remote never had, which only the default conflict policy was undoing.
