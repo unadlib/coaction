@@ -33,6 +33,24 @@ const createMemoryStorage = (): SyncStorage & { map: Map<string, string> } => {
 
 const pendingPush = () => new Promise<never>(() => undefined);
 
+/**
+ * Wait for a condition rather than for a duration.
+ *
+ * These assertions are about the retry timer having fired, not about how long
+ * that took. A fixed sleep encodes the runner's speed into the test and fails
+ * on a loaded one for reasons that have nothing to do with the code.
+ */
+const waitUntil = async (condition: () => boolean, timeoutMs = 5000) => {
+  const deadline = Date.now() + timeoutMs;
+  while (!condition()) {
+    if (Date.now() > deadline) {
+      throw new Error('waitUntil timed out');
+    }
+    await new Promise((resolve) => setTimeout(resolve, 2));
+  }
+  await nextTick();
+};
+
 test('persists optimistic state and durable outbox across restart', async () => {
   const storage = createMemoryStorage();
   const adapter: SyncAdapter = {
@@ -555,7 +573,7 @@ test('a failed push backs off and recovers on the scheduled retry', async () => 
   expect(statuses).toContain('offline');
   expect(getSyncApi(store).getPending()).toHaveLength(1);
 
-  await new Promise((resolve) => setTimeout(resolve, 60));
+  await waitUntil(() => pushAttempts > 1);
   expect(pushAttempts).toBeGreaterThan(1);
   expect(getSyncApi(store).getPending()).toHaveLength(0);
   expect(getSyncApi(store).getStatus()).toBe('idle');
@@ -738,7 +756,7 @@ test('mutations the remote declines are retried, not stranded', async () => {
   expect(statuses[statuses.length - 1]).toBe('offline');
 
   acceptAll = true;
-  await new Promise((resolve) => setTimeout(resolve, 60));
+  await waitUntil(() => api.getPending().length === 0);
   expect(api.getPending()).toHaveLength(0);
   expect(api.getStatus()).toBe('idle');
   expect(new Set(delivered).size).toBe(3);
@@ -1038,8 +1056,7 @@ test('a pull that failed is retried as a pull, not just a flush', async () => {
   await getSyncApi(store)
     .pull()
     .catch(() => undefined);
-  await new Promise((resolve) => setTimeout(resolve, 30));
-  await nextTick();
+  await waitUntil(() => attempts >= 2);
 
   // Retrying only the flush would find an empty outbox, report idle, and leave
   // the remote state unfetched.
