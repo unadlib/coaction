@@ -32,11 +32,21 @@ const shallowCopy = (value: unknown) => {
   );
 };
 
+/**
+ * Nodes copied during this batch, which nothing outside it can observe yet.
+ *
+ * Without this, every patch copies the whole path from the root again: a pull
+ * returning one patch per record re-copies the collection once per record, so
+ * the cost is the number of patches times the size of what they share. Copying
+ * a container at most once per batch makes it the number of patches plus the
+ * number of containers.
+ */
 const applyAt = (
   node: unknown,
   segments: (string | number)[],
   depth: number,
-  patch: Patch
+  patch: Patch,
+  owned: WeakSet<object>
 ): unknown => {
   if (depth === segments.length) {
     return patch.op === 'remove' ? undefined : patch.value;
@@ -45,14 +55,17 @@ const applyAt = (
   if (typeof key === 'string' && isUnsafeKey(key)) {
     throw new TypeError(`Unsafe patch path segment "${key}".`);
   }
-  const copy = shallowCopy(node) as Record<PropertyKey, unknown>;
+  let copy: Record<PropertyKey, unknown>;
+  if (typeof node === 'object' && node !== null && owned.has(node)) {
+    copy = node as Record<PropertyKey, unknown>;
+  } else {
+    copy = shallowCopy(node) as Record<PropertyKey, unknown>;
+    owned.add(copy);
+  }
   if (depth < segments.length - 1) {
-    copy[key] = applyAt(
-      (node as Record<PropertyKey, unknown>)[key],
-      segments,
-      depth + 1,
-      patch
-    );
+    // Read the child off the copy, not the original: an earlier patch in this
+    // batch may already have replaced it.
+    copy[key] = applyAt(copy[key], segments, depth + 1, patch, owned);
     return copy;
   }
   if (Array.isArray(copy)) {
@@ -74,9 +87,11 @@ const applyAt = (
 };
 
 export const applyPatchesTo = <T>(state: T, patches: Patches): T => {
+  if (!patches.length) return state;
+  const owned = new WeakSet<object>();
   let result: unknown = state;
   for (const patch of patches) {
-    result = applyAt(result, asSegments(patch.path), 0, patch);
+    result = applyAt(result, asSegments(patch.path), 0, patch, owned);
   }
   return result as T;
 };

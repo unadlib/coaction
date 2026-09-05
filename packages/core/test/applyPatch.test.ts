@@ -86,3 +86,49 @@ test('an unsafe path segment is refused', () => {
     ])
   ).toThrow(/Unsafe patch path/);
 });
+
+test('a batch copies each container once, not once per patch', () => {
+  const size = 4000;
+  const todos: Record<string, { id: string; title: string }> = {};
+  for (let index = 0; index < size; index += 1) {
+    todos[`id${index}`] = { id: `id${index}`, title: 'before' };
+  }
+  const state = { todos, elsewhere: { untouched: true } };
+  const patches: Patches = Array.from({ length: size }, (_, index) => ({
+    op: 'replace',
+    path: ['todos', `id${index}`],
+    value: { id: `id${index}`, title: 'after' }
+  }));
+
+  const started = performance.now();
+  const next = applyPatchesTo(state, patches);
+  const elapsed = performance.now() - started;
+
+  expect(Object.keys(next.todos)).toHaveLength(size);
+  expect(next.todos.id0.title).toBe('after');
+  expect(next.todos[`id${size - 1}`].title).toBe('after');
+  // Untouched branches keep their identity even across a large batch.
+  expect(next.elsewhere).toBe(state.elsewhere);
+  // The input is never written to.
+  expect(state.todos.id0.title).toBe('before');
+
+  // Copying the path per patch makes this quadratic: one patch per record
+  // re-copies the whole collection once per record. Linear runs in single-digit
+  // milliseconds here; the copy-per-patch version took several seconds. The
+  // ceiling is far above the former and far below the latter.
+  expect(elapsed).toBeLessThan(500);
+});
+
+test('a batch of array patches applies in order without re-copying', () => {
+  const state = { items: Array.from({ length: 2000 }, (_, index) => index) };
+  const patches: Patches = Array.from({ length: 2000 }, (_, index) => ({
+    op: 'replace',
+    path: ['items', index],
+    value: index * 2
+  }));
+  const started = performance.now();
+  const next = applyPatchesTo(state, patches);
+  expect(performance.now() - started).toBeLessThan(500);
+  expect(next.items[1999]).toBe(3998);
+  expect(state.items[1999]).toBe(1999);
+});
