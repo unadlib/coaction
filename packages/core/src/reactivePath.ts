@@ -437,6 +437,28 @@ export const invalidateReactivePaths = <T extends CreateState>(
         typeof lastSegment === 'string' && /^(0|[1-9]\d*)$/.test(lastSegment)
           ? Number(lastSegment)
           : undefined;
+      // Shortening an array through `length` drops elements without a patch
+      // per index, so the indexes it removed are invalidated here. `rootState`
+      // already holds the new value, so its length is the surviving count.
+      if (
+        lastSegment === 'length' &&
+        patch.op === 'replace' &&
+        Array.isArray(parentValue) &&
+        parentNode
+      ) {
+        const survivors = parentValue.length;
+        invalidateStructure(parentNode);
+        for (const [key, child] of parentNode.children ?? []) {
+          if (
+            typeof key === 'string' &&
+            /^(0|[1-9]\d*)$/.test(key) &&
+            Number(key) >= survivors
+          ) {
+            invalidateNode(child, true);
+          }
+        }
+      }
+
       if (
         Array.isArray(parentValue) &&
         parentNode &&
