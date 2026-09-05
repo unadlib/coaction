@@ -35,6 +35,7 @@ const createFakeFirestore = (
 ) => {
   const documents = new Map(Object.entries(seed));
   const writes: string[] = [];
+  const reads: unknown[] = [];
   let emit: (changes: FirestoreChange[]) => void = () => undefined;
   let listenerClosed = false;
 
@@ -44,10 +45,20 @@ const createFakeFirestore = (
   });
 
   const firestore: FirestoreOperations = {
-    getDocs: async () => ({
-      docs: [...documents.entries()].map(([id, data]) => asDocument(id, data))
-    }),
-    doc: (_collection, id) => ({ id }),
+    getDocs: async (reference) => {
+      reads.push(reference);
+      return {
+        docs: [...documents.entries()].map(([id, data]) => asDocument(id, data))
+      };
+    },
+    doc: (collection, id) => {
+      // Firestore's doc() names a child of a CollectionReference. A Query has
+      // no children, and passing one throws rather than writing anywhere.
+      if ((collection as { __query?: boolean })?.__query) {
+        throw new Error('doc() expects a CollectionReference, not a Query');
+      }
+      return { id };
+    },
     setDoc: async (reference, data) => {
       const id = (reference as { id: string }).id;
       writes.push(`set:${id}`);
@@ -69,6 +80,7 @@ const createFakeFirestore = (
   return {
     documents,
     writes,
+    reads,
     firestore,
     isListenerClosed: () => listenerClosed,
     emitChanges: (
@@ -261,4 +273,41 @@ test('realtime needs onSnapshot to have been supplied', () => {
   expect(() => adapter.subscribe?.(() => undefined)).toThrow(
     /needs onSnapshot/
   );
+});
+
+test('a narrowed read source is not used as the write address', async () => {
+  const fake = createFakeFirestore({ a: { title: 'first', done: false } });
+  const query = { __query: true };
+  const store = createTodoStore(fake, { query });
+  await nextTick();
+  await getSyncApi(store).pull();
+  await nextTick();
+
+  // The query is what gets read...
+  expect(fake.reads).toEqual([query]);
+
+  store.getState().toggle('a');
+  await nextTick();
+
+  // ...and the collection is what gets written, because doc() cannot name a
+  // child of a query.
+  expect(fake.writes).toEqual(['set:a']);
+  expect(fake.documents.get('a')?.done).toBe(true);
+  store.destroy();
+});
+
+test('a narrowed read is not treated as the whole collection', async () => {
+  const fake = createFakeFirestore({ a: { title: 'first', done: false } });
+  const store = createTodoStore(fake, { query: { __query: true } });
+  await nextTick();
+  await getSyncApi(store).pull();
+  await nextTick();
+
+  fake.documents.delete('a');
+  await getSyncApi(store).pull();
+  await nextTick();
+
+  // A document the query excludes is absent from the answer, not deleted.
+  expect(store.getState().todos.a).toBeDefined();
+  store.destroy();
 });

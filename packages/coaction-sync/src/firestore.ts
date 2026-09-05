@@ -52,8 +52,19 @@ export type FirestoreOperations = {
 
 export type FirestoreSyncAdapterOptions = {
   firestore: FirestoreOperations;
-  /** A `CollectionReference`, or a `Query` built from one. */
+  /**
+   * The `CollectionReference` documents are written to. `doc(collection, id)`
+   * has to be able to name a child of it, which a `Query` cannot.
+   */
   collection: unknown;
+  /**
+   * What to read, when that is narrower than the whole collection -- a `Query`
+   * built from it, typically. Reads fall back to `collection`.
+   *
+   * A narrowed read is not the whole collection, so it cannot be treated as
+   * authoritative: rows outside the query are missing from it, not deleted.
+   */
+  query?: unknown;
   /** Where the keyed collection lives in the store, e.g. `['todos']`. */
   path: readonly PropertyKey[];
   /**
@@ -79,6 +90,7 @@ export type FirestoreSyncAdapterOptions = {
 export const createFirestoreSyncAdapter = <TRecord extends object>({
   firestore,
   collection,
+  query,
   path,
   idField = 'id',
   realtime = false,
@@ -99,10 +111,11 @@ export const createFirestoreSyncAdapter = <TRecord extends object>({
   const crud = createCrudSyncAdapter<TRecord>({
     path,
     getId,
-    // A full read of the collection is the whole truth.
-    authoritativeList: true,
+    // A full read of the collection is the whole truth. A narrowed one is not:
+    // a document the query excludes is absent, not gone.
+    authoritativeList: query === undefined,
     list: async () => {
-      const snapshot = await firestore.getDocs(collection);
+      const snapshot = await firestore.getDocs(query ?? collection);
       return { records: snapshot.docs.map(toRecord) };
     },
     // Firestore's setDoc writes the whole document either way, so a create and
@@ -139,7 +152,7 @@ export const createFirestoreSyncAdapter = <TRecord extends object>({
         );
       }
       return firestore.onSnapshot(
-        collection,
+        query ?? collection,
         (snapshot) => {
           const patches: NonNullable<Patches> = [];
           for (const change of snapshot.docChanges()) {

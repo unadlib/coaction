@@ -182,11 +182,11 @@
         "maxGzipBytes": 4300
       },
       "dist/firestore.mjs": {
-        "baselineGzipBytes": 3921,
+        "baselineGzipBytes": 3935,
         "maxGzipBytes": 4350
       },
       "dist/firestore.js": {
-        "baselineGzipBytes": 3966,
+        "baselineGzipBytes": 3981,
         "maxGzipBytes": 4400
       }
     }

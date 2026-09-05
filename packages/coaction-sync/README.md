@@ -265,6 +265,12 @@ sync({
 });
 ```
 
+`collection` is the write address: writes go through `doc(collection, id)`, so
+it has to be a `CollectionReference`. To read something narrower, pass a `query`
+alongside it — reads use the query, writes still use the collection, and the
+pull stops being authoritative, since a document the query excludes is absent
+from the answer rather than deleted.
+
 A Firestore document does not contain its own id, so the id is merged into the
 record on read and removed again on write — set `idField` when the record names
 it something other than `id`. `setDoc` writes the whole document, so a create
