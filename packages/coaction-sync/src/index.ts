@@ -1,4 +1,4 @@
-import { normalizePatchPath } from './paths';
+import { normalizePatchPath, readAtPath } from './paths';
 import {
   applyPatches,
   createInversePatches,
@@ -410,6 +410,93 @@ export const sync = <T extends object>({
       }
     };
 
+    type ArrayShift = {
+      arrayPath: PropertyKey[];
+      index: number;
+      delta: number;
+    };
+
+    const isIndexSegment = (segment: PropertyKey) =>
+      /^(0|[1-9]\d*)$/.test(String(segment));
+
+    /** Array entries the remote inserted or removed, with how far they move. */
+    const readArrayShifts = (remotePatches: Patches, base: T): ArrayShift[] => {
+      const shifts: ArrayShift[] = [];
+      for (const patch of remotePatches) {
+        if (patch.op !== 'add' && patch.op !== 'remove') continue;
+        const path = normalizePatchPath(patch.path);
+        const last = path[path.length - 1];
+        if (last === undefined || !isIndexSegment(last)) continue;
+        const arrayPath = path.slice(0, -1);
+        if (!Array.isArray(readAtPath(base, arrayPath))) continue;
+        shifts.push({
+          arrayPath,
+          index: Number(last),
+          delta: patch.op === 'add' ? 1 : -1
+        });
+      }
+      return shifts;
+    };
+
+    /**
+     * Move a pending patch to wherever the record it named ended up: an index
+     * is a position, not an identity. Undefined when the entry the patch named
+     * is the one the remote removed.
+     */
+    const shiftPatch = (
+      patch: Patches[number],
+      shifts: readonly ArrayShift[]
+    ): Patches[number] | undefined => {
+      const path = Array.isArray(patch.path)
+        ? [...(patch.path as PropertyKey[])]
+        : normalizePatchPath(patch.path);
+      let changed = false;
+      for (const shift of shifts) {
+        const depth = shift.arrayPath.length;
+        if (path.length <= depth) continue;
+        let matches = true;
+        for (let index = 0; index < depth; index += 1) {
+          if (String(path[index]) !== String(shift.arrayPath[index])) {
+            matches = false;
+            break;
+          }
+        }
+        if (!matches) continue;
+        const segment = path[depth];
+        if (!isIndexSegment(segment)) continue;
+        const position = Number(segment);
+        if (shift.delta < 0 && position === shift.index) return undefined;
+        if (position < shift.index) continue;
+        path[depth] =
+          typeof segment === 'number'
+            ? position + shift.delta
+            : String(position + shift.delta);
+        changed = true;
+      }
+      return changed ? ({ ...patch, path } as Patches[number]) : patch;
+    };
+
+    const shiftMutation = (
+      mutation: SyncMutation,
+      shifts: readonly ArrayShift[]
+    ): SyncMutation | undefined => {
+      if (!shifts.length) return mutation;
+      const patches: Patches = [];
+      for (const patch of mutation.patches) {
+        const shifted = shiftPatch(patch, shifts);
+        if (!shifted) {
+          onError?.(
+            new Error(
+              `@coaction/sync dropped pending mutation "${mutation.id}": the array entry it edited was removed by the remote`
+            )
+          );
+          return undefined;
+        }
+        patches.push(shifted);
+      }
+      return { ...mutation, patches };
+    };
+
     /** Replay mutations onto a working copy as one net transition. */
     const replaySequence = (base: T, mutations: readonly SyncMutation[]) => {
       let state = base;
@@ -475,7 +562,11 @@ export const sync = <T extends object>({
         return resolution !== 'remote';
       });
 
-      const replayed = replaySequence(working, retained);
+      const shifts = readArrayShifts(remotePatches, store.getPureState() as T);
+      const shifted = retained
+        .map((mutation) => shiftMutation(mutation, shifts))
+        .filter((mutation): mutation is SyncMutation => Boolean(mutation));
+      const replayed = replaySequence(working, shifted);
       stage(replayed.patches, replayed.inversePatches);
 
       applyingRemote += 1;

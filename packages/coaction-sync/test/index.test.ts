@@ -449,8 +449,10 @@ test('a pending mutation the remote made unapplicable is dropped, not retried fo
   expect(api.getPending()).toHaveLength(0);
   expect(api.getStatus()).toBe('idle');
   expect(errors).toHaveLength(1);
+  // The entry the edit was inside of is the one the remote removed, so the
+  // reason names that rather than the generic "does not apply".
   expect((errors[0] as Error).message).toMatch(
-    /dropped pending mutation .* no longer applies/
+    /dropped pending mutation .* removed by the remote/
   );
   store.destroy();
 });
@@ -1234,5 +1236,58 @@ test('a rebase that throws leaves the state and the outbox untouched', async () 
   expect(errors).toHaveLength(1);
   expect(store.getState().count).toBe(1);
   expect(getSyncApi(store).getPending()).toEqual(pendingBefore);
+  store.destroy();
+});
+
+test('a remote insert moves pending array edits with the entity they named', async () => {
+  let releasePull!: (result: SyncPullResult) => void;
+  const adapter: SyncAdapter = {
+    pull: () =>
+      new Promise<SyncPullResult>((resolve) => {
+        releasePull = resolve;
+      }),
+    push: pendingPush
+  };
+  const store = create<{
+    items: Array<{ id: string; title: string }>;
+    rename: (index: number, title: string) => void;
+  }>(
+    (set) => ({
+      items: [
+        { id: 'a', title: 'A' },
+        { id: 'b', title: 'B' }
+      ],
+      rename(index, title) {
+        set(() => {
+          this.items[index].title = title;
+        });
+      }
+    }),
+    {
+      middlewares: [
+        sync({ name: 'array-shift', storage: createMemoryStorage(), adapter })
+      ]
+    }
+  );
+  await nextTick();
+
+  store.getState().rename(1, 'edited');
+  await nextTick();
+
+  const pulled = getSyncApi(store).pull();
+  await nextTick();
+  releasePull({
+    patches: [{ op: 'add', path: ['items', 0], value: { id: 'z', title: 'Z' } }]
+  });
+  await pulled;
+  await nextTick();
+
+  // The pending patch named index 1, but an index is a position and the remote
+  // insert moved the entity to 2. Replaying the position edits a record the
+  // user never touched, and nothing reports it.
+  const byId = Object.fromEntries(
+    store.getState().items.map((item) => [item.id, item.title])
+  );
+  expect(byId).toEqual({ z: 'Z', a: 'A', b: 'edited' });
   store.destroy();
 });
