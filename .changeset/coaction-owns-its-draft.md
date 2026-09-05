@@ -80,3 +80,15 @@ than happening and then complaining. The graph clone builds each property from
 its descriptor, so read-only and non-enumerable properties survive being carried
 through an unwrap, and `diffPatches` replaces the container for any property
 shape a patch cannot carry.
+
+A sixth pass made the array methods match the language: an index argument is
+converted once, from what the caller passed rather than from what it unwraps to,
+so its own `valueOf` cannot reach the base; `splice` clamps the converted
+numbers instead of doing arithmetic on whatever was handed in, which is what let
+a refused removal through; every refusal happens before the array is copied, so
+a caught error leaves no mutation and no identity churn; and `sort` refuses a
+non-function comparator and a default ordering over symbols. An accessor in a
+container being unwrapped is read once rather than carried, since its closure
+outlives the draft. `diffPatches` replaces the container for a changed
+prototype, a read-only property whose value changed, and any container holding
+an accessor.
