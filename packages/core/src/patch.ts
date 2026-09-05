@@ -11,6 +11,14 @@
  *
  * Structurally compatible with Mutative's patches, which is what lets Mutative
  * remain one producer among possible others rather than the definition.
+ *
+ * A path traverses plain objects and dense arrays, and nothing else. A `Date`,
+ * a `Map`, a `Set` or an instance of a class is a leaf: it can be replaced
+ * whole, with the value going in untouched, but a patch does not describe its
+ * interior, and one that tries is refused rather than turning it into a plain
+ * object on the way past. Narrower than what a general immutable library can
+ * patch, and it is the tree history, sync and the transport all have to agree
+ * on anyway.
  */
 export type PatchOperation = 'add' | 'remove' | 'replace';
 

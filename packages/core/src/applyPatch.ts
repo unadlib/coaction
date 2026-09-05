@@ -22,14 +22,46 @@ const asSegments = (path: Patch['path']): (string | number)[] => {
     .map((segment) => segment.replace(/~1/g, '/').replace(/~0/g, '~'));
 };
 
-const shallowCopy = (value: unknown) => {
-  if (Array.isArray(value)) return value.slice();
-  if (typeof value === 'object' && value !== null) {
-    return { ...(value as Record<PropertyKey, unknown>) };
+/**
+ * A patch path went into something a patch cannot describe the inside of.
+ *
+ * Plain objects and dense arrays are what a Coaction transition traverses.
+ * Anything else -- a `Map`, a `Set`, a `Date`, an instance of a class -- is a
+ * leaf: it can be replaced whole, and its interior has no path. Spreading one
+ * into a plain object would silently produce a different thing, which is what
+ * this replaces.
+ */
+export class UnsupportedPatchContainerError extends TypeError {
+  constructor(
+    readonly container: unknown,
+    readonly path: readonly (string | number)[]
+  ) {
+    const described =
+      container === null
+        ? 'null'
+        : typeof container === 'object'
+          ? ((container as object).constructor?.name ?? 'an object')
+          : typeof container;
+    super(
+      `A patch cannot describe the inside of ${described}. Replace it whole instead. Path: ${path.length ? path.join('.') : '<root>'}.`
+    );
+    this.name = 'UnsupportedPatchContainerError';
   }
-  throw new TypeError(
-    `Cannot apply a patch through ${value === null ? 'null' : typeof value}.`
-  );
+}
+
+const isTraversable = (value: unknown) => {
+  if (Array.isArray(value)) return true;
+  if (typeof value !== 'object' || value === null) return false;
+  const prototype = Object.getPrototypeOf(value);
+  return prototype === Object.prototype || prototype === null;
+};
+
+const shallowCopy = (value: unknown, path: readonly (string | number)[]) => {
+  if (Array.isArray(value)) return value.slice();
+  if (!isTraversable(value)) {
+    throw new UnsupportedPatchContainerError(value, path);
+  }
+  return { ...(value as Record<PropertyKey, unknown>) };
 };
 
 /**
@@ -59,7 +91,10 @@ const applyAt = (
   if (typeof node === 'object' && node !== null && owned.has(node)) {
     copy = node as Record<PropertyKey, unknown>;
   } else {
-    copy = shallowCopy(node) as Record<PropertyKey, unknown>;
+    copy = shallowCopy(node, segments.slice(0, depth)) as Record<
+      PropertyKey,
+      unknown
+    >;
     owned.add(copy);
   }
   if (depth < segments.length - 1) {

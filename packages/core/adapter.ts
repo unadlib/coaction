@@ -41,6 +41,7 @@ export {
 } from './src/utils';
 export type { Patch, PatchOperation, Patches } from './src/patch';
 export { producePatches } from './src/producePatch';
+export { UnsupportedPatchContainerError } from './src/applyPatch';
 export { assertSharedJsonValue } from './src/sharedState';
 export { wrapStore } from './src/wrapStore';
 

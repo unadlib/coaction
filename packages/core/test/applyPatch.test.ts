@@ -132,3 +132,37 @@ test('a batch of array patches applies in order without re-copying', () => {
   expect(next.items[1999]).toBe(3998);
   expect(state.items[1999]).toBe(1999);
 });
+
+test('a patch cannot describe the inside of a non-plain container', () => {
+  // Spreading these into a plain object produced something else entirely: a Map
+  // became `{}` with its entries as keys, a class instance lost its prototype
+  // and every getter on it, a Date stopped being a Date -- all silently.
+  const cases: Array<[string, object]> = [
+    ['Map', new Map([['a', 1]])],
+    ['Set', new Set([1])],
+    ['Date', new Date(0)],
+    [
+      'class',
+      new (class Node {
+        x = 1;
+      })()
+    ]
+  ];
+  for (const [, container] of cases) {
+    expect(() =>
+      applyPatchesTo({ held: container }, [
+        { op: 'replace', path: ['held', 'x'], value: 2 }
+      ])
+    ).toThrow(/cannot describe the inside of/);
+  }
+});
+
+test('a non-plain container can still be replaced whole', () => {
+  const state = { stamp: new Date(0) };
+  const next = applyPatchesTo(state, [
+    { op: 'replace', path: ['stamp'], value: new Date(1000) }
+  ]);
+  // It is a leaf, not a container: the value goes in untouched.
+  expect(next.stamp instanceof Date).toBe(true);
+  expect(next.stamp.getTime()).toBe(1000);
+});
