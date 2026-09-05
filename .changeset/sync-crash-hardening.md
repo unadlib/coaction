@@ -83,3 +83,16 @@ store.** With `persistState: false` a restarted store is empty, so a record the
 remote had dropped produced no removal and the baseline kept claiming it; and a
 record created locally but never sent produced a removal for something the
 remote never had, which only the default conflict policy was undoing.
+
+**State has to be JSON, and saying so beats rewriting it.** Everything persisted
+goes through `JSON.stringify`, while Coaction's local core does not require
+JSON — so a `Date` came back a string, a `Map` came back `{}`, and nothing said
+so until something downstream read the wrong type. `sync()` now refuses such
+state with the path to the value, checks each commit's patches, and encodes
+inside the queued write so a `BigInt` or a cycle fails the write instead of
+throwing back out of the `set()` that already committed.
+
+**A push answer overtaken by something newer is not applied.** Arrival order is
+not commit order: an answer describing what the server made of an earlier write
+would put that value back over an edit that has since arrived. The
+acknowledgement stands; the state it describes is left to a pull.
