@@ -521,7 +521,15 @@ const createSelectorTrackerState = <TState extends object>(
     },
     track<TValue>(selector: SelectorFn<TState, TValue>) {
       if (!canTrackObserverRender()) {
-        return selector(store.getInitialState());
+        // The server has no subscription to keep, but it does have to agree
+        // with everything else reading the same store at the same moment.
+        // Reading the initial state here made `useStore(s => s.count)` and
+        // `useStore().count` report different values on the server whenever
+        // anything had written to the store before rendering -- a request
+        // preloading data, a hydration middleware, an initialisation second
+        // phase -- and left the markup disagreeing with what the client
+        // hydrates against.
+        return selector(store.getState());
       }
       const selection = evaluate(selector);
       scheduleCleanup(selection);
