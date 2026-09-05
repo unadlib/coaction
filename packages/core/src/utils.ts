@@ -607,6 +607,21 @@ export const createInversePatches = <T>(
         path: inversePath,
         value: sanitizeReplacementState(target.value)
       } as Patches[number]);
+    } else if (
+      path[path.length - 1] === 'length' &&
+      Array.isArray(target.parent) &&
+      typeof patch.value === 'number' &&
+      patch.value < (target.parent as unknown[]).length
+    ) {
+      // Shortening an array through `length` drops elements without a patch
+      // per index. Putting the length back would leave holes where they were,
+      // so the inverse carries the array itself. Growing through `length` only
+      // appends holes, and restoring the length does undo that.
+      inverse.unshift({
+        op: 'replace',
+        path: path.slice(0, -1),
+        value: sanitizeReplacementState(target.parent)
+      } as Patches[number]);
     } else {
       inverse.unshift({
         op: 'replace',
