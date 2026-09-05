@@ -133,3 +133,7 @@
 - Initial release of the React adapter.
 - Added selector helpers, including `createSelector` and auto-selector support.
 - Added the React example and followed up with early integration fixes.
+
+## Unreleased
+
+- Remove the recursive full-state touch from React store notifications; observer tracking now benefits from core deep path invalidation.

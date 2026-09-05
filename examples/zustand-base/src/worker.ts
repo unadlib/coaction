@@ -1,4 +1,4 @@
-import { create } from '@coaction/react';
+import { create } from '@coaction/react/shared';
 import { logger } from '@coaction/logger';
 import { create as createWithZustand } from 'zustand';
 import { bindZustand, adapt } from '@coaction/zustand';

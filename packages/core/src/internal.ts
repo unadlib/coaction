@@ -1,5 +1,6 @@
 import type { Draft, Patches } from 'mutative';
 import type { CreateState, Listener } from './interface';
+import type { ReactivePathNode } from './reactivePath';
 
 export type MutationOperation = 'setState' | 'apply';
 
@@ -8,10 +9,6 @@ export type StoreOperation =
   | 'subscribe'
   | 'store initialization'
   | `action ${string}`;
-
-export type SignalSlot = {
-  refresh: () => void;
-};
 
 export type StateSchema = {
   rootKeys: Set<PropertyKey>;
@@ -70,10 +67,10 @@ export interface Internal<T extends CreateState = CreateState> {
    * store subscribers.
    */
   notifyStateChange: () => void;
-  /**
-   * Reactive state slots used by computed getters/selectors.
-   */
-  signalSlots?: Set<SignalSlot>;
+  /** Lazily-created deep dependency trie for immutable state reads. */
+  reactivePathRoot?: ReactivePathNode;
+  /** Number of currently-live reactive path dependency kinds. */
+  reactivePathActiveCount?: number;
   /**
    * State keys that are allowed after initialization.
    */

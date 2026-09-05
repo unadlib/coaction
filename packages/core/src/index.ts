@@ -1,6 +1,7 @@
 export { create } from './create';
 export { ActionAuthorityChangedError } from './getRawStateClientAction';
 export { onStoreReady } from './lifecycle';
+export { whole } from './getRawStateStateProperty';
 export {
   assertSafePatches,
   isStateSchemaError,

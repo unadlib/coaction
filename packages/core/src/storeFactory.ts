@@ -1,6 +1,6 @@
 import { apply as applyWithMutative, type Patches } from 'mutative';
 import { applyMiddlewares } from './applyMiddlewares';
-import { refreshSignalSlots } from './computed';
+import { invalidateReactivePaths } from './reactivePath';
 import { defaultName } from './constant';
 import { getInitialState } from './getInitialState';
 import { getRawState, type LocalActionWrapper } from './getRawState';
@@ -87,7 +87,7 @@ export const createStore = <T extends CreateState>(
     validateState
   } as Internal<T>;
   internal.notifyStateChange = () => {
-    refreshSignalSlots(internal);
+    invalidateReactivePaths(internal);
     internal.listeners.forEach((listener) => listener());
   };
   const name = options.name ?? defaultName;
@@ -188,7 +188,7 @@ export const createStore = <T extends CreateState>(
         validateState?.(internal.getTransportState?.() ?? nextState);
       }
       internal.rootState = nextState;
-      refreshSignalSlots(internal);
+      invalidateReactivePaths(internal, safePatches);
       if (internal.updateImmutable) {
         internal.updateImmutable(internal.rootState as T);
       } else {

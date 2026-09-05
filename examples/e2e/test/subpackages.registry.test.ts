@@ -52,6 +52,7 @@ describe('subpackage example registry', () => {
       'coaction-redux',
       'coaction-solid',
       'coaction-svelte',
+      'coaction-sync',
       'coaction-valtio',
       'coaction-vue',
       'coaction-xstate',

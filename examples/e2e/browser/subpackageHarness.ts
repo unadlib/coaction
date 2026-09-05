@@ -10,6 +10,7 @@ import { runExample as runReactExample } from '../../subpackages/coaction-react'
 import { runExample as runReduxExample } from '../../subpackages/coaction-redux';
 import { runExample as runSolidExample } from '../../subpackages/coaction-solid';
 import { runExample as runSvelteExample } from '../../subpackages/coaction-svelte';
+import { runExample as runSyncExample } from '../../subpackages/coaction-sync';
 import { runExample as runValtioExample } from '../../subpackages/coaction-valtio';
 import { runExample as runVueExample } from '../../subpackages/coaction-vue';
 import { runExample as runXStateExample } from '../../subpackages/coaction-xstate';
@@ -29,6 +30,7 @@ export type SubpackageHarnessResult = {
   redux: ReturnType<typeof runReduxExample>;
   solid: ReturnType<typeof runSolidExample>;
   svelte: ReturnType<typeof runSvelteExample>;
+  sync: Awaited<ReturnType<typeof runSyncExample>>;
   valtio: ReturnType<typeof runValtioExample>;
   vue: ReturnType<typeof runVueExample>;
   xstate: ReturnType<typeof runXStateExample>;
@@ -55,6 +57,7 @@ export const createSubpackageHarness = (): SubpackageHarness => ({
       redux: runReduxExample(),
       solid: runSolidExample(),
       svelte: runSvelteExample(),
+      sync: await runSyncExample(),
       valtio: runValtioExample(),
       vue: runVueExample(),
       xstate: runXStateExample(),

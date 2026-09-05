@@ -62,6 +62,9 @@ Binder-backed adapters are whole-store adapters. They are never supported as a s
 | `@coaction/persist` | Supported   | Supported         | Unsupported         | Rehydrate and writeback use `store.setState()`, which client stores reject. Install on the authority store. |
 | `@coaction/history` | Supported   | Supported         | Unsupported         | Undo/redo mutates state through `setState()`. Install on the authority store.                               |
 | `@coaction/yjs`     | Supported   | Supported         | Unsupported         | Binding rejects `store.share === 'client'`. Use on the owning store only.                                   |
+| `@coaction/sync`    | Supported   | Supported         | Unsupported         | `sync()` throws on `store.share === 'client'`. Attach it to the local or authoritative main store.          |
+
+The `@coaction/sync` backend adapters — `/crud`, `/supabase`, `/firestore`, `/query` — and the `/indexeddb` storage carry the same boundary as `sync()` itself: they are attached through it, so a client mirror rejects them with it.
 
 ## Combination Notes
 

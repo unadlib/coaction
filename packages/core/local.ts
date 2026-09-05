@@ -1,5 +1,6 @@
 export { createLocal as create } from './src/createLocal';
 export { onStoreReady } from './src/lifecycle';
+export { whole } from './src/getRawStateStateProperty';
 export { wrapStore } from './src/wrapStore';
 export {
   computed,

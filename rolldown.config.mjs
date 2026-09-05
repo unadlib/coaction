@@ -14,7 +14,19 @@ const entries =
         name,
         input: join(packageDir, `${name}.ts`)
       }))
-    : [{ name: 'index', input: join(packageDir, 'index.ts') }];
+    : packageJson.name === '@coaction/react'
+      ? ['index', 'local', 'shared'].map((name) => ({
+          name,
+          input: join(packageDir, `${name}.ts`)
+        }))
+      : packageJson.name === '@coaction/sync'
+        ? ['index', 'crud', 'indexeddb', 'supabase', 'query', 'firestore'].map(
+            (name) => ({
+              name,
+              input: join(packageDir, `${name}.ts`)
+            })
+          )
+        : [{ name: 'index', input: join(packageDir, 'index.ts') }];
 const distDir = join(packageDir, 'dist');
 
 const dependencies = new Set([

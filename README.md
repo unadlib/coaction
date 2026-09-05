@@ -323,9 +323,28 @@ function CartSummary() {
 }
 ```
 
-> The explicit `useStore(selector)` path is _version + recompute + `Object.is`_ — the same
-> model Zustand uses. Coaction's fine-grained tracking lives in `observer()` and cached
-> getters, so mix the styles freely.
+> `useStore(selector)`, `observer()` and cached getters all track the state paths they
+> actually read, to any depth: writing `user.profile.age` does not re-run a selector that
+> only read `user.profile.name`. Mix the styles freely. A selector still compares its
+> result with `Object.is`, so returning a fresh object each call re-renders as it would
+> anywhere else.
+
+When a selector scans a whole collection, that per-element precision buys nothing — any
+change to the collection invalidates the scan anyway — and every element read pays for a
+proxy trap. `whole()` takes one dependency on the value and hands back the plain object:
+
+```tsx
+import { whole } from 'coaction';
+
+// re-runs when anything inside `items` changes, and not otherwise
+const total = useCart((state) =>
+  whole(state.items).reduce((n, i) => n + i.price, 0)
+);
+```
+
+Read the result; never mutate it. It is the store's own data, exactly as `getPureState()`
+returns it, and a write outside `set()` corrupts the store. Import `whole` from the same
+entry you created the store with — `coaction` and `coaction/local` are separate bundles.
 
 ### Slices
 
@@ -365,6 +384,27 @@ const { increment } = useStore.getState().counter;
 increment(); // still works — `this` stays bound to the slice
 ```
 
+## Entry points
+
+`@coaction/react` links the local runtime. Worker and cross-context stores need
+`@coaction/react/shared`, which adds the transport protocol:
+
+| Import                   | Runtime                               |  Minimal app |
+| :----------------------- | :------------------------------------ | -----------: |
+| `@coaction/react`        | local                                 | 19.9 KB gzip |
+| `@coaction/react/local`  | local — explicit alias of the default | 19.9 KB gzip |
+| `@coaction/react/shared` | local + worker/transport              | 31.9 KB gzip |
+
+Passing `worker`, `transport`, `clientTransport`, `transportPolicy`,
+`workerType` or `executeSyncTimeoutMs` to the default entry is a type error, and
+throws at runtime naming the entry to switch to. A value of `undefined` is not
+an error — `{ worker: maybeWorker }` degrades to a local store, which is what
+feature detection and SSR guards want.
+
+Import everything from the entry you created the store with. `whole()` and the
+other core helpers are re-exported from each React entry, so
+`import { create, whole } from '@coaction/react'` always matches.
+
 ## Scaling up: shared mode
 
 Everything above runs single-threaded. When your architecture calls for it, **the same store
@@ -387,7 +427,7 @@ export const counter = (set) => ({
 **`worker.js`**
 
 ```js
-import { create } from '@coaction/react';
+import { create } from '@coaction/react/shared';
 import { counter } from './counter';
 
 create(counter);
@@ -396,7 +436,7 @@ create(counter);
 **`App.jsx`**
 
 ```jsx
-import { create } from '@coaction/react';
+import { create } from '@coaction/react/shared';
 import { counter } from './counter';
 
 const worker = new Worker(new URL('./worker.js', import.meta.url), {
@@ -404,6 +444,12 @@ const worker = new Worker(new URL('./worker.js', import.meta.url), {
 });
 const useStore = create(counter, { worker });
 ```
+
+> Shared mode lives behind `@coaction/react/shared`. The default
+> `@coaction/react` import links the local runtime only, so an app that never
+> uses a worker does not ship the transport protocol — see
+> [Entry points](#entry-points) and the
+> [migration note](./docs/migration/react-entry-points.md).
 
 In shared mode the worker owns the state (the _main_ store); webpage threads are _client_
 mirrors that read local state and proxy method calls to the main store. Coaction handles
@@ -536,11 +582,12 @@ Coaction works across frameworks, with adapters for popular state libraries and 
 | XState        | [`@coaction/xstate`](./packages/coaction-xstate/README.md)   |
 | Valtio        | [`@coaction/valtio`](./packages/coaction-valtio/README.md)   |
 
-| Middleware | Package                                                      |
-| :--------- | :----------------------------------------------------------- |
-| Logger     | [`@coaction/logger`](./packages/coaction-logger/README.md)   |
-| Persist    | [`@coaction/persist`](./packages/coaction-persist/README.md) |
-| Undo/Redo  | [`@coaction/history`](./packages/coaction-history/README.md) |
+| Middleware       | Package                                                      |
+| :--------------- | :----------------------------------------------------------- |
+| Logger           | [`@coaction/logger`](./packages/coaction-logger/README.md)   |
+| Persist          | [`@coaction/persist`](./packages/coaction-persist/README.md) |
+| Undo/Redo        | [`@coaction/history`](./packages/coaction-history/README.md) |
+| Local-first sync | [`@coaction/sync`](./packages/coaction-sync/README.md)       |
 
 For collaboration, see [`@coaction/yjs`](./packages/coaction-yjs/README.md).
 

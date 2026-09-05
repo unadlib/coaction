@@ -1,6 +1,12 @@
 import { setActiveSub } from 'alien-signals';
 import * as alienSignalsSystem from 'alien-signals/system';
 import type { Link, ReactiveNode } from 'alien-signals/system';
+import {
+  beginReactiveSubscriberTrack,
+  disposeReactiveSubscriber,
+  endReactiveSubscriberTrack,
+  registerReactiveSubscriber
+} from './reactivePath';
 
 const ReactiveFlags = (
   alienSignalsSystem as unknown as {
@@ -19,6 +25,7 @@ type ReactiveTrackerNode = ReactiveNode & {
 
 export type ReactiveTracker = {
   getSnapshot: () => number;
+  hasDependencies: () => boolean;
   subscribe: (listener: () => void) => () => void;
   track: <T>(fn: () => T) => T;
   dispose: () => void;
@@ -104,6 +111,7 @@ export const createReactiveTracker = (): ReactiveTracker => {
       listeners.forEach((listener) => listener());
     }
   };
+  registerReactiveSubscriber(node);
   const dispose = () => {
     if (disposed) {
       return;
@@ -113,9 +121,11 @@ export const createReactiveTracker = (): ReactiveTracker => {
     node.depsTail = undefined;
     purgeDeps(node);
     node.flags = 0;
+    disposeReactiveSubscriber(node);
   };
   return {
     getSnapshot: () => version,
+    hasDependencies: () => !disposed && node.deps !== undefined,
     subscribe(listener) {
       if (disposed) {
         return () => undefined;
@@ -129,15 +139,22 @@ export const createReactiveTracker = (): ReactiveTracker => {
       if (disposed) {
         return fn();
       }
+      beginReactiveSubscriberTrack(node);
       node.depsTail = undefined;
       node.flags = ReactiveFlags.Watching | ReactiveFlags.RecursedCheck;
       const prevSub = setActiveSub(node);
       try {
         return fn();
       } finally {
-        setActiveSub(prevSub);
-        node.flags &= ~ReactiveFlags.RecursedCheck;
-        purgeDeps(node);
+        try {
+          // Finalize provisional object-path dependencies while this tracker is
+          // still active so surviving terminal paths can establish signal links.
+          endReactiveSubscriberTrack(node);
+        } finally {
+          setActiveSub(prevSub);
+          node.flags &= ~ReactiveFlags.RecursedCheck;
+          purgeDeps(node);
+        }
       }
     },
     dispose

@@ -1,4 +1,4 @@
-import type { Patches } from 'mutative';
+import { apply as applyWithMutative, type Patches } from 'mutative';
 import type { MiddlewareStore } from './interface';
 
 const isEqual = (x: unknown, y: unknown) => {
@@ -535,6 +535,88 @@ export const sanitizeReplacementState = <T>(
     setOwnEnumerable(target, key, sanitizeReplacementState(value, seen));
   }
   return target as T;
+};
+
+const normalizePatchPath = (path: unknown): PropertyKey[] => {
+  if (Array.isArray(path)) {
+    return [...path] as PropertyKey[];
+  }
+  if (typeof path !== 'string' || path === '') {
+    return [];
+  }
+  return path
+    .split('/')
+    .slice(1)
+    .map((segment) => segment.replace(/~1/g, '/').replace(/~0/g, '~'));
+};
+
+const readPatchTarget = (root: unknown, path: readonly PropertyKey[]) => {
+  if (!path.length) {
+    return { exists: true, parent: undefined, value: root };
+  }
+  let parent = root as any;
+  for (let index = 0; index < path.length - 1; index += 1) {
+    if (parent === null || parent === undefined) {
+      return { exists: false, parent: undefined, value: undefined };
+    }
+    parent = parent[path[index] as any];
+  }
+  if (parent === null || parent === undefined) {
+    return { exists: false, parent: undefined, value: undefined };
+  }
+  const key = path[path.length - 1];
+  return {
+    exists: Object.prototype.hasOwnProperty.call(parent, key),
+    parent,
+    value: parent[key as any]
+  };
+};
+
+/**
+ * Recompute an exact inverse patch list for `patches` against a new base.
+ *
+ * This is intentionally path-local: it clones only values removed/replaced by
+ * the forward transition instead of snapshotting the whole store. Local-first
+ * rebase can therefore refresh optimistic inverses without O(state-size)
+ * cloning for every pending mutation.
+ */
+export const createInversePatches = <T>(
+  state: T,
+  patches: Patches
+): Patches => {
+  let current = state as unknown;
+  const inverse: Patches = [];
+  for (const patch of patches) {
+    const path = normalizePatchPath(patch.path);
+    const target = readPatchTarget(current, path);
+    const inversePath = [...path];
+    if (patch.op === 'add') {
+      const parentIsArray = Array.isArray(target.parent);
+      if (!parentIsArray && target.exists) {
+        inverse.unshift({
+          op: 'replace',
+          path: inversePath,
+          value: sanitizeReplacementState(target.value)
+        } as Patches[number]);
+      } else {
+        inverse.unshift({ op: 'remove', path: inversePath } as Patches[number]);
+      }
+    } else if (patch.op === 'remove') {
+      inverse.unshift({
+        op: 'add',
+        path: inversePath,
+        value: sanitizeReplacementState(target.value)
+      } as Patches[number]);
+    } else {
+      inverse.unshift({
+        op: 'replace',
+        path: inversePath,
+        value: sanitizeReplacementState(target.value)
+      } as Patches[number]);
+    }
+    current = applyWithMutative(current as any, [patch] as Patches);
+  }
+  return inverse;
 };
 
 export const sanitizeInitialStateValue = <T>(

@@ -22,6 +22,8 @@ test('uses getInitialState as fallback snapshot for selector and multi-selector'
     useSyncExternalStore
   }));
 
+  const React = await import('react');
+  const { render } = await import('@testing-library/react');
   const { create, createSelector } = await import('../src');
   const useCounter = create(() => ({
     count: 1
@@ -29,14 +31,23 @@ test('uses getInitialState as fallback snapshot for selector and multi-selector'
   const useStep = create(() => ({
     step: 2
   }));
-
-  const selected = useCounter((state) => state.count);
-  const plain = useCounter();
   const selectTotal = createSelector(useCounter, useStep);
-  const total = selectTotal((counter, step) => counter.count + step.step);
+
+  let selected: unknown;
+  let plain: { count: number } | undefined;
+  let total: unknown;
+  // The store hooks hold per-component tracker state, so they have to run
+  // under a renderer rather than as bare calls.
+  const Probe = () => {
+    selected = useCounter((state) => state.count);
+    plain = useCounter();
+    total = selectTotal((counter, step) => counter.count + step.step);
+    return null;
+  };
+  render(React.createElement(Probe) as any);
 
   expect(selected).toBe(1);
-  expect(plain.count).toBe(1);
+  expect(plain!.count).toBe(1);
   expect(total).toBe(3);
   expect(useSyncExternalStore).toHaveBeenCalledTimes(3);
   expect(typeof useSyncExternalStore.mock.calls[0][2]).toBe('function');
@@ -48,27 +59,29 @@ test('multi-store selector detects updates before subscription commits', async (
   vi.resetModules();
   const storeRef: { useCounter?: any } = {};
   let didUpdateBeforeSubscribe = false;
-  const snapshots: unknown[] = [];
-  const useSyncExternalStore = vi.fn(
-    (
-      subscribe: (listener: () => void) => () => void,
-      getSnapshot: () => unknown
-    ) => {
-      snapshots.push(getSnapshot());
-      if (!didUpdateBeforeSubscribe) {
-        didUpdateBeforeSubscribe = true;
-        storeRef.useCounter!.getState().increment();
+  // Delegate to the real hook, but land a store update in the window between
+  // the render-phase read and the subscription React establishes in an effect.
+  // The selector has to converge on the newer value rather than keep the
+  // total it rendered before the update.
+  vi.doMock('use-sync-external-store/shim', async () => {
+    const { useSyncExternalStore } = await import('react');
+    return {
+      useSyncExternalStore: (
+        subscribe: (listener: () => void) => () => void,
+        getSnapshot: () => unknown,
+        getServerSnapshot?: () => unknown
+      ) => {
+        if (!didUpdateBeforeSubscribe) {
+          didUpdateBeforeSubscribe = true;
+          storeRef.useCounter!.getState().increment();
+        }
+        return useSyncExternalStore(subscribe, getSnapshot, getServerSnapshot);
       }
-      const unsubscribe = subscribe(() => undefined);
-      snapshots.push(getSnapshot());
-      unsubscribe();
-      return snapshots[snapshots.length - 1];
-    }
-  );
-  vi.doMock('use-sync-external-store/shim', () => ({
-    useSyncExternalStore
-  }));
+    };
+  });
 
+  const React = await import('react');
+  const { render, screen } = await import('@testing-library/react');
   const { create, createSelector } = await import('../src');
   storeRef.useCounter = create((set) => ({
     count: 0,
@@ -83,10 +96,15 @@ test('multi-store selector detects updates before subscription commits', async (
   }));
   const selectTotal = createSelector(storeRef.useCounter, useStep);
 
-  const total = selectTotal((counter, step) => counter.count + step.step);
+  const Total = () => {
+    const total = selectTotal((counter, step) => counter.count + step.step);
+    return React.createElement('span', { 'data-testid': 'total' }, total);
+  };
+  render(React.createElement(Total) as any);
 
-  expect(total).toBe(3);
-  expect(snapshots).toEqual([2, 3]);
+  expect(didUpdateBeforeSubscribe).toBe(true);
+  expect(storeRef.useCounter.getState().count).toBe(1);
+  expect(screen.getByTestId('total').textContent).toBe('3');
 });
 
 test('autoSelector in slices mode ignores non-object slice values', async () => {
@@ -404,12 +422,58 @@ test('observer disposes tracker after committed subscription is released', async
   render(React.createElement(Counter) as any);
   expect(tracker.subscribe).toHaveBeenCalledTimes(1);
 
+  // Losing the last subscriber means the component is gone, so the tracker is
+  // released on the next macrotask rather than held for the uncommitted-render
+  // window -- while it lives, every store write keeps paying for patches.
   unsubscribe?.();
-  vi.advanceTimersByTime(9_999);
   expect(dispose).not.toHaveBeenCalled();
 
   vi.advanceTimersByTime(1);
   expect(dispose).toHaveBeenCalledTimes(1);
+});
+
+test('observer resubscribing before the release timer keeps its tracker', async () => {
+  vi.useFakeTimers();
+  vi.resetModules();
+  let unsubscribe: (() => void) | undefined;
+  let subscribeFromHook!: (listener: () => void) => () => void;
+  const dispose = vi.fn();
+  const tracker = {
+    dispose,
+    getSnapshot: () => 0,
+    subscribe: vi.fn(() => () => undefined),
+    track: (fn: () => unknown) => fn()
+  };
+  vi.doMock('coaction/adapter', async () => ({
+    ...(await vi.importActual<object>('coaction/adapter')),
+    createReactiveTracker: () => tracker
+  }));
+  vi.doMock('use-sync-external-store/shim', () => ({
+    useSyncExternalStore: vi.fn(
+      (
+        subscribe: (listener: () => void) => () => void,
+        getSnapshot: () => unknown
+      ) => {
+        subscribeFromHook = subscribe;
+        unsubscribe = subscribe(() => undefined);
+        return getSnapshot();
+      }
+    )
+  }));
+
+  const React = await import('react');
+  const { render } = await import('@testing-library/react');
+  const { observer } = await import('../src');
+  const Counter = observer(() => React.createElement('span', null, 'count'));
+
+  render(React.createElement(Counter) as any);
+
+  // A StrictMode replay or a remounted Offscreen subtree unsubscribes and
+  // resubscribes synchronously, which has to cancel the pending release.
+  unsubscribe?.();
+  subscribeFromHook(() => undefined);
+  vi.advanceTimersByTime(1);
+  expect(dispose).not.toHaveBeenCalled();
 });
 
 test('observer syncs active tracker snapshot when resubscribing after missed update', async () => {

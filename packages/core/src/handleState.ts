@@ -26,7 +26,8 @@ import {
   setOwnEnumerable
 } from './utils';
 import { handleDraft } from './handleDraft';
-import { Computed, refreshSignalSlots } from './computed';
+import { Computed } from './computed';
+import { hasReactivePathNodes, invalidateReactivePaths } from './reactivePath';
 import {
   hasStoreCommitListeners,
   prepareStoreCommit,
@@ -82,7 +83,8 @@ export const handleState = <T extends CreateState>(
         : merge;
     const enablePatches =
       Boolean(store.transport ?? (options as StoreOptions<T>).enablePatches) ||
-      hasStoreCommitListeners(store);
+      hasStoreCommitListeners(store) ||
+      hasReactivePathNodes(internal);
     if (!enablePatches && internal.mutableInstance) {
       if (internal.actMutable) {
         internal.actMutable(() => {
@@ -204,6 +206,7 @@ export const handleState = <T extends CreateState>(
       !internal.validateState &&
       !(options as StoreOptions<T>).enablePatches &&
       !hasStoreCommitListeners(store) &&
+      !hasReactivePathNodes(internal) &&
       !internal.mutableInstance &&
       updater === defaultUpdater
     ) {
@@ -320,7 +323,7 @@ export const handleState = <T extends CreateState>(
           );
           internal.rootState = copy;
         }
-        refreshSignalSlots(internal);
+        invalidateReactivePaths(internal);
         if (internal.updateImmutable) {
           internal.updateImmutable(internal.rootState as T);
         } else {

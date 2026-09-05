@@ -1,7 +1,10 @@
 import React from 'react';
 import { act, render, screen, waitFor } from '@testing-library/react';
 
-import { create, observer, type StoreWithAsyncFunction } from '../src';
+// The degradable client contract belongs to the shared entry: its actions are
+// async because they may cross a worker boundary, and stay async when the
+// worker turns out to be absent. The default entry is local and stays sync.
+import { create, observer, type StoreWithAsyncFunction } from '../src/shared';
 
 type Counter = {
   count: number;

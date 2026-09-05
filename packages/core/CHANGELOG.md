@@ -174,3 +174,8 @@
 - Initial release of the Coaction core store API.
 - Added computed state, patch support, slices, async actions, and client/worker/shared-worker synchronization.
 - Added middleware support and early examples for framework adapters.
+
+## Unreleased
+
+- Add lazy patch-driven deep reactive path tracking for immutable stores.
+- Remove full signal-slot refresh scanning from immutable commit paths.

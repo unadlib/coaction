@@ -39,7 +39,16 @@ test('local entry creates local stores and rejects shared options', () => {
     createLocal(() => ({ count: 0 }), {
       transport: {}
     } as any)
-  ).toThrow("Option 'transport' requires the coaction/shared entry point.");
+  ).toThrow(/Option 'transport' requires the shared entry point/);
+
+  // "no worker here" is a local store, not an error.
+  const degraded = createLocal<{ count: number }>(() => ({ count: 2 }), {
+    worker: undefined,
+    transport: undefined
+  } as never);
+  expect(degraded.share).toBe(false);
+  expect(degraded.getState().count).toBe(2);
+  degraded.destroy();
 });
 
 test('adapter lifecycle observes stores created by a separate entry bundle', () => {

@@ -10,6 +10,10 @@ export {
   toMutableAdapterSnapshot
 } from './src/externalMutableAdapterUtils';
 export { createReactiveTracker } from './src/reactiveTracker';
+export {
+  getReadonlyStateValueVersion,
+  trackReadonlyStateValue
+} from './src/getRawStateStateProperty';
 export type { ReactiveTracker } from './src/reactiveTracker';
 export { onStoreReady } from './src/lifecycle';
 export { replaceExternalStoreState } from './src/replaceExternalStoreState';
@@ -26,6 +30,7 @@ export type {
 } from './src/storeCommit';
 export {
   applyRootReplacementWithPatches,
+  createInversePatches,
   createRootReplacementPatches,
   isStateSchemaError,
   replaceOwnEnumerable,

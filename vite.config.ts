@@ -24,6 +24,11 @@ export default {
       '@coaction/redux': packageAlias('coaction-redux'),
       '@coaction/solid': packageAlias('coaction-solid'),
       '@coaction/svelte': packageAlias('coaction-svelte'),
+      '@coaction/sync/crud': resolve(
+        __dirname,
+        'packages/coaction-sync/src/crud.ts'
+      ),
+      '@coaction/sync': packageAlias('coaction-sync'),
       '@coaction/valtio': packageAlias('coaction-valtio'),
       '@coaction/vue': packageAlias('coaction-vue'),
       '@coaction/xstate': packageAlias('coaction-xstate'),

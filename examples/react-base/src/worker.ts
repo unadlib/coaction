@@ -1,4 +1,4 @@
-import { create } from '@coaction/react';
+import { create } from '@coaction/react/shared';
 import { logger } from '@coaction/logger';
 
 import { counter, type Counter } from './counter';

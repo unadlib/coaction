@@ -28,9 +28,14 @@ export const createLocal: LocalCreator = <T extends CreateState>(
     'worker',
     'workerType'
   ]) {
-    if (Object.hasOwnProperty.call(options, key)) {
+    // Only a value actually worth honouring is rejected. `worker: undefined`
+    // is how a caller says "no worker here" -- feature detection, SSR, a
+    // progressive-enhancement guard -- and degrading to a local store is
+    // exactly right for it. A real worker still points at the shared entry.
+    if ((options as Record<string, unknown>)[key] != null) {
       throw new Error(
-        `Option '${key}' requires the coaction/shared entry point.`
+        `Option '${key}' requires the shared entry point: import from ` +
+          `'coaction/shared', or '@coaction/react/shared' in React.`
       );
     }
   }

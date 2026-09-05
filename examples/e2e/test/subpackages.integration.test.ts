@@ -10,6 +10,7 @@ import { runExample as runReactExample } from '../../subpackages/coaction-react'
 import { runExample as runReduxExample } from '../../subpackages/coaction-redux';
 import { runExample as runSolidExample } from '../../subpackages/coaction-solid';
 import { runExample as runSvelteExample } from '../../subpackages/coaction-svelte';
+import { runExample as runSyncExample } from '../../subpackages/coaction-sync';
 import { runExample as runValtioExample } from '../../subpackages/coaction-valtio';
 import { runExample as runVueExample } from '../../subpackages/coaction-vue';
 import { runExample as runXStateExample } from '../../subpackages/coaction-xstate';
@@ -107,6 +108,17 @@ describe('subpackage integration contracts', () => {
     expect(runSvelteExample()).toMatchObject({
       count: 1,
       selectedValues: [0, 1]
+    });
+  });
+
+  test('sync example drains its outbox and rebases remote changes', async () => {
+    expect(await runSyncExample()).toMatchObject({
+      count: 2,
+      label: 'remote',
+      persistedCount: 2,
+      pushedMutations: 2,
+      pendingAfterFlush: 0,
+      status: 'idle'
     });
   });
 

@@ -9,7 +9,8 @@ import type { ClientActionFactory } from './getRawStateClientAction';
 import { createLocalAction } from './getRawStateLocalAction';
 import {
   prepareAccessorDescriptor,
-  prepareStateDescriptor
+  prepareStateDescriptor,
+  registerReadonlyStateValuePath
 } from './getRawStateStateProperty';
 import { getOwnEnumerableKeys, isUnsafeKey, setOwnEnumerable } from './utils';
 
@@ -121,6 +122,11 @@ export const getRawState = <T extends CreateState>(
     });
     // it should be a immutable state
     const slice = Object.defineProperties({}, safeDescriptors);
+    registerReadonlyStateValuePath(
+      slice,
+      internal,
+      typeof sliceKey === 'undefined' ? [] : [sliceKey]
+    );
     return lockPublicStateObject(slice);
   };
   if (store.isSliceStore) {
@@ -141,6 +147,7 @@ export const getRawState = <T extends CreateState>(
         )
       );
     });
+    registerReadonlyStateValuePath(internal.module, internal, []);
     lockPublicStateObject(internal.module);
   } else {
     internal.module = handle(rawState, initialState) as T;

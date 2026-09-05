@@ -36,9 +36,41 @@ export default defineConfig({
         __dirname,
         'packages/coaction-pinia/src/index.ts'
       ),
+      '@coaction/react/local': resolve(
+        __dirname,
+        'packages/coaction-react/src/local.ts'
+      ),
+      '@coaction/react/shared': resolve(
+        __dirname,
+        'packages/coaction-react/src/shared.ts'
+      ),
       '@coaction/react': resolve(
         __dirname,
         'packages/coaction-react/src/index.ts'
+      ),
+      '@coaction/sync/firestore': resolve(
+        __dirname,
+        'packages/coaction-sync/src/firestore.ts'
+      ),
+      '@coaction/sync/query': resolve(
+        __dirname,
+        'packages/coaction-sync/src/query.ts'
+      ),
+      '@coaction/sync/supabase': resolve(
+        __dirname,
+        'packages/coaction-sync/src/supabase.ts'
+      ),
+      '@coaction/sync/indexeddb': resolve(
+        __dirname,
+        'packages/coaction-sync/src/indexeddb.ts'
+      ),
+      '@coaction/sync/crud': resolve(
+        __dirname,
+        'packages/coaction-sync/src/crud.ts'
+      ),
+      '@coaction/sync': resolve(
+        __dirname,
+        'packages/coaction-sync/src/index.ts'
       ),
       '@coaction/redux': resolve(
         __dirname,

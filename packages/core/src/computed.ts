@@ -1,9 +1,4 @@
-import {
-  computed as createComputed,
-  endBatch,
-  signal,
-  startBatch
-} from 'alien-signals';
+import { computed as createComputed } from 'alien-signals';
 import type { Store } from './interface';
 import type { CreateState } from './interface';
 import type { Internal } from './internal';
@@ -13,9 +8,6 @@ type Accessor<T> = () => T;
 type GetterContext<T extends CreateState> = {
   internal: Internal<T>;
 };
-
-const isObjectLike = (value: unknown) =>
-  typeof value === 'object' && value !== null;
 
 const runComputedRead = <T extends CreateState, R>(
   internal: Internal<T>,
@@ -90,48 +82,6 @@ export const createCachedGetter = <T extends CreateState>(
     }
     return accessor();
   };
-};
-
-export const createTrackedStateReader = <T extends CreateState>(
-  internal: Internal<T>,
-  read: () => unknown,
-  initialValue: unknown
-) => {
-  const slotSignal = signal(initialValue);
-  const slotVersionSignal = signal(0);
-  let slotVersion = 0;
-  const slot = {
-    refresh: () => {
-      const nextValue = read();
-      slotSignal(nextValue);
-      if (internal.mutableInstance && isObjectLike(nextValue)) {
-        slotVersion += 1;
-        slotVersionSignal(slotVersion);
-      }
-    }
-  };
-  (internal.signalSlots ??= new Set()).add(slot);
-  return () => {
-    const currentValue = slotSignal();
-    if (internal.mutableInstance && isObjectLike(currentValue)) {
-      slotVersionSignal();
-    }
-    return read();
-  };
-};
-
-export const refreshSignalSlots = <T extends CreateState>(
-  internal: Internal<T>
-) => {
-  if (!internal.signalSlots?.size) {
-    return;
-  }
-  startBatch();
-  try {
-    internal.signalSlots.forEach((slot) => slot.refresh());
-  } finally {
-    endBatch();
-  }
 };
 
 const defaultMemoize = (func: (...args: any) => any) => {

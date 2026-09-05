@@ -20,7 +20,11 @@
     "directory": "packages/coaction-react"
   },
   "files": [
-    "dist"
+    "dist",
+    "local.d.ts",
+    "local.js",
+    "shared.d.ts",
+    "shared.js"
   ],
   "sideEffects": false,
   "main": "dist/index.js",
@@ -37,6 +41,28 @@
         "default": "./dist/index.js"
       },
       "default": "./dist/index.mjs"
+    },
+    "./local": {
+      "import": {
+        "types": "./dist/local.d.mts",
+        "default": "./dist/local.mjs"
+      },
+      "require": {
+        "types": "./dist/local.d.ts",
+        "default": "./dist/local.js"
+      },
+      "default": "./dist/local.mjs"
+    },
+    "./shared": {
+      "import": {
+        "types": "./dist/shared.d.mts",
+        "default": "./dist/shared.mjs"
+      },
+      "require": {
+        "types": "./dist/shared.d.ts",
+        "default": "./dist/shared.js"
+      },
+      "default": "./dist/shared.mjs"
     },
     "./package.json": "./package.json"
   },

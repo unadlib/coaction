@@ -1,6 +1,52 @@
 import React from 'react';
 import { act, fireEvent, render, screen } from '@testing-library/react';
+import { whole, type Middleware } from 'coaction';
 import { create, createSelector, Observer, observer } from '../src';
+import { createReactStore } from '../src/runtime';
+
+test('selector falls back to store subscription when no reactive path is available', () => {
+  let state = { count: 0 };
+  const listeners = new Set<() => void>();
+  const store = {
+    name: 'external-like',
+    share: false as const,
+    isSliceStore: false,
+    setState: () => undefined,
+    getState: () => state,
+    getPureState: () => state,
+    getInitialState: () => ({ count: 0 }),
+    subscribe: (listener: () => void) => {
+      listeners.add(listener);
+      return () => listeners.delete(listener);
+    },
+    destroy: () => listeners.clear(),
+    apply: () => undefined
+  };
+  const useStore = createReactStore(() => store as any, {}, {});
+  let renders = 0;
+
+  const Counter = () => {
+    renders += 1;
+    const count = useStore((current: { count: number }) => current.count);
+    return React.createElement(
+      'span',
+      { 'data-testid': 'fallback-count' },
+      count
+    );
+  };
+
+  render(React.createElement(Counter) as any);
+  expect(screen.getByTestId('fallback-count').textContent).toBe('0');
+
+  act(() => {
+    state = { count: 1 };
+    listeners.forEach((listener) => listener());
+  });
+
+  expect(screen.getByTestId('fallback-count').textContent).toBe('1');
+  expect(renders).toBe(2);
+  useStore.destroy();
+});
 
 test('types zero-options actions as synchronous', () => {
   const useStore = create<{
@@ -153,6 +199,238 @@ test('selector subscriptions skip unrelated state updates', () => {
     useStore.getState().increment();
   });
   expect(screen.getByTestId('count').textContent).toBe('1');
+  expect(renders).toBe(2);
+});
+
+test('tracked selectors do not recompute for unrelated paths', () => {
+  const useStore = create<{
+    user: { name: string; age: number };
+    label: string;
+    rename: () => void;
+    birthday: () => void;
+  }>((set) => ({
+    user: { name: 'Michael', age: 30 },
+    label: 'one',
+    rename() {
+      set(() => {
+        this.label = 'two';
+      });
+    },
+    birthday() {
+      set(() => {
+        this.user.age += 1;
+      });
+    }
+  }));
+  let selectorRuns = 0;
+  let renders = 0;
+
+  const Name = () => {
+    renders += 1;
+    const name = useStore((state) => {
+      selectorRuns += 1;
+      return state.user.name;
+    });
+    return React.createElement('span', { 'data-testid': 'name' }, name);
+  };
+
+  render(React.createElement(Name) as any);
+  expect(selectorRuns).toBe(1);
+  expect(renders).toBe(1);
+
+  act(() => useStore.getState().rename());
+  act(() => useStore.getState().birthday());
+  expect(selectorRuns).toBe(1);
+  expect(renders).toBe(1);
+});
+
+test('tracked selectors switch dynamic dependencies after commit', () => {
+  const useStore = create<{
+    useLeft: boolean;
+    left: number;
+    right: number;
+    toggle: () => void;
+    bumpLeft: () => void;
+    bumpRight: () => void;
+  }>((set) => ({
+    useLeft: true,
+    left: 1,
+    right: 10,
+    toggle() {
+      set(() => {
+        this.useLeft = !this.useLeft;
+      });
+    },
+    bumpLeft() {
+      set(() => {
+        this.left += 1;
+      });
+    },
+    bumpRight() {
+      set(() => {
+        this.right += 1;
+      });
+    }
+  }));
+  let selectorRuns = 0;
+
+  const Value = () => {
+    const value = useStore((state) => {
+      selectorRuns += 1;
+      return state.useLeft ? state.left : state.right;
+    });
+    return React.createElement('span', { 'data-testid': 'dynamic' }, value);
+  };
+
+  render(React.createElement(Value) as any);
+  expect(screen.getByTestId('dynamic').textContent).toBe('1');
+
+  act(() => useStore.getState().toggle());
+  expect(screen.getByTestId('dynamic').textContent).toBe('10');
+  const runsAfterToggle = selectorRuns;
+
+  act(() => useStore.getState().bumpLeft());
+  expect(selectorRuns).toBe(runsAfterToggle);
+  expect(screen.getByTestId('dynamic').textContent).toBe('10');
+
+  act(() => useStore.getState().bumpRight());
+  expect(screen.getByTestId('dynamic').textContent).toBe('11');
+  expect(selectorRuns).toBeGreaterThan(runsAfterToggle);
+});
+
+test('object-valued selectors subscribe to their terminal path', () => {
+  const useStore = create<{
+    user: { profile: { name: string; age: number } };
+    birthday: () => void;
+  }>((set) => ({
+    user: { profile: { name: 'Michael', age: 30 } },
+    birthday() {
+      set(() => {
+        this.user.profile.age += 1;
+      });
+    }
+  }));
+  let renders = 0;
+
+  const Profile = () => {
+    renders += 1;
+    const profile = useStore((state) => state.user.profile);
+    return React.createElement(
+      'span',
+      { 'data-testid': 'profile-age' },
+      profile.age
+    );
+  };
+
+  render(React.createElement(Profile) as any);
+  expect(screen.getByTestId('profile-age').textContent).toBe('30');
+  act(() => useStore.getState().birthday());
+  expect(screen.getByTestId('profile-age').textContent).toBe('31');
+  expect(renders).toBe(2);
+});
+
+test('observer tracks Coaction object values passed directly through React props', () => {
+  const useStore = create<{
+    user: { profile: { age: number } };
+    birthday: () => void;
+  }>((set) => ({
+    user: { profile: { age: 30 } },
+    birthday() {
+      set(() => {
+        this.user.profile.age += 1;
+      });
+    }
+  }));
+  let parentRenders = 0;
+  const Child = ({ profile }: { profile: { age: number } }) =>
+    React.createElement(
+      'span',
+      { 'data-testid': 'profile-prop-age' },
+      profile.age
+    );
+  const Parent = observer(() => {
+    parentRenders += 1;
+    const state = useStore();
+    return React.createElement(Child, { profile: state.user.profile });
+  });
+
+  render(React.createElement(Parent) as any);
+  expect(screen.getByTestId('profile-prop-age').textContent).toBe('30');
+
+  act(() => useStore.getState().birthday());
+  expect(screen.getByTestId('profile-prop-age').textContent).toBe('31');
+  expect(parentRenders).toBe(2);
+});
+
+test('object-valued selector keeps equality filtering for unrelated dependencies', () => {
+  const useStore = create<{
+    user: { name: string };
+    flag: boolean;
+    toggle: () => void;
+  }>((set) => ({
+    user: { name: 'Michael' },
+    flag: false,
+    toggle() {
+      set(() => {
+        this.flag = !this.flag;
+      });
+    }
+  }));
+  let renders = 0;
+  let selectorRuns = 0;
+
+  const User = () => {
+    renders += 1;
+    const user = useStore((state) => {
+      selectorRuns += 1;
+      void state.flag;
+      return state.user;
+    });
+    return React.createElement(
+      'span',
+      { 'data-testid': 'stable-user' },
+      user.name
+    );
+  };
+
+  render(React.createElement(User) as any);
+  const initialRuns = selectorRuns;
+  act(() => useStore.getState().toggle());
+
+  expect(selectorRuns).toBeGreaterThan(initialRuns);
+  expect(renders).toBe(1);
+  expect(screen.getByTestId('stable-user').textContent).toBe('Michael');
+});
+
+test('selector returning the complete state tracks the root aggregate', () => {
+  const useStore = create<{
+    count: number;
+    increment: () => void;
+  }>((set) => ({
+    count: 0,
+    increment() {
+      set(() => {
+        this.count += 1;
+      });
+    }
+  }));
+  let renders = 0;
+
+  const WholeState = () => {
+    renders += 1;
+    const state = useStore((current) => current);
+    return React.createElement(
+      'span',
+      { 'data-testid': 'whole-count' },
+      state.count
+    );
+  };
+
+  render(React.createElement(WholeState) as any);
+  expect(screen.getByTestId('whole-count').textContent).toBe('0');
+
+  act(() => useStore.getState().increment());
+  expect(screen.getByTestId('whole-count').textContent).toBe('1');
   expect(renders).toBe(2);
 });
 
@@ -618,6 +896,52 @@ test('createSelector combines multiple stores', () => {
   expect(screen.getByTestId('total').textContent).toBe('4');
 });
 
+test('createSelector skips unrelated paths across multiple stores', () => {
+  const useCounter = create((set) => ({
+    count: 0,
+    label: 'one',
+    rename() {
+      set(() => {
+        this.label = 'two';
+      });
+    }
+  }));
+  const useStep = create((set) => ({
+    step: 2,
+    label: 'step',
+    rename() {
+      set(() => {
+        this.label = 'changed';
+      });
+    }
+  }));
+  const useMultiSelector = createSelector(useCounter, useStep);
+  let selectorRuns = 0;
+  let renders = 0;
+
+  const Counter = () => {
+    renders += 1;
+    const total = useMultiSelector((counter, step) => {
+      selectorRuns += 1;
+      return counter.count + step.step;
+    });
+    return React.createElement(
+      'span',
+      { 'data-testid': 'isolated-total' },
+      total
+    );
+  };
+
+  render(React.createElement(Counter) as any);
+  expect(selectorRuns).toBe(1);
+  expect(renders).toBe(1);
+
+  act(() => useCounter.getState().rename());
+  act(() => useStep.getState().rename());
+  expect(selectorRuns).toBe(1);
+  expect(renders).toBe(1);
+});
+
 test('createSelector snapshots cache object results', () => {
   const useCounter = create((set) => ({
     count: 0,
@@ -651,4 +975,93 @@ test('createSelector snapshots cache object results', () => {
 
   fireEvent.click(screen.getByTestId('total'));
   expect(screen.getByTestId('total').textContent).toBe('3');
+});
+
+test('unmounting a tracked component stops the store paying for patches', async () => {
+  let patchCalls = 0;
+  const countPatches: Middleware<{
+    user: { name: string; age: number };
+    setAge: (age: number) => void;
+  }> = (store) => {
+    store.patch = (transition) => {
+      patchCalls += 1;
+      return transition;
+    };
+    return store;
+  };
+  const useStore = create(
+    (set) => ({
+      user: { name: 'Michael', age: 30 },
+      setAge(age: number) {
+        set(() => {
+          this.user.age = age;
+        });
+      }
+    }),
+    { middlewares: [countPatches] }
+  );
+
+  const Name = () => {
+    const name = useStore((state) => state.user.name);
+    return React.createElement('span', { 'data-testid': 'held-name' }, name);
+  };
+  const view = render(React.createElement(Name) as any);
+
+  // A live tracked path forces the patch-generating write path.
+  act(() => useStore.getState().setAge(31));
+  expect(patchCalls).toBeGreaterThan(0);
+
+  act(() => view.unmount());
+  // Let the release timer run; the tracked path nodes go with it.
+  await act(async () => {
+    await new Promise((resolve) => setTimeout(resolve, 0));
+  });
+
+  const afterUnmount = patchCalls;
+  act(() => useStore.getState().setAge(32));
+  act(() => useStore.getState().setAge(33));
+  expect(patchCalls).toBe(afterUnmount);
+  useStore.destroy();
+});
+
+test('whole() keeps a scanning selector reactive without per-element tracking', () => {
+  const useStore = create<{
+    rows: number[];
+    other: number;
+    bump: () => void;
+    touchOther: () => void;
+  }>((set) => ({
+    rows: [1, 2, 3],
+    other: 0,
+    bump() {
+      set(() => {
+        this.rows[0] += 1;
+      });
+    },
+    touchOther() {
+      set(() => {
+        this.other += 1;
+      });
+    }
+  }));
+
+  let selectorRuns = 0;
+  const Total = () => {
+    const total = useStore((state) => {
+      selectorRuns += 1;
+      return whole(state.rows).reduce((sum, n) => sum + n, 0);
+    });
+    return React.createElement('span', { 'data-testid': 'whole-total' }, total);
+  };
+  render(React.createElement(Total) as any);
+  expect(screen.getByTestId('whole-total').textContent).toBe('6');
+
+  const before = selectorRuns;
+  act(() => useStore.getState().touchOther());
+  expect(selectorRuns).toBe(before);
+
+  act(() => useStore.getState().bump());
+  expect(selectorRuns).toBeGreaterThan(before);
+  expect(screen.getByTestId('whole-total').textContent).toBe('7');
+  useStore.destroy();
 });

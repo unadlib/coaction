@@ -2,6 +2,7 @@ import { vi } from 'vitest';
 import {
   areShallowEqualWithArray,
   cloneOwnEnumerable,
+  createInversePatches,
   shallowCloneOwnEnumerable,
   mergeObject,
   replaceOwnEnumerable,
@@ -13,6 +14,32 @@ test('areShallowEqualWithArray handles null, NaN and signed zero', () => {
   expect(areShallowEqualWithArray(null, [1] as any)).toBeFalsy();
   expect(areShallowEqualWithArray([NaN], [NaN])).toBeTruthy();
   expect(areShallowEqualWithArray([0], [-0])).toBeFalsy();
+});
+
+test('createInversePatches captures path-local values against an evolving base', () => {
+  const state = {
+    doc: { title: 'base' },
+    items: ['a', 'b']
+  };
+  const inverse = createInversePatches(state, [
+    { op: 'replace', path: ['doc', 'title'], value: 'next' },
+    { op: 'add', path: ['doc', 'author'], value: 'Michael' },
+    { op: 'remove', path: ['items', 0] }
+  ]);
+
+  expect(inverse).toEqual([
+    { op: 'add', path: ['items', 0], value: 'a' },
+    { op: 'remove', path: ['doc', 'author'] },
+    { op: 'replace', path: ['doc', 'title'], value: 'base' }
+  ]);
+});
+
+test('createInversePatches accepts JSON Pointer paths', () => {
+  expect(
+    createInversePatches({ user: { name: 'Michael' } }, [
+      { op: 'replace', path: '/user/name', value: 'Lin' }
+    ] as any)
+  ).toEqual([{ op: 'replace', path: ['user', 'name'], value: 'Michael' }]);
 });
 
 test('mergeObject handles slice and plain merge paths', () => {

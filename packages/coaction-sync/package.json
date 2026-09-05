@@ -1,0 +1,125 @@
+{
+  "name": "@coaction/sync",
+  "version": "3.2.1",
+  "description": "Commit-based local-first synchronization for Coaction",
+  "keywords": [
+    "coaction",
+    "local-first",
+    "offline",
+    "sync"
+  ],
+  "license": "MIT",
+  "author": "unadlib",
+  "repository": {
+    "type": "git",
+    "url": "https://github.com/coactionjs/coaction.git",
+    "directory": "packages/coaction-sync"
+  },
+  "files": [
+    "dist",
+    "crud.d.ts",
+    "crud.js",
+    "indexeddb.d.ts",
+    "indexeddb.js",
+    "supabase.d.ts",
+    "supabase.js",
+    "query.d.ts",
+    "query.js",
+    "firestore.d.ts",
+    "firestore.js"
+  ],
+  "sideEffects": false,
+  "main": "dist/index.js",
+  "module": "dist/index.mjs",
+  "types": "dist/index.d.ts",
+  "exports": {
+    ".": {
+      "import": {
+        "types": "./dist/index.d.mts",
+        "default": "./dist/index.mjs"
+      },
+      "require": {
+        "types": "./dist/index.d.ts",
+        "default": "./dist/index.js"
+      },
+      "default": "./dist/index.mjs"
+    },
+    "./crud": {
+      "import": {
+        "types": "./dist/crud.d.mts",
+        "default": "./dist/crud.mjs"
+      },
+      "require": {
+        "types": "./dist/crud.d.ts",
+        "default": "./dist/crud.js"
+      },
+      "default": "./dist/crud.mjs"
+    },
+    "./indexeddb": {
+      "import": {
+        "types": "./dist/indexeddb.d.mts",
+        "default": "./dist/indexeddb.mjs"
+      },
+      "require": {
+        "types": "./dist/indexeddb.d.ts",
+        "default": "./dist/indexeddb.js"
+      },
+      "default": "./dist/indexeddb.mjs"
+    },
+    "./supabase": {
+      "import": {
+        "types": "./dist/supabase.d.mts",
+        "default": "./dist/supabase.mjs"
+      },
+      "require": {
+        "types": "./dist/supabase.d.ts",
+        "default": "./dist/supabase.js"
+      },
+      "default": "./dist/supabase.mjs"
+    },
+    "./query": {
+      "import": {
+        "types": "./dist/query.d.mts",
+        "default": "./dist/query.mjs"
+      },
+      "require": {
+        "types": "./dist/query.d.ts",
+        "default": "./dist/query.js"
+      },
+      "default": "./dist/query.mjs"
+    },
+    "./firestore": {
+      "import": {
+        "types": "./dist/firestore.d.mts",
+        "default": "./dist/firestore.mjs"
+      },
+      "require": {
+        "types": "./dist/firestore.d.ts",
+        "default": "./dist/firestore.js"
+      },
+      "default": "./dist/firestore.mjs"
+    },
+    "./package.json": "./package.json"
+  },
+  "publishConfig": {
+    "access": "public",
+    "provenance": true
+  },
+  "scripts": {
+    "clean": "rm -rf dist",
+    "test": "vitest run test",
+    "build": "node ../../scripts/build-package.mjs",
+    "dev": "node ../../scripts/build-package.mjs --watch"
+  },
+  "devDependencies": {
+    "@tanstack/query-core": "^5.102.8",
+    "coaction": "workspace:*",
+    "fake-indexeddb": "^6.2.5"
+  },
+  "peerDependencies": {
+    "coaction": "^3.2.1"
+  },
+  "authors": [
+    "Michael Lin <unadlib@gmail.com> (https://github.com/unadlib)"
+  ]
+}

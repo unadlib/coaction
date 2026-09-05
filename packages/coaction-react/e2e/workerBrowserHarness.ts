@@ -1,7 +1,9 @@
 import * as React from 'react';
 import { createRoot, type Root } from 'react-dom/client';
-import { create } from '../src/index';
-import type { StoreWithAsyncFunction } from '../src/index';
+// Worker-backed stores live on the shared entry; the default entry links the
+// local runtime only.
+import { create } from '../src/shared';
+import type { StoreWithAsyncFunction } from '../src/shared';
 import {
   workerCounter,
   type WorkerCounterState
