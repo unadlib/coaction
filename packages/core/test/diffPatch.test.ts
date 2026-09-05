@@ -158,3 +158,53 @@ test('a property patches cannot describe replaces the container', () => {
   // Same value, different accessor: not the same object.
   expect(diffPatches(one, other).patches).toHaveLength(1);
 });
+
+test('a shape a patch cannot reach replaces the container', () => {
+  // The value changed, but a read-only property cannot be assigned a new one.
+  const before = {} as { x?: number };
+  Object.defineProperty(before, 'x', {
+    value: 1,
+    writable: false,
+    enumerable: true,
+    configurable: true
+  });
+  const after = {} as { x?: number };
+  Object.defineProperty(after, 'x', {
+    value: 2,
+    writable: false,
+    enumerable: true,
+    configurable: true
+  });
+  expect(applyPatchesTo(before, diffPatches(before, after).patches)).toEqual(
+    after
+  );
+
+  // The prototype is part of what the object is, and no patch names it.
+  const protoA = { tag: 'a' };
+  const protoB = { tag: 'b' };
+  const fromA = Object.create(protoA) as { x: number };
+  fromA.x = 1;
+  const fromB = Object.create(protoB) as { x: number };
+  fromB.x = 1;
+  const moved = applyPatchesTo(fromA, diffPatches(fromA, fromB).patches);
+  expect(Object.getPrototypeOf(moved)).toBe(protoB);
+
+  // Copying a container stores what its accessor gave rather than the accessor,
+  // so a container holding one cannot be patched key by key.
+  const getter = () => 1;
+  const withAccessor = (x: number) => {
+    const held = { x } as { x: number; g?: number };
+    Object.defineProperty(held, 'g', {
+      get: getter,
+      enumerable: true,
+      configurable: true
+    });
+    return held;
+  };
+  const one = withAccessor(1);
+  const two = withAccessor(2);
+  const patched = applyPatchesTo(one, diffPatches(one, two).patches);
+  expect(typeof Object.getOwnPropertyDescriptor(patched, 'g')?.get).toBe(
+    'function'
+  );
+});

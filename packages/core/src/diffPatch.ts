@@ -109,6 +109,10 @@ const walk = (
   // would reach the right values on the wrong shape, so the container is
   // replaced whole -- the same answer sparse arrays already get.
   const reshaped = () => {
+    // The prototype is part of what the object is, and no patch names it.
+    if (Object.getPrototypeOf(before) !== Object.getPrototypeOf(after)) {
+      return true;
+    }
     const keys = new Set([
       ...Reflect.ownKeys(before),
       ...Reflect.ownKeys(after)
@@ -136,6 +140,13 @@ const walk = (
         had.get !== has.get ||
         had.set !== has.set
       ) {
+        return true;
+      }
+      // An accessor survives nothing: applying any patch to this container
+      // copies it, and a copy stores what the accessor gave rather than the
+      // accessor. A read-only property cannot be assigned a new value at all.
+      if ('get' in had || 'set' in had) return true;
+      if (had.writable === false && !Object.is(had.value, has.value)) {
         return true;
       }
     }

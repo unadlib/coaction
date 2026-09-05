@@ -467,3 +467,78 @@ test('a wrapper with a read-only property unwraps', () => {
     Object.getOwnPropertyDescriptor((state as any).copy, 'user')?.writable
   ).toBe(false);
 });
+
+test('an index argument is converted once, and not on the base', () => {
+  // The native method converts an index argument, and that conversion runs the
+  // argument's own code -- on the base object, if it were unwrapped first.
+  const arg = {
+    reads: 0,
+    valueOf(this: { reads: number }) {
+      this.reads += 1;
+      return 0;
+    }
+  };
+  const base = { xs: [1, 2], arg };
+  const { state } = scopeDraft(base, (draft: any) => {
+    draft.xs.fill(9, draft.arg);
+  });
+  expect(base.arg.reads).toBe(0);
+  expect((state as any).arg.reads).toBe(1);
+  expect(state.xs).toEqual([9, 9]);
+
+  let calls = 0;
+  const index = {
+    valueOf() {
+      calls += 1;
+      return 0;
+    }
+  };
+  scopeDraft({ xs: [1, 2, 3] }, (draft: any) => {
+    draft.xs.splice(index, 1);
+  });
+  // Converting in the preflight and again in the method read it three times.
+  expect(calls).toBe(1);
+});
+
+test('a refused removal survives an argument the language would coerce', () => {
+  // `splice(NaN, 1)` deletes from index zero. A preflight doing its own
+  // arithmetic on `NaN` saw nothing there and let the removal through.
+  const base = { xs: [new Date(0)] };
+  const { state } = scopeDraft(base, (draft: any) => {
+    try {
+      draft.xs.splice(NaN, 1);
+    } catch {
+      // The point is what survives.
+    }
+  });
+  expect(state.xs).toHaveLength(1);
+  // Nothing was copied either, so an unrelated reader keeps its identity.
+  expect(state.xs).toBe(base.xs);
+});
+
+test('sort refuses what the language refuses', () => {
+  expect(() =>
+    scopeDraft({ xs: [2, 1] }, (draft: any) => draft.xs.sort(null))
+  ).toThrow(TypeError);
+  expect(() =>
+    scopeDraft({ xs: [Symbol('b'), Symbol('a')] }, (draft: any) =>
+      draft.xs.sort()
+    )
+  ).toThrow(/Cannot convert a Symbol value to a string/);
+});
+
+test('an accessor cannot carry a draft out through its closure', () => {
+  const base = { user: { n: 1 }, copy: null as unknown };
+  const { state } = scopeDraft(base, (draft: any) => {
+    const wrapper = {};
+    Object.defineProperty(wrapper, 'user', {
+      get: () => draft.user,
+      enumerable: true,
+      configurable: true
+    });
+    draft.copy = wrapper;
+  });
+  // The closure outlives the draft, so keeping it would leave the state holding
+  // a route to something finalized. It is read once instead.
+  expect((state as any).copy.user.n).toBe(1);
+});

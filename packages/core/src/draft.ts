@@ -182,29 +182,41 @@ const childNode = (node: Node, key: PropertyKey, value: object): Node => {
 const runArrayMethod = (node: Node, method: string) =>
   function (this: unknown, ...args: unknown[]) {
     assertActive(node.root);
+    const source = current(node) as unknown as unknown[];
+    // Numbers first, and exactly once. An index argument gets converted by the
+    // native method, and that conversion runs the argument's own `valueOf` --
+    // on the base object, if the argument were unwrapped first. Converting
+    // what the caller actually passed keeps a draft a draft, so such a write
+    // is recorded like any other; converting once means the method sees a
+    // number and cannot run it again.
+    const prepared = args.map((argument, index) =>
+      numericArgument(method, index)
+        ? toIntegerOrInfinity(argument)
+        : unwrapDraft(argument)
+    );
+    // Everything that can refuse happens before the array is touched, so a
+    // caught error leaves neither a mutation nor a pointless copy behind.
+    if (method === 'sort') {
+      assertSortable(source, prepared[0]);
+    } else {
+      for (const element of wouldRemove(source, method, prepared)) {
+        if (!isPatchTraversable(element) && isObject(element)) {
+          refuseLeaf(element as object);
+        }
+      }
+    }
     const before = shallowCopy(
       current(node) as Record<PropertyKey, unknown>
     ) as unknown as unknown[];
     const copy = ensureCopy(node) as unknown as unknown[];
     let result: unknown;
     if (method === 'sort') {
-      sortThroughViews(copy, args[0] as never);
+      sortThroughViews(copy, prepared[0] as never);
       result = copy;
     } else {
-      // What is removed leaves the tree, and a leaf has no detached form, so
-      // the array is left untouched rather than mutated and then complained
-      // about -- a caught error should not leave the removal behind.
-      for (const element of wouldRemove(copy, method, args)) {
-        if (!isPatchTraversable(element) && isObject(element)) {
-          refuseLeaf(element as object);
-        }
-      }
       result = (Array.prototype as never as Record<string, Function>)[
         method
-      ].apply(
-        copy,
-        args.map((argument) => unwrapDraft(argument))
-      );
+      ].apply(copy, prepared);
     }
     node.children.clear();
     const path = pathOf(node);
@@ -254,6 +266,45 @@ const runArrayMethod = (node: Node, method: string) =>
 const isObject = (value: unknown) =>
   typeof value === 'object' && value !== null;
 
+/**
+ * Which arguments a mutating method reads as an index.
+ *
+ * They are converted here rather than by the method, so the conversion happens
+ * once and on the value the caller passed rather than on whatever it unwraps
+ * to.
+ */
+const numericArguments: Record<string, readonly number[]> = {
+  splice: [0, 1],
+  fill: [1, 2],
+  copyWithin: [0, 1, 2]
+};
+const numericArgument = (method: string, index: number) =>
+  numericArguments[method]?.includes(index) ?? false;
+
+/** `ToIntegerOrInfinity`, which is what an array index argument goes through. */
+const toIntegerOrInfinity = (value: unknown) => {
+  if (value === undefined) return undefined;
+  const number = Number(value);
+  if (Number.isNaN(number)) return 0;
+  if (number === Infinity || number === -Infinity) return number;
+  return Math.trunc(number);
+};
+
+/** `sort` accepts a comparator or nothing, and orders by string otherwise. */
+const assertSortable = (array: readonly unknown[], comparator: unknown) => {
+  if (comparator !== undefined && typeof comparator !== 'function') {
+    throw new TypeError(
+      'The comparison function must be either a function or undefined'
+    );
+  }
+  if (comparator !== undefined) return;
+  for (const element of array) {
+    if (typeof element === 'symbol') {
+      throw new TypeError('Cannot convert a Symbol value to a string');
+    }
+  }
+};
+
 /** Which elements a mutating method would take out of the array. */
 const wouldRemove = (
   array: unknown[],
@@ -263,22 +314,21 @@ const wouldRemove = (
   if (method === 'pop') return array.length ? [array[array.length - 1]] : [];
   if (method === 'shift') return array.length ? [array[0]] : [];
   if (method !== 'splice') return [];
-  const start =
-    args.length === 0
-      ? array.length
-      : Math.max(
-          0,
-          Math.min(
-            array.length,
-            Number(args[0]) < 0
-              ? array.length + Number(args[0])
-              : Number(args[0])
-          )
-        );
+  // The arguments arrive already converted, so this is the specified clamping
+  // and nothing else -- no second conversion, and no arithmetic on a value that
+  // was never a number.
+  const relative = (args[0] as number | undefined) ?? 0;
+  const start = Math.max(
+    0,
+    Math.min(array.length, relative < 0 ? array.length + relative : relative)
+  );
   const count =
     args.length <= 1
       ? array.length - start
-      : Math.max(0, Math.min(array.length - start, Number(args[1])));
+      : Math.max(
+          0,
+          Math.min(array.length - start, (args[1] as number | undefined) ?? 0)
+        );
   return array.slice(start, start + count);
 };
 
@@ -569,7 +619,16 @@ const cloneWithout = (
   for (const key of Reflect.ownKeys(source)) {
     const descriptor = Object.getOwnPropertyDescriptor(source, key)!;
     if ('get' in descriptor || 'set' in descriptor) {
-      Object.defineProperty(copy, key, descriptor);
+      // Carrying the accessor across would carry its closure, and a closure
+      // that returns a draft outlives the draft: the state would hold a route
+      // to something finalized, which throws whenever it is read. Read it once
+      // and store what it gave.
+      Object.defineProperty(copy, key, {
+        value: cloneWithout(Reflect.get(source, key), done),
+        writable: true,
+        enumerable: descriptor.enumerable,
+        configurable: true
+      });
       continue;
     }
     Object.defineProperty(copy, key, {
