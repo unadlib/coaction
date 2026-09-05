@@ -1,4 +1,5 @@
 import { create } from 'coaction';
+import { history, type HistoryApi } from '@coaction/history';
 import {
   createFetchSyncAdapter,
   getSyncApi,
@@ -1077,5 +1078,50 @@ test('overlapping pulls share one request rather than racing', async () => {
   await nextTick();
 
   expect(store.getState().count).toBe(3);
+  store.destroy();
+});
+
+test('an undo from @coaction/history is sent like any other user edit', async () => {
+  const pushed: number[][] = [];
+  const adapter: SyncAdapter = {
+    pull: async () => ({}),
+    push: async (mutations) => {
+      pushed.push(
+        mutations.flatMap((mutation) =>
+          mutation.patches.map((patch) => (patch as { value: number }).value)
+        )
+      );
+      return {};
+    }
+  };
+  const store = create<{ count: number; increment: () => void }>(
+    (set) => ({
+      count: 0,
+      increment() {
+        set(() => {
+          this.count += 1;
+        });
+      }
+    }),
+    {
+      middlewares: [
+        history(),
+        sync({ name: 'undo', storage: createMemoryStorage(), adapter })
+      ]
+    }
+  );
+  await nextTick();
+
+  store.getState().increment();
+  await nextTick();
+  expect(store.getState().count).toBe(1);
+
+  (store as unknown as { history: HistoryApi<object> }).history.undo();
+  await nextTick();
+
+  // An undo is the user taking an edit back. Skipping it because the commit
+  // replays patches leaves the remote holding the value they just removed.
+  expect(store.getState().count).toBe(0);
+  expect(pushed.flat()).toEqual([1, 0]);
   store.destroy();
 });

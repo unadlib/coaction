@@ -408,6 +408,9 @@ importers:
 
   packages/coaction-sync:
     devDependencies:
+      '@coaction/history':
+        specifier: workspace:*
+        version: link:../coaction-history
       '@tanstack/query-core':
         specifier: ^5.102.8
         version: 5.102.8

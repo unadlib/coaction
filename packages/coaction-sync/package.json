@@ -112,6 +112,7 @@
     "dev": "node ../../scripts/build-package.mjs --watch"
   },
   "devDependencies": {
+    "@coaction/history": "workspace:*",
     "@tanstack/query-core": "^5.102.8",
     "coaction": "workspace:*",
     "fake-indexeddb": "^6.2.5"

@@ -658,7 +658,12 @@ export const sync = <T extends object>({
     let unsubscribeCommit: (() => void) | undefined;
     const cancelReady = onStoreReady(store, () => {
       unsubscribeCommit = onStoreCommit<T>(store, (commit: StoreCommit<T>) => {
-        if (destroyed || applyingRemote || commit.source === 'replay') return;
+        // `applyingRemote` already covers every replay this middleware makes,
+        // so the source is not consulted: a `replay` commit from anywhere else
+        // is a user action. `@coaction/history` undo and redo arrive that way,
+        // and treating them as internal meant an undo changed local state while
+        // the remote kept the value the user had just taken back.
+        if (destroyed || applyingRemote) return;
         if (!commit.patches.length) return;
         outbox.push({
           id: createMutationId(),
