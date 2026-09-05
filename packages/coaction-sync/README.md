@@ -114,7 +114,8 @@ const store = create(
         adapter: createCrudSyncAdapter<Todo>({
           path: ['todos'],
           list: () => api.listTodos(),
-          create: (todo) => api.createTodo(todo),
+          create: (todo, { idempotencyKey }) =>
+            api.createTodo(todo, { idempotencyKey }),
           update: (todo) => api.updateTodo(todo),
           delete: (todo) => api.deleteTodo(todo.id)
         })
@@ -123,6 +124,14 @@ const store = create(
   }
 );
 ```
+
+Every handler receives a second argument describing the write: the operation,
+the record's key, the queued mutations it carries, and an `idempotencyKey`
+stable across retries. There is always a window between the remote committing a
+write and the acknowledgement being persisted locally, and everything in it is
+replayed on restart -- so a remote that dedupes on that key is what makes a
+crash there safe. Send it as an `Idempotency-Key` header, a unique column, or
+whatever the backend dedupes on.
 
 `path` points at a collection keyed by id. A pull turns each record into a patch
 there; a push reads which ids a mutation touched, looks each one up in the

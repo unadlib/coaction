@@ -559,3 +559,70 @@ test('a removal from a narrowed read does not forget the record exists', async (
   expect(remote.calls).toEqual(['update:a']);
   store.destroy();
 });
+
+test('handlers receive the queued mutations a write carries', async () => {
+  const seen: Array<{ key: string; ids: readonly string[]; op: string }> = [];
+  const remote = createRemote();
+  const store = create<{
+    todos: Record<string, Todo>;
+    add: (todo: Todo) => void;
+    rename: (id: string, title: string) => void;
+  }>(
+    (set) => ({
+      todos: {},
+      add(todo) {
+        set(() => {
+          this.todos[todo.id] = todo;
+        });
+      },
+      rename(id, title) {
+        set(() => {
+          this.todos[id].title = title;
+        });
+      }
+    }),
+    {
+      middlewares: [
+        sync({
+          name: 'crud-context',
+          storage: createMemoryStorage(),
+          adapter: createCrudSyncAdapter<Todo>({
+            path: ['todos'],
+            list: remote.list,
+            create: async (record, context) => {
+              seen.push({
+                key: context.idempotencyKey,
+                ids: context.mutationIds,
+                op: context.operation
+              });
+              return remote.create(record);
+            },
+            update: async (record, context) => {
+              seen.push({
+                key: context.idempotencyKey,
+                ids: context.mutationIds,
+                op: context.operation
+              });
+              return remote.update(record);
+            }
+          })
+        })
+      ]
+    }
+  );
+  await nextTick();
+
+  store.getState().add({ id: 'a', title: 'draft', done: false });
+  await nextTick();
+  store.getState().rename('a', 'renamed');
+  await nextTick();
+
+  expect(seen.map(({ op }) => op)).toEqual(['create', 'update']);
+  // Each write names the queued mutation it carries, so a remote that dedupes
+  // on the key survives a retry after a crash.
+  expect(seen[0].ids).toHaveLength(1);
+  expect(seen[0].key).toBe(`${seen[0].ids[0]}:create:a`);
+  expect(seen[1].key).toBe(`${seen[1].ids[0]}:update:a`);
+  expect(seen[0].ids[0]).not.toBe(seen[1].ids[0]);
+  store.destroy();
+});

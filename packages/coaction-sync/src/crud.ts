@@ -69,6 +69,29 @@ export type CrudSyncAdapter = SyncAdapter & {
   ): void;
 };
 
+/**
+ * What a write is being made for, handed to every CRUD handler.
+ *
+ * The sync core gives a mutation a stable id so a remote that dedupes on it can
+ * make a retry after a crash safe -- there is always a window between the
+ * remote committing and the acknowledgement being persisted, and everything in
+ * it is replayed on restart. The CRUD handlers took only a record, which
+ * dropped that id on the floor: no backend built on this adapter could honour
+ * the contract the outbox was written for.
+ */
+export type CrudOperationContext = {
+  operation: 'create' | 'update' | 'delete';
+  /** The record's key. */
+  recordId: string;
+  /** Queued mutations this write carries, in the order they were made. */
+  mutationIds: readonly string[];
+  /**
+   * A stable key for this write. Replaying the same queued work produces the
+   * same key, so it can be sent as an idempotency token.
+   */
+  idempotencyKey: string;
+};
+
 export type CrudSyncAdapterOptions<TRecord> = {
   /**
    * Where the keyed collection lives in the store, e.g. `['todos']` for a
@@ -84,10 +107,20 @@ export type CrudSyncAdapterOptions<TRecord> = {
    * A mutation that does need a missing handler fails the push rather than
    * being acknowledged, so the outbox keeps it.
    */
-  create?: (record: TRecord) => Promise<TRecord | void>;
-  update?: (record: TRecord) => Promise<TRecord | void>;
+  create?: (
+    record: TRecord,
+    context: CrudOperationContext
+  ) => Promise<TRecord | void>;
+  update?: (
+    record: TRecord,
+    context: CrudOperationContext
+  ) => Promise<TRecord | void>;
   /** Receives the last record known for the id, which may be stale. */
-  delete?: (record: TRecord, id: string) => Promise<void>;
+  delete?: (
+    record: TRecord,
+    id: string,
+    context: CrudOperationContext
+  ) => Promise<void>;
   /** Read a record's key. Defaults to its `id` field. */
   getId?: (record: TRecord) => string;
   /**
@@ -208,9 +241,16 @@ export const createCrudSyncAdapter = <TRecord extends object>({
    */
   const readIntents = (mutations: readonly SyncMutation[]) => {
     const intents = new Map<string, 'upsert' | 'delete'>();
+    const mutationIds = new Map<string, string[]>();
+    const attribute = (id: string, mutationId: string) => {
+      const ids = mutationIds.get(id);
+      if (!ids) mutationIds.set(id, [mutationId]);
+      else if (!ids.includes(mutationId)) ids.push(mutationId);
+    };
     const createdHere = new Set<string>();
     const lastKnownValue = new Map<string, TRecord>();
     let touchesWholeCollection = false;
+    const collectionWrites: string[] = [];
 
     for (const mutation of mutations) {
       for (const patch of mutation.patches) {
@@ -219,10 +259,15 @@ export const createCrudSyncAdapter = <TRecord extends object>({
         if (id === undefined) {
           // A write at or above the collection changes records without naming
           // any of them; the ids have to come from a diff instead.
-          if (reachesPath(patchPath, path)) touchesWholeCollection = true;
+          if (reachesPath(patchPath, path)) {
+            touchesWholeCollection = true;
+            if (!collectionWrites.includes(mutation.id))
+              collectionWrites.push(mutation.id);
+          }
           continue;
         }
         const addressesRecord = patchPath.length === path.length + 1;
+        attribute(id, mutation.id);
         if (patch.op === 'remove' && addressesRecord) {
           intents.set(id, 'delete');
           continue;
@@ -267,15 +312,18 @@ export const createCrudSyncAdapter = <TRecord extends object>({
       const current = collection();
       for (const id of Object.keys(current)) {
         if (!intents.has(id)) intents.set(id, 'upsert');
+        for (const mutation of collectionWrites) attribute(id, mutation);
       }
       // Everything the remote holds that the collection no longer does. The
       // baseline is durable, so this still names the right ids after a restart.
       for (const id of remoteIds) {
         if (!(id in current)) intents.set(id, 'delete');
+        if (!(id in current))
+          for (const mutation of collectionWrites) attribute(id, mutation);
       }
     }
 
-    return { intents, createdHere, lastKnownValue };
+    return { intents, createdHere, lastKnownValue, mutationIds };
   };
 
   return {
@@ -338,8 +386,21 @@ export const createCrudSyncAdapter = <TRecord extends object>({
     },
 
     async push(mutations, _context): Promise<SyncPushResult> {
-      const { intents, createdHere, lastKnownValue } = readIntents(mutations);
+      const { intents, createdHere, lastKnownValue, mutationIds } =
+        readIntents(mutations);
       const current = collection();
+      const contextFor = (
+        id: string,
+        operation: CrudOperationContext['operation']
+      ): CrudOperationContext => {
+        const ids = mutationIds.get(id) ?? [];
+        return {
+          operation,
+          recordId: id,
+          mutationIds: ids,
+          idempotencyKey: `${ids.join('.')}:${operation}:${id}`
+        };
+      };
       for (const [id, intent] of intents) {
         const record = current[id];
         if (intent === 'delete' || record === undefined) {
@@ -354,19 +415,19 @@ export const createCrudSyncAdapter = <TRecord extends object>({
           if (!remoteIds.has(id)) continue;
           if (!remove) throw new UnsupportedCrudOperationError('delete', id);
           const last = known.get(id) ?? lastKnownValue.get(id);
-          await remove(last as TRecord, id);
+          await remove(last as TRecord, id, contextFor(id, 'delete'));
           forgetRemoteRecord(id);
           continue;
         }
         if (remoteIds.has(id)) {
           if (!update) throw new UnsupportedCrudOperationError('update', id);
-          const returned = await update(record);
+          const returned = await update(record, contextFor(id, 'update'));
           seeRemoteRecord(id, (returned as TRecord) ?? record);
           continue;
         }
         if (!create) throw new UnsupportedCrudOperationError('create', id);
         try {
-          const returned = await create(record);
+          const returned = await create(record, contextFor(id, 'create'));
           seeRemoteRecord(id, (returned as TRecord) ?? record);
         } catch (error) {
           onCreateError?.(error, record);
