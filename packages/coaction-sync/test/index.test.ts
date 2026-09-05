@@ -1125,3 +1125,114 @@ test('an undo from @coaction/history is sent like any other user edit', async ()
   expect(pushed.flat()).toEqual([1, 0]);
   store.destroy();
 });
+
+test('a rebase is one commit, not three states subscribers can see', async () => {
+  let releasePull!: (result: SyncPullResult) => void;
+  const adapter: SyncAdapter = {
+    pull: () =>
+      new Promise<SyncPullResult>((resolve) => {
+        releasePull = resolve;
+      }),
+    push: pendingPush
+  };
+  const store = create<{
+    count: number;
+    label: string;
+    bump: () => void;
+  }>(
+    (set) => ({
+      count: 0,
+      label: 'start',
+      bump() {
+        set(() => {
+          this.count += 1;
+        });
+      }
+    }),
+    {
+      middlewares: [
+        sync({ name: 'atomic', storage: createMemoryStorage(), adapter })
+      ]
+    }
+  );
+  await nextTick();
+
+  store.getState().bump();
+  await nextTick();
+  expect(store.getState().count).toBe(1);
+
+  const seen: Array<{ count: number; label: string }> = [];
+  store.subscribe(() => {
+    const { count, label } = store.getState();
+    seen.push({ count, label });
+  });
+
+  const pulled = getSyncApi(store).pull();
+  await nextTick();
+  releasePull({
+    patches: [{ op: 'replace', path: ['label'], value: 'remote' }]
+  });
+  await pulled;
+  await nextTick();
+
+  // Rollback, remote and replay are three states and only the last is true.
+  // Publishing the other two re-renders a tree through data that was never
+  // current, including the user's own edit briefly disappearing.
+  expect(seen).toEqual([{ count: 1, label: 'remote' }]);
+  store.destroy();
+});
+
+test('a rebase that throws leaves the state and the outbox untouched', async () => {
+  const errors: unknown[] = [];
+  let releasePull!: (result: SyncPullResult) => void;
+  const adapter: SyncAdapter = {
+    pull: () =>
+      new Promise<SyncPullResult>((resolve) => {
+        releasePull = resolve;
+      }),
+    push: pendingPush
+  };
+  const store = create<{ count: number; bump: () => void }>(
+    (set) => ({
+      count: 0,
+      bump() {
+        set(() => {
+          this.count += 1;
+        });
+      }
+    }),
+    {
+      middlewares: [
+        sync({
+          name: 'atomic-fail',
+          storage: createMemoryStorage(),
+          adapter,
+          onError: (error) => errors.push(error)
+        })
+      ]
+    }
+  );
+  await nextTick();
+
+  store.getState().bump();
+  await nextTick();
+  const pendingBefore = getSyncApi(store).getPending();
+
+  const pulled = getSyncApi(store)
+    .pull()
+    .catch(() => undefined);
+  await nextTick();
+  releasePull({
+    patches: [{ op: 'replace', path: ['__proto__', 'polluted'], value: 1 }]
+  });
+  await pulled;
+  await nextTick();
+
+  // Failing part-way through used to leave state stripped of edits the outbox
+  // still listed as pending, so the next flush sent them against a base that no
+  // longer matched.
+  expect(errors).toHaveLength(1);
+  expect(store.getState().count).toBe(1);
+  expect(getSyncApi(store).getPending()).toEqual(pendingBefore);
+  store.destroy();
+});

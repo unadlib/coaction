@@ -29,6 +29,7 @@ export type {
   StorePatchTransition
 } from './src/storeCommit';
 export {
+  applyPatches,
   applyRootReplacementWithPatches,
   createInversePatches,
   createRootReplacementPatches,

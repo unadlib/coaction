@@ -634,6 +634,16 @@ export const createInversePatches = <T>(
   return inverse;
 };
 
+/**
+ * Apply patches to an immutable state value and return the result.
+ *
+ * A middleware that has to work out a multi-step transition before committing
+ * it -- a sync rebase computing rollback, remote patches and replay as a single
+ * commit -- needs the intermediate states without the store ever showing them.
+ */
+export const applyPatches = <T>(state: T, patches: Patches): T =>
+  applyWithMutative(state as any, patches) as T;
+
 export const sanitizeInitialStateValue = <T>(
   source: T,
   seen = new WeakMap<object, unknown>()

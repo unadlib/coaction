@@ -1,5 +1,6 @@
 import { normalizePatchPath } from './paths';
 import {
+  applyPatches,
   createInversePatches,
   onStoreCommit,
   onStoreReady,
@@ -389,18 +390,15 @@ export const sync = <T extends object>({
      * user their edit was lost, but it does not fail the sync itself.
      */
     const replayOptimisticMutation = (
-      mutation: SyncMutation
-    ): SyncMutation | undefined => {
-      let inverse: Patches;
+      mutation: SyncMutation,
+      base: T
+    ): { mutation: SyncMutation; state: T } | undefined => {
       try {
-        inverse = createInversePatches(
-          store.getPureState(),
-          mutation.patches
-        ) as Patches;
-        replayStorePatches(store, {
-          patches: mutation.patches,
-          inversePatches: inverse
-        });
+        const inverse = createInversePatches(base, mutation.patches) as Patches;
+        return {
+          mutation: { ...mutation, inversePatches: clonePatches(inverse) },
+          state: applyPatches(base, mutation.patches)
+        };
       } catch (error) {
         const reason = error instanceof Error ? error.message : String(error);
         onError?.(
@@ -410,49 +408,86 @@ export const sync = <T extends object>({
         );
         return undefined;
       }
-      return { ...mutation, inversePatches: clonePatches(inverse) };
     };
 
+    /** Replay mutations onto a working copy as one net transition. */
+    const replaySequence = (base: T, mutations: readonly SyncMutation[]) => {
+      let state = base;
+      const patches: Patches = [];
+      let inversePatches: Patches = [];
+      const replayed: SyncMutation[] = [];
+      for (const mutation of mutations) {
+        const result = replayOptimisticMutation(mutation, state);
+        if (!result) continue;
+        replayed.push(result.mutation);
+        state = result.state;
+        patches.push(...result.mutation.patches);
+        inversePatches = [...result.mutation.inversePatches, ...inversePatches];
+      }
+      return { state, patches, inversePatches, mutations: replayed };
+    };
+
+    /**
+     * Roll back the optimistic mutations, take the remote patches, replay what
+     * survived the conflict policy -- as one commit.
+     *
+     * Those are three states and only the last is true, so they are computed
+     * against a working copy rather than published one by one. A failure
+     * part-way through then leaves neither the store nor the outbox touched.
+     */
     const rebase = (remotePatches?: Patches) => {
       if (!remotePatches?.length) return;
+      const previousOutbox = outbox;
+      const forward: Patches = [];
+      let backward: Patches = [];
+      let working = store.getPureState() as T;
+      const stage = (patches: Patches, inverse: Patches) => {
+        working = applyPatches(working, patches);
+        forward.push(...patches);
+        backward = [...inverse, ...backward];
+      };
+
+      for (let index = previousOutbox.length - 1; index >= 0; index -= 1) {
+        const mutation = previousOutbox[index];
+        stage(mutation.inversePatches, mutation.patches);
+      }
+      stage(
+        remotePatches,
+        createInversePatches(working, remotePatches) as Patches
+      );
+
+      const retained = previousOutbox.filter((mutation) => {
+        const overlappingRemotePatches = getOverlappingRemotePatches(
+          mutation,
+          remotePatches
+        );
+        if (!overlappingRemotePatches.length) return true;
+        const resolution =
+          typeof conflict === 'function'
+            ? conflict({
+                mutation,
+                remotePatches,
+                overlappingRemotePatches
+              })
+            : conflict === 'remote-wins'
+              ? 'remote'
+              : 'local';
+        return resolution !== 'remote';
+      });
+
+      const replayed = replaySequence(working, retained);
+      stage(replayed.patches, replayed.inversePatches);
+
       applyingRemote += 1;
       try {
-        const previousOutbox = outbox;
-        for (let index = previousOutbox.length - 1; index >= 0; index -= 1) {
-          const mutation = previousOutbox[index];
-          replayStorePatches(store, {
-            patches: mutation.inversePatches,
-            inversePatches: mutation.patches
-          });
-        }
         replayStorePatches(store, {
-          patches: remotePatches,
-          inversePatches: []
+          patches: forward,
+          inversePatches: backward
         });
-        const retained = previousOutbox.filter((mutation) => {
-          const overlappingRemotePatches = getOverlappingRemotePatches(
-            mutation,
-            remotePatches
-          );
-          if (!overlappingRemotePatches.length) return true;
-          const resolution =
-            typeof conflict === 'function'
-              ? conflict({
-                  mutation,
-                  remotePatches,
-                  overlappingRemotePatches
-                })
-              : conflict === 'remote-wins'
-                ? 'remote'
-                : 'local';
-          return resolution !== 'remote';
-        });
-        outbox = retained
-          .map(replayOptimisticMutation)
-          .filter((mutation): mutation is SyncMutation => Boolean(mutation));
       } finally {
         applyingRemote -= 1;
       }
+      outbox = replayed.mutations;
     };
 
     const applyRemoteResult = async (result: SyncPullResult) => {
@@ -483,11 +518,9 @@ export const sync = <T extends object>({
     };
 
     /**
-     * Overlapping pulls share one request, the way overlapping flushes do.
-     *
-     * Two in flight at once have no ordering: the later response can carry the
-     * older revision and would then overwrite the newer state with it. Sharing
-     * the in-flight promise removes the race rather than trying to referee it.
+     * Overlapping pulls share one request, the way overlapping flushes do: two
+     * in flight have no ordering, so the later response can carry the older
+     * revision and overwrite newer state with it.
      */
     const pull = () => {
       if (!pullPromise) {
@@ -545,10 +578,8 @@ export const sync = <T extends object>({
           return;
         }
         if (pullOwed) {
-          // Sending succeeded, but the remote state this store failed to fetch
-          // is still missing. Clearing the timer here would cancel the retry
-          // that owes a pull and report a synchronised store that never read
-          // the remote at all.
+          // Sending succeeded, but the remote state is still unfetched.
+          // Clearing the timer would cancel the retry that owes a pull.
           scheduleRetry();
           return;
         }
@@ -625,10 +656,17 @@ export const sync = <T extends object>({
             }
           }
 
-          const rebasedPreHydration = preHydration
-            .map(replayOptimisticMutation)
-            .filter((mutation): mutation is SyncMutation => Boolean(mutation));
-          outbox = [...durable, ...rebasedPreHydration];
+          const rebasedPreHydration = replaySequence(
+            store.getPureState() as T,
+            preHydration
+          );
+          if (rebasedPreHydration.patches.length) {
+            replayStorePatches(store, {
+              patches: rebasedPreHydration.patches,
+              inversePatches: rebasedPreHydration.inversePatches
+            });
+          }
+          outbox = [...durable, ...rebasedPreHydration.mutations];
           hydrationSucceeded = true;
         } finally {
           applyingRemote -= 1;
@@ -658,11 +696,9 @@ export const sync = <T extends object>({
     let unsubscribeCommit: (() => void) | undefined;
     const cancelReady = onStoreReady(store, () => {
       unsubscribeCommit = onStoreCommit<T>(store, (commit: StoreCommit<T>) => {
-        // `applyingRemote` already covers every replay this middleware makes,
-        // so the source is not consulted: a `replay` commit from anywhere else
-        // is a user action. `@coaction/history` undo and redo arrive that way,
-        // and treating them as internal meant an undo changed local state while
-        // the remote kept the value the user had just taken back.
+        // `applyingRemote` covers every replay this middleware makes, so the
+        // commit source is not consulted: a replay from anywhere else is a user
+        // action, and `@coaction/history` undo and redo arrive that way.
         if (destroyed || applyingRemote) return;
         if (!commit.patches.length) return;
         outbox.push({

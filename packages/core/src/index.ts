@@ -3,6 +3,7 @@ export { ActionAuthorityChangedError } from './getRawStateClientAction';
 export { onStoreReady } from './lifecycle';
 export { whole } from './getRawStateStateProperty';
 export {
+  applyPatches,
   assertSafePatches,
   isStateSchemaError,
   sanitizeInitialStateValue,
