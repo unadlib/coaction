@@ -29,3 +29,15 @@ imports Mutative.
 Nothing about writing state changes. Mutative still produces drafts, `set(() =>
 { this.count += 1 })` still means what it meant, and no behaviour moves. What
 changes is which package defines a transition.
+
+Applying a batch copies each container once rather than once per patch. Walking
+from the root per patch made a pull that returns one patch per record re-copy
+the whole collection once per record: five thousand patches took five seconds,
+against ten milliseconds for the implementation being replaced. It is now under
+two.
+
+A patch traverses plain objects and dense arrays only. A `Date`, a `Map`, a
+`Set` or a class instance is a leaf — replaceable whole, with no interior for a
+path to name — and a path that goes further raises
+`UnsupportedPatchContainerError` instead of spreading it into a plain object and
+losing what it was.
