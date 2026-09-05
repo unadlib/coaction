@@ -626,3 +626,74 @@ test('handlers receive the queued mutations a write carries', async () => {
   expect(seen[0].ids[0]).not.toBe(seen[1].ids[0]);
   store.destroy();
 });
+
+test('a pull discarded as stale does not advance what the remote is believed to hold', async () => {
+  const remote = createRemote([{ id: 'a', title: 'from server', done: false }]);
+  let listCalls = 0;
+  let releaseFirst!: () => void;
+  let emit: ((update: { patches: unknown }) => void) | undefined;
+  const base = createCrudSyncAdapter<Todo>({
+    path: ['todos'],
+    list: async () => {
+      listCalls += 1;
+      if (listCalls === 1) {
+        await new Promise<void>((resolve) => {
+          releaseFirst = resolve;
+        });
+        return [...remote.records.values()];
+      }
+      // By the time the store asks again, the row is gone.
+      return [];
+    },
+    create: remote.create,
+    update: remote.update,
+    delete: remote.delete
+  });
+  const store = create<{
+    todos: Record<string, Todo>;
+    put: (todo: Todo) => void;
+  }>(
+    (set) => ({
+      todos: {},
+      put(todo) {
+        set(() => {
+          this.todos[todo.id] = todo;
+        });
+      }
+    }),
+    {
+      middlewares: [
+        sync({
+          name: 'crud-stale',
+          storage: createMemoryStorage(),
+          adapter: {
+            ...base,
+            subscribe(listener) {
+              emit = listener as never;
+            }
+          }
+        })
+      ]
+    }
+  );
+  await nextTick();
+
+  const pulled = getSyncApi(store).pull();
+  await nextTick();
+  // Something else moves the remote state while the pull is out, so its answer
+  // describes a base that is gone and the core discards it.
+  emit!({ patches: [{ op: 'replace', path: ['todos'], value: {} }] });
+  await nextTick();
+  releaseFirst();
+  await pulled;
+  await nextTick();
+  remote.calls.length = 0;
+
+  store.getState().put({ id: 'a', title: 'mine', done: false });
+  await nextTick();
+
+  // The discarded pull must not have taught the adapter that the remote holds
+  // "a": believing it would send this as an update of a row that is not there.
+  expect(remote.calls).toEqual(['create:a']);
+  store.destroy();
+});

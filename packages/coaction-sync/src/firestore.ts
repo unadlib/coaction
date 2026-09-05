@@ -1,5 +1,5 @@
 import type { SyncAdapter, SyncPullResult } from './index';
-import { createCrudSyncAdapter } from './crud';
+import { createCrudSyncAdapter, type CrudSyncAdapter } from './crud';
 
 type Patches = SyncPullResult['patches'];
 
@@ -139,12 +139,22 @@ export const createFirestoreSyncAdapter = <TRecord extends object>({
     }
   });
 
+  const adapter: CrudSyncAdapter = {
+    ...crud,
+    // A document leaving a narrowed read has stopped matching the query, not
+    // stopped existing, so a removal from one is no reason to forget it.
+    accept: (result) =>
+      crud.observeRemotePatches(result.patches, {
+        removalMeansGone: query === undefined
+      })
+  };
+
   if (!realtime) {
-    return crud;
+    return adapter;
   }
 
   return {
-    ...crud,
+    ...adapter,
     subscribe(listener) {
       if (!firestore.onSnapshot) {
         throw new Error(
@@ -169,15 +179,7 @@ export const createFirestoreSyncAdapter = <TRecord extends object>({
               value: toRecord(change.doc)
             } as NonNullable<Patches>[number]);
           }
-          if (!patches.length) return;
-          // Realtime writes bypass `pull`, so the baseline has to be told about
-          // them or the first local delete of such a record is skipped. A
-          // removal from a narrowed read is not proof the document is gone --
-          // it may only have stopped matching the query.
-          crud.observeRemotePatches(patches, {
-            removalMeansGone: query === undefined
-          });
-          listener({ patches });
+          if (patches.length) listener({ patches });
         },
         onError
       );

@@ -333,6 +333,11 @@ export const createCrudSyncAdapter = <TRecord extends object>({
 
     observeRemotePatches,
 
+    // The baseline advances only when the store has taken the result. A pull
+    // that turns out to be stale is discarded by the core, and advancing while
+    // building it would have left this adapter ahead of the state it describes.
+    accept: (result) => observeRemotePatches(result.patches),
+
     serialize: () => ({ remoteIds: [...remoteIds] }),
 
     hydrate(snapshot) {
@@ -351,7 +356,6 @@ export const createCrudSyncAdapter = <TRecord extends object>({
       for (const record of result.records) {
         const id = getId(record);
         seen.add(id);
-        seeRemoteRecord(id, record);
         patches.push({
           op: 'replace',
           path: [...path, id],
@@ -360,7 +364,6 @@ export const createCrudSyncAdapter = <TRecord extends object>({
       }
 
       for (const id of result.deleted ?? []) {
-        forgetRemoteRecord(id);
         patches.push({
           op: 'remove',
           path: [...path, id]
@@ -370,7 +373,6 @@ export const createCrudSyncAdapter = <TRecord extends object>({
       if (authoritativeList) {
         for (const id of Object.keys(collection())) {
           if (seen.has(id)) continue;
-          forgetRemoteRecord(id);
           patches.push({
             op: 'remove',
             path: [...path, id]

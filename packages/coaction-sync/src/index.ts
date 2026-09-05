@@ -65,6 +65,17 @@ export type SyncAdapter = {
   serialize?: () => unknown;
   /** Restore what `serialize` wrote. Called once, before any pull or push. */
   hydrate?: (snapshot: unknown) => void;
+  /**
+   * A remote result the store has taken. Advance any view of the remote here.
+   *
+   * Doing it while producing the result instead would move the adapter ahead of
+   * the store: a pull whose answer is discarded as stale, or a subscription
+   * that arrives before hydration has restored the previous checkpoint, would
+   * leave the adapter believing something the store never accepted. This runs
+   * after the rebase and before the checkpoint is written, so the two are one
+   * commit.
+   */
+  accept?: (result: SyncPullResult) => void;
 };
 
 export type SyncConflictResolution = 'local' | 'remote';
@@ -604,6 +615,7 @@ export const sync = <T extends object>({
       rebase(result.patches);
       cursor = result.cursor ?? cursor;
       revision = result.revision ?? revision;
+      adapter.accept?.(result);
       await persist();
     };
 
