@@ -285,3 +285,133 @@ test('base enablePatches and async - error handling', async () => {
   `);
   expect(isDraft(useStore.getPureState())).toBeFalsy();
 });
+
+/**
+ * The draft, its backup and its finalizer are one transaction, and they are
+ * store-global: there is one `internal.rootState`, so there can only be one
+ * open at a time. An async action holds its open across every `await`, and a
+ * second action entered in that window opens one of its own.
+ *
+ * The first action then closed, on resume, whatever transaction it found --
+ * finalizing the second action's draft while it was still writing through it.
+ * mutative revokes a finalized draft's proxy, so the second action failed on
+ * its next read with `Cannot perform 'get' on a proxy that has been revoked`:
+ * a crash in an action that did nothing wrong, thrown from another action it
+ * has never heard of, and only when the two happened to overlap.
+ */
+test('async actions that overlap do not finalize each other', async () => {
+  const gate: Record<string, () => void> = {};
+  const useStore = create<{
+    total: number;
+    log: string[];
+    runA: () => Promise<void>;
+    runB: () => Promise<void>;
+  }>(
+    () =>
+      makeAutoObservable(
+        bindMobx({
+          total: 0,
+          log: [] as string[],
+          async runA() {
+            this.total += 1;
+            this.log.push('a1');
+            await new Promise<void>((resolve) => {
+              gate.a = resolve;
+            });
+            this.total += 10;
+            this.log.push('a2');
+          },
+          async runB() {
+            this.total += 100;
+            this.log.push('b1');
+            await new Promise<void>((resolve) => {
+              gate.b = resolve;
+            });
+            this.total += 1000;
+            this.log.push('b2');
+          }
+        })
+      ),
+    { name: 'overlapping-async', enablePatches: true }
+  );
+
+  const a = useStore.getState().runA();
+  await Promise.resolve();
+  // B starts while A is suspended, which is the only way to get two of these
+  // in flight at once.
+  const b = useStore.getState().runB();
+  await Promise.resolve();
+
+  gate.a();
+  await expect(a).resolves.toBeUndefined();
+  gate.b();
+  await expect(b).resolves.toBeUndefined();
+
+  // Every write from both actions is in the state, once each.
+  expect(useStore.getState().total).toBe(1111);
+  expect(useStore.getState().log).toEqual(['a1', 'b1', 'a2', 'b2']);
+  // And no transaction is left open for the next reader to trip over.
+  expect(isDraft(useStore.getPureState())).toBeFalsy();
+  useStore.destroy();
+});
+
+test('an overlapping action that throws does not take the others down', async () => {
+  const gate: Record<string, () => void> = {};
+  const useStore = create<{
+    total: number;
+    runA: () => Promise<void>;
+    runB: () => Promise<void>;
+    runC: () => Promise<void>;
+  }>(
+    () =>
+      makeAutoObservable(
+        bindMobx({
+          total: 0,
+          async runA() {
+            this.total += 1;
+            await new Promise<void>((resolve) => {
+              gate.a = resolve;
+            });
+            this.total += 10;
+          },
+          async runB() {
+            this.total += 100;
+            await new Promise<void>((resolve) => {
+              gate.b = resolve;
+            });
+            throw new Error('b failed');
+          },
+          async runC() {
+            this.total += 1000;
+            await new Promise<void>((resolve) => {
+              gate.c = resolve;
+            });
+            this.total += 10000;
+          }
+        })
+      ),
+    { name: 'overlapping-async-throwing', enablePatches: true }
+  );
+
+  const a = useStore.getState().runA();
+  await Promise.resolve();
+  const b = useStore.getState().runB();
+  await Promise.resolve();
+  const c = useStore.getState().runC();
+  await Promise.resolve();
+
+  // The one in the middle fails, and finishes first.
+  gate.b();
+  await expect(b).rejects.toThrow('b failed');
+  gate.c();
+  await expect(c).resolves.toBeUndefined();
+  gate.a();
+  await expect(a).resolves.toBeUndefined();
+
+  // B's own write before it threw is kept -- that is what a rejected action
+  // does on a mutable instance, which has already been mutated -- and neither
+  // of the other two lost anything to it.
+  expect(useStore.getState().total).toBe(11111);
+  expect(isDraft(useStore.getPureState())).toBeFalsy();
+  useStore.destroy();
+});

@@ -33,6 +33,16 @@ export interface Internal<T extends CreateState = CreateState> {
    */
   finalizeDraft: () => [T, Patches, Patches];
   /**
+   * How many mutable-instance actions are inside their synchronous body.
+   *
+   * An action that finds a transaction already open has to know whether the
+   * action that opened it is still on the stack -- a nested call, which will go
+   * on writing and needs a transaction to return to -- or suspended at an
+   * `await`, in which case reopening one leaves a draft nobody will ever
+   * finalize and `getPureState()` starts handing out a draft.
+   */
+  mutableActionDepth?: number;
+  /**
    * The mutable instance.
    */
   mutableInstance: any;

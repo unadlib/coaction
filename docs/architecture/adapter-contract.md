@@ -45,6 +45,33 @@ An official adapter must:
 An adapter may replace store methods, but the resulting object must remain a
 valid Coaction store and compose with middleware.
 
+## Async actions on a mutable instance
+
+Patch generation for a mutable instance works by opening a mutative draft over
+`internal.rootState` for the duration of an action. There is one
+`internal.rootState`, so there is one open transaction at a time, and an async
+action holds its open across every `await`.
+
+A second action entered in that window closes the open transaction — publishing
+what the first action had written so far as its own commit — and opens one of
+its own. Only the action that opened a transaction may close it, so the first
+one, on resume, does not touch the second one's draft.
+
+What follows is the contract for overlapping async actions:
+
+- Every write from every action lands, once each, in the order it was made.
+- An action's writes **before** its first `await` are its own commit. Its
+  writes **after** an `await` join whichever transaction is open at that
+  moment, and are published in that commit.
+- Commit boundaries therefore do not line up with action boundaries while two
+  async actions overlap. A patch consumer — `@coaction/sync`,
+  `@coaction/history`, `@coaction/logger` — sees a coherent patch stream, but
+  not one commit per action.
+
+An adapter needs no code for this; it is core behavior, and it is the same for
+every mutable instance. Native Coaction stores are unaffected: their actions do
+not hold a draft across an `await`.
+
 ## Shared stores
 
 Shared replacement input is validated before adapter code reads or normalizes
