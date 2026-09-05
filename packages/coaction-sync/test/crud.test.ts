@@ -307,3 +307,50 @@ test('a custom key reader replaces the default id field', async () => {
   expect(store.getState().rows.k1.label).toBe('one');
   store.destroy();
 });
+
+test('replacing the whole collection is diffed rather than silently accepted', async () => {
+  const remote = createRemote([{ id: 'a', title: 'first', done: false }]);
+  const { store } = createTodoStore(remote);
+  await nextTick();
+  await getSyncApi(store).pull();
+  await nextTick();
+  remote.calls.length = 0;
+
+  // A write at the collection itself names no record ids at all.
+  store.setState({ todos: { b: { id: 'b', title: 'second', done: false } } });
+  await nextTick();
+
+  expect(remote.calls).toContain('create:b');
+  expect(remote.calls).toContain('delete:a');
+  expect(remote.records.has('a')).toBe(false);
+  expect(remote.records.get('b')?.title).toBe('second');
+  store.destroy();
+});
+
+test('a pending delete still reaches the remote after a restart', async () => {
+  const storage = createMemoryStorage();
+  const remote = createRemote([{ id: 'a', title: 'first', done: false }]);
+  const held = () => new Promise<never>(() => undefined);
+
+  // First run: the record is pulled, then deleted, and the delete is held so it
+  // stays in the durable outbox when the process goes away.
+  const first = createTodoStore(remote, { delete: held }, storage).store;
+  await nextTick();
+  await getSyncApi(first).pull();
+  await nextTick();
+  first.getState().drop('a');
+  await nextTick();
+  expect(getSyncApi(first).getPending()).toHaveLength(1);
+  first.destroy();
+
+  // Second run: `known` is empty and the record is already gone from the
+  // restored state, so the intent has to come from the queued mutation.
+  remote.calls.length = 0;
+  const restarted = createTodoStore(remote, {}, storage).store;
+  await nextTick();
+
+  expect(remote.calls).toContain('delete:a');
+  expect(remote.records.has('a')).toBe(false);
+  expect(getSyncApi(restarted).getPending()).toHaveLength(0);
+  restarted.destroy();
+});

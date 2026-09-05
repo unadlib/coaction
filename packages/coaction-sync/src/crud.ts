@@ -5,7 +5,12 @@ import type {
   SyncPullResult,
   SyncPushResult
 } from './index';
-import { childKeyUnder, normalizePatchPath, readAtPath } from './paths';
+import {
+  childKeyUnder,
+  normalizePatchPath,
+  reachesPath,
+  readAtPath
+} from './paths';
 
 type Patches = SyncPullResult['patches'];
 
@@ -107,15 +112,69 @@ export const createCrudSyncAdapter = <TRecord extends object>({
   const collection = (): CrudCollection<TRecord> =>
     (readAtPath(store?.getPureState(), path) as CrudCollection<TRecord>) ?? {};
 
-  const touchedIds = (mutations: readonly SyncMutation[]) => {
-    const ids = new Set<string>();
+  /**
+   * What each mutation asked for, read from its patches rather than inferred
+   * from current state plus an in-memory map.
+   *
+   * The distinction matters across a restart: the outbox is durable and an
+   * in-memory map is not, so a pending delete whose record is already gone
+   * locally has to be recognisable from the queue alone. A record the queue
+   * also creates was never on the remote and the pair cancels; one it only
+   * deletes came from somewhere the remote knows about.
+   */
+  const readIntents = (mutations: readonly SyncMutation[]) => {
+    const intents = new Map<string, 'upsert' | 'delete'>();
+    const createdHere = new Set<string>();
+    const lastKnownValue = new Map<string, TRecord>();
+    let touchesWholeCollection = false;
+
     for (const mutation of mutations) {
       for (const patch of mutation.patches) {
-        const id = childKeyUnder(normalizePatchPath(patch.path), path);
-        if (id !== undefined) ids.add(id);
+        const patchPath = normalizePatchPath(patch.path);
+        const id = childKeyUnder(patchPath, path);
+        if (id === undefined) {
+          // A write at or above the collection changes records without naming
+          // any of them; the ids have to come from a diff instead.
+          if (reachesPath(patchPath, path)) touchesWholeCollection = true;
+          continue;
+        }
+        const addressesRecord = patchPath.length === path.length + 1;
+        if (patch.op === 'remove' && addressesRecord) {
+          intents.set(id, 'delete');
+          continue;
+        }
+        if (patch.op === 'add' && addressesRecord && !intents.has(id)) {
+          createdHere.add(id);
+        }
+        intents.set(id, 'upsert');
+      }
+      // A removal's inverse carries the record that was removed, which is the
+      // only copy left once the store no longer holds it.
+      for (const patch of mutation.inversePatches) {
+        const patchPath = normalizePatchPath(patch.path);
+        const id = childKeyUnder(patchPath, path);
+        if (
+          id !== undefined &&
+          patchPath.length === path.length + 1 &&
+          patch.op === 'add' &&
+          'value' in patch
+        ) {
+          lastKnownValue.set(id, (patch as { value: TRecord }).value);
+        }
       }
     }
-    return ids;
+
+    if (touchesWholeCollection) {
+      const current = collection();
+      for (const id of Object.keys(current)) {
+        if (!intents.has(id)) intents.set(id, 'upsert');
+      }
+      for (const id of known.keys()) {
+        if (!(id in current)) intents.set(id, 'delete');
+      }
+    }
+
+    return { intents, createdHere, lastKnownValue };
   };
 
   return {
@@ -166,12 +225,20 @@ export const createCrudSyncAdapter = <TRecord extends object>({
     },
 
     async push(mutations, _context): Promise<SyncPushResult> {
+      const { intents, createdHere, lastKnownValue } = readIntents(mutations);
       const current = collection();
-      for (const id of touchedIds(mutations)) {
+      for (const [id, intent] of intents) {
         const record = current[id];
-        if (record === undefined) {
-          const last = known.get(id);
-          // Never sent, already gone: nothing for the remote to delete.
+        if (intent === 'delete' || record === undefined) {
+          // Created and removed before either reached the remote: there is
+          // nothing there to delete.
+          if (createdHere.has(id) && !known.has(id)) {
+            known.delete(id);
+            continue;
+          }
+          // Without a value from either the queue's inverse or a previous
+          // push there is no evidence the remote ever held this record.
+          const last = known.get(id) ?? lastKnownValue.get(id);
           if (last === undefined) continue;
           if (remove) await remove(last, id);
           known.delete(id);

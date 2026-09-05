@@ -41,3 +41,20 @@ export const readAtPath = (root: unknown, path: readonly PropertyKey[]) => {
   }
   return current;
 };
+
+/**
+ * Whether `path` addresses `prefix` itself, or something that contains it.
+ *
+ * `['todos']` and `[]` both reach the collection at `['todos']`; a write there
+ * changes records without naming any of them.
+ */
+export const reachesPath = (
+  path: readonly PropertyKey[],
+  prefix: readonly PropertyKey[]
+): boolean => {
+  if (path.length > prefix.length) return false;
+  for (let index = 0; index < path.length; index += 1) {
+    if (!Object.is(path[index], prefix[index])) return false;
+  }
+  return true;
+};
