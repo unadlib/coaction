@@ -127,3 +127,67 @@ test('no draft ever reaches the published state', () => {
     expect(hasDraft(state)).toBe(false);
   }
 });
+
+test('every invariant holds across generated mutation sequences', () => {
+  const hasDraft = (value: unknown, seen = new Set<object>()): boolean => {
+    if (typeof value !== 'object' || value === null || seen.has(value)) {
+      return false;
+    }
+    seen.add(value);
+    if (isCoactionDraft(value)) return true;
+    return Reflect.ownKeys(value).some((key) =>
+      hasDraft((value as Record<PropertyKey, unknown>)[key], seen)
+    );
+  };
+
+  let sequences = 0;
+  for (let seed = 1; seed <= 20000; seed += 1) {
+    const random = seeded(seed);
+    const base = {
+      xs: Array.from({ length: 1 + Math.floor(random() * 5) }, (_, i) => i),
+      items: [{ v: 1 }, { v: 2 }],
+      user: { profile: { name: 'a' }, tags: ['x'] },
+      untouched: { keep: true },
+      out: null as unknown
+    };
+    const snapshot = JSON.stringify(base);
+    const untouched = base.untouched;
+
+    const { state, patches, inversePatches } = scopeDraft(
+      base,
+      (draft: any) => {
+        const steps = 1 + Math.floor(random() * 4);
+        for (let step = 0; step < steps; step += 1) {
+          const pick = Math.floor(random() * 12);
+          if (pick < 6) {
+            operations[Math.floor(random() * operations.length)](
+              draft.xs,
+              random
+            );
+          } else if (pick === 6) {
+            draft.user.profile.name = `n${Math.floor(random() * 9)}`;
+          } else if (pick === 7) {
+            draft.items.push({ v: Math.floor(random() * 9) });
+          } else if (pick === 8) {
+            draft.out = draft.items.slice();
+          } else if (pick === 9) {
+            draft.out = { ...draft.user };
+          } else if (pick === 10) {
+            const removed = draft.items.pop();
+            if (removed) removed.v = 99;
+          } else {
+            draft.user.tags.unshift(`t${Math.floor(random() * 9)}`);
+          }
+        }
+      }
+    );
+
+    expect(JSON.stringify(base)).toBe(snapshot);
+    expect(hasDraft(state)).toBe(false);
+    expect(applyPatchesTo(base, patches)).toEqual(state);
+    expect(applyPatchesTo(state, inversePatches)).toEqual(base);
+    expect((state as typeof base).untouched).toBe(untouched);
+    sequences += 1;
+  }
+  expect(sequences).toBe(20000);
+});

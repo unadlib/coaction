@@ -199,19 +199,26 @@ const runArrayMethod = (node: Node, method: string) =>
     // nowhere, whose writes reach neither the array nor the state.
     if (Array.isArray(result)) {
       return result.map((element) =>
-        isPatchTraversable(element)
-          ? detach(element as object, node.root)
-          : element
+        isPatchTraversable(element) ? detach(element as object) : element
       );
     }
-    return isPatchTraversable(result)
-      ? detach(result as object, node.root)
-      : result;
+    return isPatchTraversable(result) ? detach(result as object) : result;
   };
 
-/** A draft over a value that is no longer part of the tree. */
-const detach = (value: object, root: Root) =>
-  createNode(value as Record<PropertyKey, unknown>, null, null, root).proxy;
+/**
+ * A draft over a value that is no longer part of the tree.
+ *
+ * It gets a root of its own, and that root is thrown away: the value has left
+ * the array, so a write to it is not part of the transition. Sharing the
+ * enclosing root would file those writes against the state's own path, since a
+ * detached node has no parent to measure a path from.
+ */
+const detach = (value: object) =>
+  createNode(value as Record<PropertyKey, unknown>, null, null, {
+    patches: [],
+    inversePatches: [],
+    finalized: false
+  }).proxy;
 
 /**
  * Let an array take a write that changes its shape, and describe the result.
