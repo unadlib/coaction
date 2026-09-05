@@ -35,10 +35,6 @@ export default defineConfig({
         __dirname,
         'packages/coaction-pinia/src/index.ts'
       ),
-      '@coaction/react/local': resolve(
-        __dirname,
-        'packages/coaction-react/src/local.ts'
-      ),
       '@coaction/react/shared': resolve(
         __dirname,
         'packages/coaction-react/src/shared.ts'

@@ -1,6 +1,6 @@
 import React from 'react';
 import { act, render, screen } from '@testing-library/react';
-import { create as createLocal } from '../src/local';
+import { create as createDefault } from '../src/index';
 import { create as createShared } from '../src/shared';
 
 type EntryState = {
@@ -58,8 +58,8 @@ const assertEntryBehaviour = (
   useStore.destroy();
 };
 
-test('@coaction/react/local drives a component through its selector', () => {
-  assertEntryBehaviour('local-name', createLocal(entryState) as any);
+test('@coaction/react drives a component through its selector', () => {
+  assertEntryBehaviour('default-name', createDefault(entryState) as any);
 });
 
 test('@coaction/react/shared drives a component through its selector', () => {

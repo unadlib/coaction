@@ -8,8 +8,8 @@ import reactCompiler from 'babel-plugin-react-compiler';
 
 const rootDir = resolve(import.meta.dirname, '..');
 const reactPackageDir = join(rootDir, 'packages/coaction-react');
-const localDist = join(reactPackageDir, 'dist/local.js');
-if (!existsSync(localDist)) {
+const entryDist = join(reactPackageDir, 'dist/index.js');
+if (!existsSync(entryDist)) {
   throw new Error(
     'React Compiler integration check requires a built @coaction/react package. Run pnpm build first.'
   );
@@ -42,7 +42,7 @@ globalThis.IS_REACT_ACT_ENVIRONMENT = true;
 
 const source = `
   import React from 'react';
-  import { create, observer } from './dist/local.js';
+  import { create, observer } from './dist/index.js';
 
   export const useStore = create((set) => ({
     user: { name: 'Michael', age: 30 },

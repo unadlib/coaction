@@ -49,7 +49,7 @@ const build = async (name) => {
 // The default entry is local, and that is the property worth guarding: an
 // import added to `src/index.ts` that reaches the transport runtime would put
 // it back into every bundle that imports React state.
-const localOnlyEntries = ['index', 'local'];
+const localOnlyEntries = ['index'];
 const sizes = {};
 for (const name of localOnlyEntries) {
   const code = await build(name);
@@ -71,13 +71,7 @@ if (!sharedCode.includes('full-sync')) {
     '@coaction/react/shared did not retain the shared protocol runtime.'
   );
 }
-if (sizes.index !== sizes.local) {
-  throw new Error(
-    `@coaction/react and @coaction/react/local must be the same runtime (${sizes.index} vs ${sizes.local} bytes gzip).`
-  );
-}
-
 const kib = (bytes) => `${(bytes / 1024).toFixed(2)} KiB`;
 console.log(
-  `React entry isolation passed (default/local ${kib(sizes.index)} gzip, shared ${kib(sizes.shared)} gzip).`
+  `React entry isolation passed (default ${kib(sizes.index)} gzip, shared ${kib(sizes.shared)} gzip).`
 );

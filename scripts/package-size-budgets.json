@@ -93,14 +93,6 @@
         "baselineGzipBytes": 4242,
         "maxGzipBytes": 4700
       },
-      "dist/local.mjs": {
-        "baselineGzipBytes": 3755,
-        "maxGzipBytes": 4150
-      },
-      "dist/local.js": {
-        "baselineGzipBytes": 4280,
-        "maxGzipBytes": 4750
-      },
       "dist/shared.mjs": {
         "baselineGzipBytes": 3574,
         "maxGzipBytes": 3950

@@ -21,8 +21,6 @@
   },
   "files": [
     "dist",
-    "local.d.ts",
-    "local.js",
     "shared.d.ts",
     "shared.js"
   ],
@@ -41,17 +39,6 @@
         "default": "./dist/index.js"
       },
       "default": "./dist/index.mjs"
-    },
-    "./local": {
-      "import": {
-        "types": "./dist/local.d.mts",
-        "default": "./dist/local.mjs"
-      },
-      "require": {
-        "types": "./dist/local.d.ts",
-        "default": "./dist/local.js"
-      },
-      "default": "./dist/local.mjs"
     },
     "./shared": {
       "import": {

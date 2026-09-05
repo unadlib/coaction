@@ -15,7 +15,7 @@ const entries =
         input: join(packageDir, `${name}.ts`)
       }))
     : packageJson.name === '@coaction/react'
-      ? ['index', 'local', 'shared'].map((name) => ({
+      ? ['index', 'shared'].map((name) => ({
           name,
           input: join(packageDir, `${name}.ts`)
         }))
