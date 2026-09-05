@@ -1,5 +1,5 @@
 // @ts-nocheck
-import { create, effect, Slices } from 'coaction';
+import { create, effect, Slices } from 'coaction/shared';
 import {
   createTransport,
   mockPorts,

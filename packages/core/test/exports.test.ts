@@ -1,35 +1,46 @@
-import * as core from '../src';
 import * as adapter from '../adapter';
-import * as local from '../local';
+import * as entry from '../index';
 import * as shared from '../shared';
 import { create } from '../src/create';
 import { createLocal } from '../src/createLocal';
 
-test('re-exports runtime APIs from package entry', () => {
-  expect(core.create).toBe(create);
+test('the default entry publishes the local runtime', () => {
+  // `coaction` is the single-context runtime: its `create` is the transport-free
+  // one, and the client-mode error cannot happen without a transport.
+  expect(entry.create).toBe(createLocal);
+  expect(entry.create).not.toBe(create);
+  expect('ActionAuthorityChangedError' in entry).toBe(false);
+  expect('createLocal' in entry).toBe(false);
+  expect('createBinder' in entry).toBe(false);
+  expect('defineExternalStoreAdapter' in entry).toBe(false);
+  expect('createReactiveTracker' in entry).toBe(false);
+  expect(entry.signal).toBeInstanceOf(Function);
+  expect(entry.computed).toBeInstanceOf(Function);
+  expect(entry.effect).toBeInstanceOf(Function);
+  expect(entry.trigger).toBeInstanceOf(Function);
+  expect(entry.applyPatches).toBeInstanceOf(Function);
+});
+
+test('the shared entry publishes the transport runtime', () => {
+  // `../shared` resolves to the built CJS shim rather than the source module,
+  // so the contract is asserted by shape: a creator distinct from the default
+  // entry's, plus the client-mode error only a transport can raise.
   expect(shared.create).toBeInstanceOf(Function);
+  expect(shared.create).not.toBe(entry.create);
   expect(shared.ActionAuthorityChangedError).toBeInstanceOf(Function);
-  expect('ActionAuthorityChangedError' in local).toBe(false);
-  expect(local.create).not.toBe(create);
-  expect('createLocal' in core).toBe(false);
-  expect('createBinder' in core).toBe(false);
-  expect('defineExternalStoreAdapter' in core).toBe(false);
-  expect('createReactiveTracker' in core).toBe(false);
-  expect('wrapStore' in core).toBe(false);
+});
+
+test('adapter internals stay in the adapter entry', () => {
   expect(adapter.createBinder).toBeInstanceOf(Function);
   expect(adapter.defineExternalStoreAdapter).toBeInstanceOf(Function);
   expect(adapter.createReactiveTracker).toBeInstanceOf(Function);
   expect(adapter.wrapStore).toBeInstanceOf(Function);
   expect(adapter.onStoreCommit).toBeInstanceOf(Function);
   expect(adapter.replayStorePatches).toBeInstanceOf(Function);
-  expect(core.signal).toBeInstanceOf(Function);
-  expect(core.computed).toBeInstanceOf(Function);
-  expect(core.effect).toBeInstanceOf(Function);
-  expect(core.trigger).toBeInstanceOf(Function);
 });
 
-test('local entry creates local stores and rejects shared options', () => {
-  const store = local.create(() => ({ count: 0 }));
+test('the default entry creates local stores and rejects shared options', () => {
+  const store = entry.create(() => ({ count: 0 }));
   const directStore = createLocal(() => ({ count: 1 }));
   expect(store.share).toBe(false);
   expect(store.getState().count).toBe(0);
@@ -52,7 +63,7 @@ test('local entry creates local stores and rejects shared options', () => {
 });
 
 test('adapter lifecycle observes stores created by a separate entry bundle', () => {
-  const store = local.create(() => ({ count: 0 }));
+  const store = entry.create(() => ({ count: 0 }));
   const ready = jest.fn();
 
   adapter.onStoreReady(store, ready);

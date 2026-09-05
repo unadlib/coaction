@@ -3,7 +3,7 @@
  *
  * The entries are separate bundles with code splitting off, so a module-level
  * `WeakMap` becomes one map per bundle and a value crossing an entry boundary
- * -- a public state object made by `coaction/local` and read through
+ * -- a public state object made by `coaction` and read through
  * `coaction/adapter` -- is recognised by nobody. Source tests cannot see it:
  * they alias every entry to one file. `scripts/check-entry-runtime-interop.mjs`
  * runs against `dist` and explains the failure mode in full.

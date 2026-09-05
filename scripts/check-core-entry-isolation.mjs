@@ -66,13 +66,13 @@ for (const name of Object.keys(budgets).sort()) {
     if (gzipBytes > maxGzipBytes) {
       failed = true;
     }
-    if (name === 'local') {
+    if (name === 'index') {
       const leaked = forbiddenLocalRuntime.filter((marker) =>
         code.includes(marker)
       );
       if (leaked.length) {
         console.error(
-          `FAIL core/local contains shared-runtime markers: ${leaked.join(', ')}`
+          `FAIL coaction contains shared-runtime markers: ${leaked.join(', ')}`
         );
         failed = true;
       }

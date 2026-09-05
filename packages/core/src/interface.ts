@@ -526,7 +526,7 @@ export type Creator = {
   ): StoreReturn<T>;
 };
 
-/** Overload set for the transport-free `coaction/local` create function. */
+/** Overload set for the transport-free `coaction` create function. */
 export type LocalCreator = {
   <T extends ISlices>(
     createState: T,

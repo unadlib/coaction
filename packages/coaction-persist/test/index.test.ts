@@ -1,4 +1,4 @@
-import { create } from 'coaction';
+import { create } from 'coaction/shared';
 import { makeAutoObservable } from 'mobx';
 import { vi } from 'vitest';
 import { createStore as createZustandStore } from 'zustand/vanilla';

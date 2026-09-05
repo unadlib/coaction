@@ -8,9 +8,8 @@ export default defineConfig({
   resolve: {
     alias: {
       'coaction/adapter': resolve(__dirname, 'packages/core/adapter.ts'),
-      'coaction/local': resolve(__dirname, 'packages/core/local.ts'),
       'coaction/shared': resolve(__dirname, 'packages/core/shared.ts'),
-      coaction: resolve(__dirname, 'packages/core/src/index.ts'),
+      coaction: resolve(__dirname, 'packages/core/index.ts'),
       '@coaction/history': resolve(
         __dirname,
         'packages/coaction-history/src/index.ts'

@@ -6,7 +6,7 @@ import {
 } from 'data-transport';
 import { bindMobx } from '../src';
 import { makeAutoObservable, autorun, runInAction } from 'mobx';
-import { create, type Slices, type Slice } from 'coaction';
+import { create, type Slices, type Slice } from 'coaction/shared';
 import { persist, type PersistStorage } from '../../coaction-persist/src';
 
 const waitForSharedHydration = async () => {

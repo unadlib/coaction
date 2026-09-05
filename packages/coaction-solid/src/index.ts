@@ -1,4 +1,4 @@
-import { create as createVanilla } from 'coaction';
+import { create as createVanilla } from 'coaction/shared';
 import { wrapStore } from 'coaction/adapter';
 import type {
   Asyncify,
@@ -8,10 +8,10 @@ import type {
   SliceState,
   Store,
   StoreOptions
-} from 'coaction';
+} from 'coaction/shared';
 import { createSignal, type Accessor } from 'solid-js';
 
-export * from 'coaction';
+export * from 'coaction/shared';
 
 type SelectorOptions = {
   autoSelector?: boolean;

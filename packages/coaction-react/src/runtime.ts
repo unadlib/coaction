@@ -7,17 +7,18 @@ import {
   wrapStore
 } from 'coaction/adapter';
 import type {
-  Slice,
-  Store,
-  StoreOptions,
-  ClientStoreOptions,
-  SliceState,
+  Asyncify,
   ISlices,
-  Asyncify
+  LocalStoreOptions,
+  Slice,
+  SliceState,
+  Store,
+  StoreOptions
 } from 'coaction';
-// Only the local entry publishes this option type; the import is type-only, so
-// it does not pull the local entry into the shared build.
-import type { LocalStoreOptions } from 'coaction/local';
+// Only the shared entry publishes the client-mode option type. The import is
+// type-only, so naming it here does not pull the transport build into the
+// default one.
+import type { ClientStoreOptions } from 'coaction/shared';
 // Keep the shim so one published build works across React 17/18/19.
 // Switching to `react` directly would be a breaking change for React 17 users.
 import { useSyncExternalStore } from 'use-sync-external-store/shim';

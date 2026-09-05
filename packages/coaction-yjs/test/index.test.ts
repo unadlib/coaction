@@ -1,4 +1,4 @@
-import { create } from 'coaction';
+import { create } from 'coaction/shared';
 import * as Y from 'yjs';
 import { history } from '../../coaction-history/src';
 import { bindYjs, yjs } from '../src';

@@ -1,4 +1,4 @@
-import { create, Slices } from 'coaction';
+import { create, Slices } from 'coaction/shared';
 import {
   createTransport,
   mockPorts,

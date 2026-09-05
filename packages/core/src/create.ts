@@ -91,7 +91,7 @@ const validateCreateModeOptions = <T extends CreateState>(
  * a shared store.
  *
  * @remarks
- * Prefer the static `coaction/local` entry when transport support is not
+ * Prefer the default `coaction` entry when transport support is not
  * required. It excludes the JSON protocol and reconnect runtime from the
  * consumer dependency graph.
  *

@@ -11,7 +11,7 @@ import {
   mockPorts,
   WorkerMainTransportOptions
 } from 'data-transport';
-import { create, type Slices } from 'coaction';
+import { create, type Slices } from 'coaction/shared';
 import { bindPinia, adapt, type PiniaStore } from '../src';
 import { persist, type PersistStorage } from '../../coaction-persist/src';
 

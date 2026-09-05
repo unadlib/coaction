@@ -28,7 +28,7 @@ type ReactivePathMeta = {
   paths: ReactivePath[];
 };
 
-// Shared across entry points: a value created by `coaction/local` is read
+// Shared across entry points: a value created by `coaction` is read
 // through `coaction/adapter`, and a per-bundle map would not recognise it.
 const publicStatePathMeta = sharedRegistry.publicStatePathMeta as WeakMap<
   object,
@@ -150,7 +150,7 @@ export const getReadonlyStateValueVersion = (value: unknown) => {
  *
  * Values that did not come from a Coaction store are returned unchanged, which
  * includes values from a store built by a *different* entry point: `coaction`
- * and `coaction/local` are separate bundles that do not share this registry, so
+ * and `coaction` are separate bundles that do not share this registry, so
  * import `whole` from the same entry you created the store with. Getting that
  * wrong stays correct -- reads fall back to per-element tracking -- but gives up
  * the speed this exists for.

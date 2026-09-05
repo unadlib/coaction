@@ -1,4 +1,4 @@
-import { create } from 'coaction';
+import { create } from 'coaction/shared';
 import { vi } from 'vitest';
 import { encodeExecuteResponse } from '../../core/src/transportProtocol';
 import { logger } from '../src/logger';

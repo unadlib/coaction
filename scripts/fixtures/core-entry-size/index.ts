@@ -1,4 +1,4 @@
-import { create } from '../../../packages/core/local';
+import { create } from '../../../packages/core/index';
 
 export const createCounter = () =>
   create((set) => ({

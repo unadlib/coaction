@@ -1,5 +1,5 @@
 import { computed, signal, type Signal } from '@angular/core';
-import { create as createVanilla } from 'coaction';
+import { create as createVanilla } from 'coaction/shared';
 import type {
   Asyncify,
   ClientStoreOptions,
@@ -8,9 +8,9 @@ import type {
   SliceState,
   Store,
   StoreOptions
-} from 'coaction';
+} from 'coaction/shared';
 
-export * from 'coaction';
+export * from 'coaction/shared';
 
 export type StoreReturn<T extends object> = Store<T> & {
   state: Signal<T>;

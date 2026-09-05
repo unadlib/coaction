@@ -2,12 +2,12 @@
 /**
  * Verify that the published entry bundles still speak one runtime protocol.
  *
- * `coaction`, `coaction/local`, `coaction/shared` and `coaction/adapter` are
+ * `coaction`, `coaction/shared` and `coaction/adapter` are
  * separate bundles with code splitting off. Any registry held in a module-level
  * variable therefore becomes one copy per bundle, and a value that crosses an
  * entry boundary stops being recognised -- which is precisely what the React
  * binding does when it tracks an object-valued selector result from a store the
- * application created with `coaction/local`.
+ * application created with `coaction`.
  *
  * The unit tests cannot catch this. They alias every entry to the same source
  * file, so a single module instance is shared and the registries agree. This
@@ -31,9 +31,8 @@ const load = async (name) => {
   return import(pathToFileURL(file).href);
 };
 
-const [index, local, shared, adapter] = await Promise.all([
+const [index, shared, adapter] = await Promise.all([
   load('index'),
-  load('local'),
   load('shared'),
   load('adapter')
 ]);
@@ -45,7 +44,6 @@ const check = (label, condition, detail) => {
 
 for (const [entryName, entry] of [
   ['coaction', index],
-  ['coaction/local', local],
   ['coaction/shared', shared]
 ]) {
   const store = entry.create(() => ({ user: { name: 'Michael' } }));
@@ -80,11 +78,11 @@ for (const [entryName, entry] of [
 // One source object must map to one readonly proxy no matter which entry reads
 // it, or reference identity stops holding across a boundary.
 {
-  const store = local.create(() => ({ items: [{ id: 'a' }] }));
+  const store = index.create(() => ({ items: [{ id: 'a' }] }));
   const first = store.getState().items;
   const second = store.getState().items;
   check(
-    'coaction/local',
+    'coaction',
     first === second,
     'repeated reads produced different readonly proxies'
   );
@@ -101,5 +99,5 @@ if (failures.length) {
 }
 
 console.log(
-  'Entry runtime interop passed (index, local and shared all interoperate with adapter).'
+  'Entry runtime interop passed (index and shared both interoperate with adapter).'
 );

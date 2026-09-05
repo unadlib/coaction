@@ -3,7 +3,7 @@
     "baselineGzipBytes": 1618,
     "maxGzipBytes": 1800
   },
-  "local": {
+  "index": {
     "baselineGzipBytes": 8733,
     "maxGzipBytes": 9650
   },

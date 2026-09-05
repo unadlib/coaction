@@ -1,8 +1,8 @@
-import { create as createVanilla } from 'coaction/local';
+import { create as createVanilla } from 'coaction';
 import { createReactStore, type LocalCreator } from './runtime';
 
 export * from './runtime';
-export * from 'coaction/local';
+export * from 'coaction';
 export type { CreateState, LocalCreator, StoreReturn } from './runtime';
 
 /**

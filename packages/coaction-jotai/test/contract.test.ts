@@ -1,4 +1,4 @@
-import { create } from 'coaction';
+import { create } from 'coaction/shared';
 import { expect, expectTypeOf, test, vi } from 'vitest';
 import { atom, createStore } from '../src';
 import { runBinderAdapterContract } from '../../core/test/binderAdapterContract';

@@ -1,4 +1,4 @@
-import { create, Slices } from 'coaction';
+import { create, Slices } from 'coaction/shared';
 import { history } from '../../coaction-history/src';
 import { adapt, assign, bindXState, createActor, createMachine } from '../src';
 

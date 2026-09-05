@@ -1,8 +1,8 @@
-import { create as createVanilla } from 'coaction/local';
+import { create as createVanilla } from 'coaction';
 import { createReactStore, type LocalCreator } from './runtime';
 
 export * from './runtime';
-export * from 'coaction/local';
+export * from 'coaction';
 // Both star exports carry these names. The React flavours are the ones this
 // entry's `create` is typed with, so re-export them explicitly to win.
 export type { CreateState, LocalCreator, StoreReturn } from './runtime';
