@@ -1509,3 +1509,56 @@ test('a subscription that has arrived invalidates a pull returning behind it', a
   expect(store.getState().count).toBe(5);
   store.destroy();
 });
+
+test('a slow push answer does not overwrite a newer event that already arrived', async () => {
+  let releasePush!: (result: { patches: unknown }) => void;
+  let emit: ((update: SyncPullResult) => void) | undefined;
+  const adapter: SyncAdapter = {
+    pull: async () => ({}),
+    push: () =>
+      new Promise((resolve) => {
+        releasePush = resolve as never;
+      }),
+    subscribe: (listener) => {
+      emit = listener;
+    }
+  };
+  const store = create<{ mine: number; theirs: number; bump: () => void }>(
+    (set) => ({
+      mine: 0,
+      theirs: 0,
+      bump() {
+        set(() => {
+          this.mine = 1;
+        });
+      }
+    }),
+    {
+      middlewares: [
+        sync({ name: 'order', storage: createMemoryStorage(), adapter })
+      ]
+    }
+  );
+  await nextTick();
+
+  store.getState().bump();
+  await nextTick();
+
+  // Another client writes after the server took this push, and realtime
+  // delivers it first.
+  emit!({ patches: [{ op: 'replace', path: ['theirs'], value: 2 }] });
+  await nextTick();
+  expect(store.getState().theirs).toBe(2);
+
+  // Only now does the push answer arrive, carrying what the server knew before
+  // that write happened.
+  releasePush({ patches: [{ op: 'replace', path: ['theirs'], value: 1 }] });
+  await nextTick();
+  await nextTick();
+
+  // Arrival order is not commit order. Applying it here would put the older
+  // value back over the newer one, with both requests having succeeded.
+  expect(store.getState().theirs).toBe(2);
+  expect(store.getState().mine).toBe(1);
+  store.destroy();
+});

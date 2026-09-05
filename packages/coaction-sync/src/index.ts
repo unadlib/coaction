@@ -799,6 +799,7 @@ export const sync = <T extends object>({
           submitted.forEach(({ id }) => attempted.add(id));
           // Stable mutation ids make retry after an ack-persist crash safe when
           // the remote treats ids idempotently.
+          const epoch = remoteEpoch;
           const result = await adapter.push(submitted, { cursor, revision });
           if (destroyed) return;
           const ack = new Set(result.ack ?? submitted.map(({ id }) => id));
@@ -809,11 +810,25 @@ export const sync = <T extends object>({
           // telling this client something it did not know -- and a pull in
           // flight asked its question before it. Which is exactly what the
           // built-in CRUD adapters return.
-          await applyRemote({
-            patches: result.patches,
-            cursor: result.cursor,
-            revision: result.revision
-          });
+          //
+          // A lane orders answers by arrival, and arrival is not the order the
+          // server committed them in. This answer says what the server made of
+          // a write it took before anything that has landed since, so applying
+          // it now would put that older value back over the newer one. The
+          // acknowledgement still stands -- the remote did take the mutations
+          // -- but the state it describes is no longer the state, and only a
+          // pull can say what is.
+          const superseded = epoch !== remoteEpoch;
+          if (superseded) pullOwed = true;
+          await applyRemote(
+            superseded
+              ? {}
+              : {
+                  patches: result.patches,
+                  cursor: result.cursor,
+                  revision: result.revision
+                }
+          );
         }
         if (declined) {
           // The remote took some mutations and refused others. Re-sending the
