@@ -697,3 +697,46 @@ test('a pull discarded as stale does not advance what the remote is believed to 
   expect(remote.calls).toEqual(['create:a']);
   store.destroy();
 });
+
+test('what the remote made of a write replaces the optimistic record', async () => {
+  const remote = createRemote();
+  const store = create<{
+    todos: Record<string, Todo>;
+    add: (todo: Todo) => void;
+  }>(
+    (set) => ({
+      todos: {},
+      add(todo) {
+        set(() => {
+          this.todos[todo.id] = todo;
+        });
+      }
+    }),
+    {
+      middlewares: [
+        sync({
+          name: 'crud-canonical',
+          storage: createMemoryStorage(),
+          adapter: createCrudSyncAdapter<Todo>({
+            path: ['todos'],
+            list: remote.list,
+            // The backend normalises the record it was sent.
+            create: async (todo) => ({
+              ...todo,
+              title: todo.title.trim().toUpperCase()
+            })
+          })
+        })
+      ]
+    }
+  );
+  await nextTick();
+
+  store.getState().add({ id: 'a', title: '  draft  ', done: false });
+  await nextTick();
+
+  // Keeping the optimistic value leaves the store disagreeing with the row it
+  // just wrote until some later pull happens to correct it.
+  expect(store.getState().todos.a.title).toBe('DRAFT');
+  store.destroy();
+});

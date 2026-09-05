@@ -391,6 +391,10 @@ export const createCrudSyncAdapter = <TRecord extends object>({
       const { intents, createdHere, lastKnownValue, mutationIds } =
         readIntents(mutations);
       const current = collection();
+      // What the remote made of each write. A backend normalises, stamps a
+      // timestamp, fills a default -- and the store would otherwise keep the
+      // optimistic record until some later pull happened to correct it.
+      const canonical: NonNullable<Patches> = [];
       const contextFor = (
         id: string,
         operation: CrudOperationContext['operation']
@@ -425,18 +429,35 @@ export const createCrudSyncAdapter = <TRecord extends object>({
           if (!update) throw new UnsupportedCrudOperationError('update', id);
           const returned = await update(record, contextFor(id, 'update'));
           seeRemoteRecord(id, (returned as TRecord) ?? record);
+          if (returned) {
+            canonical.push({
+              op: 'replace',
+              path: [...path, id],
+              value: returned
+            } as NonNullable<Patches>[number]);
+          }
           continue;
         }
         if (!create) throw new UnsupportedCrudOperationError('create', id);
         try {
           const returned = await create(record, contextFor(id, 'create'));
           seeRemoteRecord(id, (returned as TRecord) ?? record);
+          if (returned) {
+            canonical.push({
+              op: 'replace',
+              path: [...path, id],
+              value: returned
+            } as NonNullable<Patches>[number]);
+          }
         } catch (error) {
           onCreateError?.(error, record);
           throw error;
         }
       }
-      return {};
+      // Returned as patches rather than written directly: they then take the
+      // same path a pull's would -- one ordered lane, one atomic rebase over
+      // whatever is still pending, one checkpoint.
+      return canonical.length ? { patches: canonical } : {};
     }
   };
 };
