@@ -354,3 +354,112 @@ test('a pending delete still reaches the remote after a restart', async () => {
   expect(getSyncApi(restarted).getPending()).toHaveLength(0);
   restarted.destroy();
 });
+
+test('after a restart an edit to a pulled record updates it rather than creating it', async () => {
+  const storage = createMemoryStorage();
+  const remote = createRemote([{ id: 'a', title: 'old', done: false }]);
+  const first = createTodoStore(remote, {}, storage).store;
+  await nextTick();
+  await getSyncApi(first).pull();
+  await nextTick();
+  first.destroy();
+
+  // Second run: the record came from a pull in a previous process, so nothing
+  // in this one's memory has ever seen it.
+  remote.calls.length = 0;
+  const restarted = createTodoStore(remote, {}, storage).store;
+  await nextTick();
+  restarted.getState().rename('a', 'new');
+  await nextTick();
+
+  expect(remote.calls).toEqual(['update:a']);
+  expect(remote.records.get('a')?.title).toBe('new');
+  restarted.destroy();
+});
+
+test('after a restart replacing the whole collection still deletes remotely', async () => {
+  const storage = createMemoryStorage();
+  const remote = createRemote([{ id: 'a', title: 'old', done: false }]);
+  const first = createTodoStore(remote, {}, storage).store;
+  await nextTick();
+  await getSyncApi(first).pull();
+  await nextTick();
+  first.destroy();
+
+  remote.calls.length = 0;
+  const restarted = createTodoStore(remote, {}, storage).store;
+  await nextTick();
+  // A write at the collection names no ids at all, and after a restart there
+  // is no in-memory record of what the remote held.
+  restarted.setState({ todos: {} });
+  await nextTick();
+
+  expect(remote.calls).toContain('delete:a');
+  expect(remote.records.has('a')).toBe(false);
+  expect(getSyncApi(restarted).getPending()).toHaveLength(0);
+  restarted.destroy();
+});
+
+test('a record that arrived by realtime is updated, not created', async () => {
+  const remote = createRemote();
+  const storage = createMemoryStorage();
+  let emit: ((update: { patches: any }) => void) | undefined;
+  const base = createCrudSyncAdapter<Todo>({
+    path: ['todos'],
+    list: remote.list,
+    create: remote.create,
+    update: remote.update,
+    delete: remote.delete
+  });
+  const store = create<{
+    todos: Record<string, Todo>;
+    rename: (id: string, title: string) => void;
+  }>(
+    (set) => ({
+      todos: {},
+      rename(id, title) {
+        set(() => {
+          this.todos[id].title = title;
+        });
+      }
+    }),
+    {
+      middlewares: [
+        sync({
+          name: 'crud-realtime',
+          storage,
+          adapter: {
+            ...base,
+            subscribe(listener) {
+              emit = (update) => {
+                base.observeRemotePatches(update.patches);
+                listener(update as any);
+              };
+            }
+          }
+        })
+      ]
+    }
+  );
+  await nextTick();
+
+  // The remote already holds it; the store learns through the subscription.
+  remote.records.set('a', { id: 'a', title: 'from server', done: false });
+  emit!({
+    patches: [
+      {
+        op: 'replace',
+        path: ['todos', 'a'],
+        value: { id: 'a', title: 'from server', done: false }
+      }
+    ]
+  });
+  await nextTick();
+  remote.calls.length = 0;
+
+  store.getState().rename('a', 'edited');
+  await nextTick();
+
+  expect(remote.calls).toEqual(['update:a']);
+  store.destroy();
+});

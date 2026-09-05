@@ -54,6 +54,17 @@ export type SyncAdapter = {
   subscribe?: (
     listener: (update: SyncPullResult) => void
   ) => void | (() => void);
+  /**
+   * Adapter state to write into the same durable checkpoint as the outbox.
+   *
+   * An adapter that reasons about the remote -- which records it already
+   * holds, say -- must not keep that knowledge in memory while the mutations
+   * it is reasoning about survive a restart. Whatever this returns is stored
+   * with the outbox and handed back to `hydrate` before any pull or push.
+   */
+  serialize?: () => unknown;
+  /** Restore what `serialize` wrote. Called once, before any pull or push. */
+  hydrate?: (snapshot: unknown) => void;
 };
 
 export type SyncConflictResolution = 'local' | 'remote';
@@ -110,6 +121,7 @@ type PersistedSyncState<T extends object = object> = {
   revision?: string;
   outbox: SyncMutation[];
   state?: T;
+  adapter?: unknown;
 };
 
 const createDefaultStorage = (): SyncStorage => ({
@@ -331,6 +343,7 @@ export const sync = <T extends object>({
       cursor,
       revision,
       outbox,
+      adapter: adapter.serialize?.(),
       state: persistState
         ? (sanitizeReplacementState(store.getPureState()) as T)
         : undefined
@@ -707,6 +720,9 @@ export const sync = <T extends object>({
           : ({ outbox: [] } as PersistedSyncState<T>);
         cursor = parsed.cursor;
         revision = parsed.revision;
+        // Before anything is pulled, pushed or replayed: the adapter's view of
+        // the remote has to be as old as the outbox it will interpret.
+        adapter.hydrate?.(parsed.adapter);
         const durable = Array.isArray(parsed.outbox) ? parsed.outbox : [];
         const durableIds = new Set(durable.map(({ id }) => id));
         const inMemoryPreHydration = [...outbox];

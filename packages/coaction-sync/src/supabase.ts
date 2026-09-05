@@ -203,6 +203,10 @@ export const createSupabaseSyncAdapter = <TRecord extends object>({
               value: record
             } as NonNullable<Patches>[number]);
           }
+          // Realtime writes bypass `pull`, so the CRUD baseline has to be
+          // told about them or the next local edit to such a record is sent
+          // as a create.
+          crud.observeRemotePatches(patches);
           listener({ patches });
         })
         .subscribe();

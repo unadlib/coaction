@@ -30,6 +30,14 @@ export type CrudListResult<TRecord> = {
   deleted?: string[];
 };
 
+/**
+ * A CRUD adapter, plus the hook a wrapping adapter uses to tell it what the
+ * remote holds when records arrive by some route other than `pull`.
+ */
+export type CrudSyncAdapter = SyncAdapter & {
+  observeRemotePatches(patches: Patches): void;
+};
+
 export type CrudSyncAdapterOptions<TRecord> = {
   /**
    * Where the keyed collection lives in the store, e.g. `['todos']` for a
@@ -103,14 +111,51 @@ export const createCrudSyncAdapter = <TRecord extends object>({
   getId = (record) => (record as { id: string }).id,
   authoritativeList = false,
   onCreateError
-}: CrudSyncAdapterOptions<TRecord>): SyncAdapter => {
+}: CrudSyncAdapterOptions<TRecord>): CrudSyncAdapter => {
   let store: Store<any> | undefined;
-  // What the remote is believed to hold. Decides create vs update, and gives
-  // `delete` a record to work from once the store no longer has one.
+  /**
+   * Which ids the remote is believed to hold. This decides create vs update,
+   * so it is durable: the outbox it interprets survives a restart, and a
+   * baseline that does not would call `create` on a record the remote already
+   * has -- a primary key collision, on every backend that has one.
+   */
+  const remoteIds = new Set<string>();
+  // Records seen from the remote, kept only to give `delete` something to work
+  // from. Losing it costs nothing: the queue's inverse patches carry the value
+  // for anything the store itself held.
   const known = new Map<string, TRecord>();
 
   const collection = (): CrudCollection<TRecord> =>
     (readAtPath(store?.getPureState(), path) as CrudCollection<TRecord>) ?? {};
+
+  const seeRemoteRecord = (id: string, record?: TRecord) => {
+    remoteIds.add(id);
+    if (record !== undefined) known.set(id, record);
+  };
+  const forgetRemoteRecord = (id: string) => {
+    remoteIds.delete(id);
+    known.delete(id);
+  };
+
+  /**
+   * Learn what the remote holds from patches applied outside `pull`.
+   *
+   * A realtime subscription writes records straight into the store, and
+   * without this the baseline would never hear about them: the next local edit
+   * to such a record would be sent as a create.
+   */
+  const observeRemotePatches = (patches: Patches) => {
+    for (const patch of patches ?? []) {
+      const patchPath = normalizePatchPath(patch.path);
+      const id = childKeyUnder(patchPath, path);
+      if (id === undefined || patchPath.length !== path.length + 1) continue;
+      if (patch.op === 'remove') {
+        forgetRemoteRecord(id);
+        continue;
+      }
+      seeRemoteRecord(id, (patch as { value?: TRecord }).value);
+    }
+  };
 
   /**
    * What each mutation asked for, read from its patches rather than inferred
@@ -160,6 +205,21 @@ export const createCrudSyncAdapter = <TRecord extends object>({
           'value' in patch
         ) {
           lastKnownValue.set(id, (patch as { value: TRecord }).value);
+          continue;
+        }
+        // A write at the collection itself has one inverse carrying every
+        // record it replaced, which is the only copy of the ones it dropped.
+        if (
+          reachesPath(patchPath, path) &&
+          patchPath.length === path.length &&
+          'value' in patch
+        ) {
+          const previous = (patch as { value?: CrudCollection<TRecord> }).value;
+          if (previous && typeof previous === 'object') {
+            for (const [recordId, record] of Object.entries(previous)) {
+              lastKnownValue.set(recordId, record as TRecord);
+            }
+          }
         }
       }
     }
@@ -169,7 +229,9 @@ export const createCrudSyncAdapter = <TRecord extends object>({
       for (const id of Object.keys(current)) {
         if (!intents.has(id)) intents.set(id, 'upsert');
       }
-      for (const id of known.keys()) {
+      // Everything the remote holds that the collection no longer does. The
+      // baseline is durable, so this still names the right ids after a restart.
+      for (const id of remoteIds) {
         if (!(id in current)) intents.set(id, 'delete');
       }
     }
@@ -182,6 +244,18 @@ export const createCrudSyncAdapter = <TRecord extends object>({
       store = boundStore;
     },
 
+    observeRemotePatches,
+
+    serialize: () => ({ remoteIds: [...remoteIds] }),
+
+    hydrate(snapshot) {
+      const ids = (snapshot as { remoteIds?: unknown } | undefined)?.remoteIds;
+      if (!Array.isArray(ids)) return;
+      for (const id of ids) {
+        if (typeof id === 'string') remoteIds.add(id);
+      }
+    },
+
     async pull(context) {
       const result = asListResult(await list(context));
       const patches: NonNullable<Patches> = [];
@@ -190,7 +264,7 @@ export const createCrudSyncAdapter = <TRecord extends object>({
       for (const record of result.records) {
         const id = getId(record);
         seen.add(id);
-        known.set(id, record);
+        seeRemoteRecord(id, record);
         patches.push({
           op: 'replace',
           path: [...path, id],
@@ -199,7 +273,7 @@ export const createCrudSyncAdapter = <TRecord extends object>({
       }
 
       for (const id of result.deleted ?? []) {
-        known.delete(id);
+        forgetRemoteRecord(id);
         patches.push({
           op: 'remove',
           path: [...path, id]
@@ -209,7 +283,7 @@ export const createCrudSyncAdapter = <TRecord extends object>({
       if (authoritativeList) {
         for (const id of Object.keys(collection())) {
           if (seen.has(id)) continue;
-          known.delete(id);
+          forgetRemoteRecord(id);
           patches.push({
             op: 'remove',
             path: [...path, id]
@@ -232,29 +306,29 @@ export const createCrudSyncAdapter = <TRecord extends object>({
         if (intent === 'delete' || record === undefined) {
           // Created and removed before either reached the remote: there is
           // nothing there to delete.
-          if (createdHere.has(id) && !known.has(id)) {
-            known.delete(id);
+          // Created and removed before either reached the remote: there is
+          // nothing there to delete.
+          if (createdHere.has(id) && !remoteIds.has(id)) {
+            forgetRemoteRecord(id);
             continue;
           }
-          // Without a value from either the queue's inverse or a previous
-          // push there is no evidence the remote ever held this record.
+          if (!remoteIds.has(id)) continue;
           const last = known.get(id) ?? lastKnownValue.get(id);
-          if (last === undefined) continue;
-          if (remove) await remove(last, id);
-          known.delete(id);
+          if (remove) await remove(last as TRecord, id);
+          forgetRemoteRecord(id);
           continue;
         }
-        if (known.has(id)) {
+        if (remoteIds.has(id)) {
           if (update) {
             const returned = await update(record);
-            known.set(id, (returned as TRecord) ?? record);
+            seeRemoteRecord(id, (returned as TRecord) ?? record);
           }
           continue;
         }
         if (!create) continue;
         try {
           const returned = await create(record);
-          known.set(id, (returned as TRecord) ?? record);
+          seeRemoteRecord(id, (returned as TRecord) ?? record);
         } catch (error) {
           onCreateError?.(error, record);
           throw error;
