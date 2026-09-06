@@ -2,6 +2,7 @@ import { bindSymbol } from './constant';
 import type { CreateState, ISlices, Slice, Store } from './interface';
 import { Internal } from './internal';
 import { getOwnEnumerableKeys, isUnsafeKey, setOwnEnumerable } from './utils';
+import { wrapExternalApply } from './wrapExternalApply';
 
 type StateFactory<T extends CreateState> = (
   setState: Store<T>['setState'],
@@ -96,6 +97,12 @@ export const getInitialState = <T extends CreateState>(
         state,
         internal as unknown as Internal<object>,
         key
+      );
+      // The adapter has just replaced `store.apply` with something that knows
+      // how to write to its own runtime. Commit semantics are not its job.
+      wrapExternalApply(
+        store as unknown as Store<object>,
+        internal as unknown as Internal<object>
       );
       delete state[bindSymbol];
       return rawState;

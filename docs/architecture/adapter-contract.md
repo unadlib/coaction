@@ -45,6 +45,13 @@ An official adapter must:
 An adapter may replace store methods, but the resulting object must remain a
 valid Coaction store and compose with middleware.
 
+`store.apply` is the one Coaction wraps back. An adapter replaces it because
+only the adapter knows how to get a change onto its own runtime; what it does
+not have to know is that a transition through `apply` is a commit. Core works
+out the patch pair before the change, runs commit validators, calls what the
+adapter installed, and publishes the commit. An adapter therefore implements
+only the write, and must not publish a commit of its own for it.
+
 ## Async actions on a mutable instance
 
 Patch generation for a mutable instance works by opening a mutative draft over

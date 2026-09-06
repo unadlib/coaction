@@ -33,6 +33,8 @@ export type CommitReplayCounter = {
 
 export type CommitReplayContract = {
   packageName: string;
+  /** Set a field directly, for the `store.apply` cases. */
+  label?: string;
   /**
    * Build a store whose actions follow {@link CommitReplayCounter}. `release`
    * settles whatever `suspend` and `suspendThenNested` are waiting on.
@@ -84,6 +86,35 @@ export const runCommitReplayInvariant = ({
 
   describe(`${packageName} commit replay invariant`, () => {
     check('a single action', (state) => state.step(), 1);
+
+    /**
+     * `store.apply` in both forms, which an adapter replaces outright. Until
+     * core wrapped what they installed, a transition through it changed the
+     * adapter's runtime and produced no commit at all -- so the invariant these
+     * suites exist for did not hold on the one entry that had no other way to
+     * be observed.
+     */
+    test('apply in both forms replays to the state it produced', () => {
+      const { store, cleanup } = createStore();
+      const initial = JSON.parse(JSON.stringify(store.getPureState()));
+      const commits: StoreCommit[] = [];
+      onStoreCommit(store, (commit) => commits.push(commit));
+
+      store.apply(store.getPureState(), [
+        { op: 'replace', path: ['n'], value: 7 }
+      ]);
+      store.apply({ ...store.getPureState(), n: 9 } as CommitReplayCounter);
+
+      expect(store.getState().n).toBe(9);
+      expect(
+        commits.reduce(
+          (state, commit) => applyPatches(state, commit.patches),
+          initial as object
+        )
+      ).toEqual(store.getPureState());
+      store.destroy();
+      cleanup?.();
+    });
     check('a nested action', (state) => state.nested(), 21);
     check(
       'an async action on its own',
