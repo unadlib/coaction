@@ -79,6 +79,13 @@ An adapter needs no code for this; it is core behavior, and it is the same for
 every mutable instance. Native Coaction stores are unaffected: their actions do
 not hold a draft across an `await`.
 
+A refusal belongs to the action whose writes were refused. Closing a transaction
+runs commit validators, and an action entering while another is suspended closes
+that one's first — so the refusal can be raised while a different action is on
+the stack. It is held against the action it came from and surfaces on that
+action's own result; the one that found it carries on. What was refused is
+already rolled back, because the state is restored before the validators run.
+
 Because an action writes into the draft and `store.apply` is what puts the
 change onto the instance, an action is a transition Coaction can still refuse.
 A commit validator registered with `onStoreCommitValidate` runs before that

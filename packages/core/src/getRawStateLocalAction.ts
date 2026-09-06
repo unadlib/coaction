@@ -125,9 +125,35 @@ export const createLocalAction = <T extends CreateState>({
           active: true,
           displaced: internal.mutableTransactionOwner
         };
+        /**
+         * Close whatever transaction is open, whoever owns it.
+         *
+         * `handleDraft` runs commit validators, so this can throw -- and it
+         * throws inside whichever action happens to be entering, about writes
+         * that belong to another one. Leaving the store as it was found was the
+         * worst of both: ownership still named the displaced action while its
+         * draft had already been finalised, so it resumed writing through a
+         * revoked proxy, and the writes it made afterwards reached the mutable
+         * instance with no transaction to record them. The store then held a
+         * state its own commits could not rebuild.
+         *
+         * The transaction closes either way. A refusal is remembered against
+         * the action it belongs to and surfaces when that action finishes;
+         * `handleDraft` restores the state before it validates, so what was
+         * refused is already rolled back.
+         */
         const closeTransaction = () => {
-          handleDraft(store, internal);
-          internal.mutableTransactionOwner = undefined;
+          const owner = internal.mutableTransactionOwner;
+          try {
+            handleDraft(store, internal);
+          } catch (error) {
+            if (!owner || owner === context) {
+              throw error;
+            }
+            owner.failure = error;
+          } finally {
+            internal.mutableTransactionOwner = undefined;
+          }
         };
         const openTransactionFor = (owner: MutableActionContext) => {
           internal.backupState = internal.rootState;
@@ -140,16 +166,22 @@ export const createLocalAction = <T extends CreateState>({
         };
         const handleResult = () => {
           context.active = false;
-          if (internal.mutableTransactionOwner !== context) {
-            return;
+          if (internal.mutableTransactionOwner === context) {
+            closeTransaction();
+            let owner = context.displaced;
+            while (owner && !owner.active) {
+              owner = owner.displaced;
+            }
+            if (owner) {
+              openTransactionFor(owner);
+            }
           }
-          closeTransaction();
-          let owner = context.displaced;
-          while (owner && !owner.active) {
-            owner = owner.displaced;
-          }
-          if (owner) {
-            openTransactionFor(owner);
+          // A refusal collected while this action was suspended. It is its own,
+          // so it fails here rather than in the action that found it.
+          if (context.failure) {
+            const failure = context.failure;
+            context.failure = undefined;
+            throw failure;
           }
         };
         if (isDraft(internal.rootState)) {

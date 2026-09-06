@@ -36,6 +36,15 @@ export type MutableActionContext = {
    * on the floor in that case.
    */
   displaced?: MutableActionContext;
+  /**
+   * Why this action's transaction could not be closed.
+   *
+   * Closing runs commit validators, and a validator refusing belongs to the
+   * action whose writes it refused -- not to whichever action happened to
+   * arrive and displace it. It is kept here until that action finishes, and
+   * surfaces on its own result.
+   */
+  failure?: unknown;
 };
 
 export interface Internal<T extends CreateState = CreateState> {

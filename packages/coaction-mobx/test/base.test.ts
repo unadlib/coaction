@@ -940,3 +940,73 @@ test('a transaction reaches the nearest action still waiting for it', async () =
   expect(isDraft(useStore.getPureState())).toBeFalsy();
   useStore.destroy();
 });
+
+/**
+ * A commit validator refusing a suspended action's writes.
+ *
+ * Closing a transaction runs validators, and an action that arrives while
+ * another is suspended closes that one's transaction first. So the refusal
+ * happened inside a stranger's call stack, about writes that were not hers --
+ * and because the throw escaped before ownership was cleared, the store was
+ * left naming an action whose draft had already been finalised. It resumed
+ * writing through a revoked proxy, and what it wrote afterwards reached the
+ * MobX instance with no transaction to record it: the store held a state its
+ * own commits could not rebuild.
+ */
+test('a refusal reaches the action it belongs to, not the one that found it', async () => {
+  let release: (() => void) | undefined;
+  const useStore = create<{
+    n: number;
+    when: string;
+    refused: () => Promise<void>;
+    other: () => void;
+  }>(
+    () =>
+      makeAutoObservable(
+        bindMobx({
+          n: 0,
+          when: '1970-01-01',
+          async refused() {
+            this.n += 1;
+            (this as { when: unknown }).when = new Date(0);
+            await new Promise<void>((resolve) => {
+              release = resolve;
+            });
+            this.n += 1;
+          },
+          other() {
+            this.n += 100;
+          }
+        })
+      ),
+    { name: 'validator-displacement', enablePatches: true }
+  );
+  const { replayed } = track(useStore);
+  onStoreCommitValidate(useStore as Store<any>, (commit) => {
+    for (const patch of commit.patches) {
+      if ('value' in patch && patch.value instanceof Date) {
+        throw new TypeError('no Dates');
+      }
+    }
+  });
+
+  const pending = useStore.getState().refused();
+  await Promise.resolve();
+  // Enters while the other is suspended, so it closes that transaction -- and
+  // the validator refuses it. That is not this action's error.
+  expect(() => useStore.getState().other()).not.toThrow();
+  release!();
+  await expect(pending).rejects.toThrow('no Dates');
+  for (let drain = 0; drain < 6; drain += 1) await Promise.resolve();
+
+  // The refused writes are gone, the ones that were allowed are not, and the
+  // patch stream still describes the state.
+  expect(useStore.getState().when).toBe('1970-01-01');
+  expect(replayed()).toEqual(useStore.getPureState());
+  expect(isDraft(useStore.getPureState())).toBeFalsy();
+
+  // And the store still works afterwards.
+  useStore.getState().other();
+  expect(replayed()).toEqual(useStore.getPureState());
+  useStore.destroy();
+});
