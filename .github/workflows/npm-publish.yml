@@ -20,7 +20,12 @@ jobs:
       - run: npm install -g npm@11.17.0
       - run: npm --version
       - run: pnpm install --frozen-lockfile
-      - run: pnpm check
+      # The release gate verifies the artifact. `pnpm check` additionally runs
+      # the mutation testing and the defect replay, which rewrite source files
+      # and read history around specific commits -- development tooling, run by
+      # CI on the commit being released, and not something a publish should
+      # depend on. See scripts/check-fuzz-catches.mjs.
+      - run: pnpm check:release
       - run: pnpm run publish -- --provenance
         env:
           CI: true

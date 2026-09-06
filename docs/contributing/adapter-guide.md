@@ -40,8 +40,32 @@ For a binder-backed adapter:
 1. Build the binding through `defineExternalStoreAdapter()`
 2. Normalize external state in `handleState`
 3. Wire Coaction lifecycle into the external runtime in `handleStore`
-4. Preserve the store contract when overriding `subscribe()`, `destroy()`, or `apply()`
-5. Call `internal.notifyStateChange()` after direct external immutable writes that update `internal.rootState` without using `store.setState()` or `store.apply()`
+4. Say how to write into the runtime with `internal.externalApply`, and nothing more
+5. Preserve the store contract when overriding `subscribe()` or `destroy()`
+6. Call `internal.notifyStateChange()` after direct external immutable writes that update `internal.rootState` without using `store.setState()` or `store.apply()`
+
+### The write boundary
+
+`store.apply` belongs to Coaction. An adapter sets `internal.externalApply` —
+how to get a change onto its own runtime — and Coaction does the rest: it works
+out the patch pair before the change, runs commit validators, calls the writer,
+and publishes the commit.
+
+```ts
+internal.externalApply = (state = store.getPureState(), patches) => {
+  // write into the runtime; do not publish a commit
+};
+```
+
+Do not replace `store.apply`. Adapters used to, and it took on commit semantics
+they did not want — none of them published a commit, so a direct `apply` changed
+the state and told nobody — while discarding anything middleware had wrapped
+`apply` with, since middleware runs first. See
+[`store.apply` belongs to Coaction](../migration/adapter-write-boundary.md).
+
+An adapter whose runtime only accepts changes through its own channel needs no
+writer at all. Refuse from `internal.assertMutationAllowed` and let the ordinary
+`apply` do the work — `@coaction/xstate` does exactly that.
 
 Implementation expectations:
 
@@ -52,11 +76,12 @@ Implementation expectations:
 
 ## 4. Add Contract Coverage
 
-Official binder-backed adapters must use the shared contract suite in `packages/core/test/binderAdapterContract.ts`.
+Official binder-backed adapters must use the shared contract suite in `packages/core/test/binderAdapterContract.ts`, and the commit conformance suite in `packages/core/test/binderCommitConformance.ts`.
 
 Required:
 
 - add a `test/contract.test.ts` file for the package
+- add a `test/commitConformance.test.ts` file, so both forms of `store.apply` publish exactly once, replay to the state they produced, and leave a middleware wrapper working
 - cover local whole-store behavior
 - cover shared main/client behavior only if that mode is an official contract
 - include a type-expectation test
