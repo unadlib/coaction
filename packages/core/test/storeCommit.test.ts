@@ -2,6 +2,7 @@ import { create, type Middleware, type Store } from '../src';
 import {
   onStoreCommit,
   onStoreCommitPrepare,
+  onStoreCommitValidate,
   replayStorePatches,
   type StoreCommit
 } from '../adapter';
@@ -288,4 +289,50 @@ test('destroy releases commit observers and the patch replayer', () => {
     replayStorePatches(store, { patches: [], inversePatches: [] })
   ).toThrow('replayStorePatches() requires a store created by Coaction.');
   expect(listener).not.toHaveBeenCalled();
+});
+
+/**
+ * `onStoreCommitValidate` promises a validator the commit a listener will get.
+ * It was given the patches and a guess at everything else: the source was read
+ * off the store at the commit point, where nothing had said what the transition
+ * was, so every one of them looked `external` while the listener for the same
+ * commit was told `setState` or `replay`. A validator deciding by source --
+ * ignoring a replay, treating an external write differently -- was deciding on
+ * the wrong answer.
+ */
+test('a validator is told the same thing about a commit as a listener', () => {
+  const store = create<{ count: number; increment: () => void }>((set) => ({
+    count: 0,
+    increment() {
+      set(() => {
+        this.count += 1;
+      });
+    }
+  }));
+  const validated: StoreCommit[] = [];
+  const committed: StoreCommit[] = [];
+  onStoreCommitValidate(store, (commit) => validated.push(commit));
+  onStoreCommit(store, (commit) => committed.push(commit));
+
+  store.getState().increment();
+  store.setState({ count: 20 });
+  store.apply({ ...store.getPureState(), count: 30 });
+  replayStorePatches(store, {
+    patches: [{ op: 'replace', path: ['count'], value: 50 }],
+    inversePatches: [{ op: 'replace', path: ['count'], value: 30 }]
+  });
+
+  expect(validated).toHaveLength(committed.length);
+  expect(validated.map(({ source }) => source)).toEqual([
+    'setState',
+    'setState',
+    'external',
+    'replay'
+  ]);
+  validated.forEach((commit, index) => {
+    expect(commit.source).toBe(committed[index].source);
+    expect(commit.patches).toEqual(committed[index].patches);
+    expect(commit.inversePatches).toEqual(committed[index].inversePatches);
+  });
+  store.destroy();
 });

@@ -134,11 +134,18 @@ export interface Internal<T extends CreateState = CreateState> {
   validatePatches?: (patches: Patches) => void;
   /** Validate an adapter replacement source before reading its values. */
   validateReplacementSource?: (state: unknown) => void;
-  /** Commit patches already checked by the native updater. */
+  /**
+   * Commit patches already checked by the native updater.
+   *
+   * `inversePatches` is the pair's other half as the caller has it, after any
+   * `store.patch` transform. A commit validator is shown the transition that
+   * will be published, so it must not be left to derive its own.
+   */
   applyValidatedPatches?: (
     state: T,
     patches: Patches,
-    skipFinalValidation: boolean
+    skipFinalValidation: boolean,
+    inversePatches?: Patches
   ) => boolean;
   /** Publish patches when a shared authority transport is attached. */
   emitPatches?: (patches: Patches) => void;

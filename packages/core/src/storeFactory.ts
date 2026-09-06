@@ -156,7 +156,8 @@ export const createStore = <T extends CreateState>(
       state: T,
       patches: Patches | undefined,
       prepared = false,
-      skipFinalValidation = false
+      skipFinalValidation = false,
+      knownInversePatches?: Patches
     ) => {
       internal.assertAlive?.('apply');
       internal.assertMutationAllowed?.('apply');
@@ -212,13 +213,15 @@ export const createStore = <T extends CreateState>(
         validateStoreCommit(store, {
           state: nextState as T,
           patches: (safePatches ?? replacement!.patches) as Patches,
-          // A validator is shown the same pair the commit will publish, so the
-          // inverse is derived where the caller supplied none. It reads one
-          // target per patch, not the whole state, and only runs at all when
-          // something is validating.
-          inversePatches: (safePatches
-            ? createInversePatches(baseState, safePatches)
-            : replacement!.inversePatches) as Patches,
+          // The same pair the commit will publish. A caller that has the other
+          // half -- after its own `store.patch` transform -- passes it in; the
+          // derivation is only for `store.apply(state, patches)`, which is
+          // given patches and no inverse, and it reads one target per patch
+          // rather than the whole state.
+          inversePatches: (knownInversePatches ??
+            (safePatches
+              ? createInversePatches(baseState, safePatches)
+              : replacement!.inversePatches)) as Patches,
           source: getStoreCommitSource(store, 'external')
         });
       }
@@ -267,12 +270,17 @@ export const createStore = <T extends CreateState>(
         source: getStoreCommitSource(store, 'external')
       });
     };
-    internal.applyValidatedPatches = (state, patches, skipFinalValidation) => {
+    internal.applyValidatedPatches = (
+      state,
+      patches,
+      skipFinalValidation,
+      inversePatches
+    ) => {
       if (store.apply !== apply) {
         store.apply(state, patches);
         return false;
       }
-      applyState(state, patches, true, skipFinalValidation);
+      applyState(state, patches, true, skipFinalValidation, inversePatches);
       return true;
     };
     const getPureState: Store<T>['getPureState'] = () =>

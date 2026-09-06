@@ -165,7 +165,8 @@ export const handleState = <T extends CreateState>(
         internal.applyValidatedPatches?.(
           internal.rootState as T,
           safePatches,
-          !patch
+          !patch,
+          safeInversePatches
         ) ?? false;
       if (!internal.applyValidatedPatches) {
         store.apply(internal.rootState as T, safePatches);
@@ -340,7 +341,14 @@ export const handleState = <T extends CreateState>(
       if (isDrafted) {
         handleDraft(store, internal);
       }
-      result = updater(next);
+      // What this transition is has been decided here, and the commit point is
+      // several frames down. Announcing it on the store is how the rest of the
+      // pipeline already learns it -- without this a commit validator was told
+      // every transition was `external` while the listener for the same commit
+      // was told `setState` or `replay`.
+      result = runWithStoreCommitSource(store, commitSource, () =>
+        updater(next)
+      );
       if (internal.mutableInstance) {
         assertKnownStateShape(
           internal.rootState,
@@ -434,7 +442,8 @@ export const handleState = <T extends CreateState>(
           internal.applyValidatedPatches?.(
             internal.rootState as T,
             safePatches,
-            false
+            false,
+            safeInversePatches
           );
           if (!internal.applyValidatedPatches) {
             store.apply(internal.rootState as T, safePatches);

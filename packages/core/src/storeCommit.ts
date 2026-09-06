@@ -158,9 +158,10 @@ export const onStoreCommitPrepare = <T extends CreateState>(
  * owns the object and has already changed it by the time a commit exists.
  * There a middleware has only {@link onStoreCommit} to report from.
  *
- * A validator sees the same commit a listener does. It must not write to the
- * store, and it runs on every local transition, so keep it proportional to the
- * patches rather than to the size of the state.
+ * A validator sees the commit a listener will see -- the same patch pair, the
+ * same inverse, the same source. It must not write to the store, and it runs on
+ * every local transition, so keep it proportional to the patches rather than to
+ * the size of the state.
  */
 export const onStoreCommitValidate = <T extends CreateState>(
   store: Store<T>,
