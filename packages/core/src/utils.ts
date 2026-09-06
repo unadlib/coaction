@@ -596,6 +596,42 @@ type PatchPathNode = {
   ends?: boolean;
 };
 
+/**
+ * Whether two states are the same, using the structural sharing between them.
+ *
+ * Both sides are built from the same previous state -- one by the runtime
+ * finalising a draft, one by applying the patches it emitted -- so every
+ * subtree neither touched is the same object in both, and `Object.is` ends the
+ * walk there. The cost follows what changed rather than the size of the state.
+ */
+export const isSameStructure = (left: unknown, right: unknown): boolean => {
+  if (Object.is(left, right)) return true;
+  if (
+    typeof left !== 'object' ||
+    left === null ||
+    typeof right !== 'object' ||
+    right === null ||
+    Array.isArray(left) !== Array.isArray(right)
+  ) {
+    return false;
+  }
+  const leftKeys = getOwnEnumerableKeys(left);
+  const rightKeys = getOwnEnumerableKeys(right);
+  if (leftKeys.length !== rightKeys.length) return false;
+  for (const key of leftKeys) {
+    if (!Object.prototype.hasOwnProperty.call(right, key)) return false;
+    if (
+      !isSameStructure(
+        (left as Record<PropertyKey, unknown>)[key],
+        (right as Record<PropertyKey, unknown>)[key]
+      )
+    ) {
+      return false;
+    }
+  }
+  return true;
+};
+
 export const inverseNeedsDerivation = (patches: Patches) => {
   if (patches.length < 2) return false;
   // Paths go into a trie as they are read, and each one asks on the way in

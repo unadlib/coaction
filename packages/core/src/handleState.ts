@@ -18,9 +18,12 @@ import {
   finalizeImmutableStateSnapshot
 } from './immutableState';
 import {
+  applyPatches,
   assertKnownStateShape,
   createInversePatches,
+  createRootReplacementPatches,
   inverseNeedsDerivation,
+  isSameStructure,
   shallowCloneOwnEnumerable,
   getOwnEnumerableKeys,
   mergeObject,
@@ -126,9 +129,52 @@ export const handleState = <T extends CreateState>(
       internal.validateState?.(internal.getTransportState?.() ?? result[0]);
       producedState = result[0] as T;
       patches = result[1];
-      inversePatches = inverseNeedsDerivation(patches)
-        ? createInversePatches(internal.backupState as T, patches)
-        : result[2];
+      inversePatches = result[2];
+      if (inverseNeedsDerivation(patches)) {
+        // The pair needs work, and may not be usable at all.
+        //
+        // The runtime records patch paths positionally, so a recipe that drafts
+        // a nested value, moves it within its parent array and then writes into
+        // it records the position the value used to have. The pair then
+        // describes a change to something that is no longer there, and applying
+        // it -- which is how the transition is made, and how the inverse is
+        // derived -- throws.
+        //
+        // The recipe is legal, and it succeeds on a store nobody is watching,
+        // where no pair is produced at all. Failing once a listener, a
+        // validator or an observer asks for patches would mean attaching a
+        // devtool changes what an application is allowed to do. So a transition
+        // the pair cannot describe is described the other way instead: as the
+        // difference between the state before and the state the recipe
+        // produced, one patch per changed top-level key.
+        //
+        // Coarser than it could be, and only for the transitions that need it.
+        try {
+          // Applying is not enough: a stale position can land somewhere that
+          // exists, and then the pair applies cleanly to a different state than
+          // the recipe produced. Both sides share every subtree the recipe did
+          // not touch, so comparing them costs what changed.
+          if (
+            !isSameStructure(
+              applyPatches(internal.backupState as T, patches),
+              producedState
+            )
+          ) {
+            throw new Error('patches do not describe this transition');
+          }
+          inversePatches = createInversePatches(
+            internal.backupState as T,
+            patches
+          );
+        } catch {
+          const replacement = createRootReplacementPatches(
+            internal.backupState as Record<PropertyKey, unknown>,
+            producedState as Record<PropertyKey, unknown>
+          );
+          patches = replacement.patches as Patches;
+          inversePatches = replacement.inversePatches as Patches;
+        }
+      }
     } finally {
       internal.rootState = internal.backupState;
     }

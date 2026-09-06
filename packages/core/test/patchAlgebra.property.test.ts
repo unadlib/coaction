@@ -1,13 +1,13 @@
 import { create as createWithMutative, type Patches } from 'mutative';
 import { create } from '../src';
 import { onStoreCommit, type StoreCommit } from '../adapter';
-import { forEachSeed, type Random } from './random';
+import { createRandom, forEachSeed, type Random } from './random';
 import {
   applyPatches,
   createInversePatches,
   createRootReplacementPatches
 } from '../adapter';
-import { inverseNeedsDerivation } from '../src/utils';
+import { inverseNeedsDerivation, isSameStructure } from '../src/utils';
 
 /**
  * The law every consumer of patches leans on:
@@ -138,15 +138,18 @@ const mutate = (random: Random, draft: any) => {
 };
 
 /**
- * `describable` is false when the runtime could not express the transition as a
- * patch pair at all: mutative records paths positionally, so a recipe that
- * drafts a nested value, moves it within its parent array, and then writes into
- * it records the position the value used to have. Applying that pair throws.
+ * `describable` is false when the pair the runtime emitted does not describe
+ * the transition: mutative records paths positionally, so a recipe that drafts
+ * a nested value, moves it within its parent array, and then writes into it
+ * records the position the value used to have. Applying that pair throws, or --
+ * when the old position still exists -- succeeds and produces a different
+ * state.
  *
- * Those never become commits -- Coaction applies the pair to make the
- * transition, so the `set()` fails and nothing is published, with the store
- * untouched. `refuses a transition the runtime cannot describe` asserts exactly
- * that, and the properties here are about the pairs that do get committed.
+ * Those never reach a commit. Coaction detects them and describes the
+ * transition as the difference between the states instead, which
+ * `a transition the runtime cannot describe is described more coarsely`
+ * asserts. The properties here are about the pairs that are committed as they
+ * come.
  */
 const transition = (random: Random) => {
   const before = state(random);
@@ -158,9 +161,14 @@ const transition = (random: Random) => {
     },
     { enablePatches: true }
   ) as [Record<string, unknown>, Patches, Patches];
+  // Describes the transition, not merely applies. A stale position can land
+  // somewhere that exists, and then the pair applies cleanly to a state the
+  // recipe did not produce -- which is the same defect without the throw.
   let describable = true;
   try {
-    applyPatches(before, patches);
+    if (!isSameStructure(applyPatches(before, patches), after)) {
+      describable = false;
+    }
   } catch {
     describable = false;
   }
@@ -332,17 +340,18 @@ test('the fast check agrees on paths built to collide', () => {
  * mutative records paths positionally. Draft a nested value, move it within its
  * parent array, then write into it, and the write is recorded at the position
  * the value used to have -- so the pair describes a change to something that is
- * no longer there.
+ * no longer there, and applying it throws.
  *
- * Coaction makes a transition by applying that pair, so this fails at the
- * `set()` that produced it. That is the behaviour worth pinning: the recipe is
- * refused, nothing is committed, and the store is exactly as it was. The
- * message comes from the patch layer and says nothing about the recipe, which
- * is a poor error and not a wrong one.
+ * Coaction makes a transition by applying that pair, so this used to fail at
+ * the `set()`. Only when something was watching: on a store with no listener,
+ * no validator and no observer, no pair is produced and the same recipe worked.
+ * Attaching a devtool changed what the application was allowed to do.
  *
- * Found by a soak run, at fifty times the everyday seed count.
+ * It is now described the other way instead -- the difference between the state
+ * before and the state the recipe produced -- so the recipe succeeds either
+ * way, and the commit still replays.
  */
-test('a transition the runtime cannot describe is refused, not committed', () => {
+const unrepresentableStore = () => {
   const collectArrays = (
     node: unknown,
     found: unknown[][] = []
@@ -355,7 +364,7 @@ test('a transition the runtime cannot describe is refused, not committed', () =>
     }
     return found;
   };
-  const store = create<{
+  return create<{
     items: Record<string, unknown>;
     rows: unknown[];
     move: () => void;
@@ -364,11 +373,8 @@ test('a transition the runtime cannot describe is refused, not committed', () =>
     rows: [false, [-1, 0, '', true], { a: -1 }, [0, '', 1.5, '']],
     move() {
       set(() => {
-        // Drafts every array where it currently is.
         collectArrays(this);
         this.rows.unshift('moved');
-        // The one that was at index 1 is at index 2 now. Writing into it is
-        // recorded against index 1, where a boolean sits after the shift.
         const moved = collectArrays(this).find(
           (row) => row.length === 4 && row[0] === -1
         );
@@ -376,16 +382,92 @@ test('a transition the runtime cannot describe is refused, not committed', () =>
       });
     }
   }));
-  const before = JSON.parse(JSON.stringify(store.getPureState()));
+};
+
+test('a transition the runtime cannot describe is described more coarsely', () => {
+  const unwatched = unrepresentableStore();
+  unwatched.getState().move();
+  const expected = JSON.parse(JSON.stringify(unwatched.getPureState()));
+  unwatched.destroy();
+
+  const watched = unrepresentableStore();
+  const before = JSON.parse(JSON.stringify(watched.getPureState()));
   const commits: StoreCommit[] = [];
-  onStoreCommit(store, (commit) => commits.push(commit));
+  onStoreCommit(watched, (commit) => commits.push(commit));
 
-  expect(() => store.getState().move()).toThrow(/Cannot apply patch/);
-  expect(store.getPureState()).toEqual(before);
-  expect(commits).toHaveLength(0);
+  // The same recipe, and the same result, on a store that is being watched.
+  expect(() => watched.getState().move()).not.toThrow();
+  expect(watched.getPureState()).toEqual(expected);
 
-  // And the store still works.
-  store.setState({ ...store.getPureState(), items: {} });
-  expect(store.getState().items).toEqual({});
-  store.destroy();
+  // One patch, for the one top-level key that changed -- not the whole root.
+  expect(commits).toHaveLength(1);
+  expect(commits[0].patches.map(({ path }) => path)).toEqual([['rows']]);
+  expect(applyPatches(before as object, commits[0].patches)).toEqual(
+    watched.getPureState()
+  );
+  expect(
+    applyPatches(watched.getPureState() as object, commits[0].inversePatches)
+  ).toEqual(before);
+  watched.destroy();
+});
+
+test('watching a store never changes what a recipe is allowed to do', () => {
+  // Over the generated recipes, not just the one shape above: whatever a store
+  // with nothing attached accepts, a store with a listener accepts too, and
+  // reaches the same state.
+  forEachSeed(400, (random) => {
+    const seed = random.integer(0, 2 ** 30);
+    const build = () =>
+      create<{ state: Record<string, unknown>; run: () => void }>((set) => {
+        const initial = state(createRandom(seed));
+        return {
+          ...(initial as object),
+          run() {
+            set(() => {
+              const inner = createRandom(seed + 1);
+              const steps = inner.integer(1, 4);
+              for (let step = 0; step < steps; step += 1) {
+                mutate(inner, this);
+              }
+            });
+          }
+        } as never;
+      });
+
+    const unwatched = build();
+    let unwatchedError: unknown;
+    try {
+      unwatched.getState().run();
+    } catch (error) {
+      unwatchedError = error;
+    }
+    const expected = JSON.parse(JSON.stringify(unwatched.getPureState()));
+    unwatched.destroy();
+
+    const watched = build();
+    const before = JSON.parse(JSON.stringify(watched.getPureState()));
+    const commits: StoreCommit[] = [];
+    onStoreCommit(watched, (commit) => commits.push(commit));
+    let watchedError: unknown;
+    try {
+      watched.getState().run();
+    } catch (error) {
+      watchedError = error;
+    }
+
+    expect(Boolean(watchedError)).toBe(Boolean(unwatchedError));
+    expect(watched.getPureState()).toEqual(expected);
+    if (!watchedError && commits.length) {
+      expect(applyPatches(before as object, commits[0].patches)).toEqual(
+        watched.getPureState()
+      );
+      expect(
+        applyPatches(
+          watched.getPureState() as object,
+          commits[0].inversePatches
+        )
+      ).toEqual(before);
+    }
+    watched.destroy();
+  });
 });
