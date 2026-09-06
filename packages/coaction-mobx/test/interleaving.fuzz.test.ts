@@ -1,0 +1,208 @@
+import { makeAutoObservable } from 'mobx';
+import { isDraft } from 'mutative';
+import { create } from 'coaction';
+import { onStoreCommit, type StoreCommit } from 'coaction/adapter';
+import { apply as applyPatches } from 'mutative';
+import { createRandom, forEachSeed, type Random } from '../../core/test/random';
+import { bindMobx } from '../src';
+
+/**
+ * Random schedules against the invariant, rather than the schedules I thought
+ * of.
+ *
+ *     initial state + every commit's patches === the state the store holds
+ *
+ * There is no model here. The oracle is the store itself, which is the point:
+ * every model of a transaction system I could write would come from the same
+ * mental picture as the implementation and agree with it for the same wrong
+ * reasons. What a random schedule can do that a written test cannot is find the
+ * ordering nobody thought to write down -- and each of the last few bugs in the
+ * draft ownership model was exactly one of those, found by someone reading
+ * control flow because nothing was generating them.
+ */
+
+type Action = {
+  /** Reads as an action body, so a failing schedule is legible. */
+  name: string;
+  run: () => Promise<void> | void;
+};
+
+const buildStore = (random: Random) => {
+  const waiting: Array<() => void> = [];
+  const gate = () =>
+    new Promise<void>((resolve) => {
+      waiting.push(resolve);
+    });
+  const store = create<any>(
+    () =>
+      makeAutoObservable(
+        bindMobx({
+          n: 0,
+          items: [] as number[],
+          rows: [[1, 2, 3], [4, 5], [6]] as unknown[],
+          step() {
+            this.n += 1;
+          },
+          /**
+           * Writes inside a nested array and then shifts the array holding it,
+           * which is the shape whose inverse pair is order-sensitive. Without
+           * an action like this the undo walk never exercises it.
+           */
+          shuffle() {
+            const first = this.rows[0];
+            if (Array.isArray(first) && first.length >= 3) first.reverse();
+            // A scalar: unshifting a draftable value makes mutative emit
+            // whole-element replaces rather than a patch per index, and the
+            // per-index form is what makes the inverse order-sensitive.
+            this.rows.unshift(this.n);
+          },
+          drop() {
+            if (this.rows.length > 1) this.rows.shift();
+          },
+          push() {
+            this.items.push(this.n);
+          },
+          trim() {
+            this.items.length = Math.max(0, this.items.length - 1);
+          },
+          nested() {
+            this.n += 10;
+            this.step();
+            this.push();
+          },
+          async suspend() {
+            this.n += 100;
+            await gate();
+            this.n += 100;
+          },
+          async suspendThenNested() {
+            this.push();
+            await gate();
+            this.nested();
+          },
+          async suspendThenThrow() {
+            this.n += 1000;
+            await gate();
+            throw new Error('rejected');
+          }
+        })
+      ),
+    { name: `fuzz-${random.integer(0, 1e9)}`, enablePatches: true }
+  );
+  return { store, release: () => waiting.splice(0).forEach((go) => go()) };
+};
+
+const SYNC = ['step', 'push', 'trim', 'nested', 'shuffle', 'drop'] as const;
+const ASYNC = ['suspend', 'suspendThenNested', 'suspendThenThrow'] as const;
+
+test('any interleaving of actions replays to the state it produced', async () => {
+  const failures: string[] = [];
+  for (let seed = 1; seed <= 250; seed += 1) {
+    const random = createRandom(seed);
+    const { store, release } = buildStore(random);
+    const initial = JSON.parse(JSON.stringify(store.getPureState()));
+    const commits: StoreCommit[] = [];
+    onStoreCommit(store, (commit) => commits.push(commit));
+
+    const schedule: string[] = [];
+    const inFlight: Array<Promise<unknown>> = [];
+    const steps = random.integer(2, 9);
+    for (let step = 0; step < steps; step += 1) {
+      if (inFlight.length && random.chance(0.3)) {
+        schedule.push('release');
+        release();
+        await Promise.allSettled(inFlight.splice(0));
+        continue;
+      }
+      if (random.chance(0.45)) {
+        const name = random.pick(ASYNC);
+        schedule.push(name);
+        const pending = store.getState()[name]();
+        inFlight.push(pending.catch(() => undefined));
+      } else {
+        const name = random.pick(SYNC);
+        schedule.push(name);
+        store.getState()[name]();
+      }
+      if (random.chance(0.4)) await Promise.resolve();
+    }
+    release();
+    await Promise.allSettled(inFlight);
+    for (let drain = 0; drain < 8; drain += 1) await Promise.resolve();
+
+    const replayed = commits.reduce(
+      (state, commit) => applyPatches(state, commit.patches),
+      initial as object
+    );
+    const held = store.getPureState();
+    if (JSON.stringify(replayed) !== JSON.stringify(held)) {
+      failures.push(
+        `seed ${seed} [${schedule.join(' ')}]: replay ${JSON.stringify(replayed)} but store holds ${JSON.stringify(held)}`
+      );
+    }
+    if (isDraft(held)) {
+      failures.push(`seed ${seed} [${schedule.join(' ')}]: left a draft open`);
+    }
+    store.destroy();
+  }
+  expect(failures).toEqual([]);
+});
+
+test('any interleaving leaves an inverse that undoes every commit', async () => {
+  const failures: string[] = [];
+  for (let seed = 1; seed <= 150; seed += 1) {
+    const random = createRandom(seed);
+    const { store, release } = buildStore(random);
+    const initial = JSON.parse(JSON.stringify(store.getPureState()));
+    const commits: StoreCommit[] = [];
+    onStoreCommit(store, (commit) => commits.push(commit));
+
+    const inFlight: Array<Promise<unknown>> = [];
+    const schedule: string[] = [];
+    for (let step = 0; step < random.integer(2, 7); step += 1) {
+      const name = random.chance(0.5) ? random.pick(ASYNC) : random.pick(SYNC);
+      schedule.push(name);
+      const result = store.getState()[name]();
+      if (result instanceof Promise)
+        inFlight.push(result.catch(() => undefined));
+      if (random.chance(0.5)) await Promise.resolve();
+    }
+    release();
+    await Promise.allSettled(inFlight);
+    for (let drain = 0; drain < 8; drain += 1) await Promise.resolve();
+
+    // Walk the commits backwards, applying each inverse. This is what
+    // `@coaction/history` undo does and what a sync rebase rolls back with, and
+    // it is where a pair that cannot be applied shows up.
+    let undone: object = JSON.parse(JSON.stringify(store.getPureState()));
+    try {
+      for (let index = commits.length - 1; index >= 0; index -= 1) {
+        undone = applyPatches(undone, commits[index].inversePatches);
+      }
+    } catch (error) {
+      failures.push(
+        `seed ${seed} [${schedule.join(' ')}]: ${(error as Error).message}`
+      );
+      store.destroy();
+      continue;
+    }
+    if (JSON.stringify(undone) !== JSON.stringify(initial)) {
+      failures.push(
+        `seed ${seed} [${schedule.join(' ')}]: undo reached ${JSON.stringify(undone)} not ${JSON.stringify(initial)}`
+      );
+    }
+    store.destroy();
+  }
+  expect(failures).toEqual([]);
+});
+
+test('a seed that has failed before', () => {
+  // Seeds land here by name when a fuzz run finds one, so the schedule that
+  // broke is a fixed case rather than something that depends on the generator
+  // staying the way it is today.
+  forEachSeed(1, (random) => {
+    const { store } = buildStore(random);
+    expect(store.getState().n).toBe(0);
+    store.destroy();
+  });
+});
