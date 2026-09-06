@@ -2034,3 +2034,58 @@ test('each conflict resolver call gets its own context', async () => {
   expect(seen).toEqual([2, 2]);
   store.destroy();
 });
+
+/**
+ * The edges of "storage is untrusted".
+ *
+ * The first two are the ones that mattered: an array is an object as far as
+ * `typeof` is concerned, and reading fields off one finds nothing, so anything
+ * array-shaped under this key was indistinguishable from a first run with
+ * nothing stored yet and the store started clean over the top of it.
+ */
+test.each([
+  ['an array', '[]'],
+  ['an array of junk', '[1,2,3]'],
+  ['format 0', JSON.stringify({ formatVersion: 0, outbox: [] })],
+  ['a negative format', JSON.stringify({ formatVersion: -1, outbox: [] })],
+  ['a fractional format', JSON.stringify({ formatVersion: 1.5, outbox: [] })],
+  ['a numeric cursor', JSON.stringify({ formatVersion: 1, cursor: 42 })],
+  ['a scalar state', JSON.stringify({ formatVersion: 1, state: 42 })],
+  [
+    'two mutations sharing an id',
+    JSON.stringify({
+      formatVersion: 1,
+      outbox: [
+        {
+          id: 'x',
+          createdAt: 1,
+          patches: [{ op: 'replace', path: ['count'], value: 1 }],
+          inversePatches: []
+        },
+        {
+          id: 'x',
+          createdAt: 2,
+          patches: [{ op: 'replace', path: ['count'], value: 2 }],
+          inversePatches: []
+        }
+      ]
+    })
+  ]
+])('a checkpoint that is %s is refused', async (_label, raw) => {
+  const name = `checkpoint-edge-${_label.replace(/\W+/g, '-')}`;
+  const storage = createMemoryStorage();
+  storage.map.set(name, raw);
+  const store = create<{ count: number }>(() => ({ count: 0 }), {
+    middlewares: [
+      sync({
+        name,
+        storage,
+        adapter: { pull: async () => ({}), push: async () => ({ ack: [] }) }
+      })
+    ]
+  });
+
+  await expect(getSyncApi(store).flush()).rejects.toThrow(TypeError);
+  expect(storage.map.get(name)).toBe(raw);
+  store.destroy();
+});

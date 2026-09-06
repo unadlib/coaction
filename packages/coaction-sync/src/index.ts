@@ -309,7 +309,14 @@ const readOutbox = (value: unknown, what: string): SyncMutation[] => {
   if (index !== -1) {
     reject(what, `has a malformed mutation at index ${index} of its outbox`);
   }
-  return value as SyncMutation[];
+  const outbox = value as SyncMutation[];
+  // Ids are the idempotency key the remote is asked to honour and what an
+  // acknowledgement names. Two mutations sharing one are not a queue this can
+  // drain: acking either drops both.
+  if (new Set(outbox.map(({ id }) => id)).size !== outbox.length) {
+    reject(what, 'has two mutations sharing an id in its outbox');
+  }
+  return outbox;
 };
 
 const readCheckpointBody = (raw: string, what: string) => {
@@ -319,13 +326,20 @@ const readCheckpointBody = (raw: string, what: string) => {
   } catch {
     return reject(what, 'is not JSON');
   }
-  if (typeof parsed !== 'object' || parsed === null) {
+  // An array is an object as far as `typeof` is concerned, and reading fields
+  // off one finds nothing -- so junk under this key used to be indistinguishable
+  // from a first run with nothing stored yet, and started clean.
+  if (typeof parsed !== 'object' || parsed === null || Array.isArray(parsed)) {
     reject(what, 'is not an object');
   }
-  const body = parsed as { formatVersion?: unknown };
+  const body = parsed as Record<string, unknown>;
   const version = body.formatVersion;
   if (version !== undefined) {
-    if (typeof version !== 'number' || !Number.isInteger(version)) {
+    if (
+      typeof version !== 'number' ||
+      !Number.isInteger(version) ||
+      version < 1
+    ) {
       reject(what, 'has an unreadable formatVersion');
     }
     if ((version as number) > CHECKPOINT_FORMAT_VERSION) {
@@ -335,7 +349,7 @@ const readCheckpointBody = (raw: string, what: string) => {
       );
     }
   }
-  return body as Record<string, unknown>;
+  return body;
 };
 
 const parseJournal = (raw: string | null, what = 'The sync journal') => {
@@ -504,11 +518,26 @@ export const sync = <T extends object>({
     const readCheckpoint = (raw: string | null): PersistedSyncState<T> => {
       if (!raw) return { outbox: [] };
       const checkpoint = readCheckpointBody(raw, checkpointLabel);
+      for (const key of ['cursor', 'revision'] as const) {
+        const value = checkpoint[key];
+        if (value !== undefined && typeof value !== 'string') {
+          reject(checkpointLabel, `has a ${key} that is not a string`);
+        }
+      }
+      // The snapshot is handed to `store.apply` as a whole replacement, so a
+      // scalar or an array here is a state this store cannot have.
+      const state = checkpoint.state;
+      if (
+        state !== undefined &&
+        (typeof state !== 'object' || state === null || Array.isArray(state))
+      ) {
+        reject(checkpointLabel, 'has a state that is not an object');
+      }
       return {
         cursor: checkpoint.cursor as string | undefined,
         revision: checkpoint.revision as string | undefined,
         outbox: readOutbox(checkpoint.outbox, checkpointLabel),
-        state: checkpoint.state as T | undefined,
+        state: state as T | undefined,
         adapter: checkpoint.adapter
       };
     };
