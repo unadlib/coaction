@@ -58,6 +58,12 @@ const defects = [
     ]
   },
   {
+    name: 'a refusal skipping the hand-back to an action still waiting',
+    fixedBy: 'b378992',
+    files: ['packages/core/src/getRawStateLocalAction.ts'],
+    suites: ['packages/coaction-mobx/test/interleaving.fuzz.test.ts']
+  },
+  {
     name: 'a transaction handed past the action still waiting for it',
     fixedBy: '393b7bc',
     files: [
