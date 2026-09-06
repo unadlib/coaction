@@ -52,6 +52,54 @@ out the patch pair before the change, runs commit validators, calls what the
 adapter installed, and publishes the commit. An adapter therefore implements
 only the write, and must not publish a commit of its own for it.
 
+Core wraps it only when the adapter actually replaced it. `@coaction/mobx`,
+`@coaction/valtio`, `@coaction/pinia` and `@coaction/xstate` do;
+`@coaction/zustand`, `@coaction/redux` and `@coaction/jotai` bind state without
+touching `apply`, and are already on the pipeline. Wrapping those would put the
+pipeline in front of itself and publish everything twice.
+
+### Replacing `apply` discards what middleware put there
+
+Middleware runs before the binder. A middleware that wraps `store.apply` — to
+log it, to inspect the patches — has its wrapper overwritten by an adapter that
+replaces `apply` outright, and nothing reports it:
+
+```ts
+create(
+  () =>
+    makeAutoObservable(
+      bindMobx({
+        /* … */
+      })
+    ),
+  {
+    middlewares: [
+      (store) => {
+        const inner = store.apply;
+        // Gone. `bindMobx` replaces `apply` after this runs.
+        store.apply = (state, patches) => {
+          record(patches);
+          return inner(state, patches);
+        };
+        return store;
+      }
+    ]
+  }
+);
+```
+
+No middleware shipped here does that — `@coaction/history` and `@coaction/sync`
+observe transitions with `onStoreCommit`, and `@coaction/logger` and
+`@coaction/persist` use `subscribe` and `trace` — which is why nothing is
+broken today. **Middleware that wants to observe transitions should use
+`onStoreCommit`,** which sees every one of them, from a native store and a
+mutable adapter alike, and cannot be overwritten.
+
+The shape underneath this is that `store.apply` is public API being used as an
+adapter's extension point. The way out is for it to stay Coaction's, with an
+adapter registering only how to write into its own runtime — a change to the
+adapter contract itself, not to 3.x.
+
 ## Async actions on a mutable instance
 
 Patch generation for a mutable instance works by opening a mutative draft over

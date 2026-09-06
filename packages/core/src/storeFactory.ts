@@ -21,6 +21,7 @@ import type {
 } from './interface';
 import type { Internal } from './internal';
 import {
+  applyWithOwnStoreCommit,
   disposeStoreCommitRuntime,
   getStoreCommitSource,
   hasStoreCommitListeners,
@@ -331,7 +332,10 @@ export const createStore = <T extends CreateState>(
       inversePatches
     ) => {
       if (store.apply !== apply) {
-        store.apply(state, patches);
+        // Something replaced `apply` -- an adapter's writer, or a middleware
+        // wrapping it. Whoever called this publishes the commit for the
+        // transition, so whatever is behind it must not publish a second one.
+        applyWithOwnStoreCommit(store, () => store.apply(state, patches));
         return false;
       }
       applyState(state, patches, true, skipFinalValidation, inversePatches);

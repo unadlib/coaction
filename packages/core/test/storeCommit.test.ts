@@ -448,3 +448,53 @@ test('apply with patches refuses a base that is not the current state', () => {
   ).toEqual(store.getPureState());
   store.destroy();
 });
+
+/**
+ * Middleware runs before an adapter's binder, and an adapter that replaces
+ * `store.apply` with a writer for its own runtime discards whatever middleware
+ * put there. Nothing reports it -- the wrapper is simply never called again.
+ *
+ * No middleware shipped here wraps `apply`, so nothing is broken by it today.
+ * This is here so the contract has a test rather than only a paragraph: an
+ * `onStoreCommit` listener registered by the same middleware sees everything.
+ */
+test('middleware observes transitions through onStoreCommit, not by wrapping apply', () => {
+  const wrapped: number[] = [];
+  const observed: number[] = [];
+  const store = create<{ count: number; increment: () => void }>(
+    (set) => ({
+      count: 0,
+      increment() {
+        set(() => {
+          this.count += 1;
+        });
+      }
+    }),
+    {
+      middlewares: [
+        (middlewareStore) => {
+          const inner = middlewareStore.apply;
+          middlewareStore.apply = (state, patches) => {
+            wrapped.push(1);
+            return inner(state, patches);
+          };
+          onStoreCommit(middlewareStore as Store<any>, () => {
+            observed.push(1);
+          });
+          return middlewareStore;
+        }
+      ]
+    }
+  );
+
+  store.getState().increment();
+  store.apply(store.getPureState(), [
+    { op: 'replace', path: ['count'], value: 5 }
+  ]);
+
+  // On a native store both work. On a store built through MobX, Valtio, Pinia
+  // or XState only the listener does, because the binder replaced `apply`.
+  expect(observed).toHaveLength(2);
+  expect(wrapped.length).toBeGreaterThan(0);
+  store.destroy();
+});

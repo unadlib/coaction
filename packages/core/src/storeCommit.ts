@@ -87,6 +87,11 @@ const getStoreCommitRuntime = (store: object, create = false) => {
  * @remarks
  * Registering a listener enables patch generation only while it is needed,
  * even when the store was created without `enablePatches: true`.
+ *
+ * This is how middleware should watch transitions. Wrapping `store.apply`
+ * instead works on a native store and is discarded on one built through an
+ * external adapter, which replaces `apply` with a writer for its own runtime
+ * after middleware has run.
  */
 export const onStoreCommit = <T extends CreateState>(
   store: Store<T>,

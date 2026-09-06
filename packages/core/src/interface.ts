@@ -140,6 +140,12 @@ export interface Store<T extends ISlices = ISlices> {
    * `getPureState()`. A pair describes a change to the current state, so
    * applying it to anything else leaves the store somewhere its own commits do
    * not lead, and that is refused.
+   *
+   * Middleware should not wrap this to observe transitions. An external adapter
+   * replaces it outright with a writer for its own runtime, and does so after
+   * middleware has run, so the wrapper is discarded without a word.
+   * `onStoreCommit` sees every transition, on a native store and a mutable
+   * adapter alike, and nothing can overwrite it.
    */
   apply: (state?: T, patches?: Patches) => void;
   /**
