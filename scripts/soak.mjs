@@ -30,7 +30,8 @@ const suites = [
   'packages/core/test/patchAlgebra.property.test.ts',
   'packages/core/test/writePaths.fuzz.test.ts',
   'packages/coaction-sync/test/checkpoint.property.test.ts',
-  'packages/coaction-mobx/test/interleaving.fuzz.test.ts'
+  'packages/coaction-mobx/test/interleaving.fuzz.test.ts',
+  'packages/coaction-sync/test/stateMachine.fuzz.test.ts'
 ];
 
 console.log(
