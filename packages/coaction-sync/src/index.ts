@@ -801,10 +801,10 @@ export const sync = <T extends object>({
       // A resolver is called in the middle of the rebase, over the mutations
       // about to be replayed and the patches about to be applied, so it is
       // shown copies -- reaching into either would be editing the rebase's own
-      // working set while it runs. The remote patches are copied once for the
-      // whole pass rather than per conflicting mutation; that copy belongs to
-      // the caller, so what one call does to it the next call sees.
-      let remotePatchesForResolver: Patches | undefined;
+      // working set while it runs. Each call gets its own: sharing one copy of
+      // the remote patches across the pass kept the rebase safe but let one
+      // call's edits show up in the next one's context, which is a resolver
+      // reasoning about a conflict from data another conflict left behind.
       const retained = previousOutbox.filter((mutation) => {
         const overlappingRemotePatches = getOverlappingRemotePatches(
           mutation,
@@ -815,8 +815,7 @@ export const sync = <T extends object>({
           typeof conflict === 'function'
             ? conflict({
                 mutation: cloneMutation(mutation),
-                remotePatches: (remotePatchesForResolver ??=
-                  clonePatches(remotePatches)),
+                remotePatches: clonePatches(remotePatches),
                 overlappingRemotePatches: clonePatches(overlappingRemotePatches)
               })
             : conflict === 'remote-wins'

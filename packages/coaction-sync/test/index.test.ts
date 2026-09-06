@@ -1973,3 +1973,64 @@ test('a checkpoint that is not JSON is refused', async () => {
   await expect(getSyncApi(store).flush()).rejects.toThrow(/is not JSON/);
   store.destroy();
 });
+
+test('each conflict resolver call gets its own context', async () => {
+  const seen: number[] = [];
+  const adapter: SyncAdapter = {
+    pull: async () => ({
+      patches: [
+        { op: 'replace', path: ['a'], value: 'remote-a' },
+        { op: 'replace', path: ['b'], value: 'remote-b' }
+      ]
+    }),
+    push: pendingPush
+  };
+  const store = create<{
+    a: string;
+    b: string;
+    editA: () => void;
+    editB: () => void;
+  }>(
+    (set) => ({
+      a: 'base',
+      b: 'base',
+      editA() {
+        set(() => {
+          this.a = 'local-a';
+        });
+      },
+      editB() {
+        set(() => {
+          this.b = 'local-b';
+        });
+      }
+    }),
+    {
+      middlewares: [
+        sync({
+          name: 'conflict-isolation',
+          storage: createMemoryStorage(),
+          adapter,
+          conflict: ({ remotePatches }) => {
+            seen.push(remotePatches.length);
+            // Sharing one copy across the pass kept the rebase safe but let
+            // one call's edits reach the next one, so a resolver reasoned
+            // about its conflict from what another conflict left behind.
+            (remotePatches as unknown[]).length = 0;
+            return 'local';
+          }
+        })
+      ]
+    }
+  );
+  await nextTick();
+  // Two separate mutations, each conflicting with a different remote patch.
+  store.getState().editA();
+  await nextTick();
+  store.getState().editB();
+  await nextTick();
+  await getSyncApi(store).pull();
+
+  expect(seen).toEqual([2, 2]);
+  store.destroy();
+});
