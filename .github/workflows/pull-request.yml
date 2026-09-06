@@ -17,6 +17,11 @@ jobs:
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v7
+        with:
+          # `pnpm check` replays known defects from history to confirm the fuzz
+          # suites still catch them, so it needs more than the default shallow
+          # clone. See scripts/check-fuzz-catches.mjs.
+          fetch-depth: 0
       - uses: pnpm/action-setup@v6
       - name: Use Node.js 22.x
         uses: actions/setup-node@v6
@@ -51,6 +56,11 @@ jobs:
           - webkit
     steps:
       - uses: actions/checkout@v7
+        with:
+          # `pnpm check` replays known defects from history to confirm the fuzz
+          # suites still catch them, so it needs more than the default shallow
+          # clone. See scripts/check-fuzz-catches.mjs.
+          fetch-depth: 0
       - uses: pnpm/action-setup@v6
       - name: Use Node.js 22.x
         uses: actions/setup-node@v6
@@ -69,6 +79,11 @@ jobs:
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v7
+        with:
+          # `pnpm check` replays known defects from history to confirm the fuzz
+          # suites still catch them, so it needs more than the default shallow
+          # clone. See scripts/check-fuzz-catches.mjs.
+          fetch-depth: 0
       - uses: pnpm/action-setup@v6
       - name: Use Node.js 22.x
         uses: actions/setup-node@v6

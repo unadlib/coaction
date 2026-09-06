@@ -15,7 +15,8 @@
  * that fixed it has to turn the named suite red.
  */
 import { execFileSync } from 'node:child_process';
-import { dirname, resolve } from 'node:path';
+import { readFileSync, writeFileSync } from 'node:fs';
+import { dirname, join, resolve } from 'node:path';
 import { fileURLToPath } from 'node:url';
 
 const rootDir = resolve(dirname(fileURLToPath(import.meta.url)), '..');
@@ -55,23 +56,57 @@ const defects = [
       'packages/core/test/writePaths.fuzz.test.ts',
       'packages/coaction-mobx/test/interleaving.fuzz.test.ts'
     ]
+  },
+  {
+    name: 'a transaction handed past the action still waiting for it',
+    fixedBy: '393b7bc',
+    files: [
+      'packages/core/src/getRawStateLocalAction.ts',
+      'packages/core/src/internal.ts'
+    ],
+    suites: ['packages/coaction-mobx/test/interleaving.fuzz.test.ts']
   }
 ];
 
 const git = (...args) =>
-  execFileSync('git', args, { cwd: rootDir, stdio: 'pipe' }).toString();
+  execFileSync('git', args, { cwd: rootDir, stdio: 'pipe' });
 
-const dirty = git(
-  'status',
-  '--porcelain',
-  '--',
-  ...defects.flatMap((d) => d.files)
-).trim();
-if (dirty) {
+/**
+ * The historical content is read out of git and written over the working file,
+ * which is then restored from what was there before -- not from git. Rewinding
+ * with `git checkout` instead would discard uncommitted work, and refusing to
+ * run while anything is uncommitted would mean `pnpm check` fails during
+ * ordinary editing of exactly the files this is about.
+ */
+const paths = [...new Set(defects.flatMap((defect) => defect.files))];
+const saved = new Map(
+  paths.map((path) => [path, readFileSync(join(rootDir, path), 'utf8')])
+);
+const restore = () => {
+  for (const [path, content] of saved) {
+    writeFileSync(join(rootDir, path), content);
+  }
+};
+
+// The rewind needs the parent of each fixing commit, which a shallow clone does
+// not have. Say so here rather than fail somewhere inside a vitest run.
+const missing = defects
+  .map(({ fixedBy }) => fixedBy)
+  .filter((sha) => {
+    try {
+      git('cat-file', '-e', `${sha}~1^{commit}`);
+      return false;
+    } catch {
+      return true;
+    }
+  });
+if (missing.length) {
   console.error(
-    'Uncommitted changes in the files this rewinds. Commit or stash first:'
+    `This needs the history around ${missing.join(', ')}, which this checkout does not have.`
   );
-  console.error(dirty);
+  console.error(
+    'In GitHub Actions, give actions/checkout `fetch-depth: 0`; locally, run `git fetch --unshallow`.'
+  );
   process.exit(1);
 }
 
@@ -91,32 +126,33 @@ const runSuites = (suites) => {
 const missed = [];
 try {
   for (const defect of defects) {
-    // `<commit>` here is the commit that fixed it, so its parent is the state
-    // with the defect present.
-    git('checkout', `${defect.fixedBy}~1`, '--', ...defect.files);
+    // `fixedBy` is the commit that fixed it, so its parent is the state with
+    // the defect present.
+    for (const path of defect.files) {
+      writeFileSync(
+        join(rootDir, path),
+        git('show', `${defect.fixedBy}~1:${path}`).toString()
+      );
+    }
     if (runSuites(defect.suites)) {
       missed.push(defect.name);
       console.log(`MISSED  ${defect.name}`);
     } else {
       console.log(`caught  ${defect.name}`);
     }
-    git('checkout', 'HEAD', '--', ...defect.files);
+    restore();
   }
 } finally {
-  git('checkout', 'HEAD', '--', ...new Set(defects.flatMap((d) => d.files)));
+  restore();
 }
 
-const stillDirty = git(
-  'status',
-  '--porcelain',
-  '--',
-  ...defects.flatMap((d) => d.files)
-).trim();
-if (stillDirty) {
-  console.error(
-    'Source was not restored. Check `git diff` before doing anything else.'
-  );
-  process.exit(1);
+for (const [path, content] of saved) {
+  if (readFileSync(join(rootDir, path), 'utf8') !== content) {
+    console.error(
+      `${path} was not restored. Check it before doing anything else.`
+    );
+    process.exit(1);
+  }
 }
 
 if (missed.length) {

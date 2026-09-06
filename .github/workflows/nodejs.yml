@@ -13,6 +13,11 @@ jobs:
 
     steps:
       - uses: actions/checkout@v7
+        with:
+          # `pnpm check` replays known defects from history to confirm the fuzz
+          # suites still catch them, so it needs more than the default shallow
+          # clone. See scripts/check-fuzz-catches.mjs.
+          fetch-depth: 0
       - uses: pnpm/action-setup@v6
       - name: Use Node.js ${{ matrix.node-version }}
         uses: actions/setup-node@v6
