@@ -177,20 +177,8 @@ export const createStore = <T extends CreateState>(
         assertSafePatches(patches, 'store.apply()');
       }
       const safePatches = prepared ? patches : sanitizePatches(patches);
-      const baseState =
-        state === (internal.module as unknown) ? internal.rootState : state;
+      const baseState = resolveApplyBase(state, patches);
       if (baseState !== internal.rootState) {
-        if (patches) {
-          // The patch form describes a change to the state the store holds --
-          // that is what the pair means, and what the commit built from it
-          // says. Applying it to something else produces a state the commit
-          // does not describe: `apply({ a: 10 }, [b -> 1])` on `{ a: 0, b: 0 }`
-          // leaves the store at `{ a: 10, b: 1 }` while its own patches replay
-          // to `{ a: 0, b: 1 }`, and nothing downstream can tell.
-          throw new Error(
-            'store.apply() with patches must be given the current state. Pass no state, or pass getPureState().'
-          );
-        }
         validateReplacementSource?.(baseState);
       }
       const appliedState = safePatches
@@ -290,6 +278,24 @@ export const createStore = <T extends CreateState>(
       }
       return pair;
     };
+    /**
+     * Which state the patches apply to, refusing anything but the current one:
+     * a pair applied to another base leaves the store where its own commits do
+     * not lead. Ahead of the branch to an adapter's writer, which reached
+     * `applyState` -- and this rule -- only for a native store.
+     */
+    const resolveApplyBase = (state: T, patches?: Patches) => {
+      const baseState =
+        state === (internal.module as unknown)
+          ? (internal.rootState as T)
+          : state;
+      if (patches && baseState !== internal.rootState) {
+        throw new Error(
+          'store.apply() with patches must be given the current state. Pass no state, or pass getPureState().'
+        );
+      }
+      return baseState;
+    };
     let externalRuntimeApply: Store<T>['apply'] | undefined;
     const apply: Store<T>['apply'] = (
       state = internal.rootState as T,
@@ -299,6 +305,7 @@ export const createStore = <T extends CreateState>(
       // `apply` stays Coaction's, so middleware that wrapped it still runs and
       // the commit is published in one place rather than in each adapter.
       if (internal.externalApply) {
+        resolveApplyBase(state, patches);
         externalRuntimeApply ??= applyThroughExternalRuntime(
           store,
           internal,

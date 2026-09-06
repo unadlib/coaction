@@ -245,13 +245,18 @@ export const ownsStoreCommit = (store: object) =>
 
 /**
  * @internal
- * Validators need the patch pair too, so they count the same as listeners when
- * deciding whether a transition has to produce one.
+ * Whether a transition has to produce a patch pair. Everything registered here
+ * needs one: a listener is given it, a validator decides on it, a prepare
+ * listener is asked about it. Counting only listeners left a prepare-only store
+ * on the patch-free path, never reaching the callback.
  */
 export const hasStoreCommitListeners = (store: object) => {
   const runtime = getStoreCommitRuntime(store);
   return Boolean(
-    runtime && (runtime.listeners.size || runtime.validators.size)
+    runtime &&
+    (runtime.listeners.size ||
+      runtime.validators.size ||
+      runtime.prepareListeners.size)
   );
 };
 

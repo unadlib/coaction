@@ -57,6 +57,12 @@ export const runBinderCommitConformance = ({
           store.apply({ ...store.getPureState(), label: 'b' })
         ).toThrow();
 
+        expect(() =>
+          store.apply({ ...store.getPureState(), count: 99 }, [
+            { op: 'replace', path: ['label'], value: 'b' }
+          ])
+        ).toThrow();
+
         expect(store.getPureState()).toEqual(before);
         expect(commits).toHaveLength(0);
         store.destroy();
@@ -102,6 +108,30 @@ export const runBinderCommitConformance = ({
         expect(store.getState().label).toBe('b');
         expect(commits).toHaveLength(1);
       });
+    });
+
+    test('apply with patches refuses a base that is not the current state', () => {
+      // A patch pair describes a change to the state the store holds. Given a
+      // different base it still applies and the commit still says what the pair
+      // says, so the store lands somewhere its own commits do not lead. The
+      // rule lived past the point where `apply` branches to an adapter's
+      // writer, so a store built through one took the wrong base without a
+      // word.
+      const { store, cleanup } = createStore();
+      const before = JSON.parse(JSON.stringify(store.getPureState()));
+      const commits: StoreCommit[] = [];
+      onStoreCommit(store, (commit) => commits.push(commit));
+
+      expect(() =>
+        store.apply({ ...store.getPureState(), count: 99 }, [
+          { op: 'replace', path: ['label'], value: 'b' }
+        ])
+      ).toThrow(/must be given the current state/);
+
+      expect(store.getPureState()).toEqual(before);
+      expect(commits).toHaveLength(0);
+      store.destroy();
+      cleanup?.();
     });
 
     test('middleware that wraps apply still runs', () => {

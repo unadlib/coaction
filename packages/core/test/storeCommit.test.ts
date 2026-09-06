@@ -498,3 +498,44 @@ test('middleware observes transitions through onStoreCommit, not by wrapping app
   expect(wrapped.length).toBeGreaterThan(0);
   store.destroy();
 });
+
+/**
+ * `onStoreCommitPrepare` is asked about a commit before its patch pair is
+ * applied, so a store that has one registered has to produce that pair. It was
+ * not counted when deciding whether patches were needed, so a store with
+ * nothing but a prepare listener took the patch-free fast path and the callback
+ * was never reached -- an exported hook that did nothing at all unless
+ * something else happened to want patches.
+ *
+ * `@coaction/history` registers both a prepare listener and a commit listener,
+ * which is why nothing noticed.
+ */
+test('a prepare listener on its own is enough to produce a patch pair', () => {
+  const prepared: StoreCommit[] = [];
+  const store = create<{
+    items: Array<{ value: number }>;
+    replace: () => void;
+  }>((set) => ({
+    items: [{ value: 1 }],
+    replace() {
+      set(() => {
+        // An object-valued patch, which is the kind a prepare listener exists
+        // to be asked about.
+        this.items[0] = { value: 2 };
+      });
+    }
+  }));
+  onStoreCommitPrepare(store, (commit) => {
+    prepared.push(commit);
+    return false;
+  });
+
+  store.getState().replace();
+
+  expect(prepared).toHaveLength(1);
+  expect(prepared[0].patches).toEqual([
+    { op: 'replace', path: ['items', 0], value: { value: 2 } }
+  ]);
+  expect(store.getState().items[0].value).toBe(2);
+  store.destroy();
+});
