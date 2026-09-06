@@ -2146,3 +2146,77 @@ test('a pending mutation whose inverse is order-sensitive does not break the reb
   expect(getSyncApi(store).getPending()).toHaveLength(1);
   store.destroy();
 });
+
+test.each([
+  ['__proto__', ['__proto__', 'polluted']],
+  ['prototype', ['prototype', 'polluted']],
+  ['constructor', ['constructor', 'polluted']],
+  ['a nested __proto__', ['doc', '__proto__', 'polluted']]
+])(
+  'a remote patch reaching through %s is refused at the boundary',
+  async (_label, path) => {
+    const errors: unknown[] = [];
+    const store = create<{ count: number }>(() => ({ count: 0 }), {
+      middlewares: [
+        sync({
+          name: `unsafe-${_label.replace(/\W+/g, '-')}`,
+          storage: createMemoryStorage(),
+          adapter: {
+            pull: async () => ({
+              patches: [{ op: 'replace', path, value: 1 }]
+            }),
+            push: pendingPush
+          },
+          onError: (error) => errors.push(error)
+        })
+      ]
+    });
+    await nextTick();
+
+    // mutative refuses these itself, so nothing was ever polluted. What was
+    // missing is the boundary saying so: the error came from inside the patch
+    // algebra, about a path, with nothing tying it to the remote that sent it.
+    await expect(getSyncApi(store).pull()).rejects.toThrow(
+      /The remote for sync.*returned a patch at index 0/
+    );
+    expect(store.getState().count).toBe(0);
+    expect(({} as Record<string, unknown>).polluted).toBeUndefined();
+    store.destroy();
+  }
+);
+
+test('a checkpoint holding a patch that reaches outside the state is refused', async () => {
+  const name = 'unsafe-checkpoint';
+  const storage = createMemoryStorage();
+  storage.map.set(
+    name,
+    JSON.stringify({
+      formatVersion: 1,
+      outbox: [
+        {
+          id: 'm1',
+          createdAt: 1,
+          patches: [
+            { op: 'replace', path: ['__proto__', 'polluted'], value: 1 }
+          ],
+          inversePatches: []
+        }
+      ]
+    })
+  );
+  const store = create<{ count: number }>(() => ({ count: 0 }), {
+    middlewares: [
+      sync({
+        name,
+        storage,
+        adapter: { pull: async () => ({}), push: async () => ({ ack: [] }) }
+      })
+    ]
+  });
+
+  await expect(getSyncApi(store).flush()).rejects.toThrow(
+    /malformed mutation at index 0/
+  );
+  expect(({} as Record<string, unknown>).polluted).toBeUndefined();
+  store.destroy();
+});

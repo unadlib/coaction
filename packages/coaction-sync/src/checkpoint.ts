@@ -17,6 +17,28 @@ import type { Patches, SyncMutation } from './types';
  */
 export const CHECKPOINT_FORMAT_VERSION = 1;
 
+const UNSAFE_SEGMENTS = new Set(['__proto__', 'prototype', 'constructor']);
+
+/**
+ * A patch path that would reach outside the state object.
+ *
+ * mutative refuses these itself, so nothing has ever got through. What it does
+ * not do is say where the patch came from -- the error arrives from inside the
+ * patch algebra, about a path, with nothing tying it to the remote or the
+ * storage that supplied it. And relying on that refusal makes safety at this
+ * boundary a property of a dependency rather than of the boundary.
+ */
+export const hasUnsafePatchPath = (path: unknown) => {
+  const segments = Array.isArray(path)
+    ? path
+    : typeof path === 'string'
+      ? path.split('/')
+      : [];
+  return segments.some(
+    (segment) => typeof segment === 'string' && UNSAFE_SEGMENTS.has(segment)
+  );
+};
+
 export const isPatchShape = (value: unknown) => {
   if (typeof value !== 'object' || value === null) return false;
   const { op, path } = value as { op?: unknown; path?: unknown };
@@ -30,6 +52,7 @@ export const isPatchShape = (value: unknown) => {
   } else if (typeof path !== 'string') {
     return false;
   }
+  if (hasUnsafePatchPath(path)) return false;
   return op === 'remove' || 'value' in (value as object);
 };
 
@@ -49,6 +72,27 @@ export const isMutationShape = (value: unknown): value is SyncMutation => {
 
 export const reject = (what: string, problem: string): never => {
   throw new TypeError(`${what} ${problem}.`);
+};
+
+/**
+ * Everything a remote hands back, before it reaches any patch algebra.
+ *
+ * The rebase reads remote patches with `applyPatches` and `createInversePatches`
+ * on the way to `replayStorePatches`, which is where Coaction's own patch
+ * checks live -- so by the time those run, the patches have already been
+ * interpreted twice.
+ */
+export const assertRemotePatches = (patches: unknown, what: string): void => {
+  if (patches === undefined) return;
+  if (!Array.isArray(patches)) {
+    reject(what, 'returned patches that are not an array');
+  }
+  const index = (patches as unknown[]).findIndex(
+    (patch) => !isPatchShape(patch)
+  );
+  if (index !== -1) {
+    reject(what, `returned a patch at index ${index} that cannot be applied`);
+  }
 };
 
 /**

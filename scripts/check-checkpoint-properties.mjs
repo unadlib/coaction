@@ -44,8 +44,13 @@ const mutations = [
   ],
   [
     'accepts a malformed mutation',
-    'if (index !== -1) {',
-    'if (false && index !== -1) {'
+    'reject(what, `has a malformed mutation at index ${index} of its outbox`);',
+    ''
+  ],
+  [
+    'accepts an unsafe patch path',
+    'if (hasUnsafePatchPath(path)) return false;',
+    ''
   ],
   [
     'accepts duplicate mutation ids',

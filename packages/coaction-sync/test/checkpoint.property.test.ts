@@ -118,6 +118,9 @@ const arbitrary = (random: Random): unknown => {
     const key = () =>
       random.chance(0.5)
         ? random.pick([
+            '__proto__',
+            'constructor',
+            'prototype',
             'outbox',
             'formatVersion',
             'cursor',
@@ -230,6 +233,12 @@ test('breaking one field of a written checkpoint is always noticed', () => {
             { op: 'add', path: [{ deep: true }], value: 1 },
             { op: 'add', path: [] },
             { op: 'replace', path: [] },
+            // Paths that reach outside the state. mutative refuses these on
+            // its own, so a checkpoint carrying one was never dangerous -- but
+            // it was accepted here and rejected much later, by something else.
+            { op: 'replace', path: ['__proto__', 'polluted'], value: 1 },
+            { op: 'replace', path: ['doc', 'constructor', 'x'], value: 1 },
+            { op: 'replace', path: 'prototype/x', value: 1 },
             'patch',
             null,
             3

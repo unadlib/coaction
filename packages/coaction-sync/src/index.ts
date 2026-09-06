@@ -22,6 +22,7 @@ import {
   mergeMutationsById
 } from './mutations';
 import {
+  assertRemotePatches,
   CHECKPOINT_FORMAT_VERSION,
   parseJournal,
   readCheckpointBody,
@@ -459,6 +460,13 @@ export const sync = <T extends object>({
 
     const applyRemoteResult = async (result: SyncPullResult) => {
       if (destroyed) return;
+      // Every remote answer arrives through here -- a pull, a push response, a
+      // subscription update -- so this is where they are checked, before the
+      // rebase reads them.
+      assertRemotePatches(
+        result.patches,
+        `The remote for sync({ name: '${name}' })`
+      );
       rebase(result.patches);
       cursor = result.cursor ?? cursor;
       revision = result.revision ?? revision;

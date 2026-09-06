@@ -1,12 +1,14 @@
 import type { CreateState, MiddlewareStore } from './interface';
 import type { Internal } from './internal';
 import {
+  applyPatches,
   createInversePatches,
   inverseNeedsDerivation,
   sanitizeCheckedPatches
 } from './utils';
 import {
   applyWithOwnStoreCommit,
+  hasStoreCommitValidators,
   publishStoreCommit,
   validateStoreCommit
 } from './storeCommit';
@@ -43,7 +45,14 @@ export const handleDraft = <T extends CreateState>(
     // Mutation made on the instance directly, outside an action, is the case
     // that genuinely has no such point.
     validateStoreCommit(store, {
-      state: nextState,
+      // Built from the patches that will actually be applied, not from what
+      // the draft finalized to. A `store.patch` middleware sits between the
+      // two, so using the draft's result showed a validator a state its own
+      // patches disagreed with -- and a state the listener for that commit
+      // would not see.
+      state: hasStoreCommitValidators(store)
+        ? (applyPatches(internal.rootState as T, safePatches) as T)
+        : nextState,
       patches: safePatches,
       inversePatches: safeInversePatches,
       source: 'mutableAction'

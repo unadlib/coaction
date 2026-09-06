@@ -173,6 +173,12 @@ client has.
 Every way into the state is checked: `setState`, `store.apply()` with a patch
 pair or with a replacement, and a patch replay.
 
+A patch whose path reaches outside the state -- through `__proto__`,
+`prototype` or `constructor` -- is refused wherever it arrives from, the remote
+included, before the rebase reads it. mutative refuses these itself, so none of
+them was ever applied; what this adds is the boundary saying which side sent it
+rather than an error from inside the patch algebra.
+
 Whatever an adapter's `serialize()` returns goes into the same checkpoint and
 is held to the same contract. It is the harder of the two to notice going
 wrong, because it is what the adapter consults to decide which records the
