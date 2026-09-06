@@ -410,3 +410,41 @@ test('a transition Coaction publishes itself is not published twice', () => {
   ]);
   store.destroy();
 });
+
+/**
+ * A patch pair describes a change to the state the store holds. Applying it to
+ * something else produces a state the pair does not describe, and the commit
+ * built from it says the wrong thing -- with nothing downstream able to tell.
+ *
+ *     store holds { a: 0, b: 0 }
+ *     apply({ a: 10, b: 0 }, [b -> 1])
+ *     store now  { a: 10, b: 1 }
+ *     its commits replay to { a: 0, b: 1 }
+ *
+ * `Store.apply` is documented as applying patches to the current state, so this
+ * was always outside the contract. It is now refused rather than silently
+ * breaking the one invariant everything reading commits is built on.
+ */
+test('apply with patches refuses a base that is not the current state', () => {
+  const store = create<{ a: number; b: number }>(() => ({ a: 0, b: 0 }));
+  const commits: StoreCommit[] = [];
+  onStoreCommit(store, (commit) => commits.push(commit));
+
+  expect(() =>
+    store.apply({ a: 10, b: 0 }, [{ op: 'replace', path: ['b'], value: 1 }])
+  ).toThrow(/must be given the current state/);
+  expect(store.getPureState()).toEqual({ a: 0, b: 0 });
+  expect(commits).toHaveLength(0);
+
+  // The supported forms are unaffected.
+  store.apply(store.getPureState(), [{ op: 'replace', path: ['b'], value: 1 }]);
+  store.apply(undefined, [{ op: 'replace', path: ['a'], value: 2 }]);
+  expect(store.getPureState()).toEqual({ a: 2, b: 1 });
+  expect(
+    commits.reduce((state, commit) => applyPatches(state, commit.patches), {
+      a: 0,
+      b: 0
+    } as object)
+  ).toEqual(store.getPureState());
+  store.destroy();
+});

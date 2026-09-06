@@ -135,6 +135,11 @@ export interface Store<T extends ISlices = ISlices> {
    * `onStoreCommit` and to everything built on it. Where no inverse pair is
    * supplied one is derived, and a replacement is described by the pair that
    * turns the previous state into the new one.
+   *
+   * With patches, `state` must be the state the store holds -- omit it, or pass
+   * `getPureState()`. A pair describes a change to the current state, so
+   * applying it to anything else leaves the store somewhere its own commits do
+   * not lead, and that is refused.
    */
   apply: (state?: T, patches?: Patches) => void;
   /**

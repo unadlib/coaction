@@ -178,6 +178,17 @@ export const createStore = <T extends CreateState>(
       const baseState =
         state === (internal.module as unknown) ? internal.rootState : state;
       if (baseState !== internal.rootState) {
+        if (patches) {
+          // The patch form describes a change to the state the store holds --
+          // that is what the pair means, and what the commit built from it
+          // says. Applying it to something else produces a state the commit
+          // does not describe: `apply({ a: 10 }, [b -> 1])` on `{ a: 0, b: 0 }`
+          // leaves the store at `{ a: 10, b: 1 }` while its own patches replay
+          // to `{ a: 0, b: 1 }`, and nothing downstream can tell.
+          throw new Error(
+            'store.apply() with patches must be given the current state. Pass no state, or pass getPureState().'
+          );
+        }
         validateReplacementSource?.(baseState);
       }
       const appliedState = safePatches
