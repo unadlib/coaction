@@ -415,3 +415,259 @@ test('an overlapping action that throws does not take the others down', async ()
   expect(isDraft(useStore.getPureState())).toBeFalsy();
   useStore.destroy();
 });
+
+/**
+ * Nesting and overlapping are the two ways more than one action can want the
+ * single draft slot at once, and they need opposite things on the way out.
+ *
+ * A nested action's caller is still on the stack and still writing, so it has
+ * to be handed a fresh transaction. An action suspended at an `await` is not
+ * running at all, so handing one back leaves a draft nobody will finalize:
+ * `getPureState()` starts returning a draft, and the enclosing action's
+ * remaining writes are never committed -- they reach the MobX instance, so the
+ * state looks right, but no patch, no subscriber and no sync mutation ever
+ * mentions them.
+ *
+ * These cover both, and every mixture of the two.
+ */
+const trackCommits = (store: {
+  subscribe: (fn: () => void) => void;
+  getPureState: () => unknown;
+}) => {
+  const commits: unknown[] = [];
+  store.subscribe(() =>
+    commits.push(JSON.parse(JSON.stringify(store.getPureState())))
+  );
+  return commits;
+};
+
+test('a nested action hands the transaction back to its caller', () => {
+  const useStore = create<{
+    a: number;
+    b: number;
+    inner: () => void;
+    outer: () => void;
+  }>(
+    () =>
+      makeAutoObservable(
+        bindMobx({
+          a: 0,
+          b: 0,
+          inner() {
+            this.b += 1;
+          },
+          outer() {
+            this.a += 1;
+            this.inner();
+            this.a += 1;
+          }
+        })
+      ),
+    { name: 'nested-sync', enablePatches: true }
+  );
+  const commits = trackCommits(useStore);
+
+  useStore.getState().outer();
+
+  expect(useStore.getState().a).toBe(2);
+  expect(useStore.getState().b).toBe(1);
+  // The write after the nested call is committed, not just applied to the
+  // instance: three commits, and the last one carries it.
+  expect(commits).toEqual([
+    { a: 1, b: 0 },
+    { a: 1, b: 1 },
+    { a: 2, b: 1 }
+  ]);
+  expect(isDraft(useStore.getPureState())).toBeFalsy();
+  useStore.destroy();
+});
+
+test('nesting two deep still commits every write', () => {
+  const useStore = create<{
+    n: number;
+    innermost: () => void;
+    middle: () => void;
+    outer: () => void;
+  }>(
+    () =>
+      makeAutoObservable(
+        bindMobx({
+          n: 0,
+          innermost() {
+            this.n += 100;
+          },
+          middle() {
+            this.n += 10;
+            this.innermost();
+            this.n += 10;
+          },
+          outer() {
+            this.n += 1;
+            this.middle();
+            this.n += 1;
+          }
+        })
+      ),
+    { name: 'nested-deep', enablePatches: true }
+  );
+  const commits = trackCommits(useStore);
+
+  useStore.getState().outer();
+
+  expect(useStore.getState().n).toBe(122);
+  expect(commits[commits.length - 1]).toEqual({ n: 122 });
+  expect(isDraft(useStore.getPureState())).toBeFalsy();
+  useStore.destroy();
+});
+
+test('a nested action that throws leaves the caller able to finish', () => {
+  const useStore = create<{
+    n: number;
+    inner: () => void;
+    outer: () => void;
+  }>(
+    () =>
+      makeAutoObservable(
+        bindMobx({
+          n: 0,
+          inner() {
+            this.n += 10;
+            throw new Error('inner failed');
+          },
+          outer() {
+            this.n += 1;
+            try {
+              this.inner();
+            } catch {
+              // the caller handles it and carries on
+            }
+            this.n += 1;
+          }
+        })
+      ),
+    { name: 'nested-throwing', enablePatches: true }
+  );
+  const commits = trackCommits(useStore);
+
+  useStore.getState().outer();
+
+  expect(useStore.getState().n).toBe(12);
+  expect(commits[commits.length - 1]).toEqual({ n: 12 });
+  expect(isDraft(useStore.getPureState())).toBeFalsy();
+  useStore.destroy();
+});
+
+test('an async action calls a nested one after its await', async () => {
+  const useStore = create<{
+    n: number;
+    inner: () => void;
+    outer: () => Promise<void>;
+  }>(
+    () =>
+      makeAutoObservable(
+        bindMobx({
+          n: 0,
+          inner() {
+            this.n += 10;
+          },
+          async outer() {
+            this.n += 1;
+            await Promise.resolve();
+            this.inner();
+            this.n += 1;
+          }
+        })
+      ),
+    { name: 'nested-after-await', enablePatches: true }
+  );
+  const commits = trackCommits(useStore);
+
+  await useStore.getState().outer();
+
+  expect(useStore.getState().n).toBe(12);
+  expect(commits[commits.length - 1]).toEqual({ n: 12 });
+  expect(isDraft(useStore.getPureState())).toBeFalsy();
+  useStore.destroy();
+});
+
+test('a sync action calls an async one and does not wait for it', async () => {
+  const useStore = create<{
+    n: number;
+    inner: () => Promise<void>;
+    outer: () => Promise<void>;
+  }>(
+    () =>
+      makeAutoObservable(
+        bindMobx({
+          n: 0,
+          async inner() {
+            this.n += 10;
+            await Promise.resolve();
+            this.n += 10;
+          },
+          outer() {
+            this.n += 1;
+            const pending = this.inner();
+            // The caller goes on writing while the nested action is suspended.
+            this.n += 1;
+            return pending;
+          }
+        })
+      ),
+    { name: 'nested-async-inner', enablePatches: true }
+  );
+  const commits = trackCommits(useStore);
+
+  await useStore.getState().outer();
+  await Promise.resolve();
+
+  expect(useStore.getState().n).toBe(22);
+  expect(commits[commits.length - 1]).toEqual({ n: 22 });
+  expect(isDraft(useStore.getPureState())).toBeFalsy();
+  useStore.destroy();
+});
+
+test('a nested pair runs while an unrelated async action is suspended', async () => {
+  let release: (() => void) | undefined;
+  const useStore = create<{
+    n: number;
+    suspended: () => Promise<void>;
+    inner: () => void;
+    outer: () => void;
+  }>(
+    () =>
+      makeAutoObservable(
+        bindMobx({
+          n: 0,
+          async suspended() {
+            this.n += 1;
+            await new Promise<void>((resolve) => {
+              release = resolve;
+            });
+            this.n += 10;
+          },
+          inner() {
+            this.n += 100;
+          },
+          outer() {
+            this.n += 1000;
+            this.inner();
+            this.n += 1000;
+          }
+        })
+      ),
+    { name: 'nested-during-async', enablePatches: true }
+  );
+  const commits = trackCommits(useStore);
+
+  const pending = useStore.getState().suspended();
+  await Promise.resolve();
+  useStore.getState().outer();
+  release!();
+  await expect(pending).resolves.toBeUndefined();
+
+  expect(useStore.getState().n).toBe(2111);
+  expect(commits[commits.length - 1]).toEqual({ n: 2111 });
+  expect(isDraft(useStore.getPureState())).toBeFalsy();
+  useStore.destroy();
+});

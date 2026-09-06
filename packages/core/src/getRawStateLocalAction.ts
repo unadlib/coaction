@@ -11,7 +11,7 @@ import type {
   MiddlewareStore,
   StoreOptions
 } from './interface';
-import type { Internal } from './internal';
+import type { Internal, MutableActionContext } from './internal';
 import { uuid } from './utils';
 import { hasStoreCommitListeners } from './storeCommit';
 
@@ -103,64 +103,75 @@ export const createLocalAction = <T extends CreateState>({
         // `Cannot perform 'get' on a proxy that has been revoked` -- a crash in
         // an action that did nothing wrong, from another action it has never
         // heard of.
-        let ownFinalize: (() => [T, Patches, Patches]) | undefined;
-        const openTransaction = () => {
+        // Exactly one action owns the open draft, and ownership moves.
+        //
+        // A nested action takes it on entry -- committing what the enclosing
+        // action had written so far -- and hands a fresh one back on the way
+        // out, because the enclosing action is still on the stack and still
+        // writing. An action suspended at an `await` is not on the stack, so
+        // it gets nothing back: whoever runs next takes ownership, and the
+        // suspended action's writes after the await join that transaction and
+        // are committed with it.
+        //
+        // Ownership is what says who may finalize. Without it an action
+        // finalized whatever transaction it found on resume, revoking a draft
+        // another action was still writing through. Keyed to the transaction
+        // rather than to the action, a nested action's hand-back belonged to
+        // nobody, and the enclosing action's remaining writes were never
+        // committed at all.
+        const enclosing = internal.mutableActionContext;
+        const context: MutableActionContext = { running: true };
+        const closeTransaction = () => {
+          handleDraft(store, internal);
+          internal.mutableTransactionOwner = undefined;
+        };
+        const openTransactionFor = (owner: MutableActionContext) => {
           internal.backupState = internal.rootState;
           const [draft, finalize] = createWithMutative(internal.rootState, {
             enablePatches: true
           });
-          ownFinalize = finalize as () => [T, Patches, Patches];
-          internal.finalizeDraft = ownFinalize;
+          internal.finalizeDraft = finalize as () => [T, Patches, Patches];
           internal.rootState = draft as Draft<T>;
+          internal.mutableTransactionOwner = owner;
         };
-        const handleResult = (isDrafted?: boolean) => {
-          // Close only the transaction this action opened. When it belongs to
-          // somebody else, this action's writes after the await went into it
-          // and are committed with it; leaving it alone is what keeps the
-          // owner's draft valid.
-          if (internal.finalizeDraft !== ownFinalize) {
+        const handleResult = () => {
+          if (internal.mutableTransactionOwner !== context) {
             return;
           }
-          handleDraft(store, internal);
-          if (isDrafted) {
-            openTransaction();
+          closeTransaction();
+          if (enclosing?.running) {
+            openTransactionFor(enclosing);
           }
         };
         if (isDraft(internal.rootState)) {
-          // A transaction is already open -- a nested action's, or an async
-          // action's still awaiting. There is only one `internal.rootState`,
+          // Something already has one open -- an enclosing action's, or an
+          // async action's still awaiting. There is one `internal.rootState`,
           // so it has to be closed before this one opens its own.
-          handleDraft(store, internal);
+          closeTransaction();
         }
-        // Whether to leave a transaction open afterwards is a question about
-        // the caller, not about the draft: an enclosing action still on the
-        // stack goes on writing and needs one to return to, while an action
-        // suspended at an `await` does not -- it is not running, and the
-        // transaction would be left with nobody to finalize it, which is how
-        // `getPureState()` ends up returning a draft.
-        const nested = (internal.mutableActionDepth ?? 0) > 0;
-        openTransaction();
+        openTransactionFor(context);
+        internal.mutableActionContext = context;
         let asyncResult: Promise<unknown> | undefined;
-        internal.mutableActionDepth = (internal.mutableActionDepth ?? 0) + 1;
         try {
           result = fn.apply(getActionTarget(store, sliceKey), args);
           if (result instanceof Promise) {
             asyncResult = result;
           }
         } finally {
-          internal.mutableActionDepth! -= 1;
+          internal.mutableActionContext = enclosing;
+          context.running = false;
           if (!asyncResult) {
-            handleResult(nested);
+            handleResult();
           }
         }
         if (asyncResult) {
           return asyncResult.then(
             (value) => {
-              handleResult(nested);
+              handleResult();
               return value;
             },
             (error) => {
-              handleResult(nested);
+              handleResult();
               throw error;
             }
           );

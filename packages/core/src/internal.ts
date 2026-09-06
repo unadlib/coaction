@@ -15,6 +15,12 @@ export type StateSchema = {
   sliceKeys?: Map<PropertyKey, Set<PropertyKey>>;
 };
 
+/** One invocation of an action on a mutable instance. */
+export type MutableActionContext = {
+  /** Whether the action is inside its synchronous body right now. */
+  running: boolean;
+};
+
 export interface Internal<T extends CreateState = CreateState> {
   /**
    * The store module.
@@ -33,15 +39,22 @@ export interface Internal<T extends CreateState = CreateState> {
    */
   finalizeDraft: () => [T, Patches, Patches];
   /**
-   * How many mutable-instance actions are inside their synchronous body.
+   * The innermost mutable-instance action inside its synchronous body.
    *
-   * An action that finds a transaction already open has to know whether the
-   * action that opened it is still on the stack -- a nested call, which will go
-   * on writing and needs a transaction to return to -- or suspended at an
-   * `await`, in which case reopening one leaves a draft nobody will ever
-   * finalize and `getPureState()` starts handing out a draft.
+   * An action that opens a transaction has to know who to hand one back to on
+   * the way out: an enclosing action still on the stack goes on writing and
+   * needs one, an action suspended at an `await` does not.
    */
-  mutableActionDepth?: number;
+  mutableActionContext?: MutableActionContext;
+  /**
+   * Which action owns the open draft.
+   *
+   * There is one `internal.rootState`, so one transaction at a time, and only
+   * its owner may finalize it. Ownership moves: a nested action takes it on
+   * entry and hands it back on exit, and an action suspended at an `await`
+   * loses it to whoever runs next.
+   */
+  mutableTransactionOwner?: MutableActionContext;
   /**
    * The mutable instance.
    */
