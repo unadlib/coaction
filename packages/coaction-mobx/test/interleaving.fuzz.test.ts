@@ -1,7 +1,11 @@
 import { makeAutoObservable } from 'mobx';
 import { isDraft } from 'mutative';
-import { create } from 'coaction';
-import { onStoreCommit, type StoreCommit } from 'coaction/adapter';
+import { create, type Store } from 'coaction';
+import {
+  onStoreCommit,
+  onStoreCommitValidate,
+  type StoreCommit
+} from 'coaction/adapter';
 import { apply as applyPatches } from 'mutative';
 import {
   createRandom,
@@ -52,6 +56,7 @@ const buildStore = (random: Random) => {
       makeAutoObservable(
         bindMobx({
           n: 0,
+          when: 'iso',
           items: [] as number[],
           rows: [[1, 2, 3], [4, 5], [6]] as unknown[],
           step() {
@@ -94,6 +99,13 @@ const buildStore = (random: Random) => {
             await gate();
             this.nested();
           },
+          /** Writes a value a commit validator refuses, then suspends. */
+          async suspendThenRefused() {
+            this.n += 1;
+            (this as { when: unknown }).when = new Date(0);
+            await gate();
+            this.n += 1;
+          },
           async suspendThenThrow() {
             this.n += 1000;
             await gate();
@@ -112,7 +124,12 @@ const buildStore = (random: Random) => {
 };
 
 const SYNC = ['step', 'push', 'trim', 'nested', 'shuffle', 'drop'] as const;
-const ASYNC = ['suspend', 'suspendThenNested', 'suspendThenThrow'] as const;
+const ASYNC = [
+  'suspend',
+  'suspendThenNested',
+  'suspendThenThrow',
+  'suspendThenRefused'
+] as const;
 
 test('any interleaving of actions replays to the state it produced', async () => {
   const failures: string[] = [];
@@ -123,6 +140,15 @@ test('any interleaving of actions replays to the state it produced', async () =>
     const initial = JSON.parse(JSON.stringify(store.getPureState()));
     const commits: StoreCommit[] = [];
     onStoreCommit(store, (commit) => commits.push(commit));
+    // A refusal is another way for a transaction to end, and the one that
+    // used to leave ownership pointing at a finalised draft.
+    onStoreCommitValidate(store as Store<any>, (commit) => {
+      for (const patch of commit.patches) {
+        if ('value' in patch && patch.value instanceof Date) {
+          throw new TypeError('no Dates');
+        }
+      }
+    });
 
     const schedule: string[] = [];
     const inFlight: Array<Promise<unknown>> = [];
@@ -132,7 +158,7 @@ test('any interleaving of actions replays to the state it produced', async () =>
       // With a flat probability the queue rarely got past two, and the
       // orderings that break ownership need three -- the middle one finishing
       // first and the first one finishing last.
-      if (pending() >= 2 && random.chance(pending() >= 3 ? 0.65 : 0.2)) {
+      if (pending() >= 2 && random.chance(pending() >= 4 ? 0.7 : 0.18)) {
         // One of them, chosen at random, so completion order comes apart from
         // start order.
         const index = random.integer(0, pending() - 1);
@@ -141,7 +167,7 @@ test('any interleaving of actions replays to the state it produced', async () =>
         for (let drain = 0; drain < 4; drain += 1) await Promise.resolve();
         continue;
       }
-      if (random.chance(pending() >= 3 ? 0.3 : 0.6)) {
+      if (random.chance(pending() >= 4 ? 0.3 : 0.65)) {
         const name = random.pick(ASYNC);
         schedule.push(name);
         const pending = store.getState()[name]();

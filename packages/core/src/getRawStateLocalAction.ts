@@ -167,13 +167,23 @@ export const createLocalAction = <T extends CreateState>({
         const handleResult = () => {
           context.active = false;
           if (internal.mutableTransactionOwner === context) {
-            closeTransaction();
-            let owner = context.displaced;
-            while (owner && !owner.active) {
-              owner = owner.displaced;
-            }
-            if (owner) {
-              openTransactionFor(owner);
+            try {
+              closeTransaction();
+            } finally {
+              // The hand-back happens whether or not closing succeeded. A
+              // validator refusing this action's own writes throws from here,
+              // and letting that skip the hand-back left an action further
+              // down the chain still waiting with no transaction to write
+              // into -- so its next write went to the mutable instance with
+              // nothing to record it, which is the hole this ownership model
+              // exists to close.
+              let owner = context.displaced;
+              while (owner && !owner.active) {
+                owner = owner.displaced;
+              }
+              if (owner) {
+                openTransactionFor(owner);
+              }
             }
           }
           // A refusal collected while this action was suspended. It is its own,
