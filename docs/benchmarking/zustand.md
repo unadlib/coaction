@@ -112,6 +112,34 @@ in 2.0.0. `Coaction object replacement + cached getter` gates this path so it ca
 The draft path lets Mutative report precise patches, so neither the payload walk nor the cached
 getter's snapshot rebuild is needed.
 
+### By design: tracking costs writes
+
+Reading a computed getter, or attaching any commit listener, creates reactive
+path nodes. A store that has them cannot take the patch-free `setState` path,
+because invalidating those paths needs the patches:
+
+| Write path                       | ops/sec |
+| :------------------------------- | ------: |
+| nothing watching                 | 467,779 |
+| after a computed getter was read |  70,307 |
+
+This is the price of fine-grained invalidation, not a defect, and it is why the
+`mutable update` floors sit where they do — those scenarios read a getter after
+every write, so they pay it. `Coaction write, nothing watching` and `Coaction
+write, a getter has been read` gate both ends, so the gap cannot widen quietly.
+
+The comparison a reader should draw is between workloads, not libraries: a store
+nobody derives from writes at nearly half a million a second, and one whose
+derived values are kept precise writes at seventy thousand. Which of those
+describes an application is the question worth asking before quoting either.
+
+### By design: a bulk array edit is one patch per element
+
+Reversing a ten-thousand element array emits ten thousand patches, and every
+commit walks that pair. `Coaction reverse 10k array with a commit listener`
+gates it, after a correctness check added in 4.0 turned out to be quadratic and
+cost 153 ms on that shape — more than the update it was checking.
+
 The blocking regression check uses the transport-free `coaction` entry:
 
 ```sh
