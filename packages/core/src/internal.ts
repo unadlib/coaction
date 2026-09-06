@@ -26,6 +26,16 @@ export type MutableActionContext = {
    * transaction to write into.
    */
   active: boolean;
+  /**
+   * Whoever owned the transaction when this action took it.
+   *
+   * Ownership is a stack, not a pair. Three async actions in flight leave a
+   * chain, and the one that finishes may find the action it displaced already
+   * finished too -- while something further down the chain is still waiting to
+   * write. Handing the transaction only to the immediate predecessor drops it
+   * on the floor in that case.
+   */
+  displaced?: MutableActionContext;
 };
 
 export interface Internal<T extends CreateState = CreateState> {

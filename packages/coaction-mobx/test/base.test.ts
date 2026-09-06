@@ -870,3 +870,73 @@ test('a commit validator can refuse an action on a mutable instance', () => {
   expect(isDraft(useStore.getPureState())).toBeFalsy();
   useStore.destroy();
 });
+
+/**
+ * Ownership of the draft is a stack, not a pair.
+ *
+ * Three async actions in flight leave a chain: each took the transaction from
+ * the one before it. Released out of order, the one that finishes last can find
+ * the action it displaced already finished, while something further down the
+ * chain is still waiting to write. Handing the transaction only to the
+ * immediate predecessor dropped it there, and the still-waiting action's write
+ * after its `await` went straight to the MobX instance with no draft to record
+ * it -- the state came out right and the patch stream was missing it.
+ */
+test('a transaction reaches the nearest action still waiting for it', async () => {
+  const gates = new Map<string, () => void>();
+  const wait = (id: string) =>
+    new Promise<void>((resolve) => {
+      gates.set(id, resolve);
+    });
+  const useStore = create<{
+    n: number;
+    first: () => Promise<void>;
+    second: () => Promise<void>;
+    third: () => Promise<void>;
+  }>(
+    () =>
+      makeAutoObservable(
+        bindMobx({
+          n: 0,
+          async first() {
+            this.n += 1;
+            await wait('first');
+            this.n += 1;
+          },
+          async second() {
+            this.n += 10;
+            await wait('second');
+            this.n += 10;
+          },
+          async third() {
+            this.n += 100;
+            await wait('third');
+            this.n += 100;
+          }
+        })
+      ),
+    { name: 'ownership-chain', enablePatches: true }
+  );
+  const { replayed } = track(useStore);
+
+  const first = useStore.getState().first();
+  await Promise.resolve();
+  const second = useStore.getState().second();
+  await Promise.resolve();
+  const third = useStore.getState().third();
+  await Promise.resolve();
+
+  // The middle one finishes first, then the last, then the first -- so the
+  // action that finishes last is holding a transaction owed to one that is two
+  // places down the chain.
+  for (const id of ['second', 'third', 'first']) {
+    gates.get(id)!();
+    for (let drain = 0; drain < 6; drain += 1) await Promise.resolve();
+  }
+  await Promise.all([first, second, third]);
+
+  expect(useStore.getState().n).toBe(222);
+  expect(replayed()).toEqual({ n: 222 });
+  expect(isDraft(useStore.getPureState())).toBeFalsy();
+  useStore.destroy();
+});

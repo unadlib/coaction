@@ -28,11 +28,19 @@ type Action = {
 };
 
 const buildStore = (random: Random) => {
+  // One gate per suspended action, released individually and in any order.
+  // Releasing them all at once ties completion order to start order, and the
+  // orderings that break ownership are the ones where they differ -- three in
+  // flight, the middle one finishing first, the first one finishing last.
   const waiting: Array<() => void> = [];
   const gate = () =>
     new Promise<void>((resolve) => {
       waiting.push(resolve);
     });
+  const releaseOne = (index: number) => {
+    const [resolve] = waiting.splice(index, 1);
+    resolve?.();
+  };
   const store = create<any>(
     () =>
       makeAutoObservable(
@@ -89,7 +97,12 @@ const buildStore = (random: Random) => {
       ),
     { name: `fuzz-${random.integer(0, 1e9)}`, enablePatches: true }
   );
-  return { store, release: () => waiting.splice(0).forEach((go) => go()) };
+  return {
+    store,
+    pending: () => waiting.length,
+    releaseOne,
+    release: () => waiting.splice(0).forEach((go) => go())
+  };
 };
 
 const SYNC = ['step', 'push', 'trim', 'nested', 'shuffle', 'drop'] as const;
@@ -99,22 +112,29 @@ test('any interleaving of actions replays to the state it produced', async () =>
   const failures: string[] = [];
   for (let seed = 1; seed <= 250; seed += 1) {
     const random = createRandom(seed);
-    const { store, release } = buildStore(random);
+    const { store, release, releaseOne, pending } = buildStore(random);
     const initial = JSON.parse(JSON.stringify(store.getPureState()));
     const commits: StoreCommit[] = [];
     onStoreCommit(store, (commit) => commits.push(commit));
 
     const schedule: string[] = [];
     const inFlight: Array<Promise<unknown>> = [];
-    const steps = random.integer(2, 9);
+    const steps = random.integer(3, 12);
     for (let step = 0; step < steps; step += 1) {
-      if (inFlight.length && random.chance(0.3)) {
-        schedule.push('release');
-        release();
-        await Promise.allSettled(inFlight.splice(0));
+      // Weighted so several actions pile up before any of them is released.
+      // With a flat probability the queue rarely got past two, and the
+      // orderings that break ownership need three -- the middle one finishing
+      // first and the first one finishing last.
+      if (pending() >= 2 && random.chance(pending() >= 3 ? 0.65 : 0.2)) {
+        // One of them, chosen at random, so completion order comes apart from
+        // start order.
+        const index = random.integer(0, pending() - 1);
+        schedule.push(`release#${index}`);
+        releaseOne(index);
+        for (let drain = 0; drain < 4; drain += 1) await Promise.resolve();
         continue;
       }
-      if (random.chance(0.45)) {
+      if (random.chance(pending() >= 3 ? 0.3 : 0.6)) {
         const name = random.pick(ASYNC);
         schedule.push(name);
         const pending = store.getState()[name]();

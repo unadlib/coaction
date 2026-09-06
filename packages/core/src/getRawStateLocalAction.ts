@@ -103,24 +103,28 @@ export const createLocalAction = <T extends CreateState>({
         // `Cannot perform 'get' on a proxy that has been revoked` -- a crash in
         // an action that did nothing wrong, from another action it has never
         // heard of.
-        // Exactly one action owns the open draft, and ownership moves.
+        // Exactly one action owns the open draft, and ownership is a stack.
         //
         // An action takes the transaction from whoever held it on entry --
         // committing what they had written so far -- and hands a fresh one
-        // back to them on the way out, so long as they have not finished. That
+        // back on the way out to the nearest one that has not finished. That
         // covers a nested call, whose caller is still on the stack and still
         // writing, and equally an async action suspended at an `await`, which
         // is not on the stack and is still going to write again.
         //
-        // Keying the hand-back to being on the stack instead is what let a
-        // write escape entirely. A suspended action got nothing back, so its
-        // writes after the `await` went straight to the mutable instance with
-        // no draft to record them: the state was right, and the patch stream
-        // was missing them. Replaying the commits rebuilt a different state
-        // than the store held, and history, sync and anything else reading
-        // patches never heard about that write at all.
-        const displaced = internal.mutableTransactionOwner;
-        const context: MutableActionContext = { active: true };
+        // Following the chain rather than stopping at the immediate
+        // predecessor is what makes three in flight work. Released out of
+        // order, the one that finishes last can find the action it displaced
+        // already done while something further down is still waiting, and
+        // handing the transaction only to that one drops it. The next write
+        // then goes straight to the mutable instance with no draft to record
+        // it: the state stays right and the patch stream is missing it, so a
+        // replay rebuilds a different store and history and sync never hear
+        // about that write at all.
+        const context: MutableActionContext = {
+          active: true,
+          displaced: internal.mutableTransactionOwner
+        };
         const closeTransaction = () => {
           handleDraft(store, internal);
           internal.mutableTransactionOwner = undefined;
@@ -140,8 +144,12 @@ export const createLocalAction = <T extends CreateState>({
             return;
           }
           closeTransaction();
-          if (displaced?.active) {
-            openTransactionFor(displaced);
+          let owner = context.displaced;
+          while (owner && !owner.active) {
+            owner = owner.displaced;
+          }
+          if (owner) {
+            openTransactionFor(owner);
           }
         };
         if (isDraft(internal.rootState)) {
