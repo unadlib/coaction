@@ -1,7 +1,12 @@
 import { create as createWithMutative, type Patches } from 'mutative';
 import type { CreateState, MiddlewareStore } from './interface';
 import type { Internal } from './internal';
-import { replaceOwnEnumerable, sanitizeCheckedPatches } from './utils';
+import {
+  createInversePatches,
+  inverseNeedsDerivation,
+  replaceOwnEnumerable,
+  sanitizeCheckedPatches
+} from './utils';
 import { applyWithOwnStoreCommit, publishStoreCommit } from './storeCommit';
 
 type ReplaceExternalStoreStateOptions = {
@@ -15,7 +20,8 @@ export const replaceExternalStoreState = <T extends CreateState>(
   { syncImmutable = true }: ReplaceExternalStoreStateOptions = {}
 ) => {
   internal.validateReplacementSource?.(source);
-  const [nextState, patches, inversePatches] = createWithMutative(
+  const previousState = internal.rootState as T;
+  const [nextState, patches, mutativeInverse] = createWithMutative(
     internal.rootState,
     (draft) => {
       replaceOwnEnumerable(draft as Record<PropertyKey, unknown>, source);
@@ -24,6 +30,9 @@ export const replaceExternalStoreState = <T extends CreateState>(
       enablePatches: true
     }
   ) as [T, Patches, Patches];
+  const inversePatches = inverseNeedsDerivation(patches)
+    ? createInversePatches(previousState, patches)
+    : mutativeInverse;
   internal.validateState?.(nextState);
   const finalPatches = store.patch
     ? store.patch({ patches, inversePatches })

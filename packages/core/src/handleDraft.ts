@@ -1,6 +1,10 @@
 import type { CreateState, MiddlewareStore } from './interface';
 import type { Internal } from './internal';
-import { sanitizeCheckedPatches } from './utils';
+import {
+  createInversePatches,
+  inverseNeedsDerivation,
+  sanitizeCheckedPatches
+} from './utils';
 import {
   applyWithOwnStoreCommit,
   publishStoreCommit,
@@ -12,7 +16,10 @@ export const handleDraft = <T extends CreateState>(
   internal: Internal<T>
 ) => {
   internal.rootState = internal.backupState;
-  const [nextState, patches, inversePatches] = internal.finalizeDraft();
+  const [nextState, patches, mutativeInverse] = internal.finalizeDraft();
+  const inversePatches = inverseNeedsDerivation(patches)
+    ? createInversePatches(internal.rootState as T, patches)
+    : mutativeInverse;
   const finalPatches = store.patch
     ? store.patch({ patches, inversePatches })
     : { patches, inversePatches };

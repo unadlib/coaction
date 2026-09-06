@@ -19,6 +19,8 @@ import {
 } from './immutableState';
 import {
   assertKnownStateShape,
+  createInversePatches,
+  inverseNeedsDerivation,
   shallowCloneOwnEnumerable,
   getOwnEnumerableKeys,
   mergeObject,
@@ -124,7 +126,9 @@ export const handleState = <T extends CreateState>(
       internal.validateState?.(internal.getTransportState?.() ?? result[0]);
       producedState = result[0] as T;
       patches = result[1];
-      inversePatches = result[2];
+      inversePatches = inverseNeedsDerivation(patches)
+        ? createInversePatches(internal.backupState as T, patches)
+        : result[2];
     } finally {
       internal.rootState = internal.backupState;
     }

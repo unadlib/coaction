@@ -580,6 +580,36 @@ const readPatchTarget = (root: unknown, path: readonly PropertyKey[]) => {
  * rebase can therefore refresh optimistic inverses without O(state-size)
  * cloning for every pending mutation.
  */
+/**
+ * Whether mutative's inverse pair has to be rebuilt before it can be applied.
+ *
+ * `inversePatches[i]` undoes `patches[i]`, in that order, so applying the array
+ * as it comes only works while the patches are independent. A later patch that
+ * replaces the container of an earlier one -- an array element written, then
+ * the array shifted -- leaves the earlier undo writing into something that is
+ * gone. Deriving the inverse instead always works but flattens the shared
+ * references mutative's keeps, so it is used only here.
+ */
+export const inverseNeedsDerivation = (patches: Patches) => {
+  if (patches.length < 2) return false;
+  const paths = patches.map((patch) =>
+    normalizePatchPath(patch.path).map(String)
+  );
+  for (let later = 1; later < paths.length; later += 1) {
+    for (let earlier = 0; earlier < later; earlier += 1) {
+      if (paths[later].length >= paths[earlier].length) continue;
+      if (
+        paths[later].every(
+          (segment, index) => segment === paths[earlier][index]
+        )
+      ) {
+        return true;
+      }
+    }
+  }
+  return false;
+};
+
 export const createInversePatches = <T>(
   state: T,
   patches: Patches

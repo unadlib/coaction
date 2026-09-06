@@ -2089,3 +2089,60 @@ test.each([
   expect(storage.map.get(name)).toBe(raw);
   store.destroy();
 });
+
+/**
+ * mutative emits `inversePatches[i]` to undo `patches[i]`, in that order.
+ * Undoing a sequence means undoing it backwards, so applying that array as it
+ * comes only works while the patches are independent. Write an array element
+ * and then shift the array itself, and undoing the element write comes first,
+ * into a container that is no longer there.
+ *
+ * In a synced store that is not one failed undo. The rebase rolls back through
+ * every pending mutation on every pull, so one such mutation in the outbox made
+ * every later pull throw -- and the remote stopped arriving, permanently, with
+ * the state looking entirely healthy.
+ */
+test('a pending mutation whose inverse is order-sensitive does not break the rebase', async () => {
+  const store = create<{
+    rows: unknown[];
+    other: string;
+    shuffle: () => void;
+  }>(
+    (set) => ({
+      rows: [[true, false, ''], { a: 1 }, -1],
+      other: 'local',
+      shuffle() {
+        set(() => {
+          (this.rows[0] as unknown[]).reverse();
+          this.rows.unshift('x');
+        });
+      }
+    }),
+    {
+      middlewares: [
+        sync({
+          name: 'inverse-ordering',
+          storage: createMemoryStorage(),
+          adapter: {
+            pull: async () => ({
+              patches: [{ op: 'replace', path: ['other'], value: 'remote' }]
+            }),
+            push: pendingPush
+          }
+        })
+      ]
+    }
+  );
+  await nextTick();
+  store.getState().shuffle();
+  await nextTick();
+  expect(getSyncApi(store).getPending()).toHaveLength(1);
+
+  await getSyncApi(store).pull();
+
+  // The remote arrived, and the local write survived the rebase.
+  expect(store.getState().other).toBe('remote');
+  expect(store.getState().rows).toEqual(['x', ['', false, true], { a: 1 }, -1]);
+  expect(getSyncApi(store).getPending()).toHaveLength(1);
+  store.destroy();
+});
