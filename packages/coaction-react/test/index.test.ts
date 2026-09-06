@@ -1065,3 +1065,54 @@ test('whole() keeps a scanning selector reactive without per-element tracking', 
   expect(screen.getByTestId('whole-total').textContent).toBe('7');
   useStore.destroy();
 });
+
+/**
+ * The comparison docs described this path as version + recompute + `Object.is`,
+ * at parity with Zustand. It has not been that since the selector started
+ * running inside a reactive tracker: the paths it reads become its
+ * dependencies, and a write touching none of them does not reach it at all.
+ * This pins the behaviour the docs now describe.
+ */
+test('a selector does not re-run for a write it does not depend on', () => {
+  const useStore = create<{
+    user: { name: string };
+    unrelated: number;
+    renameUser: () => void;
+    touchUnrelated: () => void;
+  }>((set) => ({
+    user: { name: 'Michael' },
+    unrelated: 0,
+    renameUser() {
+      set(() => {
+        this.user.name = 'Jordan';
+      });
+    },
+    touchUnrelated() {
+      set(() => {
+        this.unrelated += 1;
+      });
+    }
+  }));
+  let selectorRuns = 0;
+  const Name = () => {
+    const name = useStore((state) => {
+      selectorRuns += 1;
+      return state.user.name;
+    });
+    return React.createElement('span', null, name);
+  };
+  render(React.createElement(Name));
+  const runsAfterMount = selectorRuns;
+
+  act(() => {
+    useStore.getState().touchUnrelated();
+  });
+  expect(selectorRuns).toBe(runsAfterMount);
+
+  act(() => {
+    useStore.getState().renameUser();
+  });
+  expect(selectorRuns).toBeGreaterThan(runsAfterMount);
+  expect(screen.getByText('Jordan')).toBeTruthy();
+  useStore.destroy();
+});

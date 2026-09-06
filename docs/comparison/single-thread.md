@@ -81,7 +81,7 @@ const cart = (set, get) => ({
 });
 ```
 
-> **Be precise about this one.** The explicit `useStore(selector)` path is _version + recompute + `Object.is`_, the same model Zustand uses. It does not add signal-level fine-grained invalidation on its own. The store/slice-field tracking behavior comes from `observer()`. So on explicit selectors Coaction is at **parity** with Zustand; the increment is that `observer()` lets you skip selectors entirely.
+> **Be precise about this one.** The explicit `useStore(selector)` path is not a recompute-and-compare loop. The selector runs inside a reactive tracker, so the paths it reads become its dependencies, and a write that touches none of them does not re-run it at all — where Zustand's model runs every selector on every store notification and uses `Object.is` on the result to decide whether to re-render. `Object.is` still decides the re-render here; what differs is that most writes never get as far as the comparison. `observer()` is a further step again: it tracks store or slice fields directly, so a component needs no selector at all.
 
 ### 4. `this` and getters — natural this-bound ergonomics
 

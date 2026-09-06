@@ -109,7 +109,7 @@ function CartTotal() {
 }
 ```
 
-Zustand also has strong selector ergonomics, including strict equality by default, `useShallow`, and `subscribeWithSelector` middleware. The explicit `useStore(selector)` path in `@coaction/react` is at parity with that model: it recomputes and compares with `Object.is`. Coaction's differentiator is `observer()`, which tracks store or slice fields directly on the signal graph so components can skip selectors entirely. For the focused single-thread case, see [Why Coaction Without Multithreading](./single-thread.md).
+Zustand also has strong selector ergonomics, including strict equality by default, `useShallow`, and `subscribeWithSelector` middleware. The explicit `useStore(selector)` path in `@coaction/react` reads the same way but does less work: the selector runs inside a reactive tracker, so the paths it reads become its dependencies and a write touching none of them does not re-run it — Zustand runs every selector on every store notification and compares the result. `Object.is` still decides the re-render in both. Coaction's further differentiator is `observer()`, which tracks store or slice fields directly on the signal graph so components can skip selectors entirely. For the focused single-thread case, see [Why Coaction Without Multithreading](./single-thread.md).
 
 ## Slices
 

@@ -148,12 +148,12 @@ export const getReadonlyStateValueVersion = (value: unknown) => {
  * returns it. Read it; never mutate it -- writes belong in `set()`, and a
  * mutation here corrupts the store without going through a transaction.
  *
- * Values that did not come from a Coaction store are returned unchanged, which
- * includes values from a store built by a *different* entry point: `coaction`
- * and `coaction` are separate bundles that do not share this registry, so
- * import `whole` from the same entry you created the store with. Getting that
- * wrong stays correct -- reads fall back to per-element tracking -- but gives up
- * the speed this exists for.
+ * Values that did not come from a Coaction store are returned unchanged. A
+ * value from a store built by a *different* entry point is not one of them:
+ * `coaction` and `coaction/shared` are separate bundles, but the registry
+ * behind this lives in the global symbol registry, so either entry's `whole`
+ * recognises either entry's state. `check-entry-runtime-interop.mjs` asserts
+ * that against the built output, where it can actually be observed.
  */
 export const whole = <T>(value: T): T => {
   if ((typeof value !== 'object' && typeof value !== 'function') || !value) {

@@ -75,6 +75,31 @@ for (const [entryName, entry] of [
   store.destroy();
 }
 
+// `whole()` reads the same registry, and its whole purpose is the coarse
+// dependency it registers. A `whole` from one entry has to recognise a value
+// from another, or it silently degrades to per-element tracking -- correct, and
+// exactly the speed it exists to avoid.
+for (const [wholeName, wholeEntry] of [
+  ['coaction', index],
+  ['coaction/shared', shared]
+]) {
+  for (const [storeName, storeEntry] of [
+    ['coaction', index],
+    ['coaction/shared', shared]
+  ]) {
+    const store = storeEntry.create(() => ({ items: [{ id: 'a' }] }));
+    const tracker = adapter.createReactiveTracker();
+    tracker.track(() => wholeEntry.whole(store.getState().items));
+    check(
+      `${wholeName}.whole() over a ${storeName} store`,
+      tracker.hasDependencies() === true,
+      'whole() registered no dependency across the entry boundary'
+    );
+    tracker.dispose();
+    store.destroy();
+  }
+}
+
 // One source object must map to one readonly proxy no matter which entry reads
 // it, or reference identity stops holding across a boundary.
 {
