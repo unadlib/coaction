@@ -2,115 +2,115 @@
   "@coaction/history": {
     "files": {
       "dist/index.mjs": {
-        "baselineGzipBytes": 4834,
-        "maxGzipBytes": 5350
+        "baselineGzipBytes": 4839,
+        "maxGzipBytes": 5250
       },
       "dist/index.js": {
-        "baselineGzipBytes": 4866,
-        "maxGzipBytes": 5400
+        "baselineGzipBytes": 4871,
+        "maxGzipBytes": 5300
       }
     }
   },
   "@coaction/jotai": {
     "files": {
       "dist/index.mjs": {
-        "baselineGzipBytes": 1104,
-        "maxGzipBytes": 1250
+        "baselineGzipBytes": 1093,
+        "maxGzipBytes": 1200
       },
       "dist/index.js": {
-        "baselineGzipBytes": 1244,
-        "maxGzipBytes": 1400
+        "baselineGzipBytes": 1231,
+        "maxGzipBytes": 1350
       }
     }
   },
   "@coaction/logger": {
     "files": {
       "dist/index.mjs": {
-        "baselineGzipBytes": 1333,
-        "maxGzipBytes": 1500
+        "baselineGzipBytes": 1322,
+        "maxGzipBytes": 1450
       },
       "dist/index.js": {
-        "baselineGzipBytes": 1377,
-        "maxGzipBytes": 1550
+        "baselineGzipBytes": 1363,
+        "maxGzipBytes": 1500
       }
     }
   },
   "@coaction/mobx": {
     "files": {
       "dist/index.mjs": {
-        "baselineGzipBytes": 1723,
+        "baselineGzipBytes": 1714,
         "maxGzipBytes": 1900
       },
       "dist/index.js": {
-        "baselineGzipBytes": 1766,
-        "maxGzipBytes": 1950
+        "baselineGzipBytes": 1758,
+        "maxGzipBytes": 1900
       }
     }
   },
   "@coaction/ng": {
     "files": {
       "dist/index.mjs": {
-        "baselineGzipBytes": 445,
+        "baselineGzipBytes": 438,
         "maxGzipBytes": 500
       },
       "dist/index.js": {
-        "baselineGzipBytes": 605,
-        "maxGzipBytes": 700
+        "baselineGzipBytes": 597,
+        "maxGzipBytes": 650
       }
     }
   },
   "@coaction/persist": {
     "files": {
       "dist/index.mjs": {
-        "baselineGzipBytes": 1821,
-        "maxGzipBytes": 2050
+        "baselineGzipBytes": 1808,
+        "maxGzipBytes": 2000
       },
       "dist/index.js": {
-        "baselineGzipBytes": 1866,
-        "maxGzipBytes": 2100
+        "baselineGzipBytes": 1853,
+        "maxGzipBytes": 2050
       }
     }
   },
   "@coaction/pinia": {
     "files": {
       "dist/index.mjs": {
-        "baselineGzipBytes": 1651,
-        "maxGzipBytes": 1850
+        "baselineGzipBytes": 1645,
+        "maxGzipBytes": 1800
       },
       "dist/index.js": {
-        "baselineGzipBytes": 1798,
-        "maxGzipBytes": 2000
+        "baselineGzipBytes": 1790,
+        "maxGzipBytes": 1950
       }
     }
   },
   "@coaction/react": {
     "files": {
       "dist/index.mjs": {
-        "baselineGzipBytes": 4292,
-        "maxGzipBytes": 4750
+        "baselineGzipBytes": 4295,
+        "maxGzipBytes": 4650
       },
       "dist/index.js": {
-        "baselineGzipBytes": 4818,
-        "maxGzipBytes": 5300
+        "baselineGzipBytes": 4821,
+        "maxGzipBytes": 5250
       },
       "dist/shared.mjs": {
-        "baselineGzipBytes": 4163,
-        "maxGzipBytes": 4600
+        "baselineGzipBytes": 4172,
+        "maxGzipBytes": 4550
       },
       "dist/shared.js": {
-        "baselineGzipBytes": 4695,
-        "maxGzipBytes": 5200
+        "baselineGzipBytes": 4700,
+        "maxGzipBytes": 5100
       }
     }
   },
   "@coaction/redux": {
     "files": {
       "dist/index.mjs": {
-        "baselineGzipBytes": 1403,
+        "baselineGzipBytes": 1393,
         "maxGzipBytes": 1550
       },
       "dist/index.js": {
-        "baselineGzipBytes": 1540,
+        "baselineGzipBytes": 1530,
         "maxGzipBytes": 1700
       }
     }
@@ -118,11 +118,11 @@
   "@coaction/solid": {
     "files": {
       "dist/index.mjs": {
-        "baselineGzipBytes": 989,
+        "baselineGzipBytes": 981,
         "maxGzipBytes": 1100
       },
       "dist/index.js": {
-        "baselineGzipBytes": 1130,
+        "baselineGzipBytes": 1120,
         "maxGzipBytes": 1250
       }
     }
@@ -130,123 +130,123 @@
   "@coaction/svelte": {
     "files": {
       "dist/index.mjs": {
-        "baselineGzipBytes": 442,
+        "baselineGzipBytes": 438,
         "maxGzipBytes": 500
       },
       "dist/index.js": {
-        "baselineGzipBytes": 599,
-        "maxGzipBytes": 700
+        "baselineGzipBytes": 591,
+        "maxGzipBytes": 650
       }
     }
   },
   "@coaction/sync": {
     "files": {
       "dist/index.mjs": {
-        "baselineGzipBytes": 8946,
-        "maxGzipBytes": 9700
+        "baselineGzipBytes": 9277,
+        "maxGzipBytes": 10050
       },
       "dist/index.js": {
-        "baselineGzipBytes": 8987,
-        "maxGzipBytes": 9750
+        "baselineGzipBytes": 9324,
+        "maxGzipBytes": 10100
       },
       "dist/crud.mjs": {
-        "baselineGzipBytes": 3635,
-        "maxGzipBytes": 4000
+        "baselineGzipBytes": 3620,
+        "maxGzipBytes": 3950
       },
       "dist/crud.js": {
-        "baselineGzipBytes": 3687,
-        "maxGzipBytes": 4100
+        "baselineGzipBytes": 3670,
+        "maxGzipBytes": 4000
       },
       "dist/indexeddb.mjs": {
-        "baselineGzipBytes": 1346,
-        "maxGzipBytes": 1500
+        "baselineGzipBytes": 1326,
+        "maxGzipBytes": 1450
       },
       "dist/indexeddb.js": {
-        "baselineGzipBytes": 1395,
-        "maxGzipBytes": 1550
+        "baselineGzipBytes": 1376,
+        "maxGzipBytes": 1500
       },
       "dist/supabase.mjs": {
-        "baselineGzipBytes": 5312,
-        "maxGzipBytes": 5850
+        "baselineGzipBytes": 5294,
+        "maxGzipBytes": 5750
       },
       "dist/supabase.js": {
-        "baselineGzipBytes": 5358,
-        "maxGzipBytes": 5900
+        "baselineGzipBytes": 5339,
+        "maxGzipBytes": 5800
       },
       "dist/query.mjs": {
-        "baselineGzipBytes": 4162,
-        "maxGzipBytes": 4600
+        "baselineGzipBytes": 4145,
+        "maxGzipBytes": 4500
       },
       "dist/query.js": {
-        "baselineGzipBytes": 4212,
-        "maxGzipBytes": 4650
+        "baselineGzipBytes": 4196,
+        "maxGzipBytes": 4550
       },
       "dist/firestore.mjs": {
-        "baselineGzipBytes": 4407,
-        "maxGzipBytes": 4850
+        "baselineGzipBytes": 4383,
+        "maxGzipBytes": 4750
       },
       "dist/firestore.js": {
-        "baselineGzipBytes": 4453,
-        "maxGzipBytes": 4900
+        "baselineGzipBytes": 4428,
+        "maxGzipBytes": 4800
       }
     }
   },
   "@coaction/valtio": {
     "files": {
       "dist/index.mjs": {
-        "baselineGzipBytes": 1412,
-        "maxGzipBytes": 1600
+        "baselineGzipBytes": 1404,
+        "maxGzipBytes": 1550
       },
       "dist/index.js": {
-        "baselineGzipBytes": 1557,
-        "maxGzipBytes": 1750
+        "baselineGzipBytes": 1546,
+        "maxGzipBytes": 1700
       }
     }
   },
   "@coaction/vue": {
     "files": {
       "dist/index.mjs": {
-        "baselineGzipBytes": 1284,
-        "maxGzipBytes": 1450
+        "baselineGzipBytes": 1280,
+        "maxGzipBytes": 1400
       },
       "dist/index.js": {
-        "baselineGzipBytes": 1415,
-        "maxGzipBytes": 1600
+        "baselineGzipBytes": 1410,
+        "maxGzipBytes": 1550
       }
     }
   },
   "@coaction/xstate": {
     "files": {
       "dist/index.mjs": {
-        "baselineGzipBytes": 1075,
-        "maxGzipBytes": 1200
+        "baselineGzipBytes": 1021,
+        "maxGzipBytes": 1150
       },
       "dist/index.js": {
-        "baselineGzipBytes": 1221,
-        "maxGzipBytes": 1350
+        "baselineGzipBytes": 1167,
+        "maxGzipBytes": 1300
       }
     }
   },
   "@coaction/yjs": {
     "files": {
       "dist/index.mjs": {
-        "baselineGzipBytes": 5363,
-        "maxGzipBytes": 5900
+        "baselineGzipBytes": 5364,
+        "maxGzipBytes": 5800
       },
       "dist/index.js": {
-        "baselineGzipBytes": 5830,
-        "maxGzipBytes": 6450
+        "baselineGzipBytes": 5833,
+        "maxGzipBytes": 6300
       }
     }
   },
   "@coaction/zustand": {
     "files": {
       "dist/index.mjs": {
-        "baselineGzipBytes": 1119,
-        "maxGzipBytes": 1250
+        "baselineGzipBytes": 1108,
+        "maxGzipBytes": 1200
       },
       "dist/index.js": {
-        "baselineGzipBytes": 1180,
+        "baselineGzipBytes": 1169,
         "maxGzipBytes": 1300
       }
     }
@@ -254,28 +254,28 @@
   "coaction": {
     "files": {
       "dist/index.mjs": {
-        "baselineGzipBytes": 17742,
-        "maxGzipBytes": 18800
+        "baselineGzipBytes": 18083,
+        "maxGzipBytes": 19550
       },
       "dist/index.js": {
-        "baselineGzipBytes": 17838,
-        "maxGzipBytes": 18900
+        "baselineGzipBytes": 18183,
+        "maxGzipBytes": 19650
       },
       "dist/shared.mjs": {
-        "baselineGzipBytes": 24884,
-        "maxGzipBytes": 26400
+        "baselineGzipBytes": 24883,
+        "maxGzipBytes": 26900
       },
       "dist/shared.js": {
-        "baselineGzipBytes": 24985,
-        "maxGzipBytes": 26500
+        "baselineGzipBytes": 24988,
+        "maxGzipBytes": 27000
       },
       "dist/adapter.mjs": {
-        "baselineGzipBytes": 11560,
-        "maxGzipBytes": 12300
+        "baselineGzipBytes": 11201,
+        "maxGzipBytes": 12100
       },
       "dist/adapter.js": {
-        "baselineGzipBytes": 12062,
-        "maxGzipBytes": 12800
+        "baselineGzipBytes": 11756,
+        "maxGzipBytes": 12700
       }
     }
   }
