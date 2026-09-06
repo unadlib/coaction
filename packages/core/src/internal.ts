@@ -17,8 +17,15 @@ export type StateSchema = {
 
 /** One invocation of an action on a mutable instance. */
 export type MutableActionContext = {
-  /** Whether the action is inside its synchronous body right now. */
-  running: boolean;
+  /**
+   * Whether the action has started and not yet finished.
+   *
+   * Not the same as being on the stack. An async action suspended at an
+   * `await` is not running and is still going to write again, and the
+   * difference between those two is what decides whether it is handed a
+   * transaction to write into.
+   */
+  active: boolean;
 };
 
 export interface Internal<T extends CreateState = CreateState> {
@@ -39,20 +46,12 @@ export interface Internal<T extends CreateState = CreateState> {
    */
   finalizeDraft: () => [T, Patches, Patches];
   /**
-   * The innermost mutable-instance action inside its synchronous body.
-   *
-   * An action that opens a transaction has to know who to hand one back to on
-   * the way out: an enclosing action still on the stack goes on writing and
-   * needs one, an action suspended at an `await` does not.
-   */
-  mutableActionContext?: MutableActionContext;
-  /**
    * Which action owns the open draft.
    *
    * There is one `internal.rootState`, so one transaction at a time, and only
-   * its owner may finalize it. Ownership moves: a nested action takes it on
-   * entry and hands it back on exit, and an action suspended at an `await`
-   * loses it to whoever runs next.
+   * its owner may finalize it. Ownership moves: an action takes it from
+   * whoever held it on entry, and hands one back to them on the way out if
+   * they have not finished.
    */
   mutableTransactionOwner?: MutableActionContext;
   /**

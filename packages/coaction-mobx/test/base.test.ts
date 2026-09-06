@@ -5,7 +5,9 @@ import {
 } from 'data-transport';
 import { bindMobx } from '../src';
 import { makeAutoObservable, autorun, observable, runInAction } from 'mobx';
-import { create, type Slices, type Slice } from 'coaction';
+import { create, type Slices, type Slice, type Store } from 'coaction';
+import { onStoreCommit, type StoreCommit } from 'coaction/adapter';
+import { apply as applyPatches } from 'mutative';
 import { isDraft } from 'mutative';
 
 test('base', () => {
@@ -422,24 +424,44 @@ test('an overlapping action that throws does not take the others down', async ()
  *
  * A nested action's caller is still on the stack and still writing, so it has
  * to be handed a fresh transaction. An action suspended at an `await` is not
- * running at all, so handing one back leaves a draft nobody will finalize:
- * `getPureState()` starts returning a draft, and the enclosing action's
- * remaining writes are never committed -- they reach the MobX instance, so the
- * state looks right, but no patch, no subscriber and no sync mutation ever
- * mentions them.
+ * running at all -- but it is still going to write again, and a write with no
+ * transaction open goes straight to the MobX instance. The state comes out
+ * right and the patch stream is missing it, which is the failure that looks
+ * like no failure at all.
  *
- * These cover both, and every mixture of the two.
+ * These cover every mixture of the two, and they check the patch stream rather
+ * than the state, because the state was never the part that broke.
  */
-const trackCommits = (store: {
+const track = (store: {
   subscribe: (fn: () => void) => void;
   getPureState: () => unknown;
 }) => {
-  const commits: unknown[] = [];
-  store.subscribe(() =>
-    commits.push(JSON.parse(JSON.stringify(store.getPureState())))
-  );
-  return commits;
+  const commits: StoreCommit[] = [];
+  const states: unknown[] = [];
+  const initial = clone(store.getPureState());
+  onStoreCommit(store as Store<any>, (commit) => commits.push(commit));
+  store.subscribe(() => states.push(clone(store.getPureState())));
+  return {
+    commits,
+    states,
+    /**
+     * Replay every commit from the state the store started in.
+     *
+     * `subscribe` sees the state after each notification, which is what the
+     * application sees and what a wrong test would check. This is what
+     * `@coaction/history`, `@coaction/sync` and any future devtool see, and
+     * the two agreeing is the invariant: a write missing from the patch
+     * stream is invisible to all of them and to nothing else.
+     */
+    replayed: () =>
+      commits.reduce(
+        (state, commit) => applyPatches(state, commit.patches),
+        initial as object
+      )
+  };
 };
+
+const clone = (value: unknown) => JSON.parse(JSON.stringify(value));
 
 test('a nested action hands the transaction back to its caller', () => {
   const useStore = create<{
@@ -465,7 +487,7 @@ test('a nested action hands the transaction back to its caller', () => {
       ),
     { name: 'nested-sync', enablePatches: true }
   );
-  const commits = trackCommits(useStore);
+  const { states, replayed } = track(useStore);
 
   useStore.getState().outer();
 
@@ -473,11 +495,12 @@ test('a nested action hands the transaction back to its caller', () => {
   expect(useStore.getState().b).toBe(1);
   // The write after the nested call is committed, not just applied to the
   // instance: three commits, and the last one carries it.
-  expect(commits).toEqual([
+  expect(states).toEqual([
     { a: 1, b: 0 },
     { a: 1, b: 1 },
     { a: 2, b: 1 }
   ]);
+  expect(replayed()).toEqual({ a: 2, b: 1 });
   expect(isDraft(useStore.getPureState())).toBeFalsy();
   useStore.destroy();
 });
@@ -510,12 +533,13 @@ test('nesting two deep still commits every write', () => {
       ),
     { name: 'nested-deep', enablePatches: true }
   );
-  const commits = trackCommits(useStore);
+  const { states, replayed } = track(useStore);
 
   useStore.getState().outer();
 
   expect(useStore.getState().n).toBe(122);
-  expect(commits[commits.length - 1]).toEqual({ n: 122 });
+  expect(states[states.length - 1]).toEqual({ n: 122 });
+  expect(replayed()).toEqual({ n: 122 });
   expect(isDraft(useStore.getPureState())).toBeFalsy();
   useStore.destroy();
 });
@@ -547,12 +571,13 @@ test('a nested action that throws leaves the caller able to finish', () => {
       ),
     { name: 'nested-throwing', enablePatches: true }
   );
-  const commits = trackCommits(useStore);
+  const { states, replayed } = track(useStore);
 
   useStore.getState().outer();
 
   expect(useStore.getState().n).toBe(12);
-  expect(commits[commits.length - 1]).toEqual({ n: 12 });
+  expect(states[states.length - 1]).toEqual({ n: 12 });
+  expect(replayed()).toEqual({ n: 12 });
   expect(isDraft(useStore.getPureState())).toBeFalsy();
   useStore.destroy();
 });
@@ -580,12 +605,13 @@ test('an async action calls a nested one after its await', async () => {
       ),
     { name: 'nested-after-await', enablePatches: true }
   );
-  const commits = trackCommits(useStore);
+  const { states, replayed } = track(useStore);
 
   await useStore.getState().outer();
 
   expect(useStore.getState().n).toBe(12);
-  expect(commits[commits.length - 1]).toEqual({ n: 12 });
+  expect(states[states.length - 1]).toEqual({ n: 12 });
+  expect(replayed()).toEqual({ n: 12 });
   expect(isDraft(useStore.getPureState())).toBeFalsy();
   useStore.destroy();
 });
@@ -616,13 +642,14 @@ test('a sync action calls an async one and does not wait for it', async () => {
       ),
     { name: 'nested-async-inner', enablePatches: true }
   );
-  const commits = trackCommits(useStore);
+  const { states, replayed } = track(useStore);
 
   await useStore.getState().outer();
   await Promise.resolve();
 
   expect(useStore.getState().n).toBe(22);
-  expect(commits[commits.length - 1]).toEqual({ n: 22 });
+  expect(states[states.length - 1]).toEqual({ n: 22 });
+  expect(replayed()).toEqual({ n: 22 });
   expect(isDraft(useStore.getPureState())).toBeFalsy();
   useStore.destroy();
 });
@@ -658,7 +685,7 @@ test('a nested pair runs while an unrelated async action is suspended', async ()
       ),
     { name: 'nested-during-async', enablePatches: true }
   );
-  const commits = trackCommits(useStore);
+  const { states, replayed } = track(useStore);
 
   const pending = useStore.getState().suspended();
   await Promise.resolve();
@@ -667,7 +694,114 @@ test('a nested pair runs while an unrelated async action is suspended', async ()
   await expect(pending).resolves.toBeUndefined();
 
   expect(useStore.getState().n).toBe(2111);
-  expect(commits[commits.length - 1]).toEqual({ n: 2111 });
+  expect(states[states.length - 1]).toEqual({ n: 2111 });
+  expect(replayed()).toEqual({ n: 2111 });
+  expect(isDraft(useStore.getPureState())).toBeFalsy();
+  useStore.destroy();
+});
+
+/**
+ * The failure that looks like no failure at all.
+ *
+ * An async action suspended at an `await` loses its transaction to whatever
+ * runs next. When that is a second action which finishes completely, nothing
+ * held a transaction by the time the first one resumed, so its remaining writes
+ * went straight to the MobX instance. The instance is the state, so
+ * `getState()`, `subscribe()` and the rendered UI were all correct -- and the
+ * patch stream was missing a write, which is what `@coaction/history`,
+ * `@coaction/sync` and anything else reading commits are built on.
+ *
+ * Replaying the commits is the check. Asserting on the state cannot see it.
+ */
+test('a write after an await reaches the patch stream, not only the instance', async () => {
+  let release: (() => void) | undefined;
+  const useStore = create<{
+    n: number;
+    suspended: () => Promise<void>;
+    interrupt: () => void;
+  }>(
+    () =>
+      makeAutoObservable(
+        bindMobx({
+          n: 0,
+          async suspended() {
+            this.n += 1;
+            await new Promise<void>((resolve) => {
+              release = resolve;
+            });
+            this.n += 10;
+          },
+          interrupt() {
+            this.n += 100;
+          }
+        })
+      ),
+    { name: 'commit-hole', enablePatches: true }
+  );
+  const { replayed } = track(useStore);
+
+  const pending = useStore.getState().suspended();
+  await Promise.resolve();
+  // Runs and finishes entirely inside the first action's await.
+  useStore.getState().interrupt();
+  release!();
+  await expect(pending).resolves.toBeUndefined();
+
+  expect(useStore.getState().n).toBe(111);
+  // Without the hand-back this was 101: the state was right and the `+10` had
+  // never been committed.
+  expect(replayed()).toEqual({ n: 111 });
+  expect(isDraft(useStore.getPureState())).toBeFalsy();
+  useStore.destroy();
+});
+
+test('two async actions interrupted by a third still replay to the state', async () => {
+  const gate: Record<string, () => void> = {};
+  const useStore = create<{
+    n: number;
+    first: () => Promise<void>;
+    second: () => Promise<void>;
+    interrupt: () => void;
+  }>(
+    () =>
+      makeAutoObservable(
+        bindMobx({
+          n: 0,
+          async first() {
+            this.n += 1;
+            await new Promise<void>((resolve) => {
+              gate.first = resolve;
+            });
+            this.n += 10;
+          },
+          async second() {
+            this.n += 100;
+            await new Promise<void>((resolve) => {
+              gate.second = resolve;
+            });
+            this.n += 1000;
+          },
+          interrupt() {
+            this.n += 10000;
+          }
+        })
+      ),
+    { name: 'commit-hole-three', enablePatches: true }
+  );
+  const { replayed } = track(useStore);
+
+  const a = useStore.getState().first();
+  await Promise.resolve();
+  const b = useStore.getState().second();
+  await Promise.resolve();
+  useStore.getState().interrupt();
+  gate.first();
+  await expect(a).resolves.toBeUndefined();
+  gate.second();
+  await expect(b).resolves.toBeUndefined();
+
+  expect(useStore.getState().n).toBe(11111);
+  expect(replayed()).toEqual({ n: 11111 });
   expect(isDraft(useStore.getPureState())).toBeFalsy();
   useStore.destroy();
 });

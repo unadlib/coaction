@@ -105,22 +105,22 @@ export const createLocalAction = <T extends CreateState>({
         // heard of.
         // Exactly one action owns the open draft, and ownership moves.
         //
-        // A nested action takes it on entry -- committing what the enclosing
-        // action had written so far -- and hands a fresh one back on the way
-        // out, because the enclosing action is still on the stack and still
-        // writing. An action suspended at an `await` is not on the stack, so
-        // it gets nothing back: whoever runs next takes ownership, and the
-        // suspended action's writes after the await join that transaction and
-        // are committed with it.
+        // An action takes the transaction from whoever held it on entry --
+        // committing what they had written so far -- and hands a fresh one
+        // back to them on the way out, so long as they have not finished. That
+        // covers a nested call, whose caller is still on the stack and still
+        // writing, and equally an async action suspended at an `await`, which
+        // is not on the stack and is still going to write again.
         //
-        // Ownership is what says who may finalize. Without it an action
-        // finalized whatever transaction it found on resume, revoking a draft
-        // another action was still writing through. Keyed to the transaction
-        // rather than to the action, a nested action's hand-back belonged to
-        // nobody, and the enclosing action's remaining writes were never
-        // committed at all.
-        const enclosing = internal.mutableActionContext;
-        const context: MutableActionContext = { running: true };
+        // Keying the hand-back to being on the stack instead is what let a
+        // write escape entirely. A suspended action got nothing back, so its
+        // writes after the `await` went straight to the mutable instance with
+        // no draft to record them: the state was right, and the patch stream
+        // was missing them. Replaying the commits rebuilt a different state
+        // than the store held, and history, sync and anything else reading
+        // patches never heard about that write at all.
+        const displaced = internal.mutableTransactionOwner;
+        const context: MutableActionContext = { active: true };
         const closeTransaction = () => {
           handleDraft(store, internal);
           internal.mutableTransactionOwner = undefined;
@@ -135,12 +135,13 @@ export const createLocalAction = <T extends CreateState>({
           internal.mutableTransactionOwner = owner;
         };
         const handleResult = () => {
+          context.active = false;
           if (internal.mutableTransactionOwner !== context) {
             return;
           }
           closeTransaction();
-          if (enclosing?.running) {
-            openTransactionFor(enclosing);
+          if (displaced?.active) {
+            openTransactionFor(displaced);
           }
         };
         if (isDraft(internal.rootState)) {
@@ -150,7 +151,6 @@ export const createLocalAction = <T extends CreateState>({
           closeTransaction();
         }
         openTransactionFor(context);
-        internal.mutableActionContext = context;
         let asyncResult: Promise<unknown> | undefined;
         try {
           result = fn.apply(getActionTarget(store, sliceKey), args);
@@ -158,8 +158,6 @@ export const createLocalAction = <T extends CreateState>({
             asyncResult = result;
           }
         } finally {
-          internal.mutableActionContext = enclosing;
-          context.running = false;
           if (!asyncResult) {
             handleResult();
           }
