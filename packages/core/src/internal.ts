@@ -154,6 +154,17 @@ export interface Internal<T extends CreateState = CreateState> {
   /** Validate an adapter replacement source before reading its values. */
   validateReplacementSource?: (state: unknown) => void;
   /**
+   * How an external adapter writes a change into its own runtime.
+   *
+   * This is the whole of an adapter's job at the apply boundary. `store.apply`
+   * stays Coaction's: it works out the patch pair, runs commit validators,
+   * calls this, and publishes the commit. An adapter that replaced
+   * `store.apply` instead was taking on commit semantics it did not want and
+   * could not get right on its own -- and it silently discarded whatever
+   * middleware had put there, because middleware runs first.
+   */
+  externalApply?: (state?: T, patches?: Patches) => void;
+  /**
    * Commit patches already checked by the native updater.
    *
    * `inversePatches` is the pair's other half as the caller has it, after any

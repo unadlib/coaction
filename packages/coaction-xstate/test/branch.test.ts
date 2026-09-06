@@ -104,11 +104,11 @@ test('supports actor-driven updates and unsubscribes on destroy', async () => {
   ).toThrow(
     'XState binding state cannot be mutated directly. Please use actor events.'
   );
-  expect(() =>
-    store.apply({
-      count: 2
-    })
-  ).toThrow(
+  // The refusal lives on `assertMutationAllowed`, which core calls from
+  // `apply`. This store is a stub whose `apply` is a spy, so it is asked
+  // directly -- the end-to-end refusal through a real store is asserted by the
+  // commit conformance suite.
+  expect(() => (internal as any).assertMutationAllowed('apply')).toThrow(
     'XState binding state cannot be mutated directly. Please use actor events.'
   );
   store.destroy();

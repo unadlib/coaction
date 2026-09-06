@@ -2,7 +2,6 @@ import { bindSymbol } from './constant';
 import type { CreateState, ISlices, Slice, Store } from './interface';
 import { Internal } from './internal';
 import { getOwnEnumerableKeys, isUnsafeKey, setOwnEnumerable } from './utils';
-import { wrapExternalApply } from './wrapExternalApply';
 
 type StateFactory<T extends CreateState> = (
   setState: Store<T>['setState'],
@@ -91,7 +90,6 @@ export const getInitialState = <T extends CreateState>(
       }
       const binder = state[bindSymbol]!;
       const rawState = binder.bind(state);
-      const applyBeforeBind = store.apply;
       binder.handleStore(
         store as unknown as Store<object>,
         rawState,
@@ -99,19 +97,6 @@ export const getInitialState = <T extends CreateState>(
         internal as unknown as Internal<object>,
         key
       );
-      // Only when the adapter actually replaced `store.apply` with something
-      // that writes to its own runtime, because commit semantics are not its
-      // job. A binder that left `apply` alone is already on the commit
-      // pipeline; wrapping it regardless put the pipeline in front of itself,
-      // and every `apply` published twice and validated twice -- one commit per
-      // transition for MobX, Valtio and Pinia, which do replace it, and two for
-      // Zustand, Redux and Jotai, which do not.
-      if (store.apply !== applyBeforeBind) {
-        wrapExternalApply(
-          store as unknown as Store<object>,
-          internal as unknown as Internal<object>
-        );
-      }
       delete state[bindSymbol];
       return rawState;
     }

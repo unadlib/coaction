@@ -45,60 +45,29 @@ An official adapter must:
 An adapter may replace store methods, but the resulting object must remain a
 valid Coaction store and compose with middleware.
 
-`store.apply` is the one Coaction wraps back. An adapter replaces it because
-only the adapter knows how to get a change onto its own runtime; what it does
-not have to know is that a transition through `apply` is a commit. Core works
-out the patch pair before the change, runs commit validators, calls what the
-adapter installed, and publishes the commit. An adapter therefore implements
-only the write, and must not publish a commit of its own for it.
+`store.apply` belongs to Coaction, for every store. An adapter says how to
+write a change into its own runtime by setting `internal.externalApply`, and
+that is the whole of its job at this boundary: Coaction works out the patch pair
+before the change, runs commit validators, calls the writer, and publishes the
+commit.
 
-Core wraps it only when the adapter actually replaced it. `@coaction/mobx`,
-`@coaction/valtio`, `@coaction/pinia` and `@coaction/xstate` do;
-`@coaction/zustand`, `@coaction/redux` and `@coaction/jotai` bind state without
-touching `apply`, and are already on the pipeline. Wrapping those would put the
-pipeline in front of itself and publish everything twice.
+An adapter used to replace `store.apply` outright, which handed it commit
+semantics it did not want. None of them published a commit, so `store.apply()`
+on a MobX, Valtio or Pinia store changed the state and told nobody; putting the
+pipeline back around whatever they installed then produced three separate ways
+to publish the same transition twice. And because middleware runs before the
+binder, replacing `apply` silently discarded anything middleware had wrapped it
+with.
 
-### Replacing `apply` discards what middleware put there
+### Middleware and the apply boundary
 
-Middleware runs before the binder. A middleware that wraps `store.apply` — to
-log it, to inspect the patches — has its wrapper overwritten by an adapter that
-replaces `apply` outright, and nothing reports it:
+Middleware runs before the binder, and `store.apply` is public API. A middleware
+that wraps it — to log it, to inspect the patches — now keeps working on a store
+built through any binder, because the binder no longer replaces it.
 
-```ts
-create(
-  () =>
-    makeAutoObservable(
-      bindMobx({
-        /* … */
-      })
-    ),
-  {
-    middlewares: [
-      (store) => {
-        const inner = store.apply;
-        // Gone. `bindMobx` replaces `apply` after this runs.
-        store.apply = (state, patches) => {
-          record(patches);
-          return inner(state, patches);
-        };
-        return store;
-      }
-    ]
-  }
-);
-```
-
-No middleware shipped here does that — `@coaction/history` and `@coaction/sync`
-observe transitions with `onStoreCommit`, and `@coaction/logger` and
-`@coaction/persist` use `subscribe` and `trace` — which is why nothing is
-broken today. **Middleware that wants to observe transitions should use
-`onStoreCommit`,** which sees every one of them, from a native store and a
-mutable adapter alike, and cannot be overwritten.
-
-The shape underneath this is that `store.apply` is public API being used as an
-adapter's extension point. The way out is for it to stay Coaction's, with an
-adapter registering only how to write into its own runtime — a change to the
-adapter contract itself, not to 3.x.
+`onStoreCommit` is still the better hook for observing transitions: it sees
+every one of them whatever produced it, including the ones that never go through
+`apply` at all.
 
 ## Async actions on a mutable instance
 

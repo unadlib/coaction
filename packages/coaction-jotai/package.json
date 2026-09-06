@@ -1,6 +1,6 @@
 {
   "name": "@coaction/jotai",
-  "version": "3.2.1",
+  "version": "4.0.0",
   "description": "A Coaction integration tool for Jotai",
   "keywords": [
     "atom",
@@ -55,7 +55,7 @@
     "jotai": "^2.18.1"
   },
   "peerDependencies": {
-    "coaction": "^3.2.1",
+    "coaction": "^4.0.0",
     "jotai": "^2.0.0"
   },
   "authors": [

@@ -104,6 +104,32 @@ export const runBinderCommitConformance = ({
       });
     });
 
+    test('middleware that wraps apply still runs', () => {
+      // `store.apply` belongs to Coaction for every binder now, so a wrapper
+      // middleware put there survives. When an adapter replaced `apply`
+      // outright it discarded the wrapper without a word, because middleware
+      // runs first.
+      const { store, cleanup } = createStore();
+      const wrapped: number[] = [];
+      const inner = store.apply;
+      store.apply = ((state?: unknown, patches?: unknown) => {
+        wrapped.push(1);
+        return (inner as (...args: unknown[]) => void)(state, patches);
+      }) as typeof store.apply;
+      const commits: StoreCommit[] = [];
+      onStoreCommit(store, (commit) => commits.push(commit));
+
+      store.apply(store.getPureState(), [
+        { op: 'replace', path: ['count'], value: 3 }
+      ]);
+
+      expect(wrapped).toHaveLength(1);
+      expect(commits).toHaveLength(1);
+      expect(store.getState().count).toBe(3);
+      store.destroy();
+      cleanup?.();
+    });
+
     test('a sequence of both forms replays to the state it produced', () => {
       withStore((store, commits) => {
         store.apply(store.getPureState(), [

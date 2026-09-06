@@ -18,31 +18,32 @@ import {
 } from './storeCommit';
 
 /**
- * Put an adapter's `store.apply` back on the commit pipeline.
+ * Commit a transition whose write goes into an external runtime.
  *
- * An external adapter replaces `apply` outright, because only it knows how to
- * get a change onto its own runtime. What it should not also have to know is
- * that a transition through `apply` is a commit -- and none of them did, so
- * `store.apply()` on a MobX, Valtio or Pinia store changed the state and told
- * nobody. `@coaction/history` had nothing to undo, `@coaction/sync` never
- * queued it, and `Store.apply`'s own contract said the opposite.
+ * `store.apply` stays Coaction's for every store. When an adapter has said how
+ * to write into its runtime, this is what `apply` does instead of assigning
+ * state: work out the patch pair before the change, let commit validators
+ * refuse it while refusing still costs nothing, ask the adapter to make the
+ * change, and publish the commit.
  *
- * Three adapters implementing commit semantics separately is how they drift, so
- * this wraps whatever they installed: the pair is worked out before the change,
- * validators get their say while refusing still costs nothing, the adapter is
- * asked to make the change, and the commit is published. The adapter keeps only
- * the part that is actually its own.
+ * An adapter used to replace `store.apply` outright, which made commit
+ * semantics its problem. None of them got it right -- `store.apply()` on a
+ * MobX, Valtio or Pinia store changed the state and told nobody -- and putting
+ * the pipeline back around whatever they installed produced three separate ways
+ * to publish the same transition twice before it settled. It also discarded
+ * anything middleware had wrapped `apply` with, since middleware runs first.
+ * The adapter now supplies only the write.
  */
-export const wrapExternalApply = <T extends CreateState>(
+export const applyThroughExternalRuntime = <T extends CreateState>(
   store: Store<T>,
-  internal: Internal<T>
+  internal: Internal<T>,
+  externalApply: NonNullable<Internal<T>['externalApply']>
 ) => {
-  const adapterApply = store.apply;
-  store.apply = ((state?: T, patches?: Patches) => {
+  return ((state?: T, patches?: Patches) => {
     const observing =
       hasStoreCommitPublishers(store) || hasStoreCommitValidators(store);
     if (!observing || ownsStoreCommit(store)) {
-      adapterApply(state, patches);
+      externalApply(state, patches);
       return;
     }
     // A mutable instance has no previous value to hold on to, so the pair is
@@ -75,7 +76,7 @@ export const wrapExternalApply = <T extends CreateState>(
       'store.apply() inverse patches'
     );
     if (!safePatches.length && !safeInversePatches.length) {
-      adapterApply(state, patches);
+      externalApply(state, patches);
       return;
     }
     validateStoreCommit(store, {
@@ -84,7 +85,7 @@ export const wrapExternalApply = <T extends CreateState>(
       inversePatches: safeInversePatches,
       source: getStoreCommitSource(store, 'external')
     });
-    adapterApply(state, patches);
+    externalApply(state, patches);
     internal.emitPatches?.(safePatches);
     publishStoreCommit(store, {
       state: store.getPureState(),

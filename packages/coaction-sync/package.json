@@ -1,6 +1,6 @@
 {
   "name": "@coaction/sync",
-  "version": "3.2.1",
+  "version": "4.0.0",
   "description": "Commit-based local-first synchronization for Coaction",
   "keywords": [
     "coaction",
@@ -118,7 +118,7 @@
     "fake-indexeddb": "^6.2.5"
   },
   "peerDependencies": {
-    "coaction": "^3.2.1"
+    "coaction": "^4.0.0"
   },
   "authors": [
     "Michael Lin <unadlib@gmail.com> (https://github.com/unadlib)"

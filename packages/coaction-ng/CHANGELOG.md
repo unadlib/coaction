@@ -1,5 +1,19 @@
 # @coaction/ng
 
+## 4.0.0
+
+### Patch Changes
+
+- Updated dependencies
+- Updated dependencies [d393227]
+- Updated dependencies [e58179a]
+- Updated dependencies [8dfbe1b]
+- Updated dependencies [fa03a28]
+- Updated dependencies [ccea3c9]
+- Updated dependencies [e58179a]
+- Updated dependencies [3be75d1]
+  - coaction@4.0.0
+
 ## 3.2.1
 
 ## 3.2.0

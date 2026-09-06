@@ -72,13 +72,10 @@ export const bindXState = createBinder<
       }
       throw new Error(unsupportedMutationMessage);
     };
-    const baseApply = store.apply.bind(store);
-    store.apply = (state, patches) => {
-      if (!isApplyingActorSnapshot) {
-        throw new Error(unsupportedMutationMessage);
-      }
-      return baseApply(state, patches);
-    };
+    // No writer of its own. An actor's context is replaced wholesale through
+    // `replaceExternalStoreState` below, so the ordinary `store.apply` does the
+    // work; all this binding adds is the refusal above, which
+    // `assertMutationAllowed` already carries.
     const applyActorSnapshot = (context: Record<PropertyKey, unknown>) => {
       isApplyingActorSnapshot = true;
       try {

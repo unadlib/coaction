@@ -20,6 +20,8 @@ type StoreWithSubscriptions = Store<object> & {
 };
 
 type MobxInternal = {
+  /** How this adapter writes a change into its own runtime. See Internal. */
+  externalApply?: (state?: any, patches?: any) => void;
   getTransportState?: () => unknown;
   rootState?: object;
   toMutableRaw?: (key: object) => object | undefined;
@@ -225,7 +227,9 @@ const handleStore = (
     baseDestroy();
   };
   internal.actMutable = runInAction;
-  store.apply = (state = store.getPureState(), patches) => {
+  // Only the write. `store.apply` stays Coaction's, so it keeps the commit
+  // semantics and whatever middleware wrapped it before this ran.
+  internal.externalApply = (state = store.getPureState(), patches) => {
     internal.assertAlive?.('apply');
     const previousSnapshot = lastSnapshot ?? snapshotPureState(store);
     isApplyingCoactionState = true;

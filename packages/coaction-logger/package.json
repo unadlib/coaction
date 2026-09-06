@@ -1,6 +1,6 @@
 {
   "name": "@coaction/logger",
-  "version": "3.2.1",
+  "version": "4.0.0",
   "description": "A logger middleware for Coaction.",
   "keywords": [
     "coaction"
@@ -52,7 +52,7 @@
     "mutative": "^1.3.0"
   },
   "peerDependencies": {
-    "coaction": "^3.2.1"
+    "coaction": "^4.0.0"
   },
   "authors": [
     "Michael Lin <unadlib@gmail.com> (https://github.com/unadlib)"

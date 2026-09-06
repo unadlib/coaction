@@ -1,5 +1,48 @@
 # @coaction/pinia
 
+## 4.0.0
+
+### Major Changes
+
+- `store.apply` belongs to Coaction on every store, and an external adapter now
+  says only how to write into its own runtime.
+
+  An adapter used to replace `store.apply` outright. That handed it commit
+  semantics it did not want: none of them published a commit, so `store.apply()`
+  on a MobX, Valtio or Pinia store changed the state and told nobody —
+  `@coaction/history` had nothing to undo and `@coaction/sync` never queued it.
+  Putting the commit pipeline back around whatever an adapter installed then
+  produced three separate ways to publish the same transition twice, each found
+  and fixed in turn. And because middleware runs before the binder, replacing
+  `apply` silently discarded anything middleware had wrapped it with.
+
+  An adapter now sets `internal.externalApply` — how to get a change onto its
+  runtime, and nothing else. Coaction works out the patch pair before the change,
+  runs commit validators, calls the writer, and publishes the commit, in one place
+  for every adapter. Middleware that wraps `store.apply` keeps working on stores
+  built through a binder.
+
+  **If you maintain a third-party adapter**, replace `store.apply = writer` with
+  `internal.externalApply = writer`. The signature is unchanged. Do not publish a
+  commit from it; Coaction does that.
+
+  `store.apply(state, patches)` also now requires `state` to be the state the
+  store holds — omit it, or pass `getPureState()`. A patch pair describes a change
+  to the current state, so applying it to anything else left the store somewhere
+  its own commits did not lead.
+
+### Patch Changes
+
+- Updated dependencies
+- Updated dependencies [d393227]
+- Updated dependencies [e58179a]
+- Updated dependencies [8dfbe1b]
+- Updated dependencies [fa03a28]
+- Updated dependencies [ccea3c9]
+- Updated dependencies [e58179a]
+- Updated dependencies [3be75d1]
+  - coaction@4.0.0
+
 ## 3.2.1
 
 ## 3.2.0

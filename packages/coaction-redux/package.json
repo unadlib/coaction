@@ -1,6 +1,6 @@
 {
   "name": "@coaction/redux",
-  "version": "3.2.1",
+  "version": "4.0.0",
   "description": "A Coaction integration tool for Redux Toolkit",
   "keywords": [
     "coaction",
@@ -56,7 +56,7 @@
   },
   "peerDependencies": {
     "@reduxjs/toolkit": "^2.0.0",
-    "coaction": "^3.2.1"
+    "coaction": "^4.0.0"
   },
   "authors": [
     "Michael Lin <unadlib@gmail.com> (https://github.com/unadlib)"

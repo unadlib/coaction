@@ -30,6 +30,8 @@ type PiniaStoreInstance = {
 };
 
 type PiniaInternal = {
+  /** How this adapter writes a change into its own runtime. See Internal. */
+  externalApply?: (state?: any, patches?: any) => void;
   getTransportState?: () => unknown;
   rootState?: object;
   toMutableRaw?: (key: object) => PiniaStoreInstance | undefined;
@@ -183,7 +185,9 @@ const handleStore = (
       store._destroyers = undefined;
       baseDestroy();
     };
-    store.apply = (nextState = store.getPureState(), patches) => {
+    // Only the write. `store.apply` stays Coaction's, so it keeps the commit
+    // semantics and whatever middleware wrapped it before this ran.
+    internal.externalApply = (nextState = store.getPureState(), patches) => {
       internal.assertAlive?.('apply');
       const previousSnapshot = lastSnapshot ?? snapshotPureState(store);
       isApplyingCoactionState = true;

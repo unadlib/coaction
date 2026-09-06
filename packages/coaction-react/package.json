@@ -1,6 +1,6 @@
 {
   "name": "@coaction/react",
-  "version": "3.2.1",
+  "version": "4.0.0",
   "description": "A Coaction integration tool for React",
   "keywords": [
     "coaction",
@@ -82,7 +82,7 @@
   },
   "peerDependencies": {
     "@types/react": "^17.0.0 || ^18.0.0 || ^19.0.0",
-    "coaction": "^3.2.1",
+    "coaction": "^4.0.0",
     "react": "^17.0.0 || ^18.0.0 || ^19.0.0"
   },
   "authors": [

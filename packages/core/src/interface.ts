@@ -141,11 +141,11 @@ export interface Store<T extends ISlices = ISlices> {
    * applying it to anything else leaves the store somewhere its own commits do
    * not lead, and that is refused.
    *
-   * Middleware should not wrap this to observe transitions. An external adapter
-   * replaces it outright with a writer for its own runtime, and does so after
-   * middleware has run, so the wrapper is discarded without a word.
-   * `onStoreCommit` sees every transition, on a native store and a mutable
-   * adapter alike, and nothing can overwrite it.
+   * This belongs to Coaction on every store, including one built through an
+   * external adapter -- the adapter supplies only how to write into its own
+   * runtime -- so middleware that wraps it keeps working. `onStoreCommit` is
+   * still the better hook for observing transitions: it sees every one of them,
+   * including those that never go through `apply`.
    */
   apply: (state?: T, patches?: Patches) => void;
   /**

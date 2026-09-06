@@ -160,15 +160,19 @@ test('reuses internals, supports apply branches and cleans up subscriptions', as
   watcher1?.('after-unsubscribe');
   expect(listener).toHaveBeenCalledTimes(2);
 
-  (store as any).apply(rootState);
+  // The write into Pinia's own runtime, which is all the adapter installs now.
+  // `store.apply` belongs to core and reaches this through
+  // `internal.externalApply`; this store is a stub, so the writer is called
+  // directly.
+  (internal as any).externalApply(rootState);
   expect(rootState.count).toBe(0);
 
-  (store as any).apply({
+  (internal as any).externalApply({
     count: 3
   });
   expect(rootState.count).toBe(3);
 
-  (store as any).apply(rootState, [
+  (internal as any).externalApply(rootState, [
     {
       op: 'replace',
       path: ['count'],

@@ -1,6 +1,7 @@
 import { apply as applyWithMutative, type Patches } from 'mutative';
 import { applyMiddlewares } from './applyMiddlewares';
 import { invalidateReactivePaths } from './reactivePath';
+import { applyThroughExternalRuntime } from './externalApply';
 import {
   createImmutableSnapshotPatches,
   finalizeImmutableStateSnapshot
@@ -289,10 +290,23 @@ export const createStore = <T extends CreateState>(
       }
       return pair;
     };
+    let externalRuntimeApply: Store<T>['apply'] | undefined;
     const apply: Store<T>['apply'] = (
       state = internal.rootState as T,
       patches
     ) => {
+      // An adapter says how to write into its own runtime and nothing more.
+      // `apply` stays Coaction's, so middleware that wrapped it still runs and
+      // the commit is published in one place rather than in each adapter.
+      if (internal.externalApply) {
+        externalRuntimeApply ??= applyThroughExternalRuntime(
+          store,
+          internal,
+          internal.externalApply
+        );
+        externalRuntimeApply(state, patches);
+        return;
+      }
       // A transition through `apply` is published, in both of its forms. Only
       // the replacement form used to be, so `store.apply(state, patches)`
       // changed the state and told nobody: `@coaction/history` had nothing to
@@ -331,10 +345,10 @@ export const createStore = <T extends CreateState>(
       skipFinalValidation,
       inversePatches
     ) => {
-      if (store.apply !== apply) {
-        // Something replaced `apply` -- an adapter's writer, or a middleware
-        // wrapping it. Whoever called this publishes the commit for the
-        // transition, so whatever is behind it must not publish a second one.
+      if (store.apply !== apply || internal.externalApply) {
+        // Middleware has wrapped `apply`, or the write goes into an external
+        // runtime. Whoever called this publishes the commit for the transition,
+        // so nothing behind it may publish a second one.
         applyWithOwnStoreCommit(store, () => store.apply(state, patches));
         return false;
       }
