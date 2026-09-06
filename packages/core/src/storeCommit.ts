@@ -51,6 +51,7 @@ type StoreCommitRuntime = {
   listeners: Set<StoreCommitListener<any>>;
   prepareListeners: Set<StoreCommitPrepareListener<any>>;
   validators: Set<StoreCommitValidator<any>>;
+  ownedApply?: boolean;
   source?: StoreCommitSource;
   replay?: StorePatchReplayer<any>;
 };
@@ -206,6 +207,39 @@ export const replayStorePatches = <T extends CreateState>(
   return replay(transition, options.setState);
 };
 
+/** @internal */
+export const hasStoreCommitPublishers = (store: object) =>
+  Boolean(getStoreCommitRuntime(store)?.listeners.size);
+
+/**
+ * @internal
+ * Apply a patch pair whose commit the caller publishes itself.
+ *
+ * `store.apply(state, patches)` publishes what it applied, because otherwise a
+ * transition through it is invisible to everything reading commits. Three
+ * callers inside Coaction go through it on their way to publishing a commit of
+ * their own -- they have the source and the real inverse, `apply` would only
+ * have a derivation -- and they say so here rather than let it publish a second,
+ * worse description of the same transition.
+ */
+export const applyWithOwnStoreCommit = <T>(
+  store: object,
+  callback: () => T
+): T => {
+  const runtime = getStoreCommitRuntime(store, true)!;
+  const previous = runtime.ownedApply;
+  runtime.ownedApply = true;
+  try {
+    return callback();
+  } finally {
+    runtime.ownedApply = previous;
+  }
+};
+
+/** @internal */
+export const ownsStoreCommit = (store: object) =>
+  Boolean(getStoreCommitRuntime(store)?.ownedApply);
+
 /**
  * @internal
  * Validators need the patch pair too, so they count the same as listeners when
@@ -307,6 +341,7 @@ export const disposeStoreCommitRuntime = (store: object) => {
   runtime.listeners.clear();
   runtime.prepareListeners.clear();
   runtime.validators.clear();
+  runtime.ownedApply = undefined;
   runtime.source = undefined;
   runtime.replay = undefined;
 };

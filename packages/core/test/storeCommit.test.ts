@@ -1,3 +1,4 @@
+import { apply as applyPatches } from 'mutative';
 import { create, type Middleware, type Store } from '../src';
 import {
   onStoreCommit,
@@ -317,15 +318,19 @@ test('a validator is told the same thing about a commit as a listener', () => {
   store.getState().increment();
   store.setState({ count: 20 });
   store.apply({ ...store.getPureState(), count: 30 });
+  store.apply(store.getPureState(), [
+    { op: 'replace', path: ['count'], value: 40 }
+  ]);
   replayStorePatches(store, {
     patches: [{ op: 'replace', path: ['count'], value: 50 }],
-    inversePatches: [{ op: 'replace', path: ['count'], value: 30 }]
+    inversePatches: [{ op: 'replace', path: ['count'], value: 40 }]
   });
 
   expect(validated).toHaveLength(committed.length);
   expect(validated.map(({ source }) => source)).toEqual([
     'setState',
     'setState',
+    'external',
     'external',
     'replay'
   ]);
@@ -334,5 +339,74 @@ test('a validator is told the same thing about a commit as a listener', () => {
     expect(commit.patches).toEqual(committed[index].patches);
     expect(commit.inversePatches).toEqual(committed[index].inversePatches);
   });
+  store.destroy();
+});
+
+/**
+ * `store.apply()` has two forms and used to publish only one of them. A
+ * replacement produced a commit; a patch pair changed the state and told nobody.
+ * Anything built on the commit stream -- `@coaction/history`, `@coaction/sync`,
+ * a devtool -- therefore had no record of a transition that had happened, which
+ * is the local state and the patch stream disagreeing about the past.
+ */
+test('both forms of apply publish what they applied', () => {
+  const store = create<{ count: number; label: string }>(() => ({
+    count: 0,
+    label: 'a'
+  }));
+  const commits: StoreCommit[] = [];
+  onStoreCommit(store, (commit) => commits.push(commit));
+
+  store.apply(store.getPureState(), [
+    { op: 'replace', path: ['count'], value: 1 }
+  ]);
+  store.apply({ ...store.getPureState(), label: 'b' });
+
+  expect(commits).toHaveLength(2);
+  expect(commits[0].patches).toEqual([
+    { op: 'replace', path: ['count'], value: 1 }
+  ]);
+  // The inverse is derived where the caller gave none, so an undo of this
+  // transition is available like any other.
+  expect(commits[0].inversePatches).toEqual([
+    { op: 'replace', path: ['count'], value: 0 }
+  ]);
+  expect(commits[1].patches).toEqual([
+    { op: 'replace', path: ['label'], value: 'b' }
+  ]);
+
+  // And what was published rebuilds what the store holds.
+  const replayed = commits.reduce(
+    (state, commit) => applyPatches(state, commit.patches),
+    { count: 0, label: 'a' } as object
+  );
+  expect(replayed).toEqual(store.getPureState());
+  store.destroy();
+});
+
+test('a transition Coaction publishes itself is not published twice', () => {
+  const store = create<{ count: number; increment: () => void }>((set) => ({
+    count: 0,
+    increment() {
+      set(() => {
+        this.count += 1;
+      });
+    }
+  }));
+  const commits: StoreCommit[] = [];
+  onStoreCommit(store, (commit) => commits.push(commit));
+
+  store.getState().increment();
+  store.setState({ count: 5 });
+  replayStorePatches(store, {
+    patches: [{ op: 'replace', path: ['count'], value: 9 }],
+    inversePatches: [{ op: 'replace', path: ['count'], value: 5 }]
+  });
+
+  expect(commits.map(({ source }) => source)).toEqual([
+    'setState',
+    'setState',
+    'replay'
+  ]);
   store.destroy();
 });

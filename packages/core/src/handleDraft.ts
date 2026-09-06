@@ -1,7 +1,11 @@
 import type { CreateState, MiddlewareStore } from './interface';
 import type { Internal } from './internal';
 import { sanitizeCheckedPatches } from './utils';
-import { publishStoreCommit, validateStoreCommit } from './storeCommit';
+import {
+  applyWithOwnStoreCommit,
+  publishStoreCommit,
+  validateStoreCommit
+} from './storeCommit';
 
 export const handleDraft = <T extends CreateState>(
   store: MiddlewareStore<T>,
@@ -37,7 +41,9 @@ export const handleDraft = <T extends CreateState>(
       inversePatches: safeInversePatches,
       source: 'mutableAction'
     });
-    store.apply(internal.rootState as T, safePatches);
+    applyWithOwnStoreCommit(store, () =>
+      store.apply(internal.rootState as T, safePatches)
+    );
     internal.emitPatches?.(safePatches);
     publishStoreCommit(store, {
       state: internal.rootState as T,

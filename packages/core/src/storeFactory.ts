@@ -20,7 +20,9 @@ import {
   disposeStoreCommitRuntime,
   getStoreCommitSource,
   hasStoreCommitListeners,
+  hasStoreCommitPublishers,
   hasStoreCommitValidators,
+  ownsStoreCommit,
   publishStoreCommit,
   registerStorePatchReplayer,
   validateStoreCommit
@@ -157,7 +159,8 @@ export const createStore = <T extends CreateState>(
       patches: Patches | undefined,
       prepared = false,
       skipFinalValidation = false,
-      knownInversePatches?: Patches
+      knownInversePatches?: Patches,
+      wantCommitPair = false
     ) => {
       internal.assertAlive?.('apply');
       internal.assertMutationAllowed?.('apply');
@@ -197,31 +200,32 @@ export const createStore = <T extends CreateState>(
       // whole -- and it does so for every entry that reaches this line:
       // `setState`, `store.apply()`, and a patch replay alike. Validating in
       // any one of those instead left the others as ways in.
-      let replacement:
-        | ReturnType<typeof createRootReplacementPatches>
-        | undefined;
-      if (hasStoreCommitValidators(store)) {
-        if (!safePatches) {
-          // A replacement carries no patch pair of its own. It is the same
-          // pair `apply` derives to publish the commit, so it is derived once
-          // and handed on.
-          replacement = createRootReplacementPatches(
-            internal.rootState as Record<PropertyKey, unknown>,
-            nextState as Record<PropertyKey, unknown>
-          );
-        }
-        validateStoreCommit(store, {
-          state: nextState as T,
+      // The pair that describes this transition, built once and used for both
+      // the validator and the commit `apply` publishes. A replacement carries
+      // no pair of its own, so one is derived; a caller that already has the
+      // other half -- after its own `store.patch` transform -- passes it in,
+      // and the derivation is only for `store.apply(state, patches)`, which is
+      // given patches and no inverse. It reads one target per patch rather
+      // than the whole state.
+      let pair: { patches: Patches; inversePatches: Patches } | undefined;
+      if (wantCommitPair || hasStoreCommitValidators(store)) {
+        const replacement = safePatches
+          ? undefined
+          : createRootReplacementPatches(
+              internal.rootState as Record<PropertyKey, unknown>,
+              nextState as Record<PropertyKey, unknown>
+            );
+        pair = {
           patches: (safePatches ?? replacement!.patches) as Patches,
-          // The same pair the commit will publish. A caller that has the other
-          // half -- after its own `store.patch` transform -- passes it in; the
-          // derivation is only for `store.apply(state, patches)`, which is
-          // given patches and no inverse, and it reads one target per patch
-          // rather than the whole state.
           inversePatches: (knownInversePatches ??
             (safePatches
               ? createInversePatches(baseState, safePatches)
-              : replacement!.inversePatches)) as Patches,
+              : replacement!.inversePatches)) as Patches
+        };
+        validateStoreCommit(store, {
+          state: nextState as T,
+          patches: pair.patches,
+          inversePatches: pair.inversePatches,
           source: getStoreCommitSource(store, 'external')
         });
       }
@@ -232,32 +236,32 @@ export const createStore = <T extends CreateState>(
       } else {
         internal.listeners.forEach((listener) => listener());
       }
-      return replacement;
+      return pair;
     };
     const apply: Store<T>['apply'] = (
       state = internal.rootState as T,
       patches
     ) => {
-      const observeReplacement =
-        patches === undefined && hasStoreCommitListeners(store);
-      const previousState = internal.rootState as T;
-      const derived = applyState(state, patches);
-      if (!observeReplacement) {
+      // A transition through `apply` is published, in both of its forms. Only
+      // the replacement form used to be, so `store.apply(state, patches)`
+      // changed the state and told nobody: `@coaction/history` had nothing to
+      // undo, `@coaction/sync` never queued it, and the local state moved away
+      // from what the patch stream said it was.
+      //
+      // The exception is a caller inside Coaction that publishes the commit
+      // itself. It has the source and the real inverse pair, where this only
+      // has a derivation, so it says so rather than let a second and worse
+      // description of the same transition go out.
+      const observe =
+        hasStoreCommitPublishers(store) && !ownsStoreCommit(store);
+      const pair = applyState(state, patches, false, false, undefined, observe);
+      if (!observe || !pair) {
         return;
       }
-      const replacement =
-        derived ??
-        createRootReplacementPatches(
-          previousState as Record<PropertyKey, unknown>,
-          internal.rootState as Record<PropertyKey, unknown>
-        );
-      const safePatches = sanitizeCheckedPatches(
-        replacement.patches as Patches,
-        'store.apply() replacement'
-      );
+      const safePatches = sanitizeCheckedPatches(pair.patches, 'store.apply()');
       const safeInversePatches = sanitizeCheckedPatches(
-        replacement.inversePatches as Patches,
-        'store.apply() replacement inverse patches'
+        pair.inversePatches,
+        'store.apply() inverse patches'
       );
       if (!safePatches.length && !safeInversePatches.length) {
         return;

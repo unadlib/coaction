@@ -30,6 +30,7 @@ import { Computed } from './computed';
 import { hasReactivePathNodes, invalidateReactivePaths } from './reactivePath';
 import {
   hasStoreCommitListeners,
+  applyWithOwnStoreCommit,
   prepareStoreCommit,
   publishStoreCommit,
   runWithStoreCommitSource,
@@ -169,7 +170,9 @@ export const handleState = <T extends CreateState>(
           safeInversePatches
         ) ?? false;
       if (!internal.applyValidatedPatches) {
-        store.apply(internal.rootState as T, safePatches);
+        applyWithOwnStoreCommit(store, () =>
+          store.apply(internal.rootState as T, safePatches)
+        );
       }
     } else {
       defaultResultValidated = true;
@@ -446,7 +449,9 @@ export const handleState = <T extends CreateState>(
             safeInversePatches
           );
           if (!internal.applyValidatedPatches) {
-            store.apply(internal.rootState as T, safePatches);
+            applyWithOwnStoreCommit(store, () =>
+              store.apply(internal.rootState as T, safePatches)
+            );
           }
         }
         return [internal.rootState as T, safePatches, safeInversePatches];

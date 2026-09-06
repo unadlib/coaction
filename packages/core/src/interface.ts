@@ -130,6 +130,11 @@ export interface Store<T extends ISlices = ISlices> {
    * This is a low-level hook used by transports and middleware. Application
    * code should generally prefer store methods or `setState()`. Client-side
    * shared-store mirrors reject direct `apply()` calls.
+   *
+   * Both forms publish a commit, so a transition made this way is visible to
+   * `onStoreCommit` and to everything built on it. Where no inverse pair is
+   * supplied one is derived, and a replacement is described by the pair that
+   * turns the previous state into the new one.
    */
   apply: (state?: T, patches?: Patches) => void;
   /**

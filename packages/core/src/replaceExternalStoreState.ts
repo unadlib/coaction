@@ -2,7 +2,7 @@ import { create as createWithMutative, type Patches } from 'mutative';
 import type { CreateState, MiddlewareStore } from './interface';
 import type { Internal } from './internal';
 import { replaceOwnEnumerable, sanitizeCheckedPatches } from './utils';
-import { publishStoreCommit } from './storeCommit';
+import { applyWithOwnStoreCommit, publishStoreCommit } from './storeCommit';
 
 type ReplaceExternalStoreStateOptions = {
   syncImmutable?: boolean;
@@ -44,7 +44,9 @@ export const replaceExternalStoreState = <T extends CreateState>(
     internal.updateImmutable = undefined;
   }
   try {
-    store.apply(internal.rootState as T, safePatches);
+    applyWithOwnStoreCommit(store, () =>
+      store.apply(internal.rootState as T, safePatches)
+    );
   } finally {
     internal.updateImmutable = updateImmutable;
   }
