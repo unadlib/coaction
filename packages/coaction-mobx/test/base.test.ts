@@ -6,7 +6,11 @@ import {
 import { bindMobx } from '../src';
 import { makeAutoObservable, autorun, observable, runInAction } from 'mobx';
 import { create, type Slices, type Slice, type Store } from 'coaction';
-import { onStoreCommit, type StoreCommit } from 'coaction/adapter';
+import {
+  onStoreCommit,
+  onStoreCommitValidate,
+  type StoreCommit
+} from 'coaction/adapter';
 import { apply as applyPatches } from 'mutative';
 import { isDraft } from 'mutative';
 
@@ -802,6 +806,67 @@ test('two async actions interrupted by a third still replay to the state', async
 
   expect(useStore.getState().n).toBe(11111);
   expect(replayed()).toEqual({ n: 11111 });
+  expect(isDraft(useStore.getPureState())).toBeFalsy();
+  useStore.destroy();
+});
+
+/**
+ * A mutable instance was treated as having no pre-commit point at all, and
+ * that is only true of mutation made on the object directly. An action goes
+ * through Coaction: it writes into a draft, and `store.apply` is what puts the
+ * change onto the instance. There is a moment between those, and a validator
+ * that throws in it leaves the instance holding exactly what it held before.
+ *
+ * Until this, a validator was not merely late for these stores -- an adapter
+ * replaces `store.apply`, so the check at the core commit point was never
+ * reached and the validator did not run at all.
+ */
+test('a commit validator can refuse an action on a mutable instance', () => {
+  let instance: { n: number; when: string } | undefined;
+  const useStore = create<{
+    n: number;
+    when: string;
+    ok: () => void;
+    bad: () => void;
+  }>(
+    () => {
+      instance = makeAutoObservable(
+        bindMobx({
+          n: 0,
+          when: '1970-01-01',
+          ok() {
+            this.n += 1;
+          },
+          bad() {
+            this.n += 1;
+            (this as { when: unknown }).when = new Date(0);
+          }
+        })
+      );
+      return instance as never;
+    },
+    { name: 'mutable-validator', enablePatches: true }
+  );
+  const commits: StoreCommit[] = [];
+  onStoreCommit(useStore as Store<any>, (commit) => commits.push(commit));
+  onStoreCommitValidate(useStore as Store<any>, (commit) => {
+    for (const patch of commit.patches) {
+      if ('value' in patch && patch.value instanceof Date) {
+        throw new TypeError('no Dates');
+      }
+    }
+  });
+
+  useStore.getState().ok();
+  expect(commits.map(({ source }) => source)).toEqual(['mutableAction']);
+
+  expect(() => useStore.getState().bad()).toThrow('no Dates');
+  // The instance is what the application reads, and it never saw the refused
+  // transition -- including the legal write that shared it.
+  expect(instance!.n).toBe(1);
+  expect(instance!.when).toBe('1970-01-01');
+  expect(useStore.getState().n).toBe(1);
+  expect(commits).toHaveLength(1);
   expect(isDraft(useStore.getPureState())).toBeFalsy();
   useStore.destroy();
 });

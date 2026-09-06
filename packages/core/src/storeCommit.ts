@@ -150,13 +150,16 @@ export const onStoreCommitPrepare = <T extends CreateState>(
  * there on with nothing left to say so.
  *
  * Every way into the state runs validators: `setState`, `store.apply()` with a
- * patch pair or with a replacement, and a patch replay. A replacement carries
- * no patch pair of its own, so the one the commit would be published with is
- * derived and checked instead.
+ * patch pair or with a replacement, a patch replay, and an action on an
+ * external mutable instance. A replacement carries no patch pair of its own, so
+ * the one the commit would be published with is derived and checked instead.
  *
- * The exception is an external mutable adapter -- MobX, Valtio, Pinia -- which
- * owns the object and has already changed it by the time a commit exists.
- * There a middleware has only {@link onStoreCommit} to report from.
+ * An action on a mutable instance counts because it writes into a draft, and
+ * putting that onto the instance is a later step -- refusing it leaves the
+ * object holding what it held before. The exception is mutation made on such an
+ * object directly, outside an action, which has already happened by the time
+ * Coaction hears about it; a middleware has only {@link onStoreCommit} for
+ * that.
  *
  * A validator sees the commit a listener will see -- the same patch pair, the
  * same inverse, the same source. It must not write to the store, and it runs on

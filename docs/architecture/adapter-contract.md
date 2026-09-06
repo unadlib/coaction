@@ -72,6 +72,13 @@ An adapter needs no code for this; it is core behavior, and it is the same for
 every mutable instance. Native Coaction stores are unaffected: their actions do
 not hold a draft across an `await`.
 
+Because an action writes into the draft and `store.apply` is what puts the
+change onto the instance, an action is a transition Coaction can still refuse.
+A commit validator registered with `onStoreCommitValidate` runs before that
+apply, and throwing leaves the instance holding what it held before the action
+ran. Mutation made on the instance directly, outside an action, is the case that
+has no such point.
+
 ## Shared stores
 
 Shared replacement input is validated before adapter code reads or normalizes

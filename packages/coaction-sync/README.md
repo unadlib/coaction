@@ -183,10 +183,9 @@ It is the same contract the shared transport enforces, checked the same way.
 Keep dates as ISO strings or epoch numbers, keyed collections as records, and
 sets as arrays.
 
-The one place this still arrives late is an external mutable adapter — MobX,
-Valtio, Pinia — where the object has already changed by the time Coaction has a
-commit to inspect. There the write is reported through `onError` rather than
-refused.
+`sync()` does not attach to an external mutable adapter at all: MobX, Valtio and
+Pinia expose accessor-backed state, which this contract already refuses when the
+store is built.
 
 ## The durable checkpoint
 
