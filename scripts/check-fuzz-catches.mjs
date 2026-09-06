@@ -13,6 +13,17 @@
  *
  * Each defect below is a real one this repository shipped. Reverting the files
  * that fixed it has to turn the named suite red.
+ *
+ * The commits are addressed by hash, so they have to stay reachable. Rewriting
+ * the history that contains them -- a rebase of `main`, a squash that replaces
+ * them -- breaks this check for everybody, and the failure says which hash it
+ * could not find. Recovering means finding the new hash for the same change and
+ * updating the entry, or dropping the entry if the change no longer exists as
+ * one commit; both are better than deleting the check, which is what makes a
+ * green fuzz run mean something.
+ *
+ * `scripts/SIZE-BUDGETS.md` and this comment are the two places where a piece
+ * of tooling depends on something outside its own file. Both say so.
  */
 import { execFileSync } from 'node:child_process';
 import { readFileSync, writeFileSync } from 'node:fs';
@@ -111,7 +122,10 @@ if (missing.length) {
     `This needs the history around ${missing.join(', ')}, which this checkout does not have.`
   );
   console.error(
-    'In GitHub Actions, give actions/checkout `fetch-depth: 0`; locally, run `git fetch --unshallow`.'
+    'A shallow clone is the usual cause: in GitHub Actions give actions/checkout `fetch-depth: 0`, locally run `git fetch --unshallow`.'
+  );
+  console.error(
+    'If the history was rewritten instead, find the new hash for the same change and update the entry in this file.'
   );
   process.exit(1);
 }
