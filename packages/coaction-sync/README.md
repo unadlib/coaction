@@ -173,6 +173,12 @@ client has.
 Every way into the state is checked: `setState`, `store.apply()` with a patch
 pair or with a replacement, and a patch replay.
 
+Whatever an adapter's `serialize()` returns goes into the same checkpoint and
+is held to the same contract. It is the harder of the two to notice going
+wrong, because it is what the adapter consults to decide which records the
+remote already has; a snapshot JSON cannot carry fails the checkpoint write the
+way any storage failure does, and is reported through `onError`.
+
 It is the same contract the shared transport enforces, checked the same way.
 Keep dates as ISO strings or epoch numbers, keyed collections as records, and
 sets as arrays.

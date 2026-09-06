@@ -114,3 +114,77 @@ test('a value JSON cannot encode is refused at the write that makes it', async (
   expect(errors).toHaveLength(0);
   store.destroy();
 });
+
+test('an adapter snapshot JSON cannot carry fails the checkpoint', async () => {
+  const errors: unknown[] = [];
+  const storage = createMemoryStorage();
+  const store = create<{ n: number; bump: () => void }>(
+    (set) => ({
+      n: 0,
+      bump() {
+        set(() => {
+          this.n += 1;
+        });
+      }
+    }),
+    {
+      middlewares: [
+        sync({
+          name: 'json-adapter-snapshot',
+          storage,
+          adapter: {
+            ...adapter,
+            // An adapter's baseline goes into the same JSON checkpoint the
+            // state does, and JSON changes it just as quietly: this comes back
+            // a string, and a `Map` would come back `{}`. It is the harder of
+            // the two to notice, because it is what the adapter consults to
+            // decide which records the remote already has.
+            serialize: () => ({ lastUpdated: new Date(0) })
+          },
+          onError: (error) => errors.push(error)
+        })
+      ]
+    }
+  );
+  await nextTick();
+  store.getState().bump();
+  await nextTick();
+
+  expect(await storage.getItem('json-adapter-snapshot')).toBeNull();
+  expect(errors.length).toBeGreaterThan(0);
+  expect((errors[0] as Error).message).toMatch(/this adapter snapshot/);
+  // The store itself is unaffected -- this is the adapter's contract, not the
+  // application's, and it fails the write the way any storage failure does.
+  expect(store.getState().n).toBe(1);
+  store.destroy();
+});
+
+test('an adapter snapshot JSON can carry is written', async () => {
+  const storage = createMemoryStorage();
+  const store = create<{ n: number; bump: () => void }>(
+    (set) => ({
+      n: 0,
+      bump() {
+        set(() => {
+          this.n += 1;
+        });
+      }
+    }),
+    {
+      middlewares: [
+        sync({
+          name: 'json-adapter-ok',
+          storage,
+          adapter: { ...adapter, serialize: () => ({ lastUpdated: 0 }) }
+        })
+      ]
+    }
+  );
+  await nextTick();
+  store.getState().bump();
+  await nextTick();
+
+  const raw = await storage.getItem('json-adapter-ok');
+  expect(JSON.parse(raw!).adapter).toEqual({ lastUpdated: 0 });
+  store.destroy();
+});

@@ -446,15 +446,27 @@ export const sync = <T extends object>({
       onStatusChange?.(next);
       statusListeners.forEach((listener) => listener(next));
     };
-    const serialize = (): PersistedSyncState<T> => ({
-      cursor,
-      revision,
-      outbox,
-      adapter: adapter.serialize?.(),
-      state: persistState
-        ? (sanitizeReplacementState(store.getPureState()) as T)
-        : undefined
-    });
+    const serialize = (): PersistedSyncState<T> => {
+      const adapterSnapshot = adapter.serialize?.();
+      if (adapterSnapshot !== undefined) {
+        // The adapter's baseline goes into the same JSON checkpoint the state
+        // does, and JSON changes it just as quietly: a `Date` in it comes back
+        // a string, a `Map` comes back `{}`. The state has been checked since
+        // the middleware was written; this was not, and it is the harder of
+        // the two to notice afterwards -- it is what the adapter consults to
+        // decide which records the remote already has.
+        assertJsonState(adapterSnapshot, 'this adapter snapshot');
+      }
+      return {
+        cursor,
+        revision,
+        outbox,
+        adapter: adapterSnapshot,
+        state: persistState
+          ? (sanitizeReplacementState(store.getPureState()) as T)
+          : undefined
+      };
+    };
     const persist = () => {
       // Encoding inside the queued work, not before it: a value JSON cannot
       // represent would otherwise throw straight back out of the `set()` that
