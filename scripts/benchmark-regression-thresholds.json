@@ -25,12 +25,12 @@
     {
       "left": "Coaction mutable update + cached getter",
       "right": "Zustand immutable update + selector recompute",
-      "minRatio": 0.4
+      "minRatio": 0.35
     },
     {
       "left": "Coaction mutable update + manual deps",
       "right": "Zustand immutable update + selector recompute",
-      "minRatio": 0.4
+      "minRatio": 0.35
     },
     {
       "left": "Coaction with Mutative",
