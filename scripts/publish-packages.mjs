@@ -94,6 +94,24 @@ const packages = getPackagesSync(rootDir)
     return a.packageJson.name.localeCompare(b.packageJson.name);
   });
 
+/**
+ * The dist-tag a version belongs under.
+ *
+ * `npm publish` writes `latest` unless told otherwise, whatever the version
+ * says -- so publishing `4.0.0-rc.1` without a `--tag` would put a release
+ * candidate in front of everyone running `npm install coaction`. A version with
+ * a prerelease identifier gets that identifier as its tag instead, and an
+ * explicit `--tag` still wins.
+ */
+const distTagFor = (version) => {
+  const prerelease = /-([0-9A-Za-z-]+)/.exec(version);
+  return prerelease ? prerelease[1] : 'latest';
+};
+
+const taggedExplicitly = publishArgs.some(
+  (arg) => arg === '--tag' || arg.startsWith('--tag=')
+);
+
 for (const pkg of packages) {
   const { name, version } = pkg.packageJson;
 
@@ -103,13 +121,19 @@ for (const pkg of packages) {
   }
 
   const tarball = pack(pkg);
+  const tag = distTagFor(version);
   console.log(
-    `Publishing ${name}@${version} from ${relative(rootDir, tarball)}`
+    `Publishing ${name}@${version} under "${tag}" from ${relative(rootDir, tarball)}`
   );
 
-  run('npm', ['publish', tarball, '--access', 'public', ...publishArgs], {
-    env: {
-      CI: 'true'
+  const tagArgs = taggedExplicitly ? [] : ['--tag', tag];
+  run(
+    'npm',
+    ['publish', tarball, '--access', 'public', ...tagArgs, ...publishArgs],
+    {
+      env: {
+        CI: 'true'
+      }
     }
-  });
+  );
 }

@@ -4,6 +4,18 @@
 
 ### Major Changes
 
+- A transition the runtime cannot express as a patch pair is now described more
+  coarsely rather than refused. mutative records patch paths positionally, so a
+  recipe that drafts a nested value, moves it within its parent array and then
+  writes into it records the position the value used to have — and Coaction
+  makes a transition by applying that pair, so the `set()` failed. Only on a
+  store that was being watched: with no listener, no validator and no observer,
+  no pair is produced and the same recipe worked. Attaching `@coaction/history`,
+  or rendering one component with `observer`, made previously valid code start
+  throwing. Such a transition is now described as the difference between the
+  state before and the state the recipe produced, one patch per changed
+  top-level key.
+
 - `store.apply` belongs to Coaction on every store, and an external adapter now
   says only how to write into its own runtime.
 

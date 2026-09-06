@@ -4,6 +4,19 @@
 
 ### Major Changes
 
+- `@coaction/react` requires React 18 or 19. The peer range used to include 17,
+  and nothing tested it: installing React 17 turns eight of the suite red,
+  because the test setup needs 18 and the hydration tests need `hydrateRoot`.
+  A CI matrix now installs each version the range claims and runs the suite
+  against it. The runtime still reads through `use-sync-external-store/shim`, so
+  React 17 may well work — it is simply not verified.
+
+- On the server, `useStore(selector)` reads the current state. It read the
+  initial state, while `useStore()` and `observer` read the current one, so a
+  store written to before rendering produced two different values for the same
+  field and neither matched what the client hydrated against. If you relied on
+  a selector returning the initial state during SSR, read `getInitialState()`.
+
 - fa03a28: `coaction` is now the local runtime, and `coaction/local` is gone. Shared and
   client stores import `create` from `coaction/shared`.
 
