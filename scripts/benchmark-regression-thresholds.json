@@ -7,7 +7,9 @@
     "Coaction object replacement + cached getter": 120,
     "Coaction unrelated field replacement": 400000,
     "Coaction with Mutative": 500,
-    "Coaction reverse 10k array with a commit listener": 30
+    "Coaction reverse 10k array with a commit listener": 30,
+    "Coaction write, nothing watching": 300000,
+    "Coaction write, a getter has been read": 45000
   },
   "minRatios": [
     {

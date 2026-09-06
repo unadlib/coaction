@@ -44,6 +44,21 @@ const runSuite = (name, suite) => {
 const itemCount = 1000;
 
 let bulkStore;
+let untrackedStore;
+let trackedStore;
+
+const createTrackingStore = () =>
+  createWithCoaction((set) => ({
+    items: createItems(),
+    get total() {
+      return sumItems(this.items);
+    },
+    bump: (index) => {
+      set((state) => {
+        state.items[index].quantity += 1;
+      });
+    }
+  }));
 
 const createItems = () =>
   Array.from({ length: itemCount }, (_, index) => ({
@@ -344,6 +359,44 @@ runSuite(
  * patches, more than the update it was checking. It is the kind of regression
  * that hides inside a correctness fix, so it gets a number here.
  */
+/**
+ * What a write costs once something is watching.
+ *
+ * Reading a computed getter, or attaching any commit listener, creates reactive
+ * path nodes -- and a store that has them cannot take the patch-free `setState`
+ * path, because invalidating those paths needs patches. That is a real and
+ * permanent cost on every write, currently about six and a half times, and it
+ * is the price of the tracking rather than a defect. It is measured so it
+ * cannot quietly become more.
+ */
+runSuite(
+  'Write cost with and without tracking',
+  new Suite()
+    .add(
+      'Coaction write, nothing watching',
+      () => {
+        untrackedStore.getState().bump(nextIndex());
+      },
+      {
+        onStart: () => {
+          untrackedStore = createTrackingStore();
+        }
+      }
+    )
+    .add(
+      'Coaction write, a getter has been read',
+      () => {
+        trackedStore.getState().bump(nextIndex());
+      },
+      {
+        onStart: () => {
+          trackedStore = createTrackingStore();
+          void trackedStore.getState().total;
+        }
+      }
+    )
+);
+
 runSuite(
   'Bulk patch commit throughput',
   new Suite().add(

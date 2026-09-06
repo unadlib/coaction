@@ -52,6 +52,27 @@ getter reading one field                 3,993     67,081
 same, over four thousand items           1,043     34,413
 ```
 
+### The write cost this leaves, and the decision about it
+
+Once a store has reactive path nodes -- which reading a computed getter or
+attaching any commit listener creates -- a write can no longer take the
+patch-free `setState` path, because invalidating those paths needs patches:
+
+```
+Coaction write, nothing watching            467,779 ops/sec
+Coaction write, a getter has been read       70,307
+```
+
+This is the price of the tracking, not a defect, and it is why the floors for
+the two `mutable update` scenarios sit where they do. **It is accepted for 4.0**
+and gated at both ends, so it cannot quietly become more, and so a future
+attempt to close the gap has a number to move.
+
+Closing it would mean invalidating reactive paths from something other than a
+patch pair -- comparing the states, say -- which is a change to how tracking
+works rather than a local optimisation. That belongs to a release that is
+changing the reactive runtime, not to one freezing it.
+
 ### What is left, and why the floors moved
 
 38,000 against a floor of 45,000. The remaining difference is the write, not the
