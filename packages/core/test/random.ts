@@ -51,6 +51,30 @@ export const createRandom = (seed: number) => {
 export type Random = ReturnType<typeof createRandom>;
 
 /**
+ * How many seeds a property or fuzz suite covers, and where it starts.
+ *
+ * The counts in the suites are sized for a run on every commit. A soak turns
+ * them up by a large factor and moves the starting seed, so it explores
+ * territory the everyday run never reaches -- and so that a soak repeated
+ * tomorrow is not the same soak. `scripts/soak.mjs` sets both.
+ */
+export const fuzzScale = Math.max(
+  1,
+  Number(process.env.COACTION_FUZZ_SCALE ?? 1) || 1
+);
+
+export const fuzzSeedOffset = Math.max(
+  0,
+  Number(process.env.COACTION_FUZZ_SEED_OFFSET ?? 0) || 0
+);
+
+/** Seeds to cover, scaled for a soak. */
+export const runs = (base: number) => Math.round(base * fuzzScale);
+
+/** The first seed, moved for a soak. */
+export const firstSeed = () => 1 + fuzzSeedOffset;
+
+/**
  * Run a property over a run of seeds, reporting the seed that failed.
  *
  * A property that throws for seed 41 should say so, not say that something was
@@ -59,9 +83,10 @@ export type Random = ReturnType<typeof createRandom>;
 export const forEachSeed = (
   count: number,
   property: (random: Random, seed: number) => void,
-  firstSeed = 1
+  from = firstSeed()
 ) => {
-  for (let seed = firstSeed; seed < firstSeed + count; seed += 1) {
+  const total = runs(count);
+  for (let seed = from; seed < from + total; seed += 1) {
     try {
       property(createRandom(seed), seed);
     } catch (error) {

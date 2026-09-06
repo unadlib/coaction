@@ -3,7 +3,13 @@ import { isDraft } from 'mutative';
 import { create } from 'coaction';
 import { onStoreCommit, type StoreCommit } from 'coaction/adapter';
 import { apply as applyPatches } from 'mutative';
-import { createRandom, forEachSeed, type Random } from '../../core/test/random';
+import {
+  createRandom,
+  firstSeed,
+  forEachSeed,
+  runs,
+  type Random
+} from '../../core/test/random';
 import { bindMobx } from '../src';
 
 /**
@@ -110,7 +116,8 @@ const ASYNC = ['suspend', 'suspendThenNested', 'suspendThenThrow'] as const;
 
 test('any interleaving of actions replays to the state it produced', async () => {
   const failures: string[] = [];
-  for (let seed = 1; seed <= 250; seed += 1) {
+  const from = firstSeed();
+  for (let seed = from; seed < from + runs(250); seed += 1) {
     const random = createRandom(seed);
     const { store, release, releaseOne, pending } = buildStore(random);
     const initial = JSON.parse(JSON.stringify(store.getPureState()));
@@ -170,7 +177,8 @@ test('any interleaving of actions replays to the state it produced', async () =>
 
 test('any interleaving leaves an inverse that undoes every commit', async () => {
   const failures: string[] = [];
-  for (let seed = 1; seed <= 150; seed += 1) {
+  const from = firstSeed();
+  for (let seed = from; seed < from + runs(150); seed += 1) {
     const random = createRandom(seed);
     const { store, release } = buildStore(random);
     const initial = JSON.parse(JSON.stringify(store.getPureState()));

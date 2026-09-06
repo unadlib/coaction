@@ -32,6 +32,7 @@
     "test:react-compiler": "node ./scripts/check-react-compiler.mjs",
     "test:properties": "node ./scripts/check-checkpoint-properties.mjs",
     "test:fuzz-catches": "node ./scripts/check-fuzz-catches.mjs",
+    "soak": "node ./scripts/soak.mjs",
     "package:quality": "node ./scripts/check-package-quality.mjs",
     "package:size": "node ./scripts/check-package-size.mjs && node ./scripts/check-core-entry-isolation.mjs && node ./scripts/check-react-entry-isolation.mjs",
     "package:check": "pnpm build && pnpm package:quality && pnpm package:size",

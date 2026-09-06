@@ -590,7 +590,11 @@ const readPatchTarget = (root: unknown, path: readonly PropertyKey[]) => {
  * gone. Deriving the inverse instead always works but flattens the shared
  * references mutative's keeps, so it is used only here.
  */
-type PatchPathNode = { children?: Map<string, PatchPathNode> };
+type PatchPathNode = {
+  children?: Map<string, PatchPathNode>;
+  /** A patch path ends here. */
+  ends?: boolean;
+};
 
 export const inverseNeedsDerivation = (patches: Patches) => {
   if (patches.length < 2) return false;
@@ -605,6 +609,13 @@ export const inverseNeedsDerivation = (patches: Patches) => {
     let node = root;
     let existing = true;
     for (const segment of normalizePatchPath(patch.path)) {
+      // An earlier patch ends above this one: this patch writes inside what
+      // that one replaced. Undoing them in order restores the container whole
+      // and then writes into it again, which for an `add` is an element too
+      // many.
+      if (node.ends) {
+        return true;
+      }
       const key = String(segment);
       node.children ??= new Map();
       let next = node.children.get(key);
@@ -620,6 +631,7 @@ export const inverseNeedsDerivation = (patches: Patches) => {
     if (existing && node.children?.size) {
       return true;
     }
+    node.ends = true;
   }
   return false;
 };

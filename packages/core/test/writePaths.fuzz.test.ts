@@ -5,7 +5,7 @@ import {
   replayStorePatches,
   type StoreCommit
 } from '../adapter';
-import { createRandom, type Random } from './random';
+import { createRandom, firstSeed, runs, type Random } from './random';
 
 /**
  * The same two invariants as the adapter fuzz, over a native store and every
@@ -110,7 +110,8 @@ const clone = (value: unknown) => JSON.parse(JSON.stringify(value));
 
 test('every write path replays to the state it produced', () => {
   const failures: string[] = [];
-  for (let seed = 1; seed <= 300; seed += 1) {
+  const from = firstSeed();
+  for (let seed = from; seed < from + runs(300); seed += 1) {
     const random = createRandom(seed);
     const store = buildStore();
     const initial = clone(store.getPureState());
@@ -138,7 +139,8 @@ test('every write path replays to the state it produced', () => {
 
 test('every commit can be undone by the inverse it carries', () => {
   const failures: string[] = [];
-  for (let seed = 1; seed <= 300; seed += 1) {
+  const from = firstSeed();
+  for (let seed = from; seed < from + runs(300); seed += 1) {
     const random = createRandom(seed);
     const store = buildStore();
     const initial = clone(store.getPureState());
