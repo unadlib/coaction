@@ -9,16 +9,30 @@ The public API is intentionally small, but the runtime has several distinct laye
    `packages/core/src/storeFactory.ts`
 2. State materialization and method binding in `packages/core/src/getInitialState.ts` and `packages/core/src/getRawState.ts`
 3. Local and shared mutation flow in `packages/core/src/handleState.ts`
-4. Client/main synchronization in `packages/core/src/asyncClientStore.ts` and `packages/core/src/handleMainTransport.ts`
+4. The authority and its client mirrors in `packages/core/src/asyncClientStore.ts` and `packages/core/src/handleMainTransport.ts`
 5. Adapter and middleware integration points in `packages/core/src/binder.ts` and the package-level middleware implementations
+
+## Three things that are not each other
+
+The word "sync" gets used for all of them, and they solve different problems:
+
+|                            | What it is                                                                                                                       | Where it lives                                         |
+| -------------------------- | -------------------------------------------------------------------------------------------------------------------------------- | ------------------------------------------------------ |
+| **Reactive tracking**      | Which components re-render when a field changes. `observer`, selectors, computed getters.                                        | `packages/core/src/reactivePath.ts`, `@coaction/react` |
+| **Shared authority**       | One store owns the state; other JavaScript contexts hold mirrors of it and call actions on it over a transport. A Worker, a tab. | `coaction/shared`                                      |
+| **Remote synchronization** | A durable outbox, a rebase against a server, and offline recovery.                                                               | `@coaction/sync`                                       |
+
+They compose, and none implies another. A local store can use `@coaction/sync`
+without ever creating a Worker. A shared store's mirrors are not a replication
+protocol — the authority is a single process, and a mirror is a view of it, not
+a replica that can diverge and be merged.
 
 ## Package Layers
 
 - `packages/core`
   - `coaction`: transport-free local creation
-  - `coaction/shared`: JSON protocol, authority/client synchronization, and reconnect recovery
+  - `coaction/shared`: the JSON protocol, authority and client mirrors, and reconnect recovery
   - `coaction/adapter`: external runtime integration helpers
-  - `coaction`: compatibility entry that retains local and shared mode selection
 - `packages/coaction-*` framework bindings
   - Wrap a core store for framework-specific reactivity and lifecycle behavior
 - `packages/coaction-*` state adapters
