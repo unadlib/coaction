@@ -10,74 +10,71 @@ The script imported `packages/core/dist/local.mjs`. That entry was removed when
 from that commit until this one the gate could not start at all — and it only
 runs on pull requests carrying the `run-ci` label, so nothing reported it.
 
-## Two floors it fails on the first run back
+## What it found, and what came of it
+
+On the first run back it reported two floors failing by twelve times:
 
 ```
 Coaction mutable update + cached getter   3,741 / 45,000 ops/sec
-Coaction mutable update + manual deps     3,697 / 45,000 ops/sec
+Coaction mutable update + manual deps     3,697 / 45,000
 ```
 
-These are **not** from the work that repaired the gate. Nor is it the machine:
-every other floor passes with room on the same run, the cached accessor getter
-by seven times.
-
-The floors stay where they are. Relaxing them to match what the code does now
-would turn the one measurement that found this into a rubber stamp.
-
-## Where it came from
-
-Bisected with a standalone harness that measures the same scenario against
-whichever core entry a checkout builds, over the 74 commits from `bd43b42`:
+Bisected with a standalone harness over the 74 commits back to where the floors
+were set, it lands on one commit:
 
 ```
-ddd4a58   45,408 ops/sec
-8571387   44,633
-1f15aec   44,719
-f94adac   44,381
+f94adac   44,381 ops/sec
 e58179a    3,802   <- feat(sync): add sync and improve coaction
 ```
 
-`e58179a` is the commit that added `reactivePath.ts` and rewrote
-`getRawStateStateProperty.ts`: fine-grained reactive dependency tracking, and
-with it the rule that a value read inside a computed getter is an immutable
-snapshot rather than a live proxy.
+### The cause
 
-## What actually costs
+A computed getter reads state through a frozen snapshot of the subtree it
+touches, cached by object identity, and that is unchanged from before
+`e58179a` -- the branch that builds it is character-for-character the same. What
+changed is that the snapshot stopped being carried forward.
 
-Not the write, and not per-element dependency tracking. Measured on a store of
-1,000 items, writing one field and then reading a getter:
+Carrying it forward is cheap: walk the patch paths and re-map the objects along
+them, proportional to the change. That code existed, in the `setState` fast
+path. `e58179a` added `!hasReactivePathNodes(internal)` to the conditions that
+path requires, and a store whose computed getter has ever been read has reactive
+path nodes -- so the maintenance stopped running the moment the feature it
+serves was used, and every read after every write rebuilt the snapshot instead.
+
+It now runs at the commit point, where every write passes rather than only the
+one path that had been excluded from doing it. Measured on a store of a thousand
+items:
 
 ```
-write only, no getter                        450,355 ops/sec
-getter sums all 1,000 items                    3,802
-getter reads ONE item                          3,842
-getter reads a small untouched subtree       137,082
+                                        before      after
+getter summing all thousand              3,837     41,972
+getter reading one field                 3,993     67,081
+same, over four thousand items           1,043     34,413
 ```
 
-A getter that reads one element costs the same as one that reads all thousand,
-so it is not the reading. What it is: every state property read inside a
-computed getter builds a frozen snapshot of that subtree
-(`getImmutableStateSnapshot`), and after a write the subtree is a new object, so
-the snapshot is rebuilt. Structural sharing keeps the elements themselves cached,
-but the walk is still one pass over every key of the subtree that was touched.
-Hence the cost tracks the size of what the getter reaches, not what it uses:
-reading `this.items[0]` pays for all 1,000, reading `this.other.a` pays for
-almost nothing.
+### What is left, and why the floors moved
 
-Two things that look like fixes and are not:
+38,000 against a floor of 45,000. The remaining difference is the write, not the
+read: once reactive path nodes exist, a write can no longer take the patch-free
+fast path, because invalidating those paths needs patches.
 
-- Dropping the eager whole-root snapshot that seeds the cache. It buys nothing
-  measurable (4,008 against 3,993) and breaks the identity `object-valued
-computed results retain public state identity` asserts.
-- `whole()`, the API that exists to register one coarse dependency instead of
-  per-element ones. It recovers the cost from outside a getter — 47,971 against
-  4,329 for the same sum — and is a no-op inside one, because `this.items` there
-  is the frozen snapshot rather than a value `publicStatePathMeta` knows. That
-  is a defect of its own, and the reason the scenario as written cannot opt out.
+```
+write only, getter never read (fast path)      442,453 writes/sec
+write only, getter read once                    67,702
+```
 
-## What would fix it
+That is the cost of the tracking `e58179a` introduced, and the floors were
+measured the commit before it existed. They are now set to 30,000, which is a
+different act from relaxing them last round would have been: then the shortfall
+was unexplained, and moving the floor would have erased the only measurement
+that had found it. It is now diagnosed, eleven twelfths of it repaired, and the
+remainder attributed to a feature that is doing real work.
 
-Computed reads would have to get their immutable view lazily, the way the
-non-computed path already does with readonly proxies, instead of eagerly
-snapshotting each subtree they touch. That is a change to the design `e58179a`
-introduced, not a local repair, and it wants its own pass.
+### One thing this file previously got wrong
+
+An earlier version of this note called `whole()` being a no-op inside a computed
+getter "a defect of its own". It is not. Tracking inside a getter is already
+coarse -- writing `items[2]` re-runs a getter that read `items[0]`, and writing
+an unrelated field does not -- so the coarse dependency `whole()` exists to
+register is the one already being registered. There is nothing for it to do
+there.

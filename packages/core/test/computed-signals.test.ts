@@ -1,5 +1,6 @@
 import { create } from '../src';
 import { createSelectorWithArray } from '../src/computed';
+import { replayStorePatches } from '../adapter';
 
 test('accessor getters are cached computed values', () => {
   let getterCalls = 0;
@@ -298,4 +299,61 @@ test('createSelectorWithArray supports calls without an object receiver', () => 
   expect(objectSelector.call(receiver)).toBe(6);
   expect(objectSelector.call(receiver)).toBe(6);
   expect(selectorCalls).toBe(2);
+});
+
+/**
+ * A getter reads state through a frozen snapshot of the subtree it touches,
+ * cached by object identity. A write makes the containers along the change a
+ * new object, so the snapshot has to be carried forward along the patch paths
+ * -- proportional to the change -- or the next read walks every key of the
+ * state to rebuild it.
+ *
+ * That maintenance used to live in the `setState` fast path, which a store with
+ * reactive path nodes cannot take. Reading a getter creates those nodes, so it
+ * stopped running the moment the feature it serves was used, and nothing said
+ * so: every value stayed correct and the cost went up by an order of magnitude.
+ *
+ * There is nothing to assert about the result -- it was never wrong. What is
+ * assertable is the shape of the cost: reading a getter after a write must not
+ * get slower because the state grew somewhere the getter never looks. The bound
+ * is deliberately loose. Without the maintenance the ratio is about a hundred;
+ * with it, near one.
+ */
+const readAfterWriteRate = (size: number) => {
+  const store = create<{
+    rows: Array<{ value: number }>;
+    readonly derived: number;
+    bump: (index: number) => void;
+  }>((set) => ({
+    rows: Array.from({ length: size }, (_, index) => ({ value: index })),
+    // Reads one element. What it costs must follow that, not the length of the
+    // array the element happens to sit in.
+    get derived() {
+      return this.rows[0].value * 2;
+    },
+    bump(index: number) {
+      set(() => {
+        this.rows[index].value += 1;
+      });
+    }
+  }));
+  let cursor = 0;
+  const once = () => {
+    cursor = (cursor + 1) % size;
+    store.getState().bump(cursor);
+    void store.getState().derived;
+  };
+  for (let index = 0; index < 200; index += 1) once();
+  const started = performance.now();
+  const runs = 400;
+  for (let index = 0; index < runs; index += 1) once();
+  const rate = runs / ((performance.now() - started) / 1000);
+  store.destroy();
+  return rate;
+};
+
+test('reading a getter after a write does not scale with what it does not read', () => {
+  const small = readAfterWriteRate(10);
+  const large = readAfterWriteRate(4000);
+  expect(large).toBeGreaterThan(small / 5);
 });

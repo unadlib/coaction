@@ -1,6 +1,10 @@
 import { apply as applyWithMutative, type Patches } from 'mutative';
 import { applyMiddlewares } from './applyMiddlewares';
 import { invalidateReactivePaths } from './reactivePath';
+import {
+  createImmutableSnapshotPatches,
+  finalizeImmutableStateSnapshot
+} from './immutableState';
 import { defaultName } from './constant';
 import { getInitialState } from './getInitialState';
 import { getRawState, type LocalActionWrapper } from './getRawState';
@@ -228,6 +232,41 @@ export const createStore = <T extends CreateState>(
           inversePatches: pair.inversePatches,
           source: getStoreCommitSource(store, 'external')
         });
+      }
+      // Carry the computed getters' immutable snapshot forward.
+      //
+      // A getter reads state through a frozen snapshot of the subtree it
+      // touches, cached by object identity. A write makes that subtree a new
+      // object, so without this the next read rebuilds it -- one pass over
+      // every key of whatever the getter can reach, on every read after every
+      // write. That is what took a getter over a thousand items from 45,000
+      // reads a second to 3,800, and it took a getter reading one field of
+      // those items down with it.
+      //
+      // Walking the patch paths instead is proportional to the change. This
+      // existed already, in the `setState` fast path -- and a store whose
+      // getter has ever been read has reactive path nodes, which is one of the
+      // conditions that path requires be absent, so it stopped running the
+      // moment the feature it serves was used. It belongs at the commit point,
+      // where every write passes.
+      const snapshotCache = internal.computedSnapshotCache;
+      const previousSnapshot = snapshotCache?.get(
+        internal.rootState as unknown as object
+      );
+      if (snapshotCache && previousSnapshot && safePatches?.length) {
+        const snapshotPatches = createImmutableSnapshotPatches(
+          safePatches,
+          snapshotCache
+        );
+        finalizeImmutableStateSnapshot(
+          nextState,
+          applyWithMutative(previousSnapshot as any, snapshotPatches),
+          safePatches,
+          snapshotCache,
+          internal.computedIdentityRequired
+            ? internal.computedSnapshotSources
+            : undefined
+        );
       }
       internal.rootState = nextState;
       invalidateReactivePaths(internal, safePatches);
