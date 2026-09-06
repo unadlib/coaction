@@ -31,3 +31,24 @@ jobs:
           pnpm check
         env:
           CI: true
+
+  react-versions:
+    name: React ${{ matrix.react }}
+    runs-on: ubuntu-latest
+    strategy:
+      matrix:
+        react: ['18', '19']
+    steps:
+      - uses: actions/checkout@v7
+      - uses: pnpm/action-setup@v6
+      - uses: actions/setup-node@v6
+        with:
+          node-version: 22.x
+          cache: pnpm
+      - run: pnpm install --frozen-lockfile
+      # The peer range says which React versions are supported. This is what
+      # makes that a fact rather than a hope: the suite runs against each of
+      # them, on the version actually installed.
+      - name: Install React ${{ matrix.react }}
+        run: pnpm --filter @coaction/react add -D react@^${{ matrix.react }} react-dom@^${{ matrix.react }}
+      - run: pnpm --filter @coaction/react test
