@@ -138,6 +138,8 @@ export type SyncMiddleware<T extends object> = (
 ) => MiddlewareStore<T> & { sync: SyncApi };
 
 type PersistedSyncState<T extends object = object> = {
+  /** See {@link CHECKPOINT_FORMAT_VERSION}. Absent means the first format. */
+  formatVersion?: number;
   cursor?: string;
   revision?: string;
   outbox: SyncMutation[];
@@ -240,16 +242,107 @@ const mergeMutationsById = (...groups: readonly SyncMutation[][]) => {
   return order.map((id) => byId.get(id)!);
 };
 
-const parseJournal = (raw: string | null) => {
+/**
+ * The checkpoint layout this build writes.
+ *
+ * The durable contract is not one field any more -- an outbox, an adapter
+ * baseline, a cursor, a revision, an optimistic snapshot and a pre-hydration
+ * journal, which have to be read back as one consistent set. Changing the shape
+ * of any of them is a thing that will happen, and a reader with no version to
+ * check has to guess from the content of the data whether it understands it.
+ *
+ * A checkpoint written before this existed has no `formatVersion` and is
+ * version 1: that is what every one of them is. A checkpoint from a *newer*
+ * build is refused rather than reinterpreted, and left where it is -- the
+ * mutations in it are writes the user made, and this build guessing at them is
+ * worse than telling the application it cannot read them.
+ */
+const CHECKPOINT_FORMAT_VERSION = 1;
+
+const isPatchShape = (value: unknown) => {
+  if (typeof value !== 'object' || value === null) return false;
+  const { op, path } = value as { op?: unknown; path?: unknown };
+  if (op !== 'add' && op !== 'replace' && op !== 'remove') return false;
+  if (Array.isArray(path)) {
+    if (
+      !path.every((key) => typeof key === 'string' || typeof key === 'number')
+    ) {
+      return false;
+    }
+  } else if (typeof path !== 'string') {
+    return false;
+  }
+  return op === 'remove' || 'value' in (value as object);
+};
+
+const isMutationShape = (value: unknown): value is SyncMutation => {
+  if (typeof value !== 'object' || value === null) return false;
+  const { id, createdAt, patches, inversePatches } = value as SyncMutation;
+  return (
+    typeof id === 'string' &&
+    id !== '' &&
+    Number.isFinite(createdAt) &&
+    Array.isArray(patches) &&
+    patches.every(isPatchShape) &&
+    Array.isArray(inversePatches) &&
+    inversePatches.every(isPatchShape)
+  );
+};
+
+const reject = (what: string, problem: string): never => {
+  throw new TypeError(`${what} ${problem}.`);
+};
+
+/**
+ * Read an outbox off storage, which is untrusted input.
+ *
+ * Refused whole rather than filtered: the mutations are a sequence of deltas,
+ * so replaying the survivors of a bad one rebuilds a different state than the
+ * user left, without saying so.
+ */
+const readOutbox = (value: unknown, what: string): SyncMutation[] => {
+  if (value === undefined) return [];
+  if (!Array.isArray(value)) reject(what, 'has an outbox that is not an array');
+  const index = (value as unknown[]).findIndex(
+    (mutation) => !isMutationShape(mutation)
+  );
+  if (index !== -1) {
+    reject(what, `has a malformed mutation at index ${index} of its outbox`);
+  }
+  return value as SyncMutation[];
+};
+
+const readCheckpointBody = (raw: string, what: string) => {
+  let parsed: unknown;
+  try {
+    parsed = JSON.parse(raw);
+  } catch {
+    return reject(what, 'is not JSON');
+  }
+  if (typeof parsed !== 'object' || parsed === null) {
+    reject(what, 'is not an object');
+  }
+  const body = parsed as { formatVersion?: unknown };
+  const version = body.formatVersion;
+  if (version !== undefined) {
+    if (typeof version !== 'number' || !Number.isInteger(version)) {
+      reject(what, 'has an unreadable formatVersion');
+    }
+    if ((version as number) > CHECKPOINT_FORMAT_VERSION) {
+      reject(
+        what,
+        `was written in format ${version}, and this build reads ${CHECKPOINT_FORMAT_VERSION}. It has been left as it is`
+      );
+    }
+  }
+  return body as Record<string, unknown>;
+};
+
+const parseJournal = (raw: string | null, what = 'The sync journal') => {
   if (!raw) return [] as SyncMutation[];
-  const parsed = JSON.parse(raw) as
-    | { outbox?: SyncMutation[] }
-    | SyncMutation[];
-  return Array.isArray(parsed)
-    ? parsed
-    : Array.isArray(parsed.outbox)
-      ? parsed.outbox
-      : [];
+  // The journal was written as a bare array before it carried a version.
+  if (raw.startsWith('[')) return readOutbox(JSON.parse(raw), what);
+  return readOutbox(readCheckpointBody(raw, what).outbox, what);
 };
 
 const pathsOverlap = (left: unknown, right: unknown) => {
@@ -380,6 +473,7 @@ export const sync = <T extends object>({
       );
     }
     const storage = resolveStorage(storageOption, name);
+    const checkpointLabel = `The durable checkpoint for sync({ name: '${name}' })`;
     /**
      * The outbox, the snapshot and the adapter's baseline are all stored as
      * JSON, so state JSON cannot represent is not persisted -- it is quietly
@@ -396,6 +490,27 @@ export const sync = <T extends object>({
           `sync({ name: '${name}' }) stores state as JSON, and ${what} cannot be. ${(error as Error).message}`
         );
       }
+    };
+    /**
+     * Read the durable checkpoint.
+     *
+     * Everything here came off storage, which is untrusted: another build
+     * wrote it, or something else is using the key, or half of it survived a
+     * crash. The type assertion this replaced was a claim about it, not a
+     * check of it, and anything it got wrong surfaced much further in -- a
+     * malformed mutation as an error about patches, a newer format as whatever
+     * that format happens to look like to this one.
+     */
+    const readCheckpoint = (raw: string | null): PersistedSyncState<T> => {
+      if (!raw) return { outbox: [] };
+      const checkpoint = readCheckpointBody(raw, checkpointLabel);
+      return {
+        cursor: checkpoint.cursor as string | undefined,
+        revision: checkpoint.revision as string | undefined,
+        outbox: readOutbox(checkpoint.outbox, checkpointLabel),
+        state: checkpoint.state as T | undefined,
+        adapter: checkpoint.adapter
+      };
     };
     adapter.bind?.(store);
     let outbox: SyncMutation[] = [];
@@ -422,6 +537,7 @@ export const sync = <T extends object>({
     const retryFactor = Math.max(1, retry.factor ?? 2);
     const statusListeners = new Set<(status: SyncStatus) => void>();
     const hydrationJournalName = `${name}::coaction-sync-pre-hydration`;
+    const journalLabel = `The pre-hydration journal for sync({ name: '${name}' })`;
     const readStorage = (key: string) => {
       try {
         return Promise.resolve(storage.getItem(key));
@@ -458,6 +574,7 @@ export const sync = <T extends object>({
         assertJsonState(adapterSnapshot, 'this adapter snapshot');
       }
       return {
+        formatVersion: CHECKPOINT_FORMAT_VERSION,
         cursor,
         revision,
         outbox,
@@ -482,11 +599,14 @@ export const sync = <T extends object>({
       writeQueue = writeQueue
         .catch(() => undefined)
         .then(async () => {
-          const prior = parseJournal(await initialJournalRead);
+          const prior = parseJournal(await initialJournalRead, journalLabel);
           const merged = mergeMutationsById(prior, current);
           await storage.setItem(
             hydrationJournalName,
-            JSON.stringify({ outbox: merged })
+            JSON.stringify({
+              formatVersion: CHECKPOINT_FORMAT_VERSION,
+              outbox: merged
+            })
           );
         });
       return writeQueue;
@@ -929,18 +1049,16 @@ export const sync = <T extends object>({
         const journalRaw = await storage.getItem(hydrationJournalName);
         if (destroyed) return;
 
-        const parsed = raw
-          ? (JSON.parse(raw) as PersistedSyncState<T>)
-          : ({ outbox: [] } as PersistedSyncState<T>);
+        const parsed = readCheckpoint(raw);
         cursor = parsed.cursor;
         revision = parsed.revision;
         // Before anything is pulled, pushed or replayed: the adapter's view of
         // the remote has to be as old as the outbox it will interpret.
         adapter.hydrate?.(parsed.adapter);
-        const durable = Array.isArray(parsed.outbox) ? parsed.outbox : [];
+        const durable = parsed.outbox;
         const durableIds = new Set(durable.map(({ id }) => id));
         const inMemoryPreHydration = [...outbox];
-        const journalPending = parseJournal(journalRaw).filter(
+        const journalPending = parseJournal(journalRaw, journalLabel).filter(
           ({ id }) => !durableIds.has(id)
         );
         const preHydration = mergeMutationsById(

@@ -1852,3 +1852,124 @@ test('an applied replacement JSON cannot carry is refused', async () => {
   expect(errors).toHaveLength(0);
   store.destroy();
 });
+
+/**
+ * Storage is untrusted input. Another build wrote it, something else is using
+ * the key, or half of it survived a crash -- and the type assertion this
+ * replaced was a claim about the data, not a check of it. What got through
+ * surfaced much further in: a malformed mutation as an error about patches
+ * somewhere inside the replay, a checkpoint from a newer build as whatever
+ * that format happens to look like to this one.
+ */
+const hydrateFrom = (name: string, raw: string) => {
+  const storage = createMemoryStorage();
+  storage.map.set(name, raw);
+  const store = create<{ count: number }>(() => ({ count: 0 }), {
+    middlewares: [
+      sync({
+        name,
+        storage,
+        adapter: { pull: async () => ({}), push: pendingPush }
+      })
+    ]
+  });
+  return { store, storage };
+};
+
+test('a checkpoint records the format it was written in', async () => {
+  const storage = createMemoryStorage();
+  const store = create<{ count: number; increment: () => void }>(
+    (set) => ({
+      count: 0,
+      increment() {
+        set(() => {
+          this.count += 1;
+        });
+      }
+    }),
+    {
+      middlewares: [
+        sync({
+          name: 'format-version',
+          storage,
+          adapter: { pull: async () => ({}), push: pendingPush }
+        })
+      ]
+    }
+  );
+  await nextTick();
+  store.getState().increment();
+  await nextTick();
+
+  expect(JSON.parse(storage.map.get('format-version')!).formatVersion).toBe(1);
+  store.destroy();
+});
+
+test('a checkpoint written before versioning still reads', async () => {
+  const { store } = hydrateFrom(
+    'legacy-checkpoint',
+    JSON.stringify({
+      outbox: [
+        {
+          id: 'm1',
+          createdAt: 1,
+          patches: [{ op: 'replace', path: ['count'], value: 7 }],
+          inversePatches: [{ op: 'replace', path: ['count'], value: 0 }]
+        }
+      ],
+      state: { count: 7 }
+    })
+  );
+  await nextTick();
+
+  expect(store.getState().count).toBe(7);
+  expect(getSyncApi(store).getPending()).toHaveLength(1);
+  store.destroy();
+});
+
+test('a checkpoint from a newer build is refused and left alone', async () => {
+  const { store, storage } = hydrateFrom(
+    'future-checkpoint',
+    JSON.stringify({ formatVersion: 99, outbox: [], state: { count: 5 } })
+  );
+  const raw = storage.map.get('future-checkpoint');
+
+  await expect(getSyncApi(store).flush()).rejects.toThrow(
+    /written in format 99/
+  );
+  expect(getSyncApi(store).getStatus()).toBe('error');
+  // Whatever is in there are writes somebody made. Guessing at them is worse
+  // than saying they cannot be read, and overwriting them is worse still.
+  expect(storage.map.get('future-checkpoint')).toBe(raw);
+  store.destroy();
+});
+
+test('a malformed mutation is refused rather than replayed', async () => {
+  const { store } = hydrateFrom(
+    'malformed-checkpoint',
+    JSON.stringify({
+      formatVersion: 1,
+      outbox: [
+        {
+          id: 'm1',
+          createdAt: 1,
+          patches: [{ op: 'replace', path: ['count'], value: 1 }],
+          inversePatches: []
+        },
+        { id: 'm2', createdAt: 2, patches: 'not-an-array', inversePatches: [] }
+      ]
+    })
+  );
+
+  await expect(getSyncApi(store).flush()).rejects.toThrow(
+    /malformed mutation at index 1/
+  );
+  store.destroy();
+});
+
+test('a checkpoint that is not JSON is refused', async () => {
+  const { store } = hydrateFrom('corrupt-checkpoint', '{ half a write');
+
+  await expect(getSyncApi(store).flush()).rejects.toThrow(/is not JSON/);
+  store.destroy();
+});

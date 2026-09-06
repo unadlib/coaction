@@ -188,6 +188,27 @@ Valtio, Pinia — where the object has already changed by the time Coaction has 
 commit to inspect. There the write is reported through `onError` rather than
 refused.
 
+## The durable checkpoint
+
+The outbox, the optimistic snapshot, the cursor, the revision and the adapter's
+baseline are one checkpoint, written under the store's `name`, plus a
+pre-hydration journal alongside it. Both carry a `formatVersion`.
+
+Storage is read as untrusted input. A checkpoint whose `formatVersion` is newer
+than this build understands is refused and **left where it is** -- what is in it
+are writes somebody made, and guessing at them is worse than saying they cannot
+be read. A checkpoint that is not JSON, or whose outbox holds a malformed
+mutation, is refused the same way: hydration rejects, `sync.flush()` and
+`sync.pull()` surface the error, and status goes to `error`.
+
+A partly-valid outbox is refused whole rather than filtered. The mutations are a
+sequence and each is a delta from the one before it, so replaying the survivors
+does not reconstruct the state the user left -- it reconstructs a different one,
+without saying so.
+
+Checkpoints written before `formatVersion` existed are read as format 1, which
+is what they are.
+
 ## Delivery semantics
 
 Mutations are delivered **at least once**. The window between a remote
