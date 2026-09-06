@@ -231,3 +231,60 @@ test('a root replacement pair travels in both directions', () => {
     );
   });
 });
+
+/**
+ * The trie is an optimisation, and the thing it optimises is three lines. So
+ * the three lines are written out here and the two are required to agree.
+ *
+ * This is not the model-testing trap of writing a second implementation of a
+ * system and calling the agreement proof: the reference below is the definition
+ * -- is any patch's path a proper prefix of an earlier one's -- and the trie is
+ * a faster way to compute it. A disagreement means the fast one is wrong.
+ */
+const referenceNeedsDerivation = (patches: Patches) => {
+  const paths = patches.map((patch) =>
+    (Array.isArray(patch.path) ? patch.path : String(patch.path).split('/'))
+      .filter((segment) => segment !== '')
+      .map(String)
+  );
+  for (let later = 1; later < paths.length; later += 1) {
+    for (let earlier = 0; earlier < later; earlier += 1) {
+      if (paths[later].length >= paths[earlier].length) continue;
+      if (
+        paths[later].every(
+          (segment, index) => segment === paths[earlier][index]
+        )
+      ) {
+        return true;
+      }
+    }
+  }
+  return false;
+};
+
+test('the fast check agrees with the definition it stands in for', () => {
+  let flagged = 0;
+  forEachSeed(2000, (random) => {
+    const { patches } = transition(random);
+    const expected = referenceNeedsDerivation(patches);
+    if (expected) flagged += 1;
+    expect(inverseNeedsDerivation(patches)).toBe(expected);
+  });
+  expect(flagged).toBeGreaterThan(0);
+});
+
+test('the fast check agrees on paths built to collide', () => {
+  forEachSeed(2000, (random) => {
+    // Paths drawn from a tiny alphabet, so prefixes and repeats are common --
+    // random state mutation produces them rarely, and the trie is exactly the
+    // part that could get them wrong.
+    const patches = random.list(0, 8, () => ({
+      op: 'replace' as const,
+      path: random.list(0, 4, () => random.pick(['a', 'b', '0', '1'])),
+      value: 1
+    })) as unknown as Patches;
+    expect(inverseNeedsDerivation(patches)).toBe(
+      referenceNeedsDerivation(patches)
+    );
+  });
+});

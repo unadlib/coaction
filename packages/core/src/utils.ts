@@ -590,21 +590,35 @@ const readPatchTarget = (root: unknown, path: readonly PropertyKey[]) => {
  * gone. Deriving the inverse instead always works but flattens the shared
  * references mutative's keeps, so it is used only here.
  */
+type PatchPathNode = { children?: Map<string, PatchPathNode> };
+
 export const inverseNeedsDerivation = (patches: Patches) => {
   if (patches.length < 2) return false;
-  const paths = patches.map((patch) =>
-    normalizePatchPath(patch.path).map(String)
-  );
-  for (let later = 1; later < paths.length; later += 1) {
-    for (let earlier = 0; earlier < later; earlier += 1) {
-      if (paths[later].length >= paths[earlier].length) continue;
-      if (
-        paths[later].every(
-          (segment, index) => segment === paths[earlier][index]
-        )
-      ) {
-        return true;
+  // Paths go into a trie as they are read, and each one asks on the way in
+  // whether anything already there went deeper through it. That is the same
+  // question as "is this a proper prefix of an earlier path", answered once per
+  // segment instead of against every earlier patch: a bulk array edit produces
+  // thousands of patches, and comparing each against all of its predecessors
+  // made the check cost more than the update it was checking.
+  const root: PatchPathNode = {};
+  for (const patch of patches) {
+    let node = root;
+    let existing = true;
+    for (const segment of normalizePatchPath(patch.path)) {
+      const key = String(segment);
+      node.children ??= new Map();
+      let next = node.children.get(key);
+      if (!next) {
+        existing = false;
+        next = {};
+        node.children.set(key, next);
       }
+      node = next;
+    }
+    // Reached entirely through nodes that were already there, and something
+    // continues past it: an earlier patch is inside what this one replaces.
+    if (existing && node.children?.size) {
+      return true;
     }
   }
   return false;

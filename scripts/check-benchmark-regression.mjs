@@ -6,7 +6,8 @@ import { fileURLToPath } from 'node:url';
 import benchmark from 'benchmark';
 import { create as createWithZustand } from 'zustand';
 import { immer } from 'zustand/middleware/immer';
-import { create as createWithCoaction } from '../packages/core/dist/local.mjs';
+import { create as createWithCoaction } from '../packages/core/dist/index.mjs';
+import { onStoreCommit } from '../packages/core/dist/adapter.mjs';
 
 const { Suite } = benchmark;
 const scriptDir = dirname(fileURLToPath(import.meta.url));
@@ -41,6 +42,8 @@ const runSuite = (name, suite) => {
 };
 
 const itemCount = 1000;
+
+let bulkStore;
 
 const createItems = () =>
   Array.from({ length: itemCount }, (_, index) => ({
@@ -330,6 +333,43 @@ runSuite(
         }
       }
     )
+);
+
+/**
+ * A bulk array edit through a store that is producing patches.
+ *
+ * Reversing ten thousand elements emits one patch per index, and the commit
+ * path walks that pair to decide whether the inverse can be applied as it
+ * comes. That walk was quadratic for one release: 153ms at ten thousand
+ * patches, more than the update it was checking. It is the kind of regression
+ * that hides inside a correctness fix, so it gets a number here.
+ */
+runSuite(
+  'Bulk patch commit throughput',
+  new Suite().add(
+    'Coaction reverse 10k array with a commit listener',
+    () => {
+      bulkStore.getState().shuffle();
+    },
+    {
+      onStart: () => {
+        bulkStore = createWithCoaction(
+          (set) => ({
+            rows: Array.from({ length: 10000 }, (_, index) => index),
+            shuffle: () => {
+              set((state) => {
+                state.rows.reverse();
+              });
+            }
+          }),
+          { enablePatches: true }
+        );
+        // Patches are only produced when something is listening, and the
+        // scan only runs on the pair that produces.
+        onStoreCommit(bulkStore, () => undefined);
+      }
+    }
+  )
 );
 
 const failures = [];
