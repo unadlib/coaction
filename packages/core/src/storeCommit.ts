@@ -149,6 +149,15 @@ export const onStoreCommitPrepare = <T extends CreateState>(
  * rendered it, and refusing it after the fact only means the two disagree from
  * there on with nothing left to say so.
  *
+ * Every way into the state runs validators: `setState`, `store.apply()` with a
+ * patch pair or with a replacement, and a patch replay. A replacement carries
+ * no patch pair of its own, so the one the commit would be published with is
+ * derived and checked instead.
+ *
+ * The exception is an external mutable adapter -- MobX, Valtio, Pinia -- which
+ * owns the object and has already changed it by the time a commit exists.
+ * There a middleware has only {@link onStoreCommit} to report from.
+ *
  * A validator sees the same commit a listener does. It must not write to the
  * store, and it runs on every local transition, so keep it proportional to the
  * patches rather than to the size of the state.
@@ -218,6 +227,10 @@ export const publishStoreCommit = <T extends CreateState>(
     listener(commit);
   }
 };
+
+/** @internal */
+export const hasStoreCommitValidators = (store: object) =>
+  Boolean(getStoreCommitRuntime(store)?.validators.size);
 
 /** @internal */
 export const validateStoreCommit = <T extends CreateState>(

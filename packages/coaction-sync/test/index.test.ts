@@ -1,4 +1,5 @@
 import { create } from 'coaction';
+import { replayStorePatches } from 'coaction/adapter';
 import { history, type HistoryApi } from '@coaction/history';
 import {
   createFetchSyncAdapter,
@@ -1774,5 +1775,80 @@ test('a replacement JSON cannot carry is refused too', async () => {
   ).toThrow(/stores state as JSON/);
   expect(store.getState().when).toBe('1970-01-01');
   expect(getSyncApi(store).getPending()).toHaveLength(0);
+  store.destroy();
+});
+
+/**
+ * `setState` is not the only way into the state. `store.apply()` is public,
+ * with and without a patch pair, and `replayStorePatches` is how middleware
+ * puts a transition through the authoritative pipeline. Checking the transition
+ * at whichever of those happened to be looked at first left the other two as
+ * ways to commit a value the outbox can never carry -- the same divergence,
+ * reached by a different door.
+ */
+const createJsonContractStore = (name: string, errors: unknown[]) =>
+  create<{ when: string }>(() => ({ when: '1970-01-01' }), {
+    middlewares: [
+      sync({
+        name,
+        storage: createMemoryStorage(),
+        adapter: { pull: async () => ({}), push: pendingPush },
+        onError: (error) => errors.push(error)
+      })
+    ]
+  });
+
+test('a replayed patch JSON cannot carry is refused', async () => {
+  const errors: unknown[] = [];
+  const store = createJsonContractStore('json-replay', errors);
+  await nextTick();
+
+  expect(() =>
+    replayStorePatches(store, {
+      patches: [{ op: 'replace', path: ['when'], value: new Date(0) }],
+      inversePatches: [{ op: 'replace', path: ['when'], value: '1970-01-01' }]
+    })
+  ).toThrow(/stores state as JSON/);
+  await nextTick();
+
+  expect(store.getState().when).toBe('1970-01-01');
+  expect(getSyncApi(store).getPending()).toHaveLength(0);
+  expect(errors).toHaveLength(0);
+  store.destroy();
+});
+
+test('an applied patch JSON cannot carry is refused', async () => {
+  const errors: unknown[] = [];
+  const store = createJsonContractStore('json-apply-patches', errors);
+  await nextTick();
+
+  expect(() =>
+    store.apply(store.getPureState(), [
+      { op: 'replace', path: ['when'], value: new Date(0) }
+    ])
+  ).toThrow(/stores state as JSON/);
+  await nextTick();
+
+  expect(store.getState().when).toBe('1970-01-01');
+  expect(getSyncApi(store).getPending()).toHaveLength(0);
+  expect(errors).toHaveLength(0);
+  store.destroy();
+});
+
+test('an applied replacement JSON cannot carry is refused', async () => {
+  const errors: unknown[] = [];
+  const store = createJsonContractStore('json-apply-replacement', errors);
+  await nextTick();
+
+  // A replacement carries no patch pair of its own, so the one the commit
+  // would have been published with is derived and checked instead.
+  expect(() => store.apply({ when: new Date(0) as unknown as string })).toThrow(
+    /stores state as JSON/
+  );
+  await nextTick();
+
+  expect(store.getState().when).toBe('1970-01-01');
+  expect(getSyncApi(store).getPending()).toHaveLength(0);
+  expect(errors).toHaveLength(0);
   store.destroy();
 });

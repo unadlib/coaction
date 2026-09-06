@@ -32,7 +32,6 @@ import {
   hasStoreCommitListeners,
   prepareStoreCommit,
   publishStoreCommit,
-  validateStoreCommit,
   runWithStoreCommitSource,
   type StoreCommitSource,
   type StorePatchTransition
@@ -143,18 +142,6 @@ export const handleState = <T extends CreateState>(
       finalPatches.inversePatches,
       'store.patch() inverse patches'
     );
-    // The last point at which refusing this transition costs nothing.
-    // `internal.rootState` went back to the backup in the `finally` above, so
-    // a validator that throws here leaves the store exactly as it was and the
-    // error surfaces at the `setState` that caused it.
-    if (safePatches.length) {
-      validateStoreCommit(store, {
-        state: (producedState ?? internal.rootState) as T,
-        patches: safePatches,
-        inversePatches: safeInversePatches,
-        source: 'setState'
-      });
-    }
     if (
       producedState &&
       safePatches.some(

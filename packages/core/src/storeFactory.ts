@@ -20,12 +20,15 @@ import {
   disposeStoreCommitRuntime,
   getStoreCommitSource,
   hasStoreCommitListeners,
+  hasStoreCommitValidators,
   publishStoreCommit,
-  registerStorePatchReplayer
+  registerStorePatchReplayer,
+  validateStoreCommit
 } from './storeCommit';
 import {
   assertKnownStateShape,
   assertSafePatches,
+  createInversePatches,
   createRootReplacementPatches,
   createStateSchema,
   getOwnEnumerableKeys,
@@ -187,6 +190,38 @@ export const createStore = <T extends CreateState>(
         );
         validateState?.(internal.getTransportState?.() ?? nextState);
       }
+      // This assignment is the commit. Everything above it works on a
+      // candidate, and `internal.rootState` still holds what every reader
+      // sees, so a commit validator that throws here aborts the transition
+      // whole -- and it does so for every entry that reaches this line:
+      // `setState`, `store.apply()`, and a patch replay alike. Validating in
+      // any one of those instead left the others as ways in.
+      let replacement:
+        | ReturnType<typeof createRootReplacementPatches>
+        | undefined;
+      if (hasStoreCommitValidators(store)) {
+        if (!safePatches) {
+          // A replacement carries no patch pair of its own. It is the same
+          // pair `apply` derives to publish the commit, so it is derived once
+          // and handed on.
+          replacement = createRootReplacementPatches(
+            internal.rootState as Record<PropertyKey, unknown>,
+            nextState as Record<PropertyKey, unknown>
+          );
+        }
+        validateStoreCommit(store, {
+          state: nextState as T,
+          patches: (safePatches ?? replacement!.patches) as Patches,
+          // A validator is shown the same pair the commit will publish, so the
+          // inverse is derived where the caller supplied none. It reads one
+          // target per patch, not the whole state, and only runs at all when
+          // something is validating.
+          inversePatches: (safePatches
+            ? createInversePatches(baseState, safePatches)
+            : replacement!.inversePatches) as Patches,
+          source: getStoreCommitSource(store, 'external')
+        });
+      }
       internal.rootState = nextState;
       invalidateReactivePaths(internal, safePatches);
       if (internal.updateImmutable) {
@@ -194,6 +229,7 @@ export const createStore = <T extends CreateState>(
       } else {
         internal.listeners.forEach((listener) => listener());
       }
+      return replacement;
     };
     const apply: Store<T>['apply'] = (
       state = internal.rootState as T,
@@ -202,14 +238,16 @@ export const createStore = <T extends CreateState>(
       const observeReplacement =
         patches === undefined && hasStoreCommitListeners(store);
       const previousState = internal.rootState as T;
-      applyState(state, patches);
+      const derived = applyState(state, patches);
       if (!observeReplacement) {
         return;
       }
-      const replacement = createRootReplacementPatches(
-        previousState as Record<PropertyKey, unknown>,
-        internal.rootState as Record<PropertyKey, unknown>
-      );
+      const replacement =
+        derived ??
+        createRootReplacementPatches(
+          previousState as Record<PropertyKey, unknown>,
+          internal.rootState as Record<PropertyKey, unknown>
+        );
       const safePatches = sanitizeCheckedPatches(
         replacement.patches as Patches,
         'store.apply() replacement'

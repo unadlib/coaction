@@ -165,10 +165,13 @@ so until something downstream reads the wrong type.
 
 `sync()` therefore refuses state it cannot store, with the path to the value.
 A write that introduces one is refused before it is committed, so the error
-reaches the `setState` that caused it and the store keeps the state it can
-carry. Committing it and reporting afterwards would leave the store serving a
-value the remote will never hear about, with every write after it a delta from
-a baseline only this client has.
+reaches the caller and the store keeps the state it can carry. Committing it
+and reporting afterwards would leave the store serving a value the remote will
+never hear about, with every write after it a delta from a baseline only this
+client has.
+
+Every way into the state is checked: `setState`, `store.apply()` with a patch
+pair or with a replacement, and a patch replay.
 
 It is the same contract the shared transport enforces, checked the same way.
 Keep dates as ISO strings or epoch numbers, keyed collections as records, and
