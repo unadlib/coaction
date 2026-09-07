@@ -9,7 +9,12 @@
     "Coaction with Mutative": 500,
     "Coaction reverse 10k array with a commit listener": 30,
     "Coaction write, nothing watching": 300000,
-    "Coaction write, a getter has been read": 45000
+    "Coaction write, a getter has been read": 45000,
+    "Coaction write, a plain subscriber": 250000,
+    "Coaction write, a commit listener": 125000,
+    "Coaction write, a path effect": 100000,
+    "Coaction object replacement, nothing watching": 2000,
+    "Coaction recipe replacement, nothing watching": 400000
   },
   "minRatios": [
     {

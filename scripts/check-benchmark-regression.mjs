@@ -6,7 +6,10 @@ import { fileURLToPath } from 'node:url';
 import benchmark from 'benchmark';
 import { create as createWithZustand } from 'zustand';
 import { immer } from 'zustand/middleware/immer';
-import { create as createWithCoaction } from '../packages/core/dist/index.mjs';
+import {
+  create as createWithCoaction,
+  effect
+} from '../packages/core/dist/index.mjs';
 import { onStoreCommit } from '../packages/core/dist/adapter.mjs';
 
 const { Suite } = benchmark;
@@ -351,23 +354,9 @@ runSuite(
 );
 
 /**
- * A bulk array edit through a store that is producing patches.
- *
- * Reversing ten thousand elements emits one patch per index, and the commit
- * path walks that pair to decide whether the inverse can be applied as it
- * comes. That walk was quadratic for one release: 153ms at ten thousand
- * patches, more than the update it was checking. It is the kind of regression
- * that hides inside a correctness fix, so it gets a number here.
- */
-/**
- * What a write costs once something is watching.
- *
- * Reading a computed getter, or attaching any commit listener, creates reactive
- * path nodes -- and a store that has them cannot take the patch-free `setState`
- * path, because invalidating those paths needs patches. That is a real and
- * permanent cost on every write, currently about six and a half times, and it
- * is the price of the tracking rather than a defect. It is measured so it
- * cannot quietly become more.
+ * Measure writes independently of recomputation. A plain subscriber needs no
+ * patches; commits, path effects and a previously-read getter do. Their costs
+ * differ, so a single "tracked" number cannot cover these paths.
  */
 runSuite(
   'Write cost with and without tracking',
@@ -397,6 +386,63 @@ runSuite(
     )
 );
 
+let observedStore;
+let disposeObservation;
+const observedWrites = new Suite();
+for (const [name, observe] of [
+  ['a plain subscriber', (store) => store.subscribe(() => {})],
+  ['a commit listener', (store) => onStoreCommit(store, () => {})],
+  ['a path effect', (store) => effect(() => store.getState().items[0].quantity)]
+]) {
+  observedWrites.add(
+    `Coaction write, ${name}`,
+    () => {
+      observedStore.getState().bump(nextIndex());
+    },
+    {
+      onStart: () => {
+        observedStore = createTrackingStore();
+        disposeObservation = observe(observedStore);
+      },
+      onComplete: () => {
+        disposeObservation();
+        observedStore.destroy();
+      }
+    }
+  );
+}
+runSuite('Write cost by observation kind', observedWrites);
+
+// Build the same replacement from raw immutable state for both forms. This
+// isolates normalization from the public readonly facade and getter tracking.
+let replacementStore;
+const replacementWrites = new Suite();
+for (const kind of ['object', 'recipe']) {
+  replacementWrites.add(
+    `Coaction ${kind} replacement, nothing watching`,
+    () => {
+      const index = nextIndex();
+      const items = replacementStore.getPureState().items.slice();
+      items[index] = { ...items[index], quantity: items[index].quantity + 1 };
+      if (kind === 'object') replacementStore.setState({ items });
+      else
+        replacementStore.setState((draft) => {
+          draft.items = items;
+        });
+    },
+    {
+      onStart: () => {
+        replacementStore = createTrackingStore();
+      },
+      onComplete: () => {
+        replacementStore.destroy();
+      }
+    }
+  );
+}
+runSuite('Replacement write cost by input form', replacementWrites);
+
+/** Reversing 10k scalars exercises bulk patch validation and commit work. */
 runSuite(
   'Bulk patch commit throughput',
   new Suite().add(

@@ -52,26 +52,44 @@ getter reading one field                 3,993     67,081
 same, over four thousand items           1,043     34,413
 ```
 
-### The write cost this leaves, and the decision about it
+### The remaining write cost and the 4.0 optimizations
 
-Once a store has reactive path nodes -- which reading a computed getter or
-attaching any commit listener creates -- a write can no longer take the
-patch-free `setState` path, because invalidating those paths needs patches:
+Patches remain necessary for commit observers and path invalidation. A plain
+`subscribe()` listener does not request them. The previous roughly 468k versus
+70k writes/sec gap also included avoidable work: replaying an already-produced
+native transition and drafting the getter's frozen array snapshot.
 
-```
-Coaction write, nothing watching            467,779 ops/sec
-Coaction write, a getter has been read       70,307
-```
+Native scalar transitions now commit their verified producer result through the
+same validation and notification boundary. Single scalar replacements in plain
+trees copy and freeze the affected snapshot path directly. Object replacements
+build snapshots from the actual committed identities, preserving deep freezing
+and computed object identity. Other patch shapes keep the general path.
 
-This is the price of the tracking, not a defect, and it is why the floors for
-the two `mutable update` scenarios sit where they do. **It is accepted for 4.0**
-and gated at both ends, so it cannot quietly become more, and so a future
-attempt to close the gap has a number to move.
+One `pnpm benchmark:check` run on Apple M1 Max, Node 24.16.0, Mutative 1.3.0,
+with 1,000 cart items (runtime commit `6774dec`):
 
-Closing it would mean invalidating reactive paths from something other than a
-patch pair -- comparing the states, say -- which is a change to how tracking
-works rather than a local optimisation. That belongs to a release that is
-changing the reactive runtime, not to one freezing it.
+| Observation before writes | Writes/sec |
+| :------------------------ | ---------: |
+| None                      |    459,024 |
+| Plain subscriber          |    451,175 |
+| Commit listener           |    332,094 |
+| Path effect               |    305,415 |
+| Getter read once          |    170,546 |
+
+The getter row measures writes after activation, without reading the getter on
+every iteration. Update followed by a summing getter is a different case: 51,225
+ops/sec in this run. Copying a changed array still costs O(array length); these
+optimizations remove redundant work without changing tracking granularity.
+
+The same run measured unobserved object replacement at 4,740 ops/sec and recipe
+replacement at 878,158 ops/sec, both constructing the same new array from
+`getPureState()`. The object form still clones incoming containers for isolation
+and sanitization. Its traversal is shared with initialization and enumerates
+array entries once. The recipe form hands values to Mutative without that input
+clone when patches are not needed; callers must respect immutable ownership.
+
+Every observation kind and both replacement forms now have independent floors.
+Existing floors and the frozen size ceilings were retained.
 
 ### A floor with no headroom is a floor that gets ignored
 
@@ -85,10 +103,10 @@ the measured value did not move, and a real regression on this path would take
 the ratio well below either number. What was wrong was setting a threshold with
 no margin, which turns a gate into something people learn to re-run.
 
-### What is left, and why the floors moved
+### Historical reason for the mutable-update floors
 
-38,000 against a floor of 45,000. The remaining difference is the write, not the
-read: once reactive path nodes exist, a write can no longer take the patch-free
+At the earlier qualification, the result was 38,000 against a floor of 45,000.
+The remaining difference then was the write, not the read: once reactive path nodes exist, a write can no longer take the patch-free
 fast path, because invalidating those paths needs patches.
 
 ```

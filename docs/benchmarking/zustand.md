@@ -45,7 +45,7 @@ The update-plus-read cases also enforce Coaction's immutable public-state
 boundary. External reads remain behind readonly proxies so actions cannot
 mutate nested values outside `set()`. Cached getter evaluation uses a separate
 frozen snapshot: its first evaluation snapshots the immutable state and later
-updates apply only the paths reported by Mutative. This keeps computed traversal
+scalar updates carry forward the affected paths; object replacements build frozen snapshots from the committed values. This keeps computed traversal
 safe without paying one proxy trap per array element and field. Stable cached
 reads and large Mutative updates remain separate cases so regressions in those
 paths are visible independently.
@@ -59,15 +59,16 @@ they are not cross-machine performance claims.
 
 ## Reading these numbers
 
-Every figure in this document and in the README comes from a **single run** of
+The original derived-positioning figures and README chart came from a **single run** of
 `pnpm benchmark:zustand-positioning` on one machine (Apple M1 Max, Node 24.16,
 `zustand@5.0.11`). Run-to-run spread on that suite is roughly ±1% for the stable read cases and
 as much as ±19% for the object-replacement case, so the trailing digits carry no meaning: quote
 the order of magnitude and the ratio, not the exact value.
 
-Mixing figures from different runs is how these documents drifted out of agreement once already.
-When you refresh them, refresh every table from the same run and update the README in the same
-change.
+The current write-cost tables below instead come from one `pnpm benchmark:check`
+run at runtime commit `6774dec` (Apple M1 Max, Node 24.16.0, Mutative 1.3.0).
+Keep these workloads separate when quoting results; refreshing positioning or
+README claims requires rerunning their own scripts.
 
 ## The object-payload write path
 
@@ -95,43 +96,55 @@ already relies on. Incoming payloads are unaffected — see below.
 
 ### By design: the incoming payload is deep-sanitized
 
-Whatever you hand to `set({ ... })` is caller-supplied data. It is deep-cloned to strip unsafe
-keys and to break aliasing with objects the caller still holds, so passing in a fresh
-1,000-element array costs O(payload). Measured on an Apple M1 Max with a 1,000-item cart:
+The object form clones incoming plain containers to strip unsafe keys and isolate
+state from subsequent caller mutation. It preserves cycles and shared references
+within the payload; non-plain atomic values retain their identities. Passing a
+fresh 1,000-element array therefore still costs O(payload). Normalization now
+uses one array traversal and shares its implementation with initialization.
 
-| Update path                                | ops/sec |
-| :----------------------------------------- | ------: |
-| `set((draft) => { ... })` (Mutative draft) |  43,918 |
-| `set({ items })` (object replacement)      |     342 |
+The current gate separates input form, observation, and public-state reads:
 
-This is not a defect and cannot be optimized away without weakening the guarantee. Coaction 1.5.0
-looks dramatically faster here only because it did not make that guarantee; the sanitizer arrived
-in 2.0.0. `Coaction object replacement + cached getter` gates this path so it cannot get worse.
+| Update path over 1,000 cart items                       | ops/sec |
+| :------------------------------------------------------ | ------: |
+| Draft field edit, then cached getter                    |  51,225 |
+| Object replacement via public state, then cached getter |     149 |
+| Object replacement via raw state, nothing watching      |   4,740 |
+| Recipe replacement via raw state, nothing watching      | 878,158 |
 
-**Practical rule: prefer `set((draft) => { ... })` whenever the value you are writing is large.**
-The draft path lets Mutative report precise patches, so neither the payload walk nor the cached
-getter's snapshot rebuild is needed.
+The two unobserved cases build the same array from `getPureState()`. Only the
+object form performs the incoming-container clone in that mode. With a getter
+or commit observer, object-valued patches require additional normalization and
+snapshot work even when assigned inside a recipe. The public-state replacement
+case also reads readonly proxies and showed about ±26% uncertainty in this run;
+these rows cannot attribute every difference to the input clone alone.
 
-### By design: tracking costs writes
+**Prefer editing fields inside `set((draft) => { ... })` for large state.**
+Mutative can report small patches while retaining unchanged subtrees. Replacing
+an entire array inside a recipe is a different workload, and does not promise
+the same performance under observation.
 
-Reading a computed getter, or attaching any commit listener, creates reactive
-path nodes. A store that has them cannot take the patch-free `setState` path,
-because invalidating those paths needs the patches:
+### Tracking still costs writes, but redundant work was removable
 
-| Write path                       | ops/sec |
-| :------------------------------- | ------: |
-| nothing watching                 | 467,779 |
-| after a computed getter was read |  70,307 |
+Commit listeners request patch pairs; reactive path readers need patches for
+invalidation. Ordinary `subscribe()` listeners need neither. The native scalar
+path now commits the verified Mutative result without replaying it, and a single
+scalar replacement carries the frozen getter snapshot forward without drafting
+that snapshot again. Patch transforms, adapters and complex patch shapes retain
+the general commit path.
 
-This is the price of fine-grained invalidation, not a defect, and it is why the
-`mutable update` floors sit where they do — those scenarios read a getter after
-every write, so they pay it. `Coaction write, nothing watching` and `Coaction
-write, a getter has been read` gate both ends, so the gap cannot widen quietly.
+| Observation before writes | Writes/sec |
+| :------------------------ | ---------: |
+| Nothing watching          |    459,024 |
+| Plain subscriber          |    451,175 |
+| Commit listener           |    332,094 |
+| Path effect               |    305,415 |
+| Getter read once          |    170,546 |
 
-The comparison a reader should draw is between workloads, not libraries: a store
-nobody derives from writes at nearly half a million a second, and one whose
-derived values are kept precise writes at seventy thousand. Which of those
-describes an application is the question worth asking before quoting either.
+These are write-only cases after setup, not repeated getter recomputation.
+The old roughly 468k/70k gap included duplicate replay and snapshot copying; it
+was not all an unavoidable price of tracking. Each mode now has its own gate.
+Array path copies still depend on container length, and summing a getter still
+traverses the array when invalidated.
 
 ### By design: a bulk array edit is one patch per element
 
