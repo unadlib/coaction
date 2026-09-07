@@ -26,7 +26,8 @@
  * of tooling depends on something outside its own file. Both say so.
  */
 import { execFileSync } from 'node:child_process';
-import { readFileSync, writeFileSync } from 'node:fs';
+import { mkdtempSync, readFileSync, rmSync, writeFileSync } from 'node:fs';
+import { tmpdir } from 'node:os';
 import { dirname, join, resolve } from 'node:path';
 import { fileURLToPath } from 'node:url';
 
@@ -130,21 +131,54 @@ if (missing.length) {
   process.exit(1);
 }
 
+const scratch = mkdtempSync(join(tmpdir(), 'coaction-fuzz-catches-'));
+const report = join(scratch, 'results.json');
 const runSuites = (suites) => {
+  rmSync(report, { force: true });
   try {
     execFileSync(
       'npx',
-      ['vitest', 'run', ...suites, '--no-file-parallelism', '--reporter=dot'],
+      [
+        'vitest',
+        'run',
+        ...suites,
+        '--no-file-parallelism',
+        '--reporter=json',
+        '--outputFile',
+        report
+      ],
       { cwd: rootDir, stdio: 'pipe' }
     );
-    return true;
   } catch {
-    return false;
+    // The report below distinguishes a regression assertion from a loader error.
   }
+  const result = JSON.parse(readFileSync(report, 'utf8'));
+  const failed = result.testResults
+    .flatMap((suite) => suite.assertionResults)
+    .filter((test) => test.status === 'failed');
+  const messages = failed.flatMap((test) => test.failureMessages).join('\n');
+  if (
+    !result.numTotalTests ||
+    /is not a function|does not provide an export|Cannot find module|is not defined/.test(
+      messages
+    )
+  ) {
+    throw new Error(
+      `Historical fixture no longer executes the intended runtime:\n${messages.slice(0, 1600)}`
+    );
+  }
+  return { passed: result.success, failed: failed.length };
 };
 
 const missed = [];
 try {
+  if (
+    !runSuites([...new Set(defects.flatMap(({ suites }) => suites))]).passed
+  ) {
+    throw new Error(
+      'The current fuzz suites must pass before testing historical defects.'
+    );
+  }
   for (const defect of defects) {
     // `fixedBy` is the commit that fixed it, so its parent is the state with
     // the defect present.
@@ -154,7 +188,8 @@ try {
         git('show', `${defect.fixedBy}~1:${path}`).toString()
       );
     }
-    if (runSuites(defect.suites)) {
+    const result = runSuites(defect.suites);
+    if (result.passed || result.failed === 0) {
       missed.push(defect.name);
       console.log(`MISSED  ${defect.name}`);
     } else {
@@ -164,6 +199,7 @@ try {
   }
 } finally {
   restore();
+  rmSync(scratch, { recursive: true, force: true });
 }
 
 for (const [path, content] of saved) {

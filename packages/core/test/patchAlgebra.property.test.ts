@@ -1,12 +1,12 @@
 import { create as createWithMutative, type Patches } from 'mutative';
 import { create } from '../src';
-import { onStoreCommit, type StoreCommit } from '../adapter';
+import { onStoreCommit, type StoreCommit } from 'coaction/adapter';
 import { createRandom, forEachSeed, type Random } from './random';
 import {
   applyPatches,
   createInversePatches,
   createRootReplacementPatches
-} from '../adapter';
+} from 'coaction/adapter';
 import { inverseNeedsDerivation, isSameStructure } from '../src/utils';
 
 /**

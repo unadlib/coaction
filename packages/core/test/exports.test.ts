@@ -1,4 +1,4 @@
-import * as adapter from '../adapter';
+import * as adapter from 'coaction/adapter';
 import * as entry from '../index';
 import * as shared from '../shared';
 import { create } from '../src/create';

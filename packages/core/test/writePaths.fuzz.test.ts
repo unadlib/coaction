@@ -4,7 +4,7 @@ import {
   onStoreCommit,
   replayStorePatches,
   type StoreCommit
-} from '../adapter';
+} from 'coaction/adapter';
 import { createRandom, firstSeed, runs, type Random } from './random';
 
 /**

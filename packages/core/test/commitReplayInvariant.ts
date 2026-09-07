@@ -1,6 +1,6 @@
 import { apply as applyPatches } from 'mutative';
 import { describe, expect, test } from 'vitest';
-import { onStoreCommit, type StoreCommit } from '../adapter';
+import { onStoreCommit, type StoreCommit } from 'coaction/adapter';
 import type { Store } from '../src';
 
 /**

@@ -1,6 +1,6 @@
 import { create } from '../src';
 import { createSelectorWithArray } from '../src/computed';
-import { replayStorePatches } from '../adapter';
+import { replayStorePatches } from 'coaction/adapter';
 
 test('accessor getters are cached computed values', () => {
   let getterCalls = 0;
