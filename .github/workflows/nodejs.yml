@@ -50,5 +50,11 @@ jobs:
       # makes that a fact rather than a hope: the suite runs against each of
       # them, on the version actually installed.
       - name: Install React ${{ matrix.react }}
-        run: pnpm --filter @coaction/react add -D react@^${{ matrix.react }} react-dom@^${{ matrix.react }}
+        run: pnpm --filter @coaction/react add -D react@^${{ matrix.react }} react-dom@^${{ matrix.react }} @types/react@^${{ matrix.react }} @types/react-dom@^${{ matrix.react }}
       - run: pnpm --filter @coaction/react test
+      - run: pnpm typecheck
+      - run: pnpm exec playwright install --with-deps chromium firefox webkit
+      - name: Hydrate React ${{ matrix.react }} in real browsers
+        run: pnpm test:e2e:browser hydration.spec.ts
+        env:
+          COACTION_REACT_MAJOR: ${{ matrix.react }}

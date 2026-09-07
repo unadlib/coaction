@@ -7,6 +7,36 @@ const packageAlias = (packageName: string) =>
   resolve(__dirname, `packages/${packageName}/src/index.ts`);
 
 export default {
+  plugins: [
+    {
+      name: 'coaction-hydration-fixture',
+      transformIndexHtml: {
+        order: 'pre' as const,
+        async handler(
+          html: string,
+          context: import('vite').IndexHtmlTransformContext
+        ) {
+          if (
+            context.path !== '/examples/e2e/browser/hydration.html' ||
+            !context.server
+          )
+            return html;
+          const params = new URL(
+            context.originalUrl ?? context.path,
+            'http://localhost'
+          ).searchParams;
+          const { renderHydrationFixture } = await context.server.ssrLoadModule(
+            '/packages/coaction-react/e2e/hydrationServer.ts'
+          );
+          const markup = renderHydrationFixture(
+            params.has('preloaded'),
+            params.has('strict')
+          );
+          return html.replace('<!-- server markup -->', markup);
+        }
+      }
+    }
+  ],
   resolve: {
     alias: {
       'coaction/adapter': resolve(__dirname, 'packages/core/adapter.ts'),
