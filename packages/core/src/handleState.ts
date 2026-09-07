@@ -1,5 +1,4 @@
 import {
-  apply as applyWithMutative,
   type Draft,
   create as createWithMutative,
   isDraft,
@@ -13,10 +12,7 @@ import type {
   StoreOptions
 } from './interface';
 import type { Internal } from './internal';
-import {
-  createImmutableSnapshotPatches,
-  finalizeImmutableStateSnapshot
-} from './immutableState';
+import { updateImmutableStateSnapshot } from './immutableState';
 import {
   applyPatches,
   assertKnownStateShape,
@@ -339,17 +335,9 @@ export const handleState = <T extends CreateState>(
             );
             if (updateSnapshot) {
               const patches = (produced as [T, Patches, Patches])[1];
-              const snapshotPatches = createImmutableSnapshotPatches(
-                patches,
-                snapshotCache!
-              );
-              const nextSnapshot = applyWithMutative(
-                snapshot as T,
-                snapshotPatches
-              );
-              finalizeImmutableStateSnapshot(
+              updateImmutableStateSnapshot(
                 nextState,
-                nextSnapshot,
+                snapshot,
                 patches,
                 snapshotCache!,
                 snapshotSources

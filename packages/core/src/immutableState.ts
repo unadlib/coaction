@@ -1,4 +1,4 @@
-import type { Patches } from 'mutative';
+import { apply, type Patches } from 'mutative';
 
 export const isImmutableStateObject = (value: unknown): value is object => {
   if (typeof value !== 'object' || value === null) {
@@ -40,18 +40,24 @@ export const getImmutableStateSnapshot = (
   return Object.freeze(snapshot);
 };
 
-export const createImmutableSnapshotPatches = (
+/** Carry forward scalar edits; build replacements from the committed identities.
+ * Mutative.apply clones object payloads, losing both their frozen descendants
+ * and the snapshot cache's source mapping. Reuse the cache directly instead.
+ */
+export const updateImmutableStateSnapshot = (
+  state: unknown,
+  previousSnapshot: unknown,
   patches: Patches,
-  cache: WeakMap<object, unknown>
-) =>
-  patches.map((patch) =>
-    Object.prototype.hasOwnProperty.call(patch, 'value')
-      ? {
-          ...patch,
-          value: getImmutableStateSnapshot(patch.value, cache)
-        }
-      : patch
-  ) as Patches;
+  cache: WeakMap<object, unknown>,
+  sources?: WeakMap<object, object>
+) => {
+  const snapshot = patches.some(
+    (patch) => typeof patch.value === 'object' && patch.value !== null
+  )
+    ? getImmutableStateSnapshot(state, cache)
+    : apply(previousSnapshot as object, patches);
+  finalizeImmutableStateSnapshot(state, snapshot, patches, cache, sources);
+};
 
 export const finalizeImmutableStateSnapshot = (
   state: unknown,

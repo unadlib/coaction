@@ -1,12 +1,8 @@
-import { apply as applyWithMutative, type Patches } from 'mutative';
+import type { Patches } from 'mutative';
 import { applyMiddlewares } from './applyMiddlewares';
 import { invalidateReactivePaths } from './reactivePath';
 import { applyThroughExternalRuntime } from './externalApply';
-import {
-  createImmutableSnapshotPatches,
-  finalizeImmutableStateSnapshot,
-  getImmutableStateSnapshot
-} from './immutableState';
+import { updateImmutableStateSnapshot } from './immutableState';
 import { defaultName } from './constant';
 import { getInitialState } from './getInitialState';
 import { getRawState, type LocalActionWrapper } from './getRawState';
@@ -41,7 +37,6 @@ import {
   createRootReplacementPatches,
   createStateSchema,
   getOwnEnumerableKeys,
-  needsRootSnapshot,
   sanitizeCheckedPatches,
   sanitizePatches,
   sanitizeReplacementState
@@ -257,20 +252,9 @@ export const createStore = <T extends CreateState>(
         internal.rootState as unknown as object
       );
       if (snapshotCache && previousSnapshot && safePatches?.length) {
-        const snapshotPatches = createImmutableSnapshotPatches(
-          safePatches,
-          snapshotCache
-        );
-        finalizeImmutableStateSnapshot(
+        updateImmutableStateSnapshot(
           nextState,
-          snapshotPatches.some(
-            (patch) =>
-              typeof patch.value === 'object' &&
-              patch.value !== null &&
-              needsRootSnapshot(patch.value)
-          )
-            ? getImmutableStateSnapshot(nextState, snapshotCache)
-            : applyWithMutative(previousSnapshot as any, snapshotPatches),
+          previousSnapshot,
           safePatches,
           snapshotCache,
           internal.computedIdentityRequired

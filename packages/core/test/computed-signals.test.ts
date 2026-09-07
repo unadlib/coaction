@@ -93,6 +93,58 @@ test('accessor getters cannot mutate the frozen state used for computation', () 
   expect(store.getPureState().nested.count).toBe(1);
 });
 
+test.each(['object', 'recipe', 'apply', 'replay'] as const)(
+  'whole-array %s replacement keeps computed descendants frozen and mapped',
+  (kind) => {
+    let captured: Array<{ nested: { value: number } }> = [];
+    const store = create(() => ({
+      items: [{ nested: { value: 1 } }],
+      get first() {
+        captured = this.items;
+        return this.items[0].nested;
+      },
+      get invalid() {
+        this.items[0].nested.value += 1;
+        return this.items[0].nested.value;
+      }
+    }));
+    expect(store.getState().first).toBe(store.getState().items[0].nested);
+    const oldSnapshot = captured;
+    const items = [{ nested: { value: 2 } }];
+    if (kind === 'object') store.setState({ items });
+    else if (kind === 'recipe')
+      store.setState((draft) => {
+        draft.items = items;
+      });
+    else {
+      const patches = [
+        { op: 'replace' as const, path: ['items'], value: items }
+      ];
+      if (kind === 'apply') store.apply(store.getPureState(), patches);
+      else
+        replayStorePatches(store, {
+          patches,
+          inversePatches: [
+            {
+              op: 'replace',
+              path: ['items'],
+              value: store.getPureState().items
+            }
+          ]
+        });
+    }
+    expect(store.getState().first).toBe(store.getState().items[0].nested);
+    expect(store.getState().first.value).toBe(2);
+    expect(Object.isFrozen(captured)).toBe(true);
+    expect(Object.isFrozen(captured[0])).toBe(true);
+    expect(Object.isFrozen(captured[0].nested)).toBe(true);
+    expect(() => store.getState().invalid).toThrow(TypeError);
+    expect(store.getPureState().items[0].nested.value).toBe(2);
+    expect(oldSnapshot[0].nested.value).toBe(1);
+    expect(Object.isFrozen(items[0].nested)).toBe(false);
+  }
+);
+
 test('object-valued computed results retain public state identity', () => {
   const store = create<{
     items: Array<{ value: number }>;
@@ -356,4 +408,42 @@ test('reading a getter after a write does not scale with what it does not read',
   const small = readAfterWriteRate(10);
   const large = readAfterWriteRate(4000);
   expect(large).toBeGreaterThan(small / 5);
+});
+
+test('computed replacement snapshots preserve cycles, aliases, sparse arrays and atoms', () => {
+  const makeGraph = (value: number) => {
+    const node = Object.assign(Object.create(null), { value });
+    node.self = node;
+    const sparse = new Array(3);
+    sparse[2] = node;
+    return { node, alias: node, sparse, date: new Date(value) };
+  };
+  let captured: ReturnType<typeof makeGraph> | undefined;
+  const store = create(() => ({
+    graph: makeGraph(1),
+    get value() {
+      captured = this.graph;
+      return this.graph.node.value;
+    }
+  }));
+  expect(store.getState().value).toBe(1);
+  const previous = captured!;
+  const next = makeGraph(2);
+  store.setState({ graph: next });
+  expect(store.getState().value).toBe(2);
+  const snapshot = captured!;
+  expect(snapshot.node).toBe(snapshot.alias);
+  expect(snapshot.node.self).toBe(snapshot.node);
+  expect(Object.getPrototypeOf(snapshot.node)).toBe(null);
+  expect(snapshot.sparse).toHaveLength(3);
+  expect(0 in snapshot.sparse).toBe(false);
+  expect(snapshot.sparse[2]).toBe(snapshot.node);
+  expect(snapshot.date).toBe(next.date);
+  expect(Object.isFrozen(snapshot.node)).toBe(true);
+  expect(Object.isFrozen(snapshot.sparse)).toBe(true);
+  expect(() => {
+    snapshot.node.value = 3;
+  }).toThrow(TypeError);
+  expect(previous.node.value).toBe(1);
+  expect(store.getPureState().graph.node.value).toBe(2);
 });
