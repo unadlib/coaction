@@ -260,7 +260,8 @@ export const createStore = <T extends CreateState>(
           snapshotCache,
           internal.computedIdentityRequired
             ? internal.computedSnapshotSources
-            : undefined
+            : undefined,
+          producedState !== undefined
         );
       }
       internal.rootState = nextState;

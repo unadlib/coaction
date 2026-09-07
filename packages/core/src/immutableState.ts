@@ -49,8 +49,40 @@ export const updateImmutableStateSnapshot = (
   previousSnapshot: unknown,
   patches: Patches,
   cache: WeakMap<object, unknown>,
-  sources?: WeakMap<object, object>
+  sources?: WeakMap<object, object>,
+  scalarTree = false
 ) => {
+  const patch = patches[0];
+  if (
+    scalarTree &&
+    patches.length === 1 &&
+    patch.op === 'replace' &&
+    patch.path[patch.path.length - 1] !== 'length'
+  ) {
+    // This native producer has verified a dense plain tree and scalar payload.
+    // Copy just its path, without drafting frozen arrays (whose concat copy is
+    // expensive). All siblings already belong to the previous frozen snapshot.
+    const parents: Array<[object, Record<PropertyKey, unknown>]> = [];
+    let value = state as Record<PropertyKey, unknown>;
+    let previous = previousSnapshot as Record<PropertyKey, unknown>;
+    for (const key of patch.path) {
+      parents.push([value, previous]);
+      value = value[key] as typeof value;
+      previous = previous[key] as typeof previous;
+    }
+    let next = patch.value;
+    for (let index = parents.length - 1; index >= 0; index -= 1) {
+      const [source, parent] = parents[index];
+      const copy = (
+        Array.isArray(parent) ? [...parent] : { ...parent }
+      ) as Record<PropertyKey, unknown>;
+      copy[patch.path[index]] = next;
+      next = Object.freeze(copy);
+      cache.set(source, next);
+      sources?.set(next, source);
+    }
+    return;
+  }
   const snapshot = patches.some(
     (patch) => typeof patch.value === 'object' && patch.value !== null
   )
@@ -98,9 +130,7 @@ export const finalizeImmutableStateSnapshot = (
       }
     }
     for (let index = ancestors.length - 1; index >= 0; index -= 1) {
-      if (!Object.isFrozen(ancestors[index])) {
-        Object.freeze(ancestors[index]);
-      }
+      Object.freeze(ancestors[index]);
     }
   }
 };
