@@ -193,7 +193,7 @@ test.each([
   }
 );
 
-test('a cyclic state can be updated again without running the recipe twice', () => {
+test('updating a sibling preserves an untouched cyclic value and runs once', () => {
   const store = create((set) => ({
     graph: cycle(),
     count: 0,
@@ -219,27 +219,137 @@ test('a cyclic state can be updated again without running the recipe twice', () 
   store.destroy();
 });
 
-test('a recipe can create a cycle from a draft and runs only once', () => {
-  let calls = 0;
-  const store = create((set) => ({
-    node: { value: 0 } as Record<string, unknown>,
-    link() {
-      set(() => {
-        calls += 1;
-        this.node.self = this.node;
+const observationModes = [
+  'unwatched',
+  'listener',
+  'prepare',
+  'getter',
+  'history'
+] as const;
+
+test.each(observationModes)(
+  '%s preserves complete graph replacements, executes once and rolls back recipe errors',
+  (mode) => {
+    let calls = 0;
+    const store = create(
+      () => ({
+        left: null as any,
+        right: null as any,
+        get linked() {
+          return (
+            this.left !== null &&
+            this.left === this.right &&
+            this.left.self === this.left
+          );
+        }
+      }),
+      { middlewares: mode === 'history' ? [history()] : [] }
+    );
+    const commits: StoreCommit[] = [];
+    if (mode === 'listener' || mode === 'history') {
+      onStoreCommit(store, (commit) => commits.push(commit));
+    }
+    if (mode === 'prepare') {
+      onStoreCommitPrepare(store, (commit) => {
+        commits.push(commit);
+        return true;
       });
     }
-  }));
-  const commits: StoreCommit[] = [];
-  onStoreCommit(store, (commit) => commits.push(commit));
-  const before = store.getPureState();
-  store.getState().link();
-  expect(calls).toBe(1);
-  expect(store.getPureState().node.self).toBe(store.getPureState().node);
-  const replayed = applyPatches(before, commits[0].patches);
-  expect(replayed.node.self).toBe(replayed.node);
-  store.destroy();
-});
+    if (mode === 'getter') expect(store.getState().linked).toBe(false);
+    const before = store.getPureState();
+    // These are complete ordinary objects, not links back into a live draft.
+    const next = cycle();
+    const failure = new Error('application recipe failed');
+    expect(() =>
+      store.setState((draft) => {
+        calls += 1;
+        draft.left = next;
+        draft.right = next;
+        throw failure;
+      })
+    ).toThrow(failure);
+    expect(calls).toBe(1);
+    expect(store.getPureState()).toBe(before);
+    expect(commits).toHaveLength(0);
+    const api = (store as unknown as { history: HistoryApi<object> }).history;
+    if (mode === 'history') expect(api.undo()).toBe(false);
+
+    store.setState((draft) => {
+      calls += 1;
+      draft.left = next;
+      draft.right = next;
+    });
+    expect(calls).toBe(2);
+    const assertLinked = (state: any) => {
+      expect(state.left).toBe(state.right);
+      expect(state.left.self).toBe(state.left);
+    };
+    assertLinked(store.getPureState());
+    expect(store.getState().linked).toBe(true);
+    expect(before.left).toBe(null);
+    expect(before.right).toBe(null);
+    if (mode === 'listener' || mode === 'prepare' || mode === 'history') {
+      expect(commits).toHaveLength(1);
+      const commit = commits[0];
+      assertLinked(applyPatches(before, commit.patches));
+      const restored = applyPatches(
+        store.getPureState(),
+        commit.inversePatches
+      );
+      expect(restored.left).toBe(null);
+      expect(restored.right).toBe(null);
+    }
+    if (mode === 'history') {
+      expect(api.undo()).toBe(true);
+      expect(store.getPureState().left).toBe(null);
+      expect(store.getPureState().right).toBe(null);
+      expect(api.redo()).toBe(true);
+      assertLinked(store.getPureState());
+    }
+    store.destroy();
+  }
+);
+
+test.each([false, true])(
+  'DAG edits follow independent draft paths and preserve explicit relinking (watched: %s)',
+  (watched) => {
+    const shared = { value: 0 };
+    const store = create(() => ({ left: shared, right: shared }));
+    const commits: StoreCommit[] = [];
+    if (watched) onStoreCommit(store, (commit) => commits.push(commit));
+    const before = store.getPureState();
+    store.setState((draft) => {
+      draft.left.value = 1;
+    });
+    const split = store.getPureState();
+    expect(split.left.value).toBe(1);
+    expect(split.right.value).toBe(0);
+    expect(split.left).not.toBe(split.right);
+    expect(before.left).toBe(before.right);
+    expect(before.left.value).toBe(0);
+    store.setState((draft) => {
+      draft.right = draft.left;
+    });
+    const linked = store.getPureState();
+    expect(linked.left).toBe(linked.right);
+    expect(linked.right.value).toBe(1);
+    if (watched) {
+      expect(commits).toHaveLength(2);
+      const replayedSplit = applyPatches(before, commits[0].patches);
+      expect(replayedSplit.left).not.toBe(replayedSplit.right);
+      expect(replayedSplit).toEqual(split);
+      const replayedLink = applyPatches(replayedSplit, commits[1].patches);
+      expect(replayedLink.left).toBe(replayedLink.right);
+      const restoredSplit = applyPatches(linked, commits[1].inversePatches);
+      expect(restoredSplit.left).not.toBe(restoredSplit.right);
+      expect(restoredSplit).toEqual(split);
+      const restored = applyPatches(restoredSplit, commits[0].inversePatches);
+      expect(restored.left).toBe(restored.right);
+      expect(restored.left.value).toBe(0);
+    }
+    store.destroy();
+  }
+);
 
 test('a cached constant getter does not flatten later graph snapshots', () => {
   const store = create((set) => ({
@@ -251,8 +361,9 @@ test('a cached constant getter does not flatten later graph snapshots', () => {
       return this.node.self === this.node;
     },
     link() {
+      const node = cycle();
       set(() => {
-        this.node.self = this.node;
+        this.node = node;
       });
     }
   }));

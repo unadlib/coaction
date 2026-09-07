@@ -77,7 +77,9 @@ const graph = (random: Random) => {
   };
 };
 
-test('observation and commit replay preserve generated local object graphs', () => {
+// Generate complete replacement values. Creating cycles from draft references
+// or editing inside a cyclic draft is outside the supported recipe contract.
+test('observation and commit replay preserve complete local graph replacements', () => {
   forEachSeed(100, (random) => {
     const initial = random.chance(0.5) ? graph(random) : null;
     const next = random.chance(0.8) ? graph(random) : null;
@@ -110,6 +112,7 @@ test('observation and commit replay preserve generated local object graphs', () 
         }
         expect(record(before)).toStrictEqual(initialGraph);
         const after = record(store.getPureState());
+        expect(after).toStrictEqual(record({ graph: next, count: 1 }));
         if (!watched) expected = after;
         else {
           expect(after).toStrictEqual(expected);
