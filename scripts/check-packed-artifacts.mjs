@@ -56,9 +56,10 @@ const entryChecks = {
   '@coaction/sync/query': ['createQuerySyncAdapter'],
   '@coaction/sync/firestore': ['createFirestoreSyncAdapter']
 };
-const run = (command, args, cwd) =>
+const run = (command, args, cwd, env = process.env) =>
   execFileSync(command, args, {
     cwd,
+    env,
     stdio: ['ignore', 'pipe', 'pipe']
   });
 const detail = (error) =>
@@ -213,7 +214,7 @@ try {
           writeFileSync(
             join(project, `use.${extension}`),
             `${imports}
-            const store = create((set) => ({ count: 0,
+            const store = create((set) => ({ count: 0, left: null, right: null,
               increment() { set(() => { this.count += 1; }); }
             }), { middlewares: [history()] });
             const commits = [];
@@ -221,41 +222,93 @@ try {
             store.getState().increment();
             if (store.getState().count !== 1 || commits.length !== 1) throw new Error('commit');
             if (!store.history.undo() || store.getState().count !== 0) throw new Error('undo');
+            const node = {}; node.self = node;
+            let calls = 0;
+            store.setState((draft) => { calls++; draft.left = node; draft.right = node; });
+            if (calls !== 1) throw new Error('history recipe retried');
+            if (!store.history.undo() || store.getPureState().left !== null || store.getPureState().right !== null) throw new Error('graph undo');
+            if (!store.history.redo()) throw new Error('graph redo');
+            const restored = store.getPureState();
+            if (restored.left !== restored.right || restored.left.self !== restored.left) throw new Error('history graph topology');
             store.destroy();
           `
           );
-          run('node', [`use.${extension}`], project);
+          for (const NODE_ENV of ['development', 'production']) {
+            run('node', [`use.${extension}`], project, {
+              ...process.env,
+              NODE_ENV
+            });
+          }
         }
-        console.log('  ok    installed store, commits and history (ESM + CJS)');
+        console.log(
+          '  ok    installed store, commits and graph history (ESM + CJS, development + production)'
+        );
       }
       if (json.name === 'coaction') {
         for (const extension of ['mjs', 'cjs']) {
           const imports =
             extension === 'mjs'
-              ? `import { create } from 'coaction'; import { onStoreCommit, applyPatches } from 'coaction/adapter';`
-              : `const { create } = require('coaction'); const { onStoreCommit, applyPatches } = require('coaction/adapter');`;
+              ? `import assert from 'node:assert/strict'; import { create } from 'coaction'; import { onStoreCommit, onStoreCommitPrepare, applyPatches } from 'coaction/adapter';`
+              : `const assert = require('node:assert/strict'); const { create } = require('coaction'); const { onStoreCommit, onStoreCommitPrepare, applyPatches } = require('coaction/adapter');`;
           writeFileSync(
             join(project, `graph.${extension}`),
             `${imports}
-            const node = {}; node.self = node;
-            const store = create(() => ({ left: null, right: null }));
-            const before = store.getPureState();
-            const commits = [];
-            onStoreCommit(store, (commit) => commits.push(commit));
-            store.setState({ left: node, right: node });
-            if (commits.length !== 1) throw new Error('graph commit');
-            for (const state of [store.getPureState(), applyPatches(before, commits[0].patches)]) {
-              if (state.left !== state.right || state.left.self !== state.left) throw new Error('graph replay');
+            for (const update of ['object', 'recipe', 'root']) {
+              for (const mode of ['unwatched', 'listener', 'prepare', 'getter']) {
+                const node = {}; node.self = node;
+                const store = create(() => ({ left: null, right: null,
+                  get linked() { return this.left !== null && this.left === this.right && this.left.self === this.left; }
+                }));
+                const before = store.getPureState();
+                const commits = [];
+                if (mode === 'listener') onStoreCommit(store, (commit) => commits.push(commit));
+                if (mode === 'prepare') onStoreCommitPrepare(store, (commit) => { commits.push(commit); return true; });
+                if (mode === 'getter') assert.equal(store.getState().linked, false);
+                const replacement = { left: node, right: node };
+                if (update === 'object') store.setState(replacement);
+                if (update === 'root') store.apply(replacement);
+                if (update === 'recipe') {
+                  let calls = 0;
+                  const failure = new Error('application failure');
+                  assert.throws(() => store.setState((draft) => {
+                    calls++; draft.left = node; throw failure;
+                  }), (error) => error === failure);
+                  assert.equal(calls, 1);
+                  assert.equal(store.getPureState(), before);
+                  assert.equal(commits.length, 0);
+                  store.setState((draft) => { calls++; draft.left = node; draft.right = node; });
+                  assert.equal(calls, 2);
+                }
+                const after = store.getPureState();
+                assert.equal(after.left, after.right);
+                assert.equal(after.left.self, after.left);
+                assert.equal(store.getState().linked, true);
+                assert.equal(before.left, null);
+                assert.equal(before.right, null);
+                // Prepare hooks belong to recipe/object production, not direct apply.
+                if (mode === 'listener' || (mode === 'prepare' && update !== 'root')) {
+                  assert.equal(commits.length, 1);
+                  const replayed = applyPatches(before, commits[0].patches);
+                  assert.equal(replayed.left, replayed.right);
+                  assert.equal(replayed.left.self, replayed.left);
+                  const restored = applyPatches(after, commits[0].inversePatches);
+                  assert.equal(restored.left, null);
+                  assert.equal(restored.right, null);
+                }
+                store.destroy();
+              }
             }
-            const restored = applyPatches(store.getPureState(), commits[0].inversePatches);
-            if (restored.left !== null || restored.right !== null) throw new Error('graph inverse');
-            store.destroy();
           `
           );
-          run('node', [`graph.${extension}`], project);
+          for (const NODE_ENV of ['development', 'production']) {
+            run('node', [`graph.${extension}`], project, {
+              ...process.env,
+              NODE_ENV
+            });
+          }
         }
         console.log(
-          '  ok    installed cyclic and aliased commit replay (ESM + CJS)'
+          `  ok    installed graph replacements and replay (ESM + CJS, development + production; Mutative ${run('node', ['-p', "require('mutative/package.json').version"], project).toString().trim()})`
         );
       }
     } catch (error) {
