@@ -1,4 +1,4 @@
 {
   "title": "Integrations",
-  "pages": ["frameworks", "adapters", "middleware", "yjs"]
+  "pages": ["frameworks", "adapters", "middleware", "sync", "yjs"]
 }

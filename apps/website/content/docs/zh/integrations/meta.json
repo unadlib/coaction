@@ -1,4 +1,4 @@
 {
-  "title": "集成",
-  "pages": ["frameworks", "adapters", "middleware", "yjs"]
+  "title": "\u96c6\u6210",
+  "pages": ["frameworks", "adapters", "middleware", "sync", "yjs"]
 }

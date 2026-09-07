@@ -1,0 +1,132 @@
+---
+title: 本地优先同步
+description: 通过持久 outbox 与 rebase，让 Coaction store 离线可用并与服务端收敛。
+---
+
+`@coaction/sync` 是 middleware。store 仍然是普通的 Coaction store —— action、
+selector、`observer`、history 都不变 —— 它产生的每一次 commit 同时会排队发往服务端。
+
+```ts
+import { create } from 'coaction';
+import { sync } from '@coaction/sync';
+
+const useTodos = create(
+  (set) => ({
+    todos: [] as Todo[],
+    add(todo: Todo) {
+      set(() => {
+        this.todos.push(todo);
+      });
+    }
+  }),
+  {
+    middlewares: [
+      sync({
+        name: 'todos',
+        adapter: {
+          pull: async ({ cursor }) => fetchChanges(cursor),
+          push: async (mutations) => pushMutations(mutations)
+        }
+      })
+    ]
+  }
+);
+```
+
+写入立即在本地生效。在发送任何东西之前，它先被写进持久 outbox，所以写入与投递之间
+崩溃是可恢复的；而一次 pull 会把仍在排队的写入 rebase 到服务端发来的内容之上。
+
+这不是[共享权威](/zh/docs/concepts/store-modes)。同步的 store 自己拥有状态并与远端
+收敛；共享 store 的镜像是另一个 JavaScript 上下文中同一个权威端的视图。两者可以组合，
+互不蕴含。
+
+## 查看队列
+
+```ts
+import { getSyncApi } from '@coaction/sync';
+
+const api = getSyncApi(useTodos);
+
+api.getStatus(); // 'hydrating' | 'idle' | 'syncing' | 'offline' | 'error'
+api.getPending(); // 这个客户端仍欠远端的 mutation
+await api.flush(); // 立即发送
+await api.pull(); // 立即拉取并 rebase
+api.subscribe((status) => render(status));
+```
+
+`getPending()` 返回的是副本。这个队列是客户端欠服务端的东西，rebase 会把它当作自己的
+工作集读回来，所以外部无法意外改动它。
+
+## 后端
+
+| 引入                       | 后端                                               |
+| -------------------------- | -------------------------------------------------- |
+| `@coaction/sync`           | `createFetchSyncAdapter` —— HTTP 上的 JSON         |
+| `@coaction/sync/crud`      | `createCrudSyncAdapter` —— 面向记录的 API          |
+| `@coaction/sync/supabase`  | Postgres 表，可选 changes-since cursor 与 realtime |
+| `@coaction/sync/firestore` | Firestore collection 或 query，可选 `onSnapshot`   |
+| `@coaction/sync/query`     | TanStack Query                                     |
+
+一个 adapter 就是两个函数，所以这里没列出的后端也只是一个 `pull` 和一个 `push`：
+
+```ts
+sync({
+  name: 'todos',
+  adapter: {
+    pull: async ({ cursor, revision }) => ({ patches, cursor }),
+    push: async (mutations, { cursor }) => ({ ack: acceptedIds })
+  }
+});
+```
+
+`push` 返回远端已持久接受的 id。没有被确认的会留在队列里并重试。
+
+## 冲突
+
+当一次 pull 带来的改动与仍在排队的写入重叠时，默认保留本地写入。
+`conflict: 'remote-wins'` 保留远端的；传函数则逐条 mutation 决定：
+
+```ts
+sync({
+  name: 'todos',
+  adapter,
+  conflict: ({ mutation, remotePatches, overlappingRemotePatches }) =>
+    overlappingRemotePatches.length > 1 ? 'remote' : 'local'
+});
+```
+
+每次调用拿到的都是各自独立的副本，所以在传入内容上直接操作的 resolver 既不会干扰
+rebase，也不会影响下一次调用。
+
+## 状态必须是 JSON
+
+outbox、乐观快照与 adapter 对远端的视图都以 JSON 存储，所以 JSON 表达不了的状态不会被
+持久化 —— 它会被悄悄改变。`Date` 回来变成字符串，`Map` 回来变成 `{}`。
+
+引入这类值的写入会在**提交之前**被拒绝，所以错误会抵达调用方，store 保持它能承载的状态。
+日期用 ISO 字符串或 epoch 数字，键值集合用 record，set 用数组。
+
+`sync()` 不能挂在外部 mutable adapter 上 —— MobX、Valtio 与 Pinia 暴露的是
+accessor-backed state，这个契约在 store 构建时就会拒绝它。
+
+## 存储
+
+默认使用 `localStorage`。可以传入 `storage`，或用 `@coaction/sync/indexeddb`
+获得更大的持久存储：
+
+```ts
+import { createIndexedDbSyncStorage } from '@coaction/sync/indexeddb';
+
+sync({ name: 'todos', adapter, storage: createIndexedDbSyncStorage() });
+```
+
+没有静默回退到内存：没有持久写入位置的运行时会被拒绝，因为 outbox 能在崩溃后存活正是
+它存在的理由。
+
+## 投递语义
+
+mutation 是**至少一次**投递。远端提交一次写入、到确认抵达持久存储之间的窗口无法从客户端
+关闭，所以在这个窗口内崩溃意味着重启后会再发一次。请把 mutation 的 `id` 当作幂等键处理。
+
+[包 README](https://github.com/unadlib/coaction/tree/main/packages/coaction-sync)
+涵盖持久 checkpoint 格式、各内置 adapter 在重放下的保证，以及 CRUD baseline。

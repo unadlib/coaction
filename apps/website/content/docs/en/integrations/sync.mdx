@@ -1,0 +1,145 @@
+---
+title: Local-first sync
+description: Keep a Coaction store working offline and converging with a server, through a durable outbox and a rebase.
+---
+
+`@coaction/sync` is middleware. The store stays an ordinary Coaction store —
+actions, selectors, `observer`, history — and every commit it makes is also
+queued for a server.
+
+```ts
+import { create } from 'coaction';
+import { sync } from '@coaction/sync';
+
+const useTodos = create(
+  (set) => ({
+    todos: [] as Todo[],
+    add(todo: Todo) {
+      set(() => {
+        this.todos.push(todo);
+      });
+    }
+  }),
+  {
+    middlewares: [
+      sync({
+        name: 'todos',
+        adapter: {
+          pull: async ({ cursor }) => fetchChanges(cursor),
+          push: async (mutations) => pushMutations(mutations)
+        }
+      })
+    ]
+  }
+);
+```
+
+A write lands locally at once. It is written to a durable outbox before anything
+is sent, so a crash between the write and the delivery is recoverable, and a
+pull rebases whatever is still pending over what the server sent.
+
+This is not [shared authority](/en/docs/concepts/store-modes). A synced store owns
+its state and reconciles with a remote; a shared store's mirrors are views of
+one authority in another JavaScript context. They compose, and neither implies
+the other.
+
+## Reading the queue
+
+```ts
+import { getSyncApi } from '@coaction/sync';
+
+const api = getSyncApi(useTodos);
+
+api.getStatus(); // 'hydrating' | 'idle' | 'syncing' | 'offline' | 'error'
+api.getPending(); // the mutations this client still owes the remote
+await api.flush(); // send them now
+await api.pull(); // fetch and rebase now
+api.subscribe((status) => render(status));
+```
+
+`getPending()` hands back copies. The queue is what the client owes the server
+and the rebase reads it back as its own working set, so nothing outside can edit
+it by accident.
+
+## Backends
+
+| Import                     | Backend                                                              |
+| -------------------------- | -------------------------------------------------------------------- |
+| `@coaction/sync`           | `createFetchSyncAdapter` — JSON over HTTP                            |
+| `@coaction/sync/crud`      | `createCrudSyncAdapter` — a record-shaped API                        |
+| `@coaction/sync/supabase`  | a Postgres table, with an optional changes-since cursor and realtime |
+| `@coaction/sync/firestore` | a Firestore collection or query, with optional `onSnapshot`          |
+| `@coaction/sync/query`     | TanStack Query                                                       |
+
+An adapter is two functions, so a backend not listed here is a `pull` and a
+`push`:
+
+```ts
+sync({
+  name: 'todos',
+  adapter: {
+    pull: async ({ cursor, revision }) => ({ patches, cursor }),
+    push: async (mutations, { cursor }) => ({ ack: acceptedIds })
+  }
+});
+```
+
+`push` returns the ids the remote durably accepted. Anything it does not
+acknowledge stays queued and is retried.
+
+## Conflicts
+
+When a pull brings a change that overlaps something still pending, the default
+keeps the local write. `conflict: 'remote-wins'` keeps the remote one, and a
+function decides per mutation:
+
+```ts
+sync({
+  name: 'todos',
+  adapter,
+  conflict: ({ mutation, remotePatches, overlappingRemotePatches }) =>
+    overlappingRemotePatches.length > 1 ? 'remote' : 'local'
+});
+```
+
+Each call is given its own copy of everything, so a resolver that works on what
+it is handed cannot disturb the rebase or the next call.
+
+## State has to be JSON
+
+The outbox, the optimistic snapshot and the adapter's view of the remote are all
+stored as JSON, so state JSON cannot represent is not persisted — it is quietly
+changed. A `Date` comes back a string; a `Map` comes back `{}`.
+
+A write that introduces one is refused **before it is committed**, so the error
+reaches the caller and the store keeps state it can carry. Keep dates as ISO
+strings or epoch numbers, keyed collections as records, and sets as arrays.
+
+`sync()` does not attach to an external mutable adapter — MobX, Valtio and Pinia
+expose accessor-backed state, which this contract refuses when the store is
+built.
+
+## Storage
+
+Defaults to `localStorage`. Pass a `storage`, or
+`@coaction/sync/indexeddb` for a larger durable store:
+
+```ts
+import { createIndexedDbSyncStorage } from '@coaction/sync/indexeddb';
+
+sync({ name: 'todos', adapter, storage: createIndexedDbSyncStorage() });
+```
+
+There is no silent fallback to memory: a runtime with nowhere durable to write
+is refused, because the outbox surviving a crash is the reason it exists.
+
+## Delivery
+
+Mutations are delivered **at least once**. The window between the remote
+committing a write and the acknowledgement reaching durable storage cannot be
+closed from the client, so a crash inside it means the restart sends that
+mutation again. Treat mutation `id` values idempotently.
+
+The [package README](https://github.com/unadlib/coaction/tree/main/packages/coaction-sync)
+covers the durable checkpoint format, what each built-in adapter guarantees
+under replay, and the CRUD baseline.
