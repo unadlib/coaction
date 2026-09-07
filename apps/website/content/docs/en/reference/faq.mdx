@@ -43,6 +43,26 @@ reported sequence.
 tree and rejects `undefined`, non-finite numbers, `-0`, accessors, platform objects, sparse arrays,
 cycles, and repeated references.
 
+## Can local state contain cycles and shared references?
+
+Yes, initialization and complete value replacement preserve them. Native recipes still use
+Mutative drafts: creating cycles from draft references or editing inside cyclic drafts is
+unsupported. Build a complete graph from ordinary objects and replace its field:
+
+```ts
+const node = { value: 1, self: null as any };
+node.self = node;
+store.setState({ node });
+```
+
+A recipe may also assign that complete value. Use `store.apply(nextState)` when replacing a
+cyclic root, and do not mutate values after passing them to the store. Acyclic shared nodes use
+independent draft paths: changing `draft.left.value` need not change `draft.right.value`.
+Assign `draft.right = draft.left` explicitly when the result should share that node.
+
+Commit replay and history preserve the recorded result, using snapshots when necessary. They
+do not extend the draft editing contract, and shared transport still requires a JSON tree.
+
 ## Can I persist or undo on a shared client?
 
 No. Persist and history are authority-side integrations. A client-local write would create a

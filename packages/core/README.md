@@ -93,6 +93,19 @@ negative zero, functions in data, symbols, accessors, platform objects, sparse
 arrays, circular references, and repeated object references. Local stores do
 not inherit this restriction.
 
+Local initialization and complete value replacement can preserve cycles and
+shared references. Native `setState(recipe)` still uses Mutative drafts:
+creating cycles from draft references or editing inside cyclic drafts is
+unsupported. Build a complete new graph from ordinary objects and replace its
+field with `setState({ node: nextNode })`, or replace a cyclic root with
+`apply(nextState)`. A recipe may assign that complete value. Do not mutate it
+after handing it to the store.
+
+Acyclic shared nodes use independent drafts for each path. Editing
+`draft.left.value` need not update `draft.right.value`; explicitly assign
+`draft.right = draft.left` to share the result. Commit replay and history
+preserve the resulting topology, using full snapshots when required.
+
 An authority and every connected client must use the same Coaction major and
 wire protocol. Mixed-major shared deployments are unsupported.
 

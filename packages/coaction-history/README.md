@@ -14,6 +14,12 @@ changes instead of whole-store snapshots. Legacy snapshots are reserved for
 values such as cyclic graphs, `Date`, sparse arrays, symbol keys, and custom
 prototypes.
 
+Cycle support covers complete value replacement and snapshot restoration.
+History does not extend the native recipe contract to creating cycles from
+draft references or editing inside cyclic drafts. Construct a new graph from
+ordinary objects and replace its field or root. Replay preserves the topology
+of each recorded state, including intentional splits of acyclic shared nodes.
+
 ## Installation
 
 Install it with pnpm:

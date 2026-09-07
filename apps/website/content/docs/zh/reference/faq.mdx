@@ -33,6 +33,27 @@ Coaction public state 不可变。请在 `set()` 内写入，让运行时能够�
 
 `JSON.stringify()` 会静默归一化或丢弃某些值。Coaction 要求无损 JSON tree，因此拒绝 `undefined`、非有限数、`-0`、accessor、platform object、sparse array、cycle 与重复引用。
 
+## 本地状态可以包含循环引用和共享引用吗？
+
+可以，初始化和完整值替换会保留这些引用关系。原生 recipe 仍然使用 Mutative draft，
+不支持用 draft 引用创建循环，也不支持进入循环结构内部进行 draft 编辑。
+应先用普通对象构造完整的新值，再替换对应字段：
+
+```ts
+const node = { value: 1, self: null as any };
+node.self = node;
+store.setState({ node });
+```
+
+也可以在 recipe 内把这个完整值赋给字段。如果循环包含根节点，使用 `store.apply(nextState)`
+替换整个状态。传入 store 后，不要继续修改这个值。
+
+无环的共享节点按路径生成独立 draft，因此修改 `draft.left.value` 不一定修改
+`draft.right.value`。如果结果需要共享同一个节点，应显式赋值 `draft.right = draft.left`。
+
+Commit 重放和 history 会保留记录结果的引用关系，必要时使用快照。它们不会扩大 draft
+编辑的支持范围，共享传输仍然要求 JSON 树。
+
 ## 可以在 shared client 上 persist 或 undo 吗？
 
 不能。Persist 与 history 是权威端集成。client-local 写入会创造第二个 authority，并与其他镜像分叉。
