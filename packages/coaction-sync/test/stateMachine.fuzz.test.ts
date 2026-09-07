@@ -1,5 +1,6 @@
 import { create } from 'coaction';
 import { applyPatches } from 'coaction/adapter';
+import { isDeepStrictEqual } from 'node:util';
 import { createRandom, firstSeed, runs } from '../../core/test/random';
 import {
   getSyncApi,
@@ -11,20 +12,11 @@ import {
 } from '../src';
 
 /**
- * Random schedules of everything that can happen to a syncing store, against
- * the invariants that hold whatever the schedule was.
- *
- * There is no reference model. A model of the rebase would come from the same
- * mental picture as the implementation and agree with it for the same wrong
- * reasons -- and the invariants worth the most here do not need one. They are
- * claims about history: a mutation the remote acknowledged does not come back,
- * one it did not acknowledge does not vanish, a cursor does not go backwards, a
- * mutation id is not reused for different content. Each is checkable against
- * what was recorded rather than against a second implementation.
- *
- * The one identity below that is modelled -- the durable baseline plus every
- * pending mutation equals the state the client shows -- is the definition of
- * optimistic state, not a reimplementation of how it is reached.
+ * Sequential randomized actions, including partial acknowledgements, failures
+ * and reopening from storage. Deferred/overlapping responses have separate
+ * regression tests; this is not an arbitrary concurrent network scheduler.
+ * The server records acknowledged writes independently. Its state plus the
+ * pending queue must equal the visible optimistic state after every action.
  */
 
 const settle = async () => {
@@ -38,6 +30,7 @@ type Journal = {
   /** Content of every mutation id ever queued. */
   content: Map<string, string>;
   cursors: string[];
+  violations: string[];
 };
 
 const buildWorld = (seed: number) => {
@@ -59,7 +52,8 @@ const buildWorld = (seed: number) => {
   const journal: Journal = {
     acked: new Set(),
     content: new Map(),
-    cursors: []
+    cursors: [],
+    violations: []
   };
   let remote: Record<string, unknown> = { count: 0, label: 'a' };
   let cursorNumber = 0;
@@ -67,7 +61,13 @@ const buildWorld = (seed: number) => {
 
   const record = (mutations: readonly SyncMutation[]) => {
     for (const mutation of mutations) {
-      journal.content.set(mutation.id, JSON.stringify(mutation.patches));
+      const content = JSON.stringify(mutation.patches);
+      const known = journal.content.get(mutation.id);
+      if (known !== undefined && known !== content) {
+        journal.violations.push(`mutation ${mutation.id} changed content`);
+      } else if (known === undefined) {
+        journal.content.set(mutation.id, content);
+      }
     }
   };
 
@@ -88,7 +88,12 @@ const buildWorld = (seed: number) => {
       if (random.chance(0.3)) throw new Error('push failed');
       // Acknowledge a prefix, so partial acknowledgement is part of the space.
       const taken = mutations.slice(0, random.integer(0, mutations.length));
-      for (const mutation of taken) journal.acked.add(mutation.id);
+      for (const mutation of taken) {
+        if (!journal.acked.has(mutation.id)) {
+          remote = applyPatches(remote, mutation.patches);
+          journal.acked.add(mutation.id);
+        }
+      }
       return { ack: taken.map(({ id }) => id) };
     }
   };
@@ -126,10 +131,19 @@ const buildWorld = (seed: number) => {
       }
     );
 
-  return { random, storage, journal, adapter, open, errors };
+  return {
+    random,
+    storage,
+    journal,
+    adapter,
+    open,
+    errors,
+    record,
+    remote: () => remote
+  };
 };
 
-test('a syncing store keeps its invariants under any schedule', async () => {
+test('a syncing store preserves pending writes and replay identities across sequential actions', async () => {
   const failures: string[] = [];
   const from = firstSeed();
   for (let seed = from; seed < from + runs(60); seed += 1) {
@@ -142,6 +156,7 @@ test('a syncing store keeps its invariants under any schedule', async () => {
 
     const schedule: string[] = [];
     const seenCursors: string[] = [];
+    let previousPending: string[] = [];
     const note = (why: string) =>
       failures.push(`seed ${seed} [${schedule.join(' ')}]: ${why}`);
 
@@ -173,6 +188,15 @@ test('a syncing store keeps its invariants under any schedule', async () => {
       await settle();
 
       const pending = api.getPending();
+      world.record(pending);
+      for (const violation of journal.violations.splice(0)) note(violation);
+      const pendingIds = new Set(pending.map(({ id }) => id));
+      for (const id of previousPending) {
+        if (!pendingIds.has(id) && !journal.acked.has(id)) {
+          note(`unacknowledged mutation ${id} vanished`);
+        }
+      }
+      previousPending = [...pendingIds];
 
       // An id is never reused for different content, so an acknowledgement can
       // never be about a write the remote did not see.
@@ -196,17 +220,24 @@ test('a syncing store keeps its invariants under any schedule', async () => {
         note('two queued mutations share an id');
       }
 
-      // Every queued mutation carries a pair that can be applied and undone.
+      // Check each pair at its actual base, then the complete optimistic state.
+      let replayed = world.remote();
       for (const mutation of pending) {
         try {
-          const state = applyPatches(
-            JSON.parse(JSON.stringify(store.getPureState())),
-            mutation.patches
-          );
-          applyPatches(state, mutation.inversePatches);
-        } catch (error) {
+          const state = applyPatches(replayed, mutation.patches);
+          const restored = applyPatches(state, mutation.inversePatches);
+          if (!isDeepStrictEqual(restored, replayed)) {
+            note(`mutation ${mutation.id} inverse does not restore its base`);
+          }
+          replayed = state;
+        } catch {
           note(`mutation ${mutation.id} carries an unusable pair`);
         }
+      }
+      if (!isDeepStrictEqual(replayed, store.getPureState())) {
+        note(
+          'server state plus pending mutations differs from optimistic state'
+        );
       }
 
       // Cursors move forwards. Every one the remote issued is in order, and the
