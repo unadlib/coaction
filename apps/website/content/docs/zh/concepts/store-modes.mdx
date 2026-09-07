@@ -52,10 +52,22 @@ Client method 是异步的，因为执行发生在权威端。client 可以读�
 | 入口               | 包含内容                                      |
 | ------------------ | --------------------------------------------- |
 | `coaction`         | 本地创建、生命周期 helper、signal primitive   |
-| `coaction/shared`  | 共享创建、JSON protocol、权威/client 同步     |
+| `coaction/shared`  | 共享创建、JSON protocol、权威端与 client 镜像 |
 | `coaction/adapter` | 外部 store binding 与 state/patch 安全 helper |
-| `coaction`         | 跨越本地与共享选择的兼容 surface              |
 
 框架包暴露自己的 `create()` wrapper，并可能同时支持 local 与 worker option。Vanilla 代码直接选择 `coaction` 或 `coaction/shared` 可获得最清楚的 bundle 边界。
+
+## 三件都被叫作"同步"的事
+
+它们可以组合，但互不蕴含：
+
+|                | 是什么                                                                                              |
+| -------------- | --------------------------------------------------------------------------------------------------- |
+| **响应式追踪** | 哪些组件在字段变化时重渲染 —— `observer`、selector、computed getter。                               |
+| **共享权威**   | 一个 store 拥有状态，其它 JavaScript 上下文持有它的镜像，并通过 transport 调用它的 action。即本页。 |
+| **远端同步**   | 持久 outbox、对服务端的 rebase、离线恢复 —— [`@coaction/sync`](/zh/docs/integrations/sync)。        |
+
+本地 store 可以在完全不创建 Worker 的情况下与服务端同步。而共享 store 的镜像是同一个权威端的
+视图，不是会各自演化再合并的副本 —— 后者才是这套词汇在多数其它库里的含义。
 
 继续阅读[共享运行时概览](/zh/docs/shared/overview)，了解权威语义与部署规则。

@@ -55,13 +55,27 @@ The package exposes static boundaries so a bundler can avoid loading unrelated r
 | Entry              | Contains                                                                 |
 | ------------------ | ------------------------------------------------------------------------ |
 | `coaction`         | Local creation, lifecycle helpers, signal primitives                     |
-| `coaction/shared`  | Shared-capable creation, JSON protocol, authority/client synchronization |
+| `coaction/shared`  | Shared-capable creation, the JSON protocol, authority and client mirrors |
 | `coaction/adapter` | External-store binding and state/patch safety helpers                    |
-| `coaction`         | Compatibility surface spanning local and shared selection                |
 
 Framework packages expose their own `create()` wrapper and may support both local and worker
 options. Vanilla code gets the clearest bundle boundary by choosing `coaction` or
 `coaction/shared` directly.
+
+## Three things the word "sync" gets used for
+
+They compose, and none of them implies another:
+
+|                            | What it is                                                                                                           |
+| -------------------------- | -------------------------------------------------------------------------------------------------------------------- |
+| **Reactive tracking**      | Which components re-render when a field changes — `observer`, selectors, computed getters.                           |
+| **Shared authority**       | One store owns the state; other JavaScript contexts hold mirrors and call actions on it over a transport. This page. |
+| **Remote synchronization** | A durable outbox, a rebase against a server, offline recovery — [`@coaction/sync`](/docs/integrations/sync).         |
+
+A local store can synchronize with a server without ever creating a Worker. And
+a shared store's mirrors are views of one authority, not replicas that diverge
+and get merged — which is what the same vocabulary means in most other
+libraries.
 
 Continue with the [shared runtime overview](/en/docs/shared/overview) for authority semantics and
 deployment rules.
