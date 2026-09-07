@@ -99,3 +99,24 @@ Custom adapters import `defineExternalStoreAdapter()` from `coaction/adapter`. T
 the core `Store` lifecycle, notify Coaction after direct external immutable writes, and declare
 support boundaries with contract tests. See [contributing](/en/docs/reference/contributing) before
 starting one.
+
+### The write boundary
+
+`store.apply` belongs to Coaction. An adapter says how to write a change into
+its own runtime by setting `internal.externalApply`, and that is the whole of
+its job here — Coaction works out the patch pair, runs commit validators, calls
+the writer, and publishes the commit.
+
+```ts
+internal.externalApply = (state = store.getPureState(), patches) => {
+  // write into the runtime; do not publish a commit
+};
+```
+
+An adapter that only wants to refuse a direct write, because its runtime takes
+changes through its own channel, needs no writer at all — refuse from
+`internal.assertMutationAllowed` and let the ordinary `apply` do the work.
+
+Adapters used to replace `store.apply` outright. That took on commit semantics
+they did not want, and discarded anything middleware had wrapped `apply` with,
+since middleware runs first.

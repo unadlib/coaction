@@ -90,3 +90,21 @@ XState 会阻止 `setState()`，应发送 actor event。Redux 与 XState 当前�
 ## 编写 adapter
 
 自定义 adapter 从 `coaction/adapter` 导入 `defineExternalStoreAdapter()`。它必须保留 core `Store` 生命周期，在直接外部不可变写入后通知 Coaction，并通过 contract test 声明支持边界。开始前请阅读[贡献指南](/zh/docs/reference/contributing)。
+
+### 写入边界
+
+`store.apply` 属于 Coaction。adapter 通过设置 `internal.externalApply` 说明如何把一次改动
+写进自己的 runtime，这就是它在这里的全部职责 —— Coaction 负责算出 patch pair、运行 commit
+validator、调用这个 writer，然后发布 commit。
+
+```ts
+internal.externalApply = (state = store.getPureState(), patches) => {
+  // 写进 runtime；不要自己发布 commit
+};
+```
+
+如果 adapter 只是想拒绝直接写入（因为它的 runtime 只通过自己的通道接受改动），那它根本不需要
+writer —— 从 `internal.assertMutationAllowed` 拒绝，让普通的 `apply` 去做事即可。
+
+adapter 过去是直接替换 `store.apply` 的。那让它承担了并不想要的 commit 语义，而且会丢弃
+middleware 对 `apply` 的包装 —— 因为 middleware 先于 binder 运行。

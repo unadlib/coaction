@@ -63,6 +63,13 @@ Client options add:
 Application code should prefer named actions over `apply()`. `apply()` is a low-level contract for
 transports, middleware, and adapters.
 
+Both forms publish a commit, so a transition made this way is visible to
+`onStoreCommit` and to everything built on it — history, sync, a devtool. With
+patches, `state` must be the state the store holds: omit it, or pass
+`getPureState()`. A patch pair describes a change to the current state, so
+applying it to a different base would leave the store somewhere its own commits
+do not lead, and that is refused.
+
 ## Computed declaration
 
 ```ts

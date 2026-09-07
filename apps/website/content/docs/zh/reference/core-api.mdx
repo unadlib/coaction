@@ -62,6 +62,11 @@ Client options 额外包含：
 
 应用代码应优先使用具名 action，而不是 `apply()`；后者是 transport、middleware 与 adapter 的底层 contract。
 
+两种形式都会发布 commit，因此这样做出的 transition 对 `onStoreCommit` 以及基于它构建的
+一切（history、sync、devtool）都是可见的。带 patches 时，`state` 必须是 store 当前持有的
+状态：省略它，或传 `getPureState()`。一对 patch 描述的是对当前状态的改动，应用到别的基准上
+会让 store 落到它自己的 commit 到不了的地方，因此会被拒绝。
+
 ## Computed 声明
 
 ```ts
