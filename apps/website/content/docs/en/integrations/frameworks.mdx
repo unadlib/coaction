@@ -41,6 +41,24 @@ const count = useCounter((state) => state.count);
 `<Observer>` creates a smaller tracked render region, and `useCounter.auto()` returns a cached
 field-selector map.
 
+### Server rendering
+
+On a server there is nothing to subscribe to, so every way of reading a store is
+a plain read of the state as it is at that moment — a selector, a no-selector
+call, and `observer` all agree.
+
+That matters when something has written to the store before rendering: a request
+preloading data, a hydration middleware, an initialisation second phase. All
+three report the value that was written, which is also what the client hydrates
+against, so React accepts the markup instead of reporting a mismatch and
+re-rendering the tree.
+
+If you want the value the store was created with, ask for it:
+
+```tsx
+const initial = useCounter.getInitialState().count;
+```
+
 ## Vue
 
 ```ts

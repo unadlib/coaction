@@ -36,6 +36,21 @@ const count = useCounter((state) => state.count);
 
 `<Observer>` 可创建更小的追踪区域，`useCounter.auto()` 返回缓存字段 selector map。
 
+### 服务端渲染
+
+服务端没有任何可订阅的东西，所以读取 store 的每一种方式都只是一次普通读取，读到的是那一刻的
+状态 —— selector、不带 selector 的调用、`observer` 三者一致。
+
+这在渲染之前已经有写入时才真正重要：请求预加载数据、hydration middleware、初始化的第二阶段。
+三者都会报告被写入的那个值，而这也正是客户端 hydrate 时比对的值，所以 React 会接受这段
+markup，而不是报告 mismatch 并重新渲染整棵树。
+
+如果你要的是 store 创建时的值，就显式去取：
+
+```tsx
+const initial = useCounter.getInitialState().count;
+```
+
 ## Vue
 
 ```ts
