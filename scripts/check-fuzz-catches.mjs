@@ -35,6 +35,21 @@ const rootDir = resolve(dirname(fileURLToPath(import.meta.url)), '..');
 
 const defects = [
   {
+    name: 'replacement snapshots losing deep freezing and computed identity',
+    fixedBy: '02bf016',
+    // Restore the snapshot helper together with its callers. Mixing an old
+    // caller with a renamed current helper would test a loader error instead.
+    files: [
+      'packages/core/src/immutableState.ts',
+      'packages/core/src/handleState.ts',
+      'packages/core/src/storeFactory.ts'
+    ],
+    suites: [
+      'packages/core/test/computed-signals.test.ts',
+      'packages/core/test/computedSnapshots.property.test.ts'
+    ]
+  },
+  {
     name: 'a write after an await never reaching the patch stream',
     fixedBy: 'd490498',
     files: [
@@ -51,6 +66,7 @@ const defects = [
       'packages/core/src/storeCommit.ts',
       'packages/core/src/handleDraft.ts',
       'packages/core/src/handleState.ts',
+      'packages/core/src/immutableState.ts',
       'packages/core/src/replaceExternalStoreState.ts'
     ],
     suites: ['packages/core/test/writePaths.fuzz.test.ts']
@@ -61,6 +77,8 @@ const defects = [
     files: [
       'packages/core/src/utils.ts',
       'packages/core/src/handleState.ts',
+      'packages/core/src/storeFactory.ts',
+      'packages/core/src/immutableState.ts',
       'packages/core/src/handleDraft.ts',
       'packages/core/src/replaceExternalStoreState.ts'
     ],
