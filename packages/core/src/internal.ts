@@ -170,12 +170,15 @@ export interface Internal<T extends CreateState = CreateState> {
    * `inversePatches` is the pair's other half as the caller has it, after any
    * `store.patch` transform. A commit validator is shown the transition that
    * will be published, so it must not be left to derive its own.
+   * `producedState` is available only for native, untransformed scalar patches;
+   * normalizing these cannot change the candidate. Wrappers still receive apply.
    */
   applyValidatedPatches?: (
     state: T,
     patches: Patches,
     skipFinalValidation: boolean,
-    inversePatches?: Patches
+    inversePatches?: Patches,
+    producedState?: T
   ) => boolean;
   /** Publish patches when a shared authority transport is attached. */
   emitPatches?: (patches: Patches) => void;

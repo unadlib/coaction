@@ -163,7 +163,8 @@ export const createStore = <T extends CreateState>(
       prepared = false,
       skipFinalValidation = false,
       knownInversePatches?: Patches,
-      wantCommitPair = false
+      wantCommitPair = false,
+      producedState?: T
     ) => {
       internal.assertAlive?.('apply');
       internal.assertMutationAllowed?.('apply');
@@ -178,9 +179,9 @@ export const createStore = <T extends CreateState>(
       if (baseState !== internal.rootState) {
         validateReplacementSource?.(baseState);
       }
-      const appliedState = safePatches
-        ? applyPatches(baseState, safePatches)
-        : baseState;
+      const appliedState =
+        producedState ??
+        (safePatches ? applyPatches(baseState, safePatches) : baseState);
       const nextState = prepared
         ? appliedState
         : sanitizeReplacementState(appliedState);
@@ -343,7 +344,8 @@ export const createStore = <T extends CreateState>(
       state,
       patches,
       skipFinalValidation,
-      inversePatches
+      inversePatches,
+      producedState
     ) => {
       if (store.apply !== apply || internal.externalApply) {
         // Middleware has wrapped `apply`, or the write goes into an external
@@ -352,7 +354,15 @@ export const createStore = <T extends CreateState>(
         applyWithOwnStoreCommit(store, () => store.apply(state, patches));
         return false;
       }
-      applyState(state, patches, true, skipFinalValidation, inversePatches);
+      applyState(
+        state,
+        patches,
+        true,
+        skipFinalValidation,
+        inversePatches,
+        false,
+        producedState
+      );
       return true;
     };
     const getPureState: Store<T>['getPureState'] = () =>

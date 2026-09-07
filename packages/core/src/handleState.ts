@@ -228,7 +228,18 @@ export const handleState = <T extends CreateState>(
           internal.rootState as T,
           safePatches,
           !patch,
-          safeInversePatches
+          safeInversePatches,
+          // Normalization cannot alter scalar payloads. Keep the verified
+          // producer result instead of drafting the same transition again.
+          // Object payloads and middleware transforms still take the apply path.
+          !patch &&
+            !snapshot &&
+            !nextNeedsSnapshot &&
+            safePatches.every(
+              (patch) => typeof patch.value !== 'object' || patch.value === null
+            )
+            ? producedState
+            : undefined
         ) ?? false;
       if (!internal.applyValidatedPatches) {
         applyWithOwnStoreCommit(store, () =>

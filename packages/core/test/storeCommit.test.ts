@@ -539,3 +539,73 @@ test('a prepare listener on its own is enough to produce a patch pair', () => {
   expect(store.getState().items[0].value).toBe(2);
   store.destroy();
 });
+
+test.each(['native', 'patch', 'apply-wrapper'] as const)(
+  '%s scalar writes preserve validation, rollback, notifications and replay',
+  (mode) => {
+    let recipeCalls = 0;
+    let applyCalls = 0;
+    const store = create(
+      () => ({ rows: [{ value: 0 }], sibling: { value: 1 } }),
+      {
+        middlewares: [
+          (store) => {
+            if (mode === 'patch')
+              store.patch = ({ patches, inversePatches }) => ({
+                patches: patches.map((patch) => ({
+                  ...patch,
+                  value: Number(patch.value) + 10
+                })),
+                inversePatches
+              });
+            if (mode === 'apply-wrapper') {
+              const apply = store.apply;
+              store.apply = (...args) => {
+                applyCalls += 1;
+                apply(...args);
+              };
+            }
+            return store;
+          }
+        ]
+      }
+    );
+    const commits: StoreCommit[] = [];
+    const notifications = jest.fn();
+    const before = store.getPureState();
+    store.subscribe(notifications);
+    onStoreCommit(store, (commit) => commits.push(commit));
+    let reject = true;
+    const validated: StoreCommit[] = [];
+    onStoreCommitValidate(store, (commit) => {
+      expect(store.getPureState()).toBe(before);
+      expect(commit.source).toBe('setState');
+      expect(commit.state.rows[0].value).toBe(mode === 'patch' ? 12 : 2);
+      expect(applyPatches(before, commit.patches)).toEqual(commit.state);
+      validated.push(commit);
+      if (reject) throw new Error('veto');
+    });
+    const write = () =>
+      store.setState((draft) => {
+        recipeCalls += 1;
+        draft.rows[0].value = 2;
+      });
+    expect(write).toThrow('veto');
+    expect(store.getPureState()).toBe(before);
+    expect(commits).toHaveLength(0);
+    expect(notifications).not.toHaveBeenCalled();
+    reject = false;
+    write();
+    expect(recipeCalls).toBe(2);
+    expect(commits).toHaveLength(1);
+    expect(commits[0].state).toBe(validated[1].state);
+    if (mode !== 'apply-wrapper') {
+      expect(commits[0].state.sibling).toBe(before.sibling);
+    }
+    expect(applyPatches(commits[0].state, commits[0].inversePatches)).toEqual(
+      before
+    );
+    expect(notifications).toHaveBeenCalledTimes(1);
+    expect(applyCalls).toBe(mode === 'apply-wrapper' ? 2 : 0);
+  }
+);
