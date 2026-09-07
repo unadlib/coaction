@@ -4,12 +4,34 @@ import { spawnSync } from 'node:child_process';
 import { mkdtempSync, readFileSync, rmSync, writeFileSync } from 'node:fs';
 import { dirname, join, resolve } from 'node:path';
 import { fileURLToPath, pathToFileURL } from 'node:url';
+import ts from 'typescript';
 
 const scriptDir = dirname(fileURLToPath(import.meta.url));
 const rootDir = resolve(scriptDir, '..');
 const npmBin = process.platform === 'win32' ? 'npm.cmd' : 'npm';
 const pnpmBin = process.platform === 'win32' ? 'pnpm.cmd' : 'pnpm';
 const targets = process.argv.slice(2);
+const baseConfig = ts.getParsedCommandLineOfConfigFile(
+  join(rootDir, 'tsconfig.typecheck.json'),
+  {},
+  {
+    ...ts.sys,
+    onUnRecoverableConfigFileDiagnostic(diagnostic) {
+      throw new Error(
+        ts.flattenDiagnosticMessageText(diagnostic.messageText, '\n')
+      );
+    }
+  }
+);
+if (baseConfig.errors.length) {
+  throw new Error(
+    baseConfig.errors
+      .map((diagnostic) =>
+        ts.flattenDiagnosticMessageText(diagnostic.messageText, '\n')
+      )
+      .join('\n')
+  );
+}
 
 if (targets.length === 0) {
   console.error(
@@ -83,8 +105,9 @@ for (const target of targets) {
           compilerOptions: {
             baseUrl: rootDir,
             paths: {
-              coaction: [join(rootDir, 'packages', 'core', 'index.ts')],
-              'coaction/*': [join(rootDir, 'packages', 'core', '*.ts')],
+              // TypeScript replaces, rather than merges, inherited paths.
+              // Keep every workspace source alias while substituting Travels.
+              ...baseConfig.options.paths,
               travels: [resolve(travelsDir, typesEntry)]
             }
           }
