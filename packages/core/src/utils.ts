@@ -284,12 +284,14 @@ export const setOwnEnumerable = (
 };
 
 export const getOwnEnumerableKeys = (source: unknown) => {
-  if (typeof source !== 'object' || source === null) {
+  if (!source || typeof source !== 'object') {
     return [];
   }
-  return Reflect.ownKeys(source).filter((key) =>
-    Object.prototype.propertyIsEnumerable.call(source, key)
-  );
+  const keys: PropertyKey[] = Object.keys(source);
+  for (const key of Object.getOwnPropertySymbols(source)) {
+    if (Object.prototype.propertyIsEnumerable.call(source, key)) keys.push(key);
+  }
+  return keys;
 };
 
 const getOwnSchemaKeys = (source: unknown) => {
@@ -496,9 +498,10 @@ export const cloneOwnEnumerable = <T extends Record<PropertyKey, unknown>>(
   return target;
 };
 
-export const sanitizeReplacementState = <T>(
+const cloneStateValue = <T>(
   source: T,
-  seen = new WeakMap<object, unknown>()
+  seen: WeakMap<object, unknown>,
+  preserveFunctions: boolean
 ): T => {
   if (typeof source !== 'object' || source === null) {
     return source;
@@ -507,52 +510,39 @@ export const sanitizeReplacementState = <T>(
   if (cached) {
     return cached as T;
   }
-  if (Array.isArray(source)) {
-    const target: unknown[] = [];
-    target.length = source.length;
-    seen.set(source, target);
-    for (let index = 0; index < source.length; index += 1) {
-      if (Object.prototype.hasOwnProperty.call(source, index)) {
-        target[index] = sanitizeReplacementState(source[index], seen);
-      }
-    }
-    for (const key of getOwnEnumerableKeys(source)) {
-      if (
-        isArrayIndexKey(key) ||
-        (typeof key === 'string' && isUnsafeKey(key))
-      ) {
-        continue;
-      }
-      const value = (source as Record<PropertyKey, unknown>)[key];
-      if (typeof value === 'function') {
-        continue;
-      }
-      setOwnEnumerable(
-        target as unknown as Record<PropertyKey, unknown>,
-        key,
-        sanitizeReplacementState(value, seen)
-      );
-    }
-    return target as T;
-  }
+  const array = Array.isArray(source);
   const prototype = Object.getPrototypeOf(source);
-  if (prototype !== Object.prototype && prototype !== null) {
+  if (!array && prototype !== Object.prototype && prototype !== null) {
     return source;
   }
-  const target = Object.create(prototype) as Record<PropertyKey, unknown>;
+  const target = (
+    array ? new Array(source.length) : Object.create(prototype)
+  ) as Record<PropertyKey, unknown>;
   seen.set(source, target);
-  for (const key of getOwnEnumerableKeys(source)) {
-    if (typeof key === 'string' && isUnsafeKey(key)) {
+  // Array indices include non-enumerable slots. Named extras and symbols
+  // remain enumerable-only, matching the object replacement boundary.
+  for (const key of array
+    ? Reflect.ownKeys(source)
+    : getOwnEnumerableKeys(source)) {
+    const index = array && isArrayIndexKey(key);
+    if (
+      (typeof key === 'string' && isUnsafeKey(key)) ||
+      (array &&
+        !index &&
+        !Object.prototype.propertyIsEnumerable.call(source, key))
+    )
       continue;
-    }
     const value = (source as Record<PropertyKey, unknown>)[key];
-    if (typeof value === 'function') {
-      continue;
-    }
-    setOwnEnumerable(target, key, sanitizeReplacementState(value, seen));
+    if (!preserveFunctions && !index && typeof value === 'function') continue;
+    target[key] = cloneStateValue(value, seen, preserveFunctions);
   }
   return target as T;
 };
+
+export const sanitizeReplacementState = <T>(
+  source: T,
+  seen = new WeakMap<object, unknown>()
+): T => cloneStateValue(source, seen, false);
 
 const normalizePatchPath = (path: unknown): PropertyKey[] => {
   if (Array.isArray(path)) {
@@ -853,62 +843,7 @@ export const applyPatches = <T>(state: T, patches: Patches): T => {
 export const sanitizeInitialStateValue = <T>(
   source: T,
   seen = new WeakMap<object, unknown>()
-): T => {
-  if (typeof source !== 'object' || source === null) {
-    return source;
-  }
-  const cached = seen.get(source);
-  if (cached) {
-    return cached as T;
-  }
-  if (Array.isArray(source)) {
-    const target: unknown[] = [];
-    target.length = source.length;
-    seen.set(source, target);
-    for (let index = 0; index < source.length; index += 1) {
-      if (Object.prototype.hasOwnProperty.call(source, index)) {
-        target[index] = sanitizeInitialStateValue(source[index], seen);
-      }
-    }
-    for (const key of getOwnEnumerableKeys(source)) {
-      if (
-        isArrayIndexKey(key) ||
-        (typeof key === 'string' && isUnsafeKey(key))
-      ) {
-        continue;
-      }
-      setOwnEnumerable(
-        target as unknown as Record<PropertyKey, unknown>,
-        key,
-        sanitizeInitialStateValue(
-          (source as Record<PropertyKey, unknown>)[key],
-          seen
-        )
-      );
-    }
-    return target as T;
-  }
-  const prototype = Object.getPrototypeOf(source);
-  if (prototype !== Object.prototype && prototype !== null) {
-    return source;
-  }
-  const target = Object.create(prototype) as Record<PropertyKey, unknown>;
-  seen.set(source, target);
-  for (const key of getOwnEnumerableKeys(source)) {
-    if (typeof key === 'string' && isUnsafeKey(key)) {
-      continue;
-    }
-    setOwnEnumerable(
-      target,
-      key,
-      sanitizeInitialStateValue(
-        (source as Record<PropertyKey, unknown>)[key],
-        seen
-      )
-    );
-  }
-  return target as T;
-};
+): T => cloneStateValue(source, seen, true);
 
 export const areShallowEqualWithArray = (
   prev: any[] | null | IArguments,
