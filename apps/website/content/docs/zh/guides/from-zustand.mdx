@@ -32,7 +32,9 @@ Zustand updater 通常返回 partial object。Coaction 也接受 object merge，
 const count = useCounter((state) => state.count);
 ```
 
-它采用 version + selector recompute + `Object.is` 比较，是低风险且熟悉的迁移点。
+写法与 Zustand 一致，做的工作更少：selector 在 reactive tracker 中执行，读到的路径成为它的依赖，
+没有触及这些路径的写入不会重新执行它 —— 而 Zustand 每次 store 通知都会执行全部 selector 再比较
+结果。两边都由 `Object.is` 决定是否重渲染。无论如何都是低风险且熟悉的迁移点。
 
 Store 稳定后，再在确实能减少 selector 组合样板的地方使用 `observer()`：
 

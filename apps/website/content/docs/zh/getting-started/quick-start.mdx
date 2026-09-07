@@ -59,7 +59,9 @@ function CountOnly() {
 }
 ```
 
-显式 selector 路径采用 version + recompute + `Object.is` 模型，与 Zustand 类似。经常重复使用的字段 selector 可以创建一次缓存 map：
+selector 在 reactive tracker 中执行，它读到的路径就成为它的依赖：没有触及这些路径的写入根本不会
+重新执行它。`Object.is` 仍然决定是否重渲染，但大多数写入不会走到这一步。经常重复使用的字段
+selector 可以创建一次缓存 map：
 
 ```tsx
 const selectors = useCounter.auto();

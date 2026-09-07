@@ -65,8 +65,10 @@ function CountOnly() {
 }
 ```
 
-The explicit selector path follows a version + recompute + `Object.is` model, similar to Zustand.
-For frequently reused field selectors, create a cached selector map once:
+The selector runs inside a reactive tracker, so the paths it reads become its dependencies: a
+write that touches none of them does not re-run it at all. `Object.is` still decides the
+re-render, but most writes never reach the comparison. For frequently reused field selectors,
+create a cached selector map once:
 
 ```tsx
 const selectors = useCounter.auto();

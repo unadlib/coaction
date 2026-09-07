@@ -34,8 +34,11 @@ Existing selector-oriented components can keep the explicit style:
 const count = useCounter((state) => state.count);
 ```
 
-The behavior is a version + selector recomputation + `Object.is` comparison, so it is a familiar
-and low-risk migration point.
+It reads like Zustand's, and does less work. The selector runs inside a reactive tracker, so the
+paths it reads become its dependencies and a write touching none of them does not re-run it --
+where Zustand runs every selector on every store notification and compares the result.
+`Object.is` still decides the re-render in both. A familiar and low-risk migration point either
+way.
 
 Once the store is stable, use `observer()` where automatic read tracking removes meaningful
 selector boilerplate:
