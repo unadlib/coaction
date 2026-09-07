@@ -84,12 +84,16 @@ export default defineConfig([
       {
         file: join(distDir, `${name}.mjs`),
         format: 'esm',
+        // Keep API docs in declarations; runtime bundles retain legal notices
+        // and tree-shaking annotations without duplicating JSDoc prose.
+        comments: { legal: true, annotation: true, jsdoc: false },
         codeSplitting: false,
         sourcemap: false
       },
       {
         file: join(distDir, `${name}.js`),
         format: 'cjs',
+        comments: { legal: true, annotation: true, jsdoc: false },
         exports: 'named',
         codeSplitting: false,
         sourcemap: false

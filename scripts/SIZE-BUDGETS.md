@@ -24,9 +24,12 @@ a deliberate act with a reason, stated where the reason belongs:
 
 - **Say what was added.** A number that moves without an explanation in the same
   commit is indistinguishable from one that moved to silence a failure.
-- **Check what grew.** This repository ships comments in its output, and more
-  than once a "500 byte" change has turned out to be 30 bytes of code and 470 of
-  prose. Measure with comments stripped before assuming the code grew.
+- **Check what grew.** Runtime bundles retain legal notices and tree-shaking
+  annotations. API JSDoc stays in declarations instead of being duplicated in
+  JavaScript. This packaging change reduces the raw artifact measurements
+  without changing the frozen ceilings. The core consumer fixtures measure
+  retained Coaction code with `alien-signals`, `data-transport` and `mutative`
+  externalized; they are not dependency-inclusive application bundle sizes.
 - **Never move a ceiling to pass a build.** Raising `maxGzipBytes` without
   raising `baselineGzipBytes` hides the growth from the report as well as from
   the build.
