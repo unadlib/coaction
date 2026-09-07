@@ -4,7 +4,8 @@ import { invalidateReactivePaths } from './reactivePath';
 import { applyThroughExternalRuntime } from './externalApply';
 import {
   createImmutableSnapshotPatches,
-  finalizeImmutableStateSnapshot
+  finalizeImmutableStateSnapshot,
+  getImmutableStateSnapshot
 } from './immutableState';
 import { defaultName } from './constant';
 import { getInitialState } from './getInitialState';
@@ -25,7 +26,6 @@ import {
   applyWithOwnStoreCommit,
   disposeStoreCommitRuntime,
   getStoreCommitSource,
-  hasStoreCommitListeners,
   hasStoreCommitPublishers,
   hasStoreCommitValidators,
   ownsStoreCommit,
@@ -34,12 +34,14 @@ import {
   validateStoreCommit
 } from './storeCommit';
 import {
+  applyPatches,
   assertKnownStateShape,
   assertSafePatches,
   createInversePatches,
   createRootReplacementPatches,
   createStateSchema,
   getOwnEnumerableKeys,
+  needsRootSnapshot,
   sanitizeCheckedPatches,
   sanitizePatches,
   sanitizeReplacementState
@@ -182,7 +184,7 @@ export const createStore = <T extends CreateState>(
         validateReplacementSource?.(baseState);
       }
       const appliedState = safePatches
-        ? (applyWithMutative(baseState, safePatches) as T)
+        ? applyPatches(baseState, safePatches)
         : baseState;
       const nextState = prepared
         ? appliedState
@@ -261,7 +263,14 @@ export const createStore = <T extends CreateState>(
         );
         finalizeImmutableStateSnapshot(
           nextState,
-          applyWithMutative(previousSnapshot as any, snapshotPatches),
+          snapshotPatches.some(
+            (patch) =>
+              typeof patch.value === 'object' &&
+              patch.value !== null &&
+              needsRootSnapshot(patch.value)
+          )
+            ? getImmutableStateSnapshot(nextState, snapshotCache)
+            : applyWithMutative(previousSnapshot as any, snapshotPatches),
           safePatches,
           snapshotCache,
           internal.computedIdentityRequired

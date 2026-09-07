@@ -28,6 +28,7 @@ const seedOffset = Number(process.argv[3] ?? 1_000_000);
 
 const suites = [
   'packages/core/test/patchAlgebra.property.test.ts',
+  'packages/core/test/graphState.property.test.ts',
   'packages/core/test/writePaths.fuzz.test.ts',
   'packages/coaction-sync/test/checkpoint.property.test.ts',
   'packages/coaction-mobx/test/interleaving.fuzz.test.ts',

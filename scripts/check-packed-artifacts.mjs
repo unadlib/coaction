@@ -1,22 +1,8 @@
 #!/usr/bin/env node
-/**
- * Install the packed tarballs into an empty project and use them.
- *
- * Everything else checks the repository: `publint` and `attw` read the package
- * manifests, the tests import source through vitest aliases, and the entry
- * interop check loads `dist` by path. None of that exercises what a consumer
- * actually gets -- whether `files` ships the built output, whether the
- * `exports` map resolves under Node's own algorithm, whether the types resolve
- * from the installed location, or whether a dependency that should have been
- * declared happens to be present in the monorepo and missing on its own.
- *
- * This packs, installs into a scratch directory outside the workspace, and
- * imports every published entry through Node -- as ESM and as CJS -- then makes
- * a store and reads it, so a broken entry fails as a broken entry rather than
- * as a missing file.
- */
+/** Qualify every public entry in a separate, installed tarball consumer. */
 import { execFileSync } from 'node:child_process';
 import {
+  mkdirSync,
   mkdtempSync,
   readFileSync,
   rmSync,
@@ -40,26 +26,47 @@ const packages = readdirSync(packagesDir)
   }))
   .filter(({ json }) => !json.private);
 
-/** Entries to import from an installed package, with what each must export. */
+// An explicit API assertion for each entry prevents empty/broken bundles from
+// passing. Manifests drive enumeration, so adding an entry requires a probe.
 const entryChecks = {
-  coaction: [
-    ['coaction', ['create', 'whole']],
-    ['coaction/shared', ['create']],
-    [
-      'coaction/adapter',
-      ['onStoreCommit', 'replayStorePatches', 'createBinder']
-    ]
-  ],
-  '@coaction/react': [['@coaction/react', ['create', 'observer']]],
-  '@coaction/history': [['@coaction/history', ['history']]],
-  '@coaction/sync': [
-    ['@coaction/sync', ['sync', 'getSyncApi']],
-    ['@coaction/sync/crud', []],
-    ['@coaction/sync/indexeddb', []]
-  ],
-  '@coaction/logger': [['@coaction/logger', ['logger']]],
-  '@coaction/persist': [['@coaction/persist', ['persist']]]
+  coaction: ['create', 'whole'],
+  'coaction/shared': ['create'],
+  'coaction/adapter': ['onStoreCommit', 'replayStorePatches', 'createBinder'],
+  '@coaction/react': ['create', 'observer'],
+  '@coaction/react/shared': ['create', 'observer'],
+  '@coaction/history': ['history'],
+  '@coaction/jotai': ['bindJotai'],
+  '@coaction/logger': ['logger'],
+  '@coaction/mobx': ['bindMobx'],
+  '@coaction/ng': ['create'],
+  '@coaction/persist': ['persist'],
+  '@coaction/pinia': ['bindPinia'],
+  '@coaction/redux': ['bindRedux'],
+  '@coaction/solid': ['create'],
+  '@coaction/svelte': ['create'],
+  '@coaction/valtio': ['bindValtio'],
+  '@coaction/vue': ['create'],
+  '@coaction/xstate': ['bindXState'],
+  '@coaction/yjs': ['bindYjs'],
+  '@coaction/zustand': ['bindZustand'],
+  '@coaction/sync': ['sync', 'getSyncApi'],
+  '@coaction/sync/crud': ['createCrudSyncAdapter'],
+  '@coaction/sync/indexeddb': ['createIndexedDbSyncStorage'],
+  '@coaction/sync/supabase': ['createSupabaseSyncAdapter'],
+  '@coaction/sync/query': ['createQuerySyncAdapter'],
+  '@coaction/sync/firestore': ['createFirestoreSyncAdapter']
 };
+const run = (command, args, cwd) =>
+  execFileSync(command, args, {
+    cwd,
+    stdio: ['ignore', 'pipe', 'pipe']
+  });
+const detail = (error) =>
+  [error.stdout, error.stderr]
+    .filter(Boolean)
+    .map((value) => value.toString())
+    .join('\n')
+    .trim() || error.message;
 
 const scratch = mkdtempSync(join(tmpdir(), 'coaction-pack-'));
 let failed = false;
@@ -87,113 +94,179 @@ try {
     tarballs.set(json.name, join(scratch, output));
   }
 
-  const project = join(scratch, 'consumer');
-  execFileSync('mkdir', ['-p', project]);
-  writeFileSync(
-    join(project, 'package.json'),
-    JSON.stringify(
-      {
-        name: 'coaction-pack-consumer',
-        version: '0.0.0',
-        private: true,
-        type: 'module',
-        dependencies: Object.fromEntries(
-          [...tarballs].map(([name, file]) => [name, `file:${file}`])
-        )
-      },
-      null,
-      2
-    )
+  const overrides = Object.fromEntries(
+    [...tarballs].map(([name, file]) => [name, `file:${file}`])
   );
-
-  console.log('Installing the tarballs');
-  execFileSync(
-    'npm',
-    ['install', '--no-audit', '--no-fund', '--loglevel=error'],
-    {
-      cwd: project,
-      stdio: ['ignore', 'pipe', 'pipe']
+  let entryCount = 0;
+  for (const { json } of packages) {
+    const project = join(scratch, json.name.replace(/[^a-z0-9-]/gi, '_'));
+    mkdirSync(project);
+    // Only this package and its declared workspace peers are direct runtime
+    // dependencies. npm supplies external peers from their declared ranges.
+    const dependencies = { [json.name]: overrides[json.name] };
+    for (const name of Object.keys(json.peerDependencies ?? {})) {
+      if (tarballs.has(name)) dependencies[name] = overrides[name];
     }
-  );
-
-  for (const [packageName, entries] of Object.entries(entryChecks)) {
-    for (const [entry, exported] of entries) {
-      const esm = `
-        import * as mod from '${entry}';
-        const missing = ${JSON.stringify(exported)}.filter((name) => typeof mod[name] === 'undefined');
-        if (missing.length) { console.error('missing: ' + missing.join(', ')); process.exit(1); }
-      `;
-      writeFileSync(join(project, 'probe.mjs'), esm);
-      try {
-        execFileSync('node', ['probe.mjs'], {
-          cwd: project,
-          stdio: ['ignore', 'pipe', 'pipe']
-        });
-        console.log(`  ok    import ${entry}`);
-      } catch (error) {
-        fail(
-          `import ${entry}: ${(error.stderr?.toString() || error.message).trim().split('\n')[0]}`
-        );
-      }
-      const cjs = `
-        const mod = require('${entry}');
-        const missing = ${JSON.stringify(exported)}.filter((name) => typeof mod[name] === 'undefined');
-        if (missing.length) { console.error('missing: ' + missing.join(', ')); process.exit(1); }
-      `;
-      writeFileSync(join(project, 'probe.cjs'), cjs);
-      try {
-        execFileSync('node', ['probe.cjs'], {
-          cwd: project,
-          stdio: ['ignore', 'pipe', 'pipe']
-        });
-        console.log(`  ok    require ${entry}`);
-      } catch (error) {
-        fail(
-          `require ${entry}: ${(error.stderr?.toString() || error.message).trim().split('\n')[0]}`
-        );
-      }
-    }
-  }
-
-  // A store built and read from the installed packages, so the entries are
-  // checked for working rather than only for resolving.
-  writeFileSync(
-    join(project, 'use.mjs'),
-    `
-      import { create } from 'coaction';
-      import { onStoreCommit } from 'coaction/adapter';
-      import { history } from '@coaction/history';
-      const store = create((set) => ({
-        count: 0,
-        increment() { set(() => { this.count += 1; }); }
-      }), { middlewares: [history()] });
-      const commits = [];
-      onStoreCommit(store, (commit) => commits.push(commit));
-      store.getState().increment();
-      if (store.getState().count !== 1) { console.error('state'); process.exit(1); }
-      if (commits.length !== 1) { console.error('commits: ' + commits.length); process.exit(1); }
-      if (!store.history.undo()) { console.error('undo'); process.exit(1); }
-      if (store.getState().count !== 0) { console.error('undone'); process.exit(1); }
-      store.destroy();
-    `
-  );
-  try {
-    execFileSync('node', ['use.mjs'], {
-      cwd: project,
-      stdio: ['ignore', 'pipe', 'pipe']
-    });
-    console.log('  ok    a store built from the installed packages works');
-  } catch (error) {
-    fail(
-      `using the installed packages: ${(error.stderr?.toString() || error.message).trim().split('\n').slice(0, 3).join(' ')}`
+    writeFileSync(
+      join(project, 'package.json'),
+      JSON.stringify(
+        {
+          name: 'coaction-pack-consumer',
+          version: '0.0.0',
+          private: true,
+          type: 'module',
+          dependencies,
+          overrides,
+          devDependencies: { typescript: '^5.9.3' }
+        },
+        null,
+        2
+      )
     );
+    console.log(`Installing isolated consumer for ${json.name}`);
+    try {
+      run(
+        'npm',
+        ['install', '--no-audit', '--no-fund', '--loglevel=error'],
+        project
+      );
+      const entries = Object.keys(json.exports)
+        .filter((key) => key !== './package.json')
+        .map((key) => (key === '.' ? json.name : json.name + key.slice(1)));
+      const probes = [];
+      for (const entry of entries) {
+        const names = entryChecks[entry];
+        if (!names?.length) throw new Error(`Missing API probe for ${entry}`);
+        entryCount += 1;
+        for (const format of ['esm', 'cjs']) {
+          const extension = format === 'esm' ? 'mjs' : 'cjs';
+          const load =
+            format === 'esm'
+              ? `import * as mod from '${entry}';`
+              : `const mod = require('${entry}');`;
+          writeFileSync(
+            join(project, `probe.${extension}`),
+            `${load}
+            for (const name of ${JSON.stringify(names)}) {
+              if (typeof mod[name] !== 'function') throw new Error('${entry}: missing ' + name);
+            }
+          `
+          );
+          run('node', [`probe.${extension}`], project);
+          const typesFile = `probe-${probes.length}.${format === 'esm' ? 'mts' : 'cts'}`;
+          probes.push(typesFile);
+          const importTypes =
+            format === 'esm'
+              ? `import * as mod from '${entry}';`
+              : `import mod = require('${entry}');`;
+          writeFileSync(
+            join(project, typesFile),
+            `${importTypes}
+            ${names.map((name) => `const ${name}: Function = mod.${name};`).join('\n')}
+            ${
+              names.includes('create')
+                ? `
+              const store = mod.create(() => ({ count: 0 }));
+              const count: number = store.getState().count;
+              // @ts-expect-error Installed declarations must retain state inference.
+              const invalid: string = store.getState().count;
+              store.destroy();
+            `
+                : ''
+            }
+          `
+          );
+        }
+        console.log(`  ok    import + require ${entry}`);
+      }
+      for (const [module, moduleResolution, files] of [
+        ['NodeNext', 'NodeNext', probes],
+        ['ESNext', 'Bundler', probes.filter((file) => file.endsWith('.mts'))]
+      ]) {
+        writeFileSync(
+          join(project, 'tsconfig.json'),
+          JSON.stringify({
+            compilerOptions: {
+              target: 'ES2022',
+              module,
+              moduleResolution,
+              strict: true,
+              noEmit: true,
+              skipLibCheck: false
+            },
+            files
+          })
+        );
+        run(
+          'node',
+          ['node_modules/typescript/bin/tsc', '-p', 'tsconfig.json'],
+          project
+        );
+        console.log(`  ok    installed declarations (${moduleResolution})`);
+      }
+      if (json.name === '@coaction/history') {
+        for (const extension of ['mjs', 'cjs']) {
+          const imports =
+            extension === 'mjs'
+              ? `import { create } from 'coaction'; import { onStoreCommit } from 'coaction/adapter'; import { history } from '@coaction/history';`
+              : `const { create } = require('coaction'); const { onStoreCommit } = require('coaction/adapter'); const { history } = require('@coaction/history');`;
+          writeFileSync(
+            join(project, `use.${extension}`),
+            `${imports}
+            const store = create((set) => ({ count: 0,
+              increment() { set(() => { this.count += 1; }); }
+            }), { middlewares: [history()] });
+            const commits = [];
+            onStoreCommit(store, (commit) => commits.push(commit));
+            store.getState().increment();
+            if (store.getState().count !== 1 || commits.length !== 1) throw new Error('commit');
+            if (!store.history.undo() || store.getState().count !== 0) throw new Error('undo');
+            store.destroy();
+          `
+          );
+          run('node', [`use.${extension}`], project);
+        }
+        console.log('  ok    installed store, commits and history (ESM + CJS)');
+      }
+      if (json.name === 'coaction') {
+        for (const extension of ['mjs', 'cjs']) {
+          const imports =
+            extension === 'mjs'
+              ? `import { create } from 'coaction'; import { onStoreCommit, applyPatches } from 'coaction/adapter';`
+              : `const { create } = require('coaction'); const { onStoreCommit, applyPatches } = require('coaction/adapter');`;
+          writeFileSync(
+            join(project, `graph.${extension}`),
+            `${imports}
+            const node = {}; node.self = node;
+            const store = create(() => ({ left: null, right: null }));
+            const before = store.getPureState();
+            const commits = [];
+            onStoreCommit(store, (commit) => commits.push(commit));
+            store.setState({ left: node, right: node });
+            if (commits.length !== 1) throw new Error('graph commit');
+            for (const state of [store.getPureState(), applyPatches(before, commits[0].patches)]) {
+              if (state.left !== state.right || state.left.self !== state.left) throw new Error('graph replay');
+            }
+            const restored = applyPatches(store.getPureState(), commits[0].inversePatches);
+            if (restored.left !== null || restored.right !== null) throw new Error('graph inverse');
+            store.destroy();
+          `
+          );
+          run('node', [`graph.${extension}`], project);
+        }
+        console.log(
+          '  ok    installed cyclic and aliased commit replay (ESM + CJS)'
+        );
+      }
+    } catch (error) {
+      fail(`${json.name}: ${detail(error)}`);
+    }
   }
+  console.log(
+    `Checked ${entryCount} public entries across ${packages.length} isolated consumers.`
+  );
 } finally {
   rmSync(scratch, { recursive: true, force: true });
 }
-
-if (failed) {
-  console.error('\nPacked artifact check failed.');
-  process.exit(1);
-}
-console.log('\nPacked artifacts install and work.');
+if (failed) process.exit(1);
+console.log('Packed runtime and TypeScript consumer checks passed.');

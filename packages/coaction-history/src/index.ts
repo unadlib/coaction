@@ -1,5 +1,6 @@
 import {
   applyRootReplacementWithPatches,
+  isSameStructure as isEqual,
   onStoreCommit,
   onStoreCommitPrepare,
   onStoreReady,
@@ -50,8 +51,10 @@ const setOwnEnumerable = (
   target[key] = value;
 };
 
-const isObjectRecord = (value: object) =>
-  Object.prototype.toString.call(value) === '[object Object]';
+const isObjectRecord = (value: object) => {
+  const prototype = Object.getPrototypeOf(value);
+  return prototype === null || prototype.constructor === Object;
+};
 
 const toSnapshot = (
   state: unknown,
@@ -82,7 +85,8 @@ const toSnapshot = (
     if (visited.has(state)) {
       return visited.get(state) as Snapshot;
     }
-    const next: Record<PropertyKey, unknown> = {};
+    const next: Record<PropertyKey, unknown> =
+      Object.getPrototypeOf(state) === null ? Object.create(null) : {};
     visited.set(state, next);
     for (const key of getOwnEnumerableKeys(state)) {
       const value = (state as Record<PropertyKey, unknown>)[key];
@@ -94,57 +98,6 @@ const toSnapshot = (
     return next;
   }
   return state as Snapshot;
-};
-
-const isEqual = (
-  a: unknown,
-  b: unknown,
-  visited = new WeakMap<object, WeakSet<object>>()
-): boolean => {
-  if (Object.is(a, b)) {
-    return true;
-  }
-  if (
-    typeof a !== 'object' ||
-    a === null ||
-    typeof b !== 'object' ||
-    b === null
-  ) {
-    return false;
-  }
-  const aIsArray = Array.isArray(a);
-  const bIsArray = Array.isArray(b);
-  if (aIsArray || bIsArray) {
-    if (!aIsArray || !bIsArray || a.length !== b.length) {
-      return false;
-    }
-  } else if (!isObjectRecord(a) || !isObjectRecord(b)) {
-    return false;
-  }
-  let seenTargets = visited.get(a);
-  if (!seenTargets) {
-    seenTargets = new WeakSet<object>();
-    visited.set(a, seenTargets);
-  } else if (seenTargets.has(b)) {
-    return true;
-  }
-  seenTargets.add(b);
-  const aObject = a as Record<PropertyKey, unknown>;
-  const bObject = b as Record<PropertyKey, unknown>;
-  const aKeys = getOwnEnumerableKeys(aObject);
-  const bKeys = getOwnEnumerableKeys(bObject);
-  if (aKeys.length !== bKeys.length) {
-    return false;
-  }
-  for (const key of aKeys) {
-    if (!Object.prototype.hasOwnProperty.call(bObject, key)) {
-      return false;
-    }
-    if (!isEqual(aObject[key], bObject[key], visited)) {
-      return false;
-    }
-  }
-  return true;
 };
 
 const hasCircularReference = (

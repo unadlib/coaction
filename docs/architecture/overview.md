@@ -64,9 +64,8 @@ a replica that can diverge and be merged.
 
 ## Design Constraints
 
-- The compatibility `coaction` entry supports multiple modes, while new
-  vanilla code gets local creation from `coaction` and reaches the transport
-  runtime through `coaction/shared`.
+- `coaction` creates local stores and rejects transport options. The shared
+  authority and client runtimes are available through `coaction/shared`.
 - Shared mode treats the main store as the single execution authority.
 - Client stores are mirrors, not peers. They may read local mirrored state, but they do not own mutation authority.
 - Binder-backed adapters and Coaction slices solve different composition problems and should not be mixed.

@@ -34,6 +34,7 @@ export {
   applyRootReplacementWithPatches,
   createInversePatches,
   createRootReplacementPatches,
+  isSameStructure,
   isStateSchemaError,
   replaceOwnEnumerable,
   sanitizeInitialStateValue,

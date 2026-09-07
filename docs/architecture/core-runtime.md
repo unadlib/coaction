@@ -10,10 +10,18 @@ types and signatures live in the [core API reference](../api/core/index.md).
 | `coaction`         | Local stores without transport code. This entry rejects shared-only options. |
 | `coaction/shared`  | Local stores, shared authorities, and client mirrors.                        |
 | `coaction/adapter` | Helpers for authors of external-store adapters.                              |
-| `coaction`         | Compatibility entry with the same shared-capable `create()` behavior.        |
 
 New code should import the narrowest entry it needs. The entry-point isolation
 is enforced by `scripts/check-core-entry-isolation.mjs`.
+
+Local state may contain cycles, shared references, sparse arrays, enumerable
+symbols and null-prototype records. Non-plain objects are atomic identity
+values. Commit replay must preserve this domain: ordinary trees use precise
+patches, while values that positional patch cloning cannot preserve use a
+complete root snapshot (`path: []`) in both directions. For an unrepresentable
+positional edit to an ordinary tree, fallback replaces only changed top-level
+keys. Adding a commit listener must not change a recipe's result or cause it
+to execute twice.
 
 ## Store creation
 

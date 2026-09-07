@@ -1,5 +1,19 @@
-import { apply as applyWithMutative, type Patches } from 'mutative';
+import {
+  apply as applyWithMutative,
+  create as createWithMutative,
+  type Options,
+  type Patches
+} from 'mutative';
 import type { MiddlewareStore } from './interface';
+
+/** Null-prototype records are local data, not mutable atomic instances. */
+export const markLocalState: Exclude<
+  Options<true, false>['mark'],
+  unknown[] | undefined
+> = (value, types) =>
+  value != null && Object.getPrototypeOf(value) === null
+    ? types.immutable
+    : undefined;
 
 const isEqual = (x: unknown, y: unknown) => {
   if (x === y) {
@@ -127,6 +141,9 @@ export const createRootReplacementPatches = (
   currentState: Record<PropertyKey, unknown>,
   nextState: Record<PropertyKey, unknown>
 ) => {
+  if (needsRootSnapshot(currentState) || needsRootSnapshot(nextState)) {
+    return createSnapshotPatches(currentState, nextState);
+  }
   const patches: RootReplacementPatch[] = [];
   const inversePatches: RootReplacementPatch[] = [];
   const nextKeys = new Set(getOwnEnumerableKeys(nextState));
@@ -572,83 +589,108 @@ const readPatchTarget = (root: unknown, path: readonly PropertyKey[]) => {
   };
 };
 
-/**
- * Recompute an exact inverse patch list for `patches` against a new base.
- *
- * This is intentionally path-local: it clones only values removed/replaced by
- * the forward transition instead of snapshotting the whole store. Local-first
- * rebase can therefore refresh optimistic inverses without O(state-size)
- * cloning for every pending mutation.
- */
-/**
- * Whether mutative's inverse pair has to be rebuilt before it can be applied.
- *
- * `inversePatches[i]` undoes `patches[i]`, in that order, so applying the array
- * as it comes only works while the patches are independent. A later patch that
- * replaces the container of an earlier one -- an array element written, then
- * the array shifted -- leaves the earlier undo writing into something that is
- * gone. Deriving the inverse instead always works but flattens the shared
- * references mutative's keeps, so it is used only here.
- */
 type PatchPathNode = {
   children?: Map<string, PatchPathNode>;
   /** A patch path ends here. */
   ends?: boolean;
 };
 
-/**
- * Whether two states are the same, using the structural sharing between them.
- *
- * Both sides are built from the same previous state -- one by the runtime
- * finalising a draft, one by applying the patches it emitted -- so every
- * subtree neither touched is the same object in both, and `Object.is` ends the
- * walk there. The cost follows what changed rather than the size of the state.
- */
+/** Compare local state graphs, including identity leaves and alias topology. */
 export const isSameStructure = (left: unknown, right: unknown): boolean => {
   if (Object.is(left, right)) return true;
-  if (
-    typeof left !== 'object' ||
-    left === null ||
-    typeof right !== 'object' ||
-    right === null ||
-    Array.isArray(left) !== Array.isArray(right)
-  ) {
-    return false;
-  }
-  const leftKeys = getOwnEnumerableKeys(left);
-  const rightKeys = getOwnEnumerableKeys(right);
-  if (leftKeys.length !== rightKeys.length) return false;
-  for (const key of leftKeys) {
-    if (!Object.prototype.hasOwnProperty.call(right, key)) return false;
+  const leftToRight = new WeakMap<object, object>();
+  const rightToLeft = new WeakMap<object, object>();
+  const pending: [unknown, unknown][] = [[left, right]];
+  while (pending.length) {
+    const [a, b] = pending.pop()!;
     if (
-      !isSameStructure(
-        (left as Record<PropertyKey, unknown>)[key],
-        (right as Record<PropertyKey, unknown>)[key]
-      )
+      typeof a !== 'object' ||
+      a === null ||
+      typeof b !== 'object' ||
+      b === null
     ) {
-      return false;
+      if (!Object.is(a, b)) return false;
+      continue;
+    }
+    const prototype = Object.getPrototypeOf(a);
+    if (prototype !== Object.getPrototypeOf(b)) return false;
+    const array = Array.isArray(a);
+    if (array !== Array.isArray(b)) return false;
+    if (!array && prototype !== Object.prototype && prototype !== null) {
+      if (!Object.is(a, b)) return false;
+      continue;
+    }
+    if (array && a.length !== (b as unknown[]).length) return false;
+    if (leftToRight.has(a) || rightToLeft.has(b)) {
+      if (leftToRight.get(a) !== b || rightToLeft.get(b) !== a) return false;
+      continue;
+    }
+    leftToRight.set(a, b);
+    rightToLeft.set(b, a);
+    // Even an identical subtree must be indexed: a node inside it may also
+    // occur through a different, changed path on just one side.
+    const keys = getOwnEnumerableKeys(a);
+    if (keys.length !== getOwnEnumerableKeys(b).length) return false;
+    for (const key of keys) {
+      if (!Object.prototype.propertyIsEnumerable.call(b, key)) return false;
+      pending.push([
+        (a as Record<PropertyKey, unknown>)[key],
+        (b as Record<PropertyKey, unknown>)[key]
+      ]);
     }
   }
   return true;
 };
 
+/**
+ * Mutative's per-patch value cloning describes trees. A full root value is
+ * needed for graphs, atomic objects, symbols and array shapes that cloning
+ * would split, recurse through, or silently normalize. Root replacement is a
+ * standard patch and can also be replayed by consumers using Mutative itself.
+ */
+export const needsRootSnapshot = (state: unknown): boolean => {
+  const seen = new WeakSet<object>();
+  const pending = [state];
+  while (pending.length) {
+    const value = pending.pop();
+    if (typeof value !== 'object' || value === null) continue;
+    if (seen.has(value)) return true;
+    seen.add(value);
+    const array = Array.isArray(value);
+    const prototype = Object.getPrototypeOf(value);
+    if (!array && prototype !== Object.prototype) {
+      return true;
+    }
+    const keys = getOwnEnumerableKeys(value);
+    if (array && keys.length !== value.length) return true;
+    for (const key of keys) {
+      if (typeof key === 'symbol' || (array && !isArrayIndexKey(key))) {
+        return true;
+      }
+      pending.push((value as Record<PropertyKey, unknown>)[key]);
+    }
+  }
+  return false;
+};
+
+export const createSnapshotPatches = (before: unknown, after: unknown) => ({
+  patches: Object.is(before, after)
+    ? []
+    : [{ op: 'replace' as const, path: [], value: after }],
+  inversePatches: Object.is(before, after)
+    ? []
+    : [{ op: 'replace' as const, path: [], value: before }]
+});
+
 export const inverseNeedsDerivation = (patches: Patches) => {
   if (patches.length < 2) return false;
-  // Paths go into a trie as they are read, and each one asks on the way in
-  // whether anything already there went deeper through it. That is the same
-  // question as "is this a proper prefix of an earlier path", answered once per
-  // segment instead of against every earlier patch: a bulk array edit produces
-  // thousands of patches, and comparing each against all of its predecessors
-  // made the check cost more than the update it was checking.
+  // A trie detects overlapping paths in linear path-length time.
   const root: PatchPathNode = {};
   for (const patch of patches) {
     let node = root;
     let existing = true;
     for (const segment of normalizePatchPath(patch.path)) {
-      // An earlier patch ends above this one: this patch writes inside what
-      // that one replaced. Undoing them in order restores the container whole
-      // and then writes into it again, which for an `add` is an element too
-      // many.
+      // This patch writes inside a container replaced by an earlier patch.
       if (node.ends) {
         return true;
       }
@@ -662,8 +704,7 @@ export const inverseNeedsDerivation = (patches: Patches) => {
       }
       node = next;
     }
-    // Reached entirely through nodes that were already there, and something
-    // continues past it: an earlier patch is inside what this one replaces.
+    // This patch replaces a container changed by an earlier patch.
     if (existing && node.children?.size) {
       return true;
     }
@@ -672,10 +713,20 @@ export const inverseNeedsDerivation = (patches: Patches) => {
   return false;
 };
 
+/** Derive an inverse at its actual base; graphs require a complete snapshot. */
 export const createInversePatches = <T>(
   state: T,
   patches: Patches
 ): Patches => {
+  if (
+    patches.length &&
+    (needsRootSnapshot(state) ||
+      needsRootSnapshot(patches.map((patch) => patch.value)))
+  ) {
+    return [
+      { op: 'replace', path: [], value: sanitizeReplacementState(state) }
+    ];
+  }
   let current = state as unknown;
   const inverse: Patches = [];
   for (const patch of patches) {
@@ -705,10 +756,7 @@ export const createInversePatches = <T>(
       typeof patch.value === 'number' &&
       patch.value < (target.parent as unknown[]).length
     ) {
-      // Shortening an array through `length` drops elements without a patch
-      // per index. Putting the length back would leave holes where they were,
-      // so the inverse carries the array itself. Growing through `length` only
-      // appends holes, and restoring the length does undo that.
+      // Restoring length alone cannot restore the elements truncation removed.
       inverse.unshift({
         op: 'replace',
         path: path.slice(0, -1),
@@ -721,20 +769,86 @@ export const createInversePatches = <T>(
         value: sanitizeReplacementState(target.value)
       } as Patches[number]);
     }
-    current = applyWithMutative(current as any, [patch] as Patches);
+    current = applyWithMutative(current as any, [patch] as Patches, {
+      mark: markLocalState
+    });
   }
   return inverse;
 };
 
-/**
- * Apply patches to an immutable state value and return the result.
- *
- * A middleware that has to work out a multi-step transition before committing
- * it -- a sync rebase computing rollback, remote patches and replay as a single
- * commit -- needs the intermediate states without the store ever showing them.
- */
-export const applyPatches = <T>(state: T, patches: Patches): T =>
-  applyWithMutative(state as any, patches) as T;
+/** Apply an intermediate immutable transition without publishing a store update. */
+export const applyPatches = <T>(state: T, patches: Patches): T => {
+  const last = patches[patches.length - 1];
+  if (last?.op === 'replace' && !last.path.length) return last.value as T;
+  const values = patches.flatMap((patch) =>
+    typeof patch.value === 'object' && patch.value !== null ? [patch.value] : []
+  );
+  if (!values.length || !needsRootSnapshot(values)) {
+    return applyWithMutative(state as any, patches, {
+      mark: markLocalState
+    }) as T;
+  }
+  // Incoming non-root patches can carry graphs too. Clone their values with
+  // one memo, then assign them into a draft without Mutative's tree-only clone.
+  assertSafePatches(patches, 'applyPatches()');
+  const seen = new WeakMap<object, unknown>();
+  let start = 0;
+  for (let index = patches.length - 1; index >= 0; index -= 1) {
+    const patch = patches[index];
+    if (!patch.path.length && patch.op === 'replace') {
+      state = sanitizeReplacementState(patch.value, seen) as T;
+      start = index + 1;
+      break;
+    }
+  }
+  if (start === patches.length) return state;
+  return createWithMutative(
+    state as any,
+    (draft: any) => {
+      for (const patch of patches.slice(start)) {
+        const path = normalizePatchPath(patch.path);
+        let parent = draft;
+        for (const key of path.slice(0, -1)) {
+          parent =
+            parent instanceof Map
+              ? parent.get(key)
+              : parent instanceof Set
+                ? [...parent][Number(key)]
+                : parent[key];
+          if (parent === null || typeof parent !== 'object') {
+            throw new Error(
+              `Cannot apply patch at '${path.map(String).join('/')}'.`
+            );
+          }
+        }
+        const key = path[path.length - 1];
+        const remove = patch.op === 'remove';
+        if (!remove && patch.op !== 'add' && patch.op !== 'replace') {
+          throw new Error(`Unsupported patch operation: ${patch.op}.`);
+        }
+        const value = sanitizeReplacementState(patch.value, seen);
+        if (parent instanceof Map) {
+          if (remove) parent.delete(key);
+          else parent.set(key, value);
+        } else if (parent instanceof Set) {
+          if (patch.op === 'replace')
+            throw new Error('Cannot apply replace patch to set.');
+          if (remove) parent.delete(patch.value);
+          else parent.add(value);
+        } else if (Array.isArray(parent) && patch.op !== 'replace') {
+          const index = key === '-' ? parent.length : Number(key);
+          if (remove) parent.splice(index, 1);
+          else parent.splice(index, 0, value);
+        } else if (remove) {
+          delete parent[key];
+        } else {
+          parent[key] = value;
+        }
+      }
+    },
+    { mark: markLocalState }
+  ) as T;
+};
 
 export const sanitizeInitialStateValue = <T>(
   source: T,

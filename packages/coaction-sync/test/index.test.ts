@@ -1742,7 +1742,7 @@ test('a write JSON cannot carry is refused instead of committed', async () => {
   );
   await nextTick();
 
-  expect(() => store.getState().touch()).toThrow(/the write at updatedAt/);
+  expect(() => store.getState().touch()).toThrow(/JSON.*updatedAt/);
   // Nothing from the refused transition landed -- not the illegal value, and
   // not the legal write that shared it.
   expect(store.getState().updatedAt).toBe('1970-01-01');

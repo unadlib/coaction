@@ -6,7 +6,7 @@ import {
   onStoreCommitValidate,
   replayStorePatches,
   type StoreCommit
-} from '../adapter';
+} from 'coaction/adapter';
 
 type Counter = {
   count: number;
@@ -160,9 +160,9 @@ test('replacement commit patches retain aliases across root values', () => {
 
   store.apply({ left: shared, right: shared });
 
-  const values = commits[0].patches.map((patch) => patch.value);
-  expect(values).toHaveLength(2);
-  expect(values[0]).toBe(values[1]);
+  const [patch] = commits[0].patches;
+  expect(patch.path).toEqual([]);
+  expect(patch.value.left).toBe(patch.value.right);
 });
 
 test('replays patches through middleware and publishes the committed result', () => {
