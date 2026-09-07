@@ -6,7 +6,7 @@
 
 # Interface: MiddlewareStore\<T\>
 
-Defined in: [packages/core/src/interface.ts:166](https://github.com/coactionjs/coaction/blob/main/packages/core/src/interface.ts#L166)
+Defined in: [packages/core/src/interface.ts:189](https://github.com/coactionjs/coaction/blob/main/packages/core/src/interface.ts#L189)
 
 Semantic alias for middleware-facing stores.
 
@@ -31,7 +31,7 @@ Middleware implementations should type their `store` parameter as
 
 > **apply**: (`state?`, `patches?`) => `void`
 
-Defined in: [packages/core/src/interface.ts:134](https://github.com/coactionjs/coaction/blob/main/packages/core/src/interface.ts#L134)
+Defined in: [packages/core/src/interface.ts:157](https://github.com/coactionjs/coaction/blob/main/packages/core/src/interface.ts#L157)
 
 Apply patches to the current state.
 
@@ -55,6 +55,22 @@ This is a low-level hook used by transports and middleware. Application
 code should generally prefer store methods or `setState()`. Client-side
 shared-store mirrors reject direct `apply()` calls.
 
+Both forms publish a commit, so a transition made this way is visible to
+`onStoreCommit` and to everything built on it. Where no inverse pair is
+supplied one is derived, and a replacement is described by the pair that
+turns the previous state into the new one.
+
+With patches, `state` must be the state the store holds -- omit it, or pass
+`getPureState()`. A pair describes a change to the current state, so
+applying it to anything else leaves the store somewhere its own commits do
+not lead, and that is refused.
+
+This belongs to Coaction on every store, including one built through an
+external adapter -- the adapter supplies only how to write into its own
+runtime -- so middleware that wraps it keeps working. `onStoreCommit` is
+still the better hook for observing transitions: it sees every one of them,
+including those that never go through `apply`.
+
 #### Inherited from
 
 [`Store`](Store.md).[`apply`](Store.md#apply)
@@ -65,7 +81,7 @@ shared-store mirrors reject direct `apply()` calls.
 
 > **destroy**: () => `void`
 
-Defined in: [packages/core/src/interface.ts:112](https://github.com/coactionjs/coaction/blob/main/packages/core/src/interface.ts#L112)
+Defined in: [packages/core/src/interface.ts:119](https://github.com/coactionjs/coaction/blob/main/packages/core/src/interface.ts#L119)
 
 Tear down the store.
 
@@ -88,7 +104,7 @@ attached transport.
 
 > **getInitialState**: () => `T`
 
-Defined in: [packages/core/src/interface.ts:146](https://github.com/coactionjs/coaction/blob/main/packages/core/src/interface.ts#L146)
+Defined in: [packages/core/src/interface.ts:169](https://github.com/coactionjs/coaction/blob/main/packages/core/src/interface.ts#L169)
 
 Return the state produced during initialization before later mutations.
 
@@ -106,7 +122,7 @@ Return the state produced during initialization before later mutations.
 
 > **getPureState**: () => `T`
 
-Defined in: [packages/core/src/interface.ts:142](https://github.com/coactionjs/coaction/blob/main/packages/core/src/interface.ts#L142)
+Defined in: [packages/core/src/interface.ts:165](https://github.com/coactionjs/coaction/blob/main/packages/core/src/interface.ts#L165)
 
 Return the current state without methods or getters.
 
@@ -129,7 +145,7 @@ data.
 
 > **getState**: () => `T`
 
-Defined in: [packages/core/src/interface.ts:98](https://github.com/coactionjs/coaction/blob/main/packages/core/src/interface.ts#L98)
+Defined in: [packages/core/src/interface.ts:105](https://github.com/coactionjs/coaction/blob/main/packages/core/src/interface.ts#L105)
 
 Read the current state object.
 
@@ -152,7 +168,7 @@ this object continue to execute against the latest store state.
 
 > **isSliceStore**: `boolean`
 
-Defined in: [packages/core/src/interface.ts:125](https://github.com/coactionjs/coaction/blob/main/packages/core/src/interface.ts#L125)
+Defined in: [packages/core/src/interface.ts:132](https://github.com/coactionjs/coaction/blob/main/packages/core/src/interface.ts#L132)
 
 Whether `createState` was interpreted as a slices object.
 
@@ -166,7 +182,7 @@ Whether `createState` was interpreted as a slices object.
 
 > **name**: `string`
 
-Defined in: [packages/core/src/interface.ts:70](https://github.com/coactionjs/coaction/blob/main/packages/core/src/interface.ts#L70)
+Defined in: [packages/core/src/interface.ts:72](https://github.com/coactionjs/coaction/blob/main/packages/core/src/interface.ts#L72)
 
 The name of the store.
 
@@ -180,7 +196,7 @@ The name of the store.
 
 > `optional` **patch**: (`option`) => [`PatchTransform`](PatchTransform.md)
 
-Defined in: [packages/core/src/interface.ts:151](https://github.com/coactionjs/coaction/blob/main/packages/core/src/interface.ts#L151)
+Defined in: [packages/core/src/interface.ts:174](https://github.com/coactionjs/coaction/blob/main/packages/core/src/interface.ts#L174)
 
 #### Parameters
 
@@ -207,7 +223,7 @@ with `MiddlewareStore`.
 
 > **setState**: (`next`, `updater?`) => `void`
 
-Defined in: [packages/core/src/interface.ts:79](https://github.com/coactionjs/coaction/blob/main/packages/core/src/interface.ts#L79)
+Defined in: [packages/core/src/interface.ts:86](https://github.com/coactionjs/coaction/blob/main/packages/core/src/interface.ts#L86)
 
 Mutate the current state.
 
@@ -232,8 +248,13 @@ Low-level updater hook used by transports and middleware integrations.
 #### Remarks
 
 Pass a deep-partial object to merge fields, or pass an updater to edit a
-Mutative draft. Passing `null` is a no-op. Client-side shared stores intentionally reject direct
-`setState()` calls; trigger a store method instead.
+Mutative draft. Draft editing follows Mutative's independent-path semantics
+for acyclic shared references. Creating cycles from draft references or
+editing inside cyclic drafts is unsupported. Replace a cyclic value with a
+complete new value instead; assigning that value inside an updater is also
+supported. Use `apply(nextState)` when replacing a cyclic root.
+Passing `null` is a no-op. Client-side shared stores intentionally reject
+direct `setState()` calls; trigger a store method instead.
 
 #### Inherited from
 
@@ -245,7 +266,7 @@ Mutative draft. Passing `null` is a no-op. Client-side shared stores intentional
 
 > `optional` **share**: `false` \| `"main"` \| `"client"`
 
-Defined in: [packages/core/src/interface.ts:117](https://github.com/coactionjs/coaction/blob/main/packages/core/src/interface.ts#L117)
+Defined in: [packages/core/src/interface.ts:124](https://github.com/coactionjs/coaction/blob/main/packages/core/src/interface.ts#L124)
 
 Indicates whether the store is local, the main shared store, or a client
 mirror of a shared store.
@@ -260,7 +281,7 @@ mirror of a shared store.
 
 > **subscribe**: (`listener`) => () => `void`
 
-Defined in: [packages/core/src/interface.ts:104](https://github.com/coactionjs/coaction/blob/main/packages/core/src/interface.ts#L104)
+Defined in: [packages/core/src/interface.ts:111](https://github.com/coactionjs/coaction/blob/main/packages/core/src/interface.ts#L111)
 
 Subscribe to state changes.
 
@@ -290,7 +311,7 @@ A function that removes the listener.
 
 > `optional` **trace**: (`options`) => `void`
 
-Defined in: [packages/core/src/interface.ts:156](https://github.com/coactionjs/coaction/blob/main/packages/core/src/interface.ts#L156)
+Defined in: [packages/core/src/interface.ts:179](https://github.com/coactionjs/coaction/blob/main/packages/core/src/interface.ts#L179)
 
 #### Parameters
 
@@ -317,7 +338,7 @@ with `MiddlewareStore`.
 
 > `optional` **transport**: `Transport`\<`any`\>
 
-Defined in: [packages/core/src/interface.ts:121](https://github.com/coactionjs/coaction/blob/main/packages/core/src/interface.ts#L121)
+Defined in: [packages/core/src/interface.ts:128](https://github.com/coactionjs/coaction/blob/main/packages/core/src/interface.ts#L128)
 
 Transport used to synchronize a shared store between processes or threads.
 

@@ -8,7 +8,7 @@
 
 > **SliceState**\<`T`\> = `{ [K in keyof T]: ReturnType<T[K]> }`
 
-Defined in: [packages/core/src/interface.ts:286](https://github.com/coactionjs/coaction/blob/main/packages/core/src/interface.ts#L286)
+Defined in: [packages/core/src/interface.ts:309](https://github.com/coactionjs/coaction/blob/main/packages/core/src/interface.ts#L309)
 
 Derived state object produced by mapping slice factories to their return
 types.

@@ -124,8 +124,9 @@ export const handleState = <T extends CreateState>(
           return fn.apply(null);
         },
         {
-          // A graph already in the draft can make patch generation itself
-          // recurse through cycles. Produce it once, without positional patches.
+          // Preserve complete graph values and unrelated sibling edits without
+          // positional cloning. This does not support editing inside a cyclic
+          // draft or creating cycles from draft references.
           enablePatches: !snapshot,
           mark: markLocalState
         }

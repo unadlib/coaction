@@ -6,7 +6,7 @@
 
 # Interface: PatchTransform
 
-Defined in: [packages/core/src/interface.ts:26](https://github.com/coactionjs/coaction/blob/main/packages/core/src/interface.ts#L26)
+Defined in: [packages/core/src/interface.ts:28](https://github.com/coactionjs/coaction/blob/main/packages/core/src/interface.ts#L28)
 
 Patch pair exposed to middleware compatibility hooks.
 
@@ -16,7 +16,7 @@ Patch pair exposed to middleware compatibility hooks.
 
 > **inversePatches**: `Patches`
 
-Defined in: [packages/core/src/interface.ts:28](https://github.com/coactionjs/coaction/blob/main/packages/core/src/interface.ts#L28)
+Defined in: [packages/core/src/interface.ts:30](https://github.com/coactionjs/coaction/blob/main/packages/core/src/interface.ts#L30)
 
 ---
 
@@ -24,4 +24,4 @@ Defined in: [packages/core/src/interface.ts:28](https://github.com/coactionjs/co
 
 > **patches**: `Patches`
 
-Defined in: [packages/core/src/interface.ts:27](https://github.com/coactionjs/coaction/blob/main/packages/core/src/interface.ts#L27)
+Defined in: [packages/core/src/interface.ts:29](https://github.com/coactionjs/coaction/blob/main/packages/core/src/interface.ts#L29)

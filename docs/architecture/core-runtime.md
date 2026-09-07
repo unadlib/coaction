@@ -14,14 +14,51 @@ types and signatures live in the [core API reference](../api/core/index.md).
 New code should import the narrowest entry it needs. The entry-point isolation
 is enforced by `scripts/check-core-entry-isolation.mjs`.
 
-Local state may contain cycles, shared references, sparse arrays, enumerable
-symbols and null-prototype records. Non-plain objects are atomic identity
-values. Commit replay must preserve this domain: ordinary trees use precise
-patches, while values that positional patch cloning cannot preserve use a
-complete root snapshot (`path: []`) in both directions. For an unrepresentable
-positional edit to an ordinary tree, fallback replaces only changed top-level
-keys. Adding a commit listener must not change a recipe's result or cause it
-to execute twice.
+Local state initialization, snapshots and complete value replacements preserve
+cycles, shared references, sparse arrays, enumerable symbols and null-prototype
+records. Snapshot comparison treats non-plain objects as atomic identity values.
+Ordinary trees use precise commit patches; values that positional patch cloning
+cannot preserve use a complete root snapshot (`path: []`) in both directions.
+For an unrepresentable positional edit to an ordinary tree, fallback replaces
+only changed top-level keys. Replay preserves the committed result, including
+its reference topology.
+
+### Draft editing and complete graph replacement
+
+The native `setState(recipe)` API uses Mutative drafts. It does not provide a
+general graph editor: creating a cycle from draft references or editing inside
+a cyclic draft is unsupported. Disabling patch generation does not remove this
+restriction. Construct a complete new graph from ordinary values and replace
+the field instead:
+
+```ts
+const node = { value: 1, self: null as any };
+node.self = node;
+store.setState({ node });
+// Assigning the same complete value inside a recipe is also supported:
+store.setState((draft) => {
+  draft.node = node;
+});
+```
+
+Do not mutate the graph after passing it to the store. Replace the entire root
+with `store.apply(nextState)` when the cycle includes the root itself. Updating
+an unrelated field can leave a nested cyclic value untouched; this does not
+establish support for editing that value through a draft.
+
+For acyclic shared references, Mutative drafts each access path independently.
+Changing `draft.left.value` need not change `draft.right.value`, even if both
+fields initially referenced the same object. Assign `draft.right = draft.left`
+explicitly when the result should share that node. This is the
+[Mutative shared-reference contract](https://mutative.js.org/docs/extra-topics/shared-references/).
+Commit replay must preserve the resulting split or shared references, rather
+than impose the topology of the previous state.
+
+Within the supported update contract, adding a commit listener, reading a
+getter or enabling history must not change the result or run the recipe twice.
+Recipe errors propagate without retrying or committing a partial update. A
+snapshot fallback repairs patch representation; it cannot repair an unsupported
+recipe's result. Shared transport and remote sync retain their JSON contracts.
 
 ## Store creation
 

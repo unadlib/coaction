@@ -75,8 +75,13 @@ export interface Store<T extends ISlices = ISlices> {
    *
    * @remarks
    * Pass a deep-partial object to merge fields, or pass an updater to edit a
-   * Mutative draft. Passing `null` is a no-op. Client-side shared stores intentionally reject direct
-   * `setState()` calls; trigger a store method instead.
+   * Mutative draft. Draft editing follows Mutative's independent-path semantics
+   * for acyclic shared references. Creating cycles from draft references or
+   * editing inside cyclic drafts is unsupported. Replace a cyclic value with a
+   * complete new value instead; assigning that value inside an updater is also
+   * supported. Use `apply(nextState)` when replacing a cyclic root.
+   * Passing `null` is a no-op. Client-side shared stores intentionally reject
+   * direct `setState()` calls; trigger a store method instead.
    */
   setState: (
     /**

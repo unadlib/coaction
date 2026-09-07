@@ -8,7 +8,7 @@
 
 > **Middleware**\<`T`\> = (`store`) => [`MiddlewareStore`](../interfaces/MiddlewareStore.md)\<`T`\>
 
-Defined in: [packages/core/src/interface.ts:278](https://github.com/coactionjs/coaction/blob/main/packages/core/src/interface.ts#L278)
+Defined in: [packages/core/src/interface.ts:301](https://github.com/coactionjs/coaction/blob/main/packages/core/src/interface.ts#L301)
 
 Store enhancer invoked during store creation.
 
