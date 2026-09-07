@@ -1,4 +1,6 @@
-import type { Transport } from 'data-transport';
+// The barrel also declares Electron, WebRTC and browser-extension transports.
+// Our public types only need Transport, without those optional platform types.
+import type { Transport } from 'data-transport/dist/transport.js';
 import type { Draft, Patches } from 'mutative';
 import type { JsonValue } from './jsonTypes';
 
