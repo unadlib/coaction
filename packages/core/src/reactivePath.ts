@@ -321,6 +321,10 @@ export const trackReactiveTraversalPath = <T extends CreateState>(
 ) => {
   const subscriber = getActiveSub() as object | undefined;
   if (!subscriber || !reactiveSubscribers.get(subscriber)?.next) {
+    // Foreign subscribers have no finalization pass to distinguish traversal
+    // from a returned object or an identity comparison. Keep the object path
+    // conservatively; otherwise even computed(() => state.user) can go stale.
+    trackReactivePath(internal, path);
     return;
   }
   const node = getNode(internal, path, true)!;
