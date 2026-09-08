@@ -32,7 +32,7 @@ const entryChecks = {
   coaction: ['create', 'whole'],
   'coaction/shared': ['create'],
   'coaction/adapter': ['onStoreCommit', 'replayStorePatches', 'createBinder'],
-  'coaction/derived': ['derivePath'],
+  'coaction/derived': ['derive', 'derivePath', 'identity'],
   '@coaction/react': ['create', 'observer'],
   '@coaction/react/shared': ['create', 'observer'],
   '@coaction/history': ['history'],

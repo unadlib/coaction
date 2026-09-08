@@ -243,6 +243,17 @@ export const beginReactiveSubscriberTrack = (subscriber: object) => {
   }
 };
 
+/** @internal Preserve object identity reads for a conservative derived selector. */
+export const retainReactiveTraversalPaths = (subscriber: object) => {
+  const next = reactiveSubscribers.get(subscriber)?.next;
+  for (const [node, mask] of next ?? []) {
+    if (mask & VALUE_DEPENDENCY) {
+      next!.set(node, mask | TERMINAL_DEPENDENCY);
+      (node.valueVersion ??= signal(node.valueTick))();
+    }
+  }
+};
+
 /** Reconcile tracker dependencies and prune nodes that are no longer used. */
 export const endReactiveSubscriberTrack = (subscriber: object) => {
   const state = reactiveSubscribers.get(subscriber);

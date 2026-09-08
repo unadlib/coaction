@@ -69,9 +69,10 @@ test('path results preserve readonly object identity and observe root facades', 
   const store = create({ user: { n: 1 } });
   const user = derivePath(store, ['user']);
   const root = derivePath(store, []);
-  const seen: number[] = [];
+  let notifications = 0;
   const stop = effect(() => {
-    seen.push(root().user.n);
+    root();
+    notifications++;
   });
   expect(user()).toBe(store.getState().user);
   expect(() => {
@@ -83,7 +84,7 @@ test('path results preserve readonly object identity and observe root facades', 
   });
   expect(user()).toBe(store.getState().user);
   expect(before.n).toBe(1);
-  expect(seen).toEqual([1, 2]);
+  expect(notifications).toBe(2);
   stop();
   store.destroy();
   expect(() => user()).toThrow('disposed');

@@ -7,6 +7,7 @@ import {
   endReactiveSubscriberTrack,
   normalizeReactivePath,
   registerReactiveSubscriber,
+  retainReactiveTraversalPaths,
   trackReactivePath
 } from './reactivePath';
 import { purgeDeps } from './reactiveTracker';
@@ -38,7 +39,51 @@ export type PathValue<
     : unknown;
 
 type StoreReader<T> = { getState(): T };
-type Result<T> = { value: T; version?: number } | { error: unknown };
+
+/** Controls automatic dependency selection. */
+export type DeriveOptions = {
+  /**
+   * Opt into leaf/structure tracking. Default false preserves all traversed
+   * object identities. With deep enabled, mark identity observations with
+   * identity(value); JavaScript equality and WeakMap lookups have no proxy trap.
+   */
+  deep?: boolean;
+};
+
+type StateRefs = Map<object, number> | undefined;
+type Result<T> = { value: T; refs: StateRefs } | { error: unknown };
+
+// State objects returned inside plain data wrappers are terminal dependencies,
+// even when the same evaluation also read a child. Do not invoke output getters
+// or walk opaque instances/closures. Their identity reads need explicit markers.
+const trackResult = (value: unknown): StateRefs => {
+  if (!value || typeof value !== 'object') return;
+  const seen = new WeakSet<object>();
+  const pending = [value];
+  let refs: StateRefs;
+  while (pending.length) {
+    const current = pending.pop()!;
+    if (seen.has(current)) continue;
+    seen.add(current);
+    if (trackReadonlyStateValue(current)) {
+      (refs ??= new Map()).set(current, getReadonlyStateValueVersion(current)!);
+      continue;
+    }
+    const proto = Object.getPrototypeOf(current);
+    if (!Array.isArray(current) && proto !== Object.prototype && proto !== null)
+      continue;
+    for (const key of Reflect.ownKeys(current)) {
+      const child = Object.getOwnPropertyDescriptor(current, key)?.value;
+      if (child && typeof child === 'object') pending.push(child);
+    }
+  }
+  return refs;
+};
+
+const sameRefs = (left: StateRefs, right: StateRefs) =>
+  left?.size === right?.size &&
+  (!left ||
+    [...left].every(([value, version]) => right?.get(value) === version));
 
 const getInternal = <T extends object>(store: StoreReader<T>) => {
   const state = store.getState();
@@ -56,7 +101,8 @@ const getInternal = <T extends object>(store: StoreReader<T>) => {
 
 const createDerived = <T extends object, R>(
   internal: Internal<T>,
-  evaluate: () => R
+  evaluate: () => R,
+  retainObjects = false
 ): Derived<R> => {
   let disposed = false;
   let evaluating = false;
@@ -82,19 +128,19 @@ const createDerived = <T extends object, R>(
     beginReactiveSubscriberTrack(node);
     try {
       const value = evaluateRead();
-      trackReadonlyStateValue(value);
-      const version = getReadonlyStateValueVersion(value);
+      const refs = trackResult(value);
       return previous &&
         'value' in previous &&
         Object.is(previous.value, value) &&
-        previous.version === version
+        sameRefs(previous.refs, refs)
         ? previous
-        : { value, version };
+        : { value, refs };
     } catch (error) {
       // Cache failures as data so alien-signals still installs the caller's
       // link. Every read throws until an input changes, then evaluation retries.
       return { error };
     } finally {
+      if (retainObjects) retainReactiveTraversalPaths(node);
       endReactiveSubscriberTrack(node);
     }
   });
@@ -130,6 +176,44 @@ const createDerived = <T extends object, R>(
       return result.value;
     },
     { dispose }
+  );
+};
+
+/**
+ * Mark a state object identity without unwrapping its readonly view.
+ *
+ * @remarks
+ * Import from `coaction/derived`. Use inside deep selectors before comparing
+ * objects, using them as WeakMap keys, or capturing them in opaque output values.
+ * Unlike whole(), this preserves the public readonly object's identity.
+ */
+export const identity = <T>(value: T): T => {
+  trackReadonlyStateValue(value);
+  return value;
+};
+
+/**
+ * Create a lazy, disposable selector owned by one immutable Coaction store.
+ *
+ * @remarks
+ * Import from `coaction/derived`. Default tracking includes object identities.
+ * Use `{ deep: true }` for leaf/structure value selection; identity observations
+ * then need identity(value). Returned state inside plain data wrappers is
+ * tracked automatically. Results use Object.is equality, including NaN and -0.
+ * Draft reads bypass the committed cache. Dispose when the owner no longer
+ * needs this read; store.destroy() also disposes it. Selectors are synchronous
+ * pure reads. Native getters remain the fast frozen-snapshot option for scans.
+ */
+export const derive = <T extends object, R>(
+  store: StoreReader<T>,
+  selector: (state: T) => R,
+  options: DeriveOptions = {}
+): Derived<R> => {
+  const internal = getInternal(store);
+  return createDerived(
+    internal,
+    () => selector(internal.module),
+    !options.deep
   );
 };
 

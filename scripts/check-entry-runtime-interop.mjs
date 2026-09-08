@@ -85,6 +85,26 @@ for (const [entryName, entry] of [
   stop();
   name.dispose();
 
+  const label = derived.derive(store, (s) => s.user.name, { deep: true });
+  const user = derived.derive(
+    store,
+    (s) => ({ user: s.user, name: s.user.name }),
+    { deep: true }
+  );
+  check(
+    `${entryName} -> coaction/derived`,
+    label() === 'Lin' && user().user === store.getState().user,
+    'automatic derived did not preserve state identity'
+  );
+  store.setState({ user: { name: 'Ada' } });
+  check(
+    `${entryName} -> coaction/derived`,
+    label() === 'Ada' && user().user.name === 'Ada',
+    'automatic derived did not invalidate across entries'
+  );
+  label.dispose();
+  user.dispose();
+
   store.destroy();
 }
 
