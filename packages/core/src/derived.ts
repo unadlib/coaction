@@ -40,8 +40,18 @@ export type PathValue<
 
 type StoreReader<T> = { getState(): T };
 
-/** Controls automatic dependency selection. */
-export type DeriveOptions = {
+/** Optional result equality, separate from dependency tracking. */
+export type DerivedOptions<T> = {
+  /**
+   * Defaults to Object.is. Returning true reuses the previous result. The
+   * comparator must be pure and runs without recording reactive dependencies.
+   * Changes inside a returned live state facade still propagate.
+   */
+  equals?: (previous: T, next: T) => boolean;
+};
+
+/** Controls automatic dependency selection and result equality. */
+export type DeriveOptions<T> = DerivedOptions<T> & {
   /**
    * Opt into leaf/structure tracking. Default false preserves all traversed
    * object identities. With deep enabled, mark identity observations with
@@ -102,7 +112,8 @@ const getInternal = <T extends object>(store: StoreReader<T>) => {
 const createDerived = <T extends object, R>(
   internal: Internal<T>,
   evaluate: () => R,
-  retainObjects = false
+  retainObjects = false,
+  equals: (previous: R, next: R) => boolean = Object.is
 ): Derived<R> => {
   let disposed = false;
   let evaluating = false;
@@ -129,12 +140,19 @@ const createDerived = <T extends object, R>(
     try {
       const value = evaluateRead();
       const refs = trackResult(value);
-      return previous &&
-        'value' in previous &&
-        Object.is(previous.value, value) &&
-        sameRefs(previous.refs, refs)
-        ? previous
-        : { value, refs };
+      if (previous && 'value' in previous) {
+        const subscriber = setActiveSub(undefined);
+        try {
+          if (equals(previous.value, value) && sameRefs(previous.refs, refs)) {
+            // Record this evaluation's dependencies even when its output is
+            // equivalent. A changed branch can otherwise leave the cache stale.
+            return previous;
+          }
+        } finally {
+          setActiveSub(subscriber);
+        }
+      }
+      return { value, refs };
     } catch (error) {
       // Cache failures as data so alien-signals still installs the caller's
       // link. Every read throws until an input changes, then evaluation retries.
@@ -207,13 +225,14 @@ export const identity = <T>(value: T): T => {
 export const derive = <T extends object, R>(
   store: StoreReader<T>,
   selector: (state: T) => R,
-  options: DeriveOptions = {}
+  options: DeriveOptions<R> = {}
 ): Derived<R> => {
   const internal = getInternal(store);
   return createDerived(
     internal,
     () => selector(internal.module),
-    !options.deep
+    !options.deep,
+    options.equals
   );
 };
 
@@ -232,34 +251,43 @@ export const derivePath = <
   const P extends readonly PropertyKey[]
 >(
   store: StoreReader<T>,
-  path: P
+  path: P,
+  options: DerivedOptions<PathValue<T, P>> = {}
 ): Derived<PathValue<T, P>> => {
   const internal = getInternal(store);
   const keys = normalizeReactivePath(path);
-  return createDerived(internal, () => {
-    trackReactivePath(internal, keys);
-    // Resolve scalar paths on owned state, with no proxy traps or per-level
-    // signal links. Object results use the canonical public readonly view.
-    let value: any = internal.rootState;
-    for (const key of keys) {
-      if (value == null || !Object.prototype.hasOwnProperty.call(value, key)) {
-        if (value === internal.rootState && key in internal.module) {
-          throw new Error(
-            'derivePath selects state data; use derive for getters.'
-          );
+  return createDerived(
+    internal,
+    () => {
+      trackReactivePath(internal, keys);
+      // Resolve scalar paths on owned state, with no proxy traps or per-level
+      // signal links. Object results use the canonical public readonly view.
+      let value: any = internal.rootState;
+      for (const key of keys) {
+        if (
+          value == null ||
+          !Object.prototype.hasOwnProperty.call(value, key)
+        ) {
+          if (value === internal.rootState && key in internal.module) {
+            throw new Error(
+              'derivePath selects state data; use derive for getters.'
+            );
+          }
+          return undefined as PathValue<T, P>;
         }
-        return undefined as PathValue<T, P>;
+        value = value[key];
       }
-      value = value[key];
-    }
-    if (!value || typeof value !== 'object') return value as PathValue<T, P>;
-    const previous = setActiveSub(undefined);
-    try {
-      let publicValue: any = internal.module;
-      for (const key of keys) publicValue = publicValue[key];
-      return publicValue as PathValue<T, P>;
-    } finally {
-      setActiveSub(previous);
-    }
-  });
+      if (!value || typeof value !== 'object') return value as PathValue<T, P>;
+      const previous = setActiveSub(undefined);
+      try {
+        let publicValue: any = internal.module;
+        for (const key of keys) publicValue = publicValue[key];
+        return publicValue as PathValue<T, P>;
+      } finally {
+        setActiveSub(previous);
+      }
+    },
+    false,
+    options.equals
+  );
 };
