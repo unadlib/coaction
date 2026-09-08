@@ -3,6 +3,10 @@
     "baselineGzipBytes": 2048,
     "maxGzipBytes": 2250
   },
+  "derived": {
+    "baselineGzipBytes": 2264,
+    "maxGzipBytes": 2450
+  },
   "index": {
     "baselineGzipBytes": 9817,
     "maxGzipBytes": 10650

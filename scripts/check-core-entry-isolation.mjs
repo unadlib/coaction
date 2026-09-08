@@ -19,7 +19,8 @@ const forbiddenLocalRuntime = [
   'data-transport',
   'execute-result',
   'full-sync',
-  'transportEpoch'
+  'transportEpoch',
+  'Circular derived evaluation'
 ];
 const forbiddenAdapterRuntime = [
   'Client transport',
