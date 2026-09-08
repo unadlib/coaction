@@ -79,7 +79,8 @@ const unlink = (link: Link, sub = link.sub) => {
   return nextDep;
 };
 
-const purgeDeps = (sub: ReactiveNode) => {
+/** @internal Unlink dependencies using the same lifecycle rules as trackers. */
+export const purgeDeps = (sub: ReactiveNode) => {
   const depsTail = sub.depsTail;
   let dep = depsTail !== undefined ? depsTail.nextDep : sub.deps;
   while (dep !== undefined) {

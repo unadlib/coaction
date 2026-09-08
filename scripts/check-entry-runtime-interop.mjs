@@ -31,10 +31,11 @@ const load = async (name) => {
   return import(pathToFileURL(file).href);
 };
 
-const [index, shared, adapter] = await Promise.all([
+const [index, shared, adapter, derived] = await Promise.all([
   load('index'),
   load('shared'),
-  load('adapter')
+  load('adapter'),
+  load('derived')
 ]);
 
 const failures = [];
@@ -71,6 +72,18 @@ for (const [entryName, entry] of [
     'a tracker from the adapter recorded no dependency'
   );
   tracker.dispose();
+
+  const name = derived.derivePath(store, ['user', 'name']);
+  const seen = [];
+  const stop = entry.effect(() => seen.push(name()));
+  store.setState({ user: { name: 'Lin' } });
+  check(
+    `${entryName} -> coaction/derived`,
+    seen.join(',') === 'Michael,Lin',
+    'path derived did not follow the committed state'
+  );
+  stop();
+  name.dispose();
 
   store.destroy();
 }

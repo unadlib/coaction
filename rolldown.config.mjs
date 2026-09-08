@@ -10,7 +10,7 @@ const packageDir = resolve(process.env.COACTION_PACKAGE_DIR ?? process.cwd());
 const packageJson = require(join(packageDir, 'package.json'));
 const entries =
   packageJson.name === 'coaction'
-    ? ['index', 'shared', 'adapter'].map((name) => ({
+    ? ['index', 'shared', 'adapter', 'derived'].map((name) => ({
         name,
         input: join(packageDir, `${name}.ts`)
       }))
