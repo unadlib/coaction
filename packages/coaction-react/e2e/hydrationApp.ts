@@ -1,5 +1,6 @@
 import React, { StrictMode, useEffect } from 'react';
 import { create, observer } from '../src';
+import { derive, derivePath } from 'coaction/derived';
 
 const h = React.createElement;
 export const createHydrationStore = (preloaded: boolean) => {
@@ -22,6 +23,12 @@ export const hydrationApp = (
   strict: boolean,
   ready?: () => void
 ) => {
+  // Owned by the fixture store, outside React render and StrictMode effects.
+  const deepName = derive(store, (s) => s.user.name, { deep: true });
+  const pathName = derivePath(store, ['user', 'name']);
+  const Derived = observer(() =>
+    h('span', { 'data-reader': 'derived' }, `${pathName()}:${deepName()}`)
+  );
   const Selected = () =>
     h('span', { 'data-reader': 'selector' }, String(store((s) => s.count)));
   const Whole = () =>
@@ -45,7 +52,8 @@ export const hydrationApp = (
       h(Selected),
       h(Whole),
       h(Observed),
-      h(Nested)
+      h(Nested),
+      h(Derived)
     );
   };
   return strict ? h(StrictMode, null, h(App)) : h(App);

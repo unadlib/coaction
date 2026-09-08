@@ -39,6 +39,7 @@ export default {
   ],
   resolve: {
     alias: {
+      'coaction/derived': resolve(__dirname, 'packages/core/derived.ts'),
       'coaction/adapter': resolve(__dirname, 'packages/core/adapter.ts'),
       'coaction/shared': resolve(__dirname, 'packages/core/shared.ts'),
       coaction: resolve(__dirname, 'packages/core/index.ts'),

@@ -18,6 +18,9 @@ for (const scenario of ['initial', 'preloaded', 'strict', 'mismatch']) {
     expect(serverHtml).toContain(
       `data-reader="selector">${preloaded ? '7' : '0'}</span>`
     );
+    expect(serverHtml).toContain(
+      `data-reader="derived">${preloaded ? 'Michael:Michael' : 'anonymous:anonymous'}</span>`
+    );
     const crashes: string[] = [];
     page.on('pageerror', (error) => crashes.push(error.message));
     await page.goto(url);
@@ -26,8 +29,8 @@ for (const scenario of ['initial', 'preloaded', 'strict', 'mismatch']) {
       .toBe(true);
     const current =
       scenario === 'initial'
-        ? ['0', '0', '0', 'anonymous']
-        : ['7', '7', '7', 'Michael'];
+        ? ['0', '0', '0', 'anonymous', 'anonymous:anonymous']
+        : ['7', '7', '7', 'Michael', 'Michael:Michael'];
     await expect(page.locator('[data-reader]')).toHaveText(current);
     const metrics = await page.evaluate(() => ({
       errors: window.__hydration.errors,
@@ -51,7 +54,8 @@ for (const scenario of ['initial', 'preloaded', 'strict', 'mismatch']) {
       '9',
       '9',
       '9',
-      'Jordan'
+      'Jordan',
+      'Jordan:Jordan'
     ]);
     expect(crashes).toEqual([]);
     await page.evaluate(() => window.__hydration.destroy());
