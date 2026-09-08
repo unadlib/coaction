@@ -8,7 +8,7 @@
 
 > **identity**\<`T`\>(`value`): `T`
 
-Defined in: [packages/core/src/derived.ts:213](https://github.com/coactionjs/coaction/blob/main/packages/core/src/derived.ts#L213)
+Defined in: [packages/core/src/derived.ts:231](https://github.com/coactionjs/coaction/blob/main/packages/core/src/derived.ts#L231)
 
 Mark a state object identity without unwrapping its readonly view.
 

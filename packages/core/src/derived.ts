@@ -120,10 +120,14 @@ const createDerived = <T extends object, R>(
   retainObjects = false,
   equals: (previous: R, next: R) => boolean = Object.is
 ): Derived<R> => {
-  let disposed = false;
+  let context:
+    | { internal: Internal<T>; evaluate: () => R; equals: typeof equals }
+    | undefined = { internal, evaluate, equals };
   let evaluating = false;
   let node: ReactiveNode | undefined;
+  let cached: Result<R> | undefined;
   const evaluateRead = () => {
+    const { internal, evaluate } = context!;
     evaluating = true;
     // A deep read can be nested inside a native frozen-snapshot getter.
     const previousDepth = internal.computedReadDepth;
@@ -136,7 +140,8 @@ const createDerived = <T extends object, R>(
     }
   };
   let read = computed<Result<R>>((previous) => {
-    if (disposed) return { error: new Error('Derived value is disposed.') };
+    if (!context) return { error: new Error('Derived value is disposed.') };
+    const { equals } = context;
     if (!node) {
       node = getActiveSub()!;
       registerReactiveSubscriber(node);
@@ -151,25 +156,28 @@ const createDerived = <T extends object, R>(
           if (equals(previous.value, value) && sameRefs(previous.refs, refs)) {
             // Record this evaluation's dependencies even when its output is
             // equivalent. A changed branch can otherwise leave the cache stale.
-            return previous;
+            return (cached = previous);
           }
         } finally {
           setActiveSub(subscriber);
         }
       }
-      return { value, refs };
+      return (cached = { value, refs });
     } catch (error) {
       // Cache failures as data so alien-signals still installs the caller's
       // link. Every read throws until an input changes, then evaluation retries.
-      return { error };
+      return (cached = { error });
     } finally {
       if (retainObjects) retainReactiveTraversalPaths(node);
       endReactiveSubscriberTrack(node);
     }
   });
   const dispose = () => {
-    if (disposed) return;
-    disposed = true;
+    if (!context) return;
+    const { internal } = context;
+    // The public handle may survive its owner. Drop the owner and callback
+    // closures as well as the dependency links, including never-read handles.
+    context = undefined;
     internal.destroyCallbacks?.delete(dispose);
     if (node) {
       node.depsTail = undefined;
@@ -177,13 +185,23 @@ const createDerived = <T extends object, R>(
       disposeReactiveSubscriber(node);
       node = undefined;
     }
+    // The alien node can still be retained by a consumer. Clear our own result
+    // envelope instead of depending on undocumented fields of that node.
+    if (cached) {
+      if ('value' in cached) {
+        cached.value = undefined!;
+        cached.refs = undefined;
+      } else cached.error = undefined;
+      cached = undefined;
+    }
     // Drop the cached result even if the disposed public function stays alive.
     read = undefined!;
   };
   internal.destroyCallbacks!.add(dispose);
   return Object.assign(
     () => {
-      if (disposed) throw new Error('Derived value is disposed.');
+      if (!context) throw new Error('Derived value is disposed.');
+      const { internal } = context;
       if (evaluating) throw new Error('Circular derived evaluation.');
       if (internal.isBatching) {
         const previous = setActiveSub(undefined);

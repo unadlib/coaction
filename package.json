@@ -57,7 +57,7 @@
     "docs:api": "node ./scripts/generate-api-docs.js",
     "docs:api:check": "pnpm run docs:api && node ./scripts/check-clean-path.js docs/api/core",
     "prepare": "husky",
-    "test:entries": "node ./scripts/check-entry-runtime-interop.mjs"
+    "test:entries": "node ./scripts/check-entry-runtime-interop.mjs && node --expose-gc ./scripts/check-derived-disposal.mjs"
   },
   "devDependencies": {
     "@actions/exec": "^3.0.0",
