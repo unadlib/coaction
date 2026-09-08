@@ -37,8 +37,8 @@ const publicStatePathMeta = sharedRegistry.publicStatePathMeta as WeakMap<
 /** Reverse of the readonly proxy cache, so a proxy can hand back its source. */
 const readonlyProxySource = sharedRegistry.readonlyProxySource;
 
-const areReactivePathsEqual = (left: ReactivePath, right: ReactivePath) =>
-  left.length === right.length &&
+const isReactivePathPrefix = (left: ReactivePath, right: ReactivePath) =>
+  left.length <= right.length &&
   left.every((segment, index) => Object.is(segment, right[index]));
 
 const addReactivePathTo = (
@@ -46,9 +46,13 @@ const addReactivePathTo = (
   path: ReactivePath,
   owned: boolean
 ) => {
-  if (meta.paths.some((known) => areReactivePathsEqual(known, path))) {
+  if (meta.paths.some((known) => isReactivePathPrefix(known, path))) {
     return;
   }
+  // A canonical proxy reached through its own descendant is a cycle. Fold
+  // that route back to its shortest prefix instead of growing self.self...
+  // paths on every evaluation. Distinct alias branches retain their union.
+  meta.paths = meta.paths.filter((known) => !isReactivePathPrefix(path, known));
   // `owned` marks a path the caller built for this call and will not reuse,
   // so it can be stored as-is instead of copied again on every property read.
   meta.paths.push(owned ? path : [...path]);
@@ -156,17 +160,11 @@ export const getReadonlyStateValueVersion = (value: unknown) => {
  * that against the built output, where it can actually be observed.
  */
 export const whole = <T>(value: T): T => {
-  if ((typeof value !== 'object' && typeof value !== 'function') || !value) {
-    return value;
-  }
-  const meta = publicStatePathMeta.get(value as object);
-  if (!meta) {
-    return value;
-  }
-  for (const path of meta.paths) {
-    trackReactivePath(meta.internal, path);
-  }
-  return (readonlyProxySource.get(value as object) ?? value) as T;
+  return (
+    trackReadonlyStateValue(value)
+      ? (readonlyProxySource.get(value as object) ?? value)
+      : value
+  ) as T;
 };
 
 type PrepareStateDescriptorOptions<T extends CreateState> = {
