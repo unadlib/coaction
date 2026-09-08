@@ -17,7 +17,8 @@
     "Internal",
     "Listener",
     "SingleLocalStoreOptions",
-    "StoreReturn"
+    "StoreReturn",
+    "StoreReader"
   ],
   "excludeInternal": true
 }

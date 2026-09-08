@@ -151,6 +151,12 @@ Use `coaction/shared` when state crosses a Worker, an iframe, an Electron
 process or a browser extension, and `coaction/adapter` when authoring an
 external-state adapter.
 
+`coaction/derived` is an optional entry for disposable, store-owned selectors and
+exact data-path reads. `derive(store, selector, { deep: true })` opts into deep value
+tracking; native getters retain their frozen snapshots and default granularity.
+See the [computed guide](https://coactionjs.github.io/coaction/en/docs/concepts/computed)
+for identity markers, output equality, transactions and ownership.
+
 For React applications:
 
 ```bash

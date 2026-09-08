@@ -1,6 +1,6 @@
 ---
 title: Computed state
-description: Define cached derived state with accessor getters or explicit dependency selectors.
+description: Choose frozen getter snapshots, explicit paths, or managed deep selectors.
 ---
 
 Coaction's computed values use the same signal graph as field tracking. A component can read a
@@ -66,19 +66,151 @@ convenient way to read another namespace, though update logic should still happe
 
 ## Tracking granularity
 
-Automatic render tracking operates at each own enumerable field on the store or slice. Nested
-object reads are tracked through the containing top-level field. Updating a sibling property in
-that same nested object can therefore invalidate the same subscriber.
+Native getters and `get(deps, fn)` read frozen snapshots at the store/slice field boundary.
+Reading `this.user.name` in a getter therefore invalidates that getter when `user.age` changes.
+With `get(s => [s.user.name], fn)`, the dependency selector runs again, but `fn` can reuse its
+result when the selected name is unchanged. Recomputing a getter and notifying its consumers
+are separate: an unchanged primitive result can suppress downstream work.
 
-If a hot component needs narrower nested behavior, use an explicit selector that returns the
-specific nested value and relies on `Object.is`.
+React selectors and `observer` use managed deep path tracking. A selector reading
+`state.user.name` can ignore an age-only recipe update. Parent replacement, array structure,
+and graph snapshot patches can invalidate more broadly.
+
+## Managed derived reads
+
+The optional `coaction/derived` entry adds store-owned cached reads without changing native
+getter defaults or adding this runtime to the default entry's consumer bundle:
+
+```ts
+import { create } from 'coaction';
+import { derive, derivePath } from 'coaction/derived';
+
+const person = create({ user: { name: 'Ada', age: 30 } });
+
+// An exact state-data path: no intermediate object dependency collection.
+const name = derivePath(person, ['user', 'name']);
+
+// Dynamic value selection with leaf and structure dependencies.
+const greeting = derive(person, (s) => `Hello, ${s.user.name}`, {
+  deep: true
+});
+
+name(); // 'Ada'
+greeting(); // 'Hello, Ada'
+person.setState((s) => {
+  s.user.age++;
+});
+greeting(); // cached: its selected name did not change
+
+name.dispose();
+greeting.dispose();
+person.destroy();
+```
+
+`derivePath` copies the path when created, supports string/number/symbol keys, and returns
+`undefined` for missing data. It selects data, not methods or native computed getters. Use
+`derive` to compose getters or to select a path dynamically. There is no incremental `reduce`,
+`filter`, or `sort` algorithm hidden behind either API.
+
+### Object identity is a separate dependency
+
+`derive(store, selector)` conservatively retains traversed object identities by default.
+`{ deep: true }` opts into value selection: traversing an object to reach a child does not
+automatically retain the parent's identity. JavaScript `===`, `Object.is`, and WeakMap lookups
+cannot be detected by property traps. Mark these uses explicitly:
+
+```ts
+import { derive, identity } from 'coaction/derived';
+
+const captured = person.getState().user;
+const description = derive(
+  person,
+  (s) => {
+    const user = identity(s.user);
+    return `${user === captured}:${user.name}`;
+  },
+  { deep: true }
+);
+```
+
+An age change must rerun this selector because it replaces the `user` object, even though the
+name is unchanged. `identity()` returns the same readonly object; `whole()` instead returns
+owned raw data for coarse scans, which must never be mutated.
+
+Returning a state object directly, or carrying it inside ordinary object/array data wrappers,
+retains its terminal dependency automatically. Cyclic wrappers are supported. Output accessors
+are not invoked, and opaque instances, functions and closures are not traversed: mark any state
+objects captured there with `identity()` during selection. Arrays, holes, symbols, null
+prototypes, cycles and shared references retain the local-state contract. Date, Map, Set and
+class instances remain atomic identity leaves; their internal mutations are not made reactive.
+
+### Result equality
+
+Result comparison defaults to `Object.is`, including its NaN and signed-zero behavior. A fresh
+object result is different even when its fields are equal. Supply `equals` to reuse equivalent
+derived data:
+
+```ts
+const adult = derive(person, (s) => ({ adult: s.user.age >= 18 }), {
+  deep: true,
+  equals: (before, after) => before.adult === after.adult
+});
+```
+
+Comparison is independent of dependency selection and runs without collecting dependencies.
+Even when a result is reused, branch dependencies are reconciled. The comparator must be pure.
+Changes to state objects carried in the output still propagate, including live root/slice
+facades: result equality does not hide a change to their state. Structural equality of arbitrary
+local graphs is not the default.
+
+### Transactions, ownership and React
+
+Reads inside a recipe evaluate against that store's current draft without installing a cache
+or retaining draft proxies. Failed recipes and validator vetoes leave the committed cache intact;
+consumers are invalidated after an accepted commit. Selector failures remain failures on cached
+reads and retry when a dependency changes. Compose derivations owned by the same store; this API
+does not coordinate transactions between different stores. Selectors must be synchronous pure
+reads. Work after `await` is outside dependency collection; this is not a Resource/Suspense API.
+
+Each read keeps its current dependencies until `dispose()` or `store.destroy()`. Unread
+derivations do not activate patches. Disposing is idempotent, releases the read's dependencies
+and cache, and makes subsequent calls throw. Stopping a consumer does not dispose a store-owned
+derivation: it stays available for other consumers. Native getter caches have their own existing
+store lifetime.
+
+Create derivations with their store or another explicit owner, outside React render. Creating
+one in a render or relying on `useMemo` as a cleanup boundary can retain abandoned instances.
+An existing store-owned read works in a selector or an observer:
+
+```tsx
+const displayName = derive(usePerson, (s) => s.user.name, { deep: true });
+
+function Name() {
+  return <span>{usePerson(() => displayName())}</span>;
+}
+```
+
+Here `usePerson` is a store from `@coaction/react`. Dispose `displayName` when its owner ends,
+or destroy that store. Unmounting a component releases its React subscription. SSR stores and
+their derived reads belong to the request; shared clients derive from their accepted mirror
+state. Derived definitions and caches never enter patches, history or transport payloads.
+
+## Standalone signal primitives
+
+`computed`, `signal` and `effect` exported by `coaction` remain alien-signals primitives. They
+are useful for independent signal graphs, but do not provide store-owned disposal or draft-aware
+caching. Standalone computations retain conservative object dependencies. A whole root-facade
+result needs an explicit `whole(store.getState())` read to register an aggregate dependency.
+Their Coaction path bookkeeping lasts for the store lifetime; prefer `derive` for dynamic
+store selectors that need dependency reclamation. Plain getters nested inside initial data are
+still materialized as data, not recursively registered computed definitions.
 
 ## External adapters
 
-Native accessor/getter computed behavior belongs to Coaction-owned state. Mutable external
+Native accessor/getter computed behavior belongs to Coaction-owned state. External
 adapter instances do not gain Coaction's cached getters or `get(deps, selector)` semantics.
 Their own runtime—MobX computed values, Pinia getters, selectors, or machine state—remains
-responsible for derived state.
+responsible for derived state. `derive` and `derivePath` explicitly reject external adapters.
 
 ## Performance expectations
 
@@ -86,3 +218,10 @@ Stable repeated reads are the strongest path for cached getters. Updates still p
 readonly public-state boundary and must refresh the cached snapshot before the next derived read.
 Treat microbenchmarks as regression signals, not universal claims; see the
 [performance guide](/en/docs/guides/performance) for the maintained commands and interpretation.
+
+Deep tracking is suited to sparse reads. For full collection scans, keep a native getter over a
+frozen snapshot; `derive(store, s => s.total)` can compose that getter. Reading every item through
+a deep proxy adds tracking work without avoiding any evaluation. Immutable updates still copy
+changed ancestor containers, so a flat-array scalar write is not O(depth) independent of size.
+`pnpm benchmark:derived` reports sparse workloads at 1k/10k/50k scales, full scans at 10k,
+cached reads, and writes with unread/disposed derivations. It is included in `benchmark:check`.

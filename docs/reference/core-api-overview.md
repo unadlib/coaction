@@ -9,16 +9,15 @@ from `coaction`.
 
 | Import path        | Intended use                                                                        |
 | ------------------ | ----------------------------------------------------------------------------------- |
-| `coaction`         | Compatibility entry that selects local or shared behavior from runtime options.     |
 | `coaction`         | Transport-free local stores and local signal/lifecycle helpers.                     |
 | `coaction/shared`  | Shared authority/client stores, the JSON protocol, and reconnect behavior.          |
 | `coaction/adapter` | External-store adapter contracts, snapshots, patch helpers, and reactive utilities. |
+| `coaction/derived` | Optional store-owned path reads, deep selectors, identity markers and disposal.     |
 
 ## Primary Entry Points
 
-- {@link api-docs.create | create}: exported by `coaction` and
-  `coaction/shared`; creates local stores, shared main stores, and shared
-  clients.
+- {@link api-docs.create | shared create}: exported by `coaction/shared`;
+  creates local stores, shared main stores, and shared clients.
 - {@link api-docs.createLocal | create from coaction}: documentation name
   for the transport-free implementation exported as `create` by
   `coaction`. `createLocal` is not a root-package export.
@@ -35,6 +34,10 @@ from `coaction`.
 - {@link api-docs.wrapStore | wrapStore}: exported by `coaction` and
   `coaction/adapter`; low-level helper used by framework bindings.
 - `signal`, `computed`, `effect`, `effectScope`, `trigger`, batching helpers, and introspection helpers: alien-signals primitives re-exported for advanced integrations.
+- {@link api-docs.derive | derive}, {@link api-docs.derivePath | derivePath}, and
+  {@link api-docs.identity | identity}: exported only by `coaction/derived`;
+  managed selectors and paths for native immutable stores. Deep value tracking
+  is explicit; object-identity observations need markers in deep mode.
 
 ## Semantics Worth Reading First
 

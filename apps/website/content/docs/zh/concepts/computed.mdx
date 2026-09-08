@@ -1,6 +1,6 @@
 ---
 title: 计算状态
-description: 使用访问器 getter 或显式依赖 selector 声明缓存派生状态。
+description: 选择冻结 getter 快照、显式路径或可管理生命周期的深层派生 selector。
 ---
 
 Coaction 的 computed value 与字段追踪共用同一张 signal graph。组件可以读取缓存 getter，getter 再读取 store 字段，失效过程沿依赖图传播，无需手工维护 memo 数组。
@@ -59,14 +59,107 @@ const cart = create((set, get) => ({
 
 ## 追踪粒度
 
-自动渲染追踪以 store 或 slice 上的每个 own enumerable field 为边界。嵌套对象通过其所在的顶层字段被追踪，因此同一嵌套对象中的 sibling property 变化可能使相同 subscriber 失效。
+原生 getter 与 `get(deps, fn)` 读取冻结快照，依赖以 store/slice 字段为边界。因此 getter 中的 `this.user.name` 会因 `user.age` 变化而重新计算。使用 `get(s => [s.user.name], fn)` 时，依赖 selector 会重跑，但 name 不变时可以复用 `fn` 的结果。计算函数重跑和通知消费者是两件事：相同的 primitive 结果可以阻止下游执行。
 
-如果热点组件需要更窄的嵌套行为，请使用返回具体叶子值、依赖 `Object.is` 的显式 selector。
+React selector 与 `observer` 使用可回收的深层路径追踪。读取 `state.user.name` 的 selector 可以忽略仅改变 age 的 recipe。父对象 replacement、数组结构变化和 graph snapshot patches 可能扩大失效范围。
+
+## 可管理生命周期的派生读取
+
+可选入口 `coaction/derived` 提供归属 store 的缓存读取，不改变原生 getter 默认行为，也不会把这套运行时代码加入默认入口的 consumer bundle：
+
+```ts
+import { create } from 'coaction';
+import { derive, derivePath } from 'coaction/derived';
+
+const person = create({ user: { name: 'Ada', age: 30 } });
+
+// 精确数据路径，不收集中间对象的依赖。
+const name = derivePath(person, ['user', 'name']);
+
+// 动态选择，按叶子和结构收集依赖。
+const greeting = derive(person, (s) => `Hello, ${s.user.name}`, {
+  deep: true
+});
+
+name(); // 'Ada'
+greeting(); // 'Hello, Ada'
+person.setState((s) => {
+  s.user.age++;
+});
+greeting(); // name 未变，复用缓存
+
+name.dispose();
+greeting.dispose();
+person.destroy();
+```
+
+`derivePath` 创建时复制路径，支持 string/number/symbol key；数据不存在时返回 `undefined`。它只选择 state data，不选择 action 或原生 computed getter。动态路径和 getter 组合请使用 `derive`。这两个 API 都不会把任意 `reduce`、`filter` 或 `sort` 自动变成增量算法。
+
+### 对象身份是独立依赖
+
+`derive(store, selector)` 默认保留所有经过的对象身份依赖。`{ deep: true }` 显式选择值语义：为了读取子属性而经过父对象，不会自动保留父对象身份。JavaScript 的 `===`、`Object.is` 和 WeakMap 查询无法通过 property trap 识别，需要显式标记：
+
+```ts
+import { derive, identity } from 'coaction/derived';
+
+const captured = person.getState().user;
+const description = derive(
+  person,
+  (s) => {
+    const user = identity(s.user);
+    return `${user === captured}:${user.name}`;
+  },
+  { deep: true }
+);
+```
+
+age 变化会替换 user 对象，因此这里即使 name 不变也必须重算。`identity()` 返回原本的 readonly 对象；`whole()` 则为整体扫描返回自有 raw data，不能修改它。
+
+直接返回 state 对象，或将它放进普通对象／数组的数据属性中，会自动保留 terminal dependency；带 cycle 的结果包装也受支持。追踪不会执行结果的 accessor，也不会遍历 opaque instance、函数或 closure；在这些位置携带 state 时，应在 selector 内用 `identity()` 标记。数组、空洞、symbol、null prototype、cycle 和共享引用保留现有 local-state contract。Date、Map、Set 和 class instance 仍是 atomic identity leaf，其内部 mutation 不会自动变得可观察。
+
+### 结果比较
+
+默认使用 `Object.is`，包括 NaN 与正负零的区别。新对象即使字段相同，也属于不同结果；可以用 `equals` 显式复用等价派生数据：
+
+```ts
+const adult = derive(person, (s) => ({ adult: s.user.age >= 18 }), {
+  deep: true,
+  equals: (before, after) => before.adult === after.adult
+});
+```
+
+结果比较与依赖收集独立；比较函数应保持纯函数，其读取不会添加响应式依赖。即使复用结果，分支依赖也会重新协调。结果携带的 state 对象发生变化时仍会通知，包括身份稳定的 root/slice facade，避免 `equals` 隐藏实际 state 变化。默认不对任意 local graph 做结构深比较。
+
+### 事务、归属与 React
+
+recipe 内的读取使用当前 store 的 draft，不更新已提交缓存，也不保留 draft proxy。recipe 抛错或 validator 拒绝后，已提交缓存保持有效；消费者在 commit 被接受后失效。selector 抛错后，缓存读取仍抛错，输入依赖变化后重新求值。可组合归属同一 store 的派生读取；这个 API 不负责跨 store 的事务协调。selector 必须是同步纯读取；`await` 后的工作不在追踪范围内，这不是 Resource/Suspense API。
+
+每个读取保留当前依赖，直到调用 `dispose()` 或 `store.destroy()`。尚未读取的派生对象不会开启 patches。`dispose()` 可重复调用，会释放该读取的依赖与缓存，之后再次读取会抛错。停止某个消费者不会销毁 store 归属的派生对象，其他消费者仍可继续使用；原生 getter 的缓存仍采用其既有 store 生命周期。
+
+请随 store 或另一个明确 owner 创建派生对象，不要在 React render 中创建，也不要把 `useMemo` 当成清理边界，否则废弃的 render 可能留下实例。已存在的 store 归属读取可以用于 selector 或 observer：
+
+```tsx
+const displayName = derive(usePerson, (s) => s.user.name, { deep: true });
+
+function Name() {
+  return <span>{usePerson(() => displayName())}</span>;
+}
+```
+
+这里 `usePerson` 来自 `@coaction/react`。owner 结束时销毁 `displayName`，或销毁其 store；组件卸载会释放 React 订阅。SSR 的 store 和派生读取归属对应请求；shared client 使用已接受的镜像状态重新计算。派生定义和缓存不会进入 patches、history 或 transport payload。
+
+## 独立信号原语
+
+`coaction` 导出的 `computed`、`signal`、`effect` 仍是 alien-signals 原语，适合独立 signal graph，但不具备 store 归属的销毁和 draft-aware 缓存。独立 computed 保守保留对象依赖；若结果是整个 root facade，需要显式 `whole(store.getState())` 读取来登记整体依赖。它们的 Coaction 路径记账持续到 store 生命周期结束；需要回收动态 store 依赖时，请使用 `derive`。初始嵌套数据中的普通 getter 仍会被求值成 data，不会递归注册成 computed 定义。
 
 ## 外部适配器
 
-原生 getter computed 属于 Coaction 自有状态。可变外部 adapter instance 不会自动获得 Coaction 缓存 getter 或 `get(deps, selector)` 语义；应由其自身运行时（MobX computed、Pinia getter、selector 或 machine state）负责派生状态。
+原生 getter computed 属于 Coaction 自有状态。外部 adapter instance 不会自动获得 Coaction 缓存 getter 或 `get(deps, selector)` 语义；应由其自身运行时（MobX computed、Pinia getter、selector 或 machine state）负责派生状态。`derive` 和 `derivePath` 会明确拒绝外部 adapter。
 
 ## 性能预期
 
 稳定重复读取是缓存 getter 最强的路径。更新后，Coaction 仍需维护 readonly public-state 边界，并在下一次派生读取前刷新 computed 使用的 snapshot。微基准应被视为回归信号，而非普适结论；维护命令与解释见[性能指南](/zh/docs/guides/performance)。
+
+深层追踪适合稀疏读取。全量集合扫描继续使用读取冻结快照的原生 getter，也可以用 `derive(store, s => s.total)` 组合该 getter。若通过深层 proxy 遍历每个元素，只会增加追踪成本，不能省去求值。不可变更新仍需复制变化路径上的容器，flat array 的单点写入并不独立于数组长度。
+
+`pnpm benchmark:derived` 覆盖 1k/10k/50k 稀疏读取、10k 全量扫描、稳定缓存读取，以及尚未读取／已销毁派生对象的写入成本；已加入 `benchmark:check`。

@@ -65,6 +65,28 @@ import { computed, effect, signal } from 'coaction';
 import { defineExternalStoreAdapter } from 'coaction/adapter';
 ```
 
+### Optional managed derivations
+
+Native getters read frozen snapshots at a store/slice field boundary. For an exact
+path or a selector with explicit deep value tracking, use the separate entry:
+
+```ts
+import { derive, derivePath } from 'coaction/derived';
+
+const count = derivePath(store, ['count']);
+const doubled = derive(store, (state) => state.count * 2, { deep: true });
+```
+
+`derive` defaults to conservative object identity dependencies; deep mode requires
+`identity(value)` for identity comparisons and opaque captures. Returned state in
+plain data wrappers is tracked automatically. Results default to `Object.is`, with
+an optional pure `equals` comparator. Reads inside recipes see drafts without
+changing the committed cache. Call `.dispose()` when the owner finishes, or
+`store.destroy()` to release its derivations. Define these outside React render.
+Native getters remain the efficient frozen-snapshot option for full scans.
+See the [computed guide](https://coactionjs.github.io/coaction/en/docs/concepts/computed)
+for identity, output, transaction and lifecycle contracts.
+
 ### Adapter and Middleware Utilities
 
 `coaction/adapter` exports utilities for adapter and middleware authors. These are not needed for normal application state updates, but they are part of the supported integration surface used by the official packages:

@@ -1,6 +1,6 @@
 /**
  * Documentation-only catalog for the root `coaction` entry and its public
- * `local`, `shared`, and `adapter` subpaths.
+ * `shared`, `adapter`, and `derived` subpaths.
  *
  * @remarks
  * This file is not a runtime entry point. An export appearing here does not
@@ -13,6 +13,13 @@ export { create } from './src/create';
 export { createLocal } from './src/createLocal';
 export { createBinder, defineExternalStoreAdapter } from './src/binder';
 export { createReactiveTracker } from './src/reactiveTracker';
+export { derive, derivePath, identity } from './src/derived';
+export type {
+  Derived,
+  DerivedOptions,
+  DeriveOptions,
+  PathValue
+} from './src/derived';
 export { ActionAuthorityChangedError } from './src/getRawStateClientAction';
 export { wrapStore } from './src/wrapStore';
 export {

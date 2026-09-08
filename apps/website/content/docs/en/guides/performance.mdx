@@ -36,6 +36,10 @@ pnpm benchmark:check
 - `benchmark` compares large update paths, including Coaction draft updates and Zustand + Immer.
 - `benchmark:zustand-positioning` separates stable derived reads from update-then-read work.
 - `benchmark:check` enforces regression floors with CI headroom.
+- `benchmark:derived` runs built-entry workloads in fresh processes: sparse paths,
+  related/unrelated writes, full scans, cached reads, and unread/disposed owners.
+  It is included in `benchmark:check`; full deep scans are reported to make their
+  tracking cost visible, while native getters provide the coarse scan baseline.
 
 Thresholds must not be lowered merely to make a failing run green. A threshold change needs a
 reviewed runtime-semantic or benchmark-methodology reason.

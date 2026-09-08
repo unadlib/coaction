@@ -31,6 +31,7 @@ pnpm benchmark:check
 - `benchmark` 对比大型 update path，包括 Coaction draft 与 Zustand + Immer；
 - `benchmark:zustand-positioning` 分离 stable derived read 与 update-then-read；
 - `benchmark:check` 以 CI 浮动余量执行回归下限。
+- `benchmark:derived` 在独立进程中使用构建后的入口，覆盖稀疏路径、相关／无关写入、全量扫描、缓存读取，以及尚未读取／已销毁的 owner。它已加入 `benchmark:check`；全量 deep scan 的结果用于展示追踪成本，原生 getter 提供 coarse scan 基线。
 
 不能仅为让失败结果变绿而降低阈值。阈值变化必须有经过 review 的 runtime semantic 或 benchmark methodology 理由。
 

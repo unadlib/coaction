@@ -7,7 +7,7 @@
 # api-docs
 
 Documentation-only catalog for the root `coaction` entry and its public
-`local`, `shared`, and `adapter` subpaths.
+`shared`, `adapter`, and `derived` subpaths.
 
 ## Remarks
 
@@ -31,6 +31,9 @@ map for the owning public subpath.
 - [Asyncify](type-aliases/Asyncify.md)
 - [AsyncStore](type-aliases/AsyncStore.md)
 - [ClientStoreOptions](type-aliases/ClientStoreOptions.md)
+- [Derived](type-aliases/Derived.md)
+- [DerivedOptions](type-aliases/DerivedOptions.md)
+- [DeriveOptions](type-aliases/DeriveOptions.md)
 - [ExternalStoreAdapterOptions](type-aliases/ExternalStoreAdapterOptions.md)
 - [ISlices](type-aliases/ISlices.md)
 - [JsonPrimitive](type-aliases/JsonPrimitive.md)
@@ -38,6 +41,7 @@ map for the owning public subpath.
 - [LocalCreator](type-aliases/LocalCreator.md)
 - [LocalStoreOptions](type-aliases/LocalStoreOptions.md)
 - [Middleware](type-aliases/Middleware.md)
+- [PathValue](type-aliases/PathValue.md)
 - [ReactiveTracker](type-aliases/ReactiveTracker.md)
 - [Slice](type-aliases/Slice.md)
 - [Slices](type-aliases/Slices.md)
@@ -57,9 +61,12 @@ map for the owning public subpath.
 - [createBinder](functions/createBinder.md)
 - [createReactiveTracker](functions/createReactiveTracker.md)
 - [defineExternalStoreAdapter](functions/defineExternalStoreAdapter.md)
+- [derive](functions/derive.md)
+- [derivePath](functions/derivePath.md)
 - [effect](functions/effect.md)
 - [effectScope](functions/effectScope.md)
 - [endBatch](functions/endBatch.md)
+- [identity](functions/identity.md)
 - [isComputed](functions/isComputed.md)
 - [isEffect](functions/isEffect.md)
 - [isEffectScope](functions/isEffectScope.md)
