@@ -249,11 +249,34 @@ try {
         for (const extension of ['mjs', 'cjs']) {
           const imports =
             extension === 'mjs'
-              ? `import assert from 'node:assert/strict'; import { create } from 'coaction'; import { onStoreCommit, onStoreCommitPrepare, applyPatches } from 'coaction/adapter';`
-              : `const assert = require('node:assert/strict'); const { create } = require('coaction'); const { onStoreCommit, onStoreCommitPrepare, applyPatches } = require('coaction/adapter');`;
+              ? `import assert from 'node:assert/strict'; import { create } from 'coaction'; import { derive, derivePath, identity } from 'coaction/derived'; import { onStoreCommit, onStoreCommitPrepare, applyPatches } from 'coaction/adapter';`
+              : `const assert = require('node:assert/strict'); const { create } = require('coaction'); const { derive, derivePath, identity } = require('coaction/derived'); const { onStoreCommit, onStoreCommitPrepare, applyPatches } = require('coaction/adapter');`;
           writeFileSync(
             join(project, `graph.${extension}`),
             `${imports}
+            {
+              const store = create({ user: { name: 'Ada', age: 1 } });
+              let calls = 0;
+              const name = derive(store, s => { calls++; return s.user.name; }, { deep: true });
+              const age = derivePath(store, ['user', 'age']);
+              const user = derive(store, s => identity(s.user), { deep: true });
+              assert.equal(name(), 'Ada');
+              assert.equal(age(), 1);
+              assert.equal(user(), store.getState().user);
+              store.setState(s => { s.user.age++; });
+              assert.equal(name(), 'Ada');
+              assert.equal(calls, 1);
+              assert.equal(age(), 2);
+              assert.equal(user(), store.getState().user);
+              assert.throws(() => store.setState(s => { s.user.name = 'draft'; assert.equal(name(), 'draft'); throw new Error('rollback'); }), /rollback/);
+              assert.equal(name(), 'Ada');
+              store.setState(s => { s.user.name = 'Lin'; });
+              assert.equal(name(), 'Lin');
+              name.dispose();
+              assert.throws(() => name(), /disposed/);
+              store.destroy();
+              assert.throws(() => age(), /disposed/);
+            }
             for (const update of ['object', 'recipe', 'root']) {
               for (const mode of ['unwatched', 'listener', 'prepare', 'getter']) {
                 const node = {}; node.self = node;

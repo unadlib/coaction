@@ -100,7 +100,12 @@ const getInternal = <T extends object>(store: StoreReader<T>) => {
   const meta = sharedRegistry.publicStatePathMeta.get(state) as
     | { internal: Internal<T> }
     | undefined;
-  if (!meta || meta.internal.mutableInstance) {
+  if (
+    !meta ||
+    meta.internal.mutableInstance ||
+    meta.internal.updateImmutable ||
+    meta.internal.externalApply
+  ) {
     throw new Error(
       'Derived values require a native immutable Coaction store.'
     );
