@@ -11,14 +11,13 @@ import {
   type Store,
   type StoreCommit
 } from 'coaction/adapter';
-import { normalizePatchPath, readAtPath } from './paths';
+import { createRebasePaths } from './rebasePaths';
 import { resolveStorage } from './storage';
 import {
   cloneMutation,
   clonePatches,
   createMutationId,
   describeWrite,
-  getOverlappingRemotePatches,
   mergeMutationsById
 } from './mutations';
 import {
@@ -33,7 +32,6 @@ import type {
   Patches,
   PersistedSyncState,
   SyncApi,
-  SyncConflictResolution,
   SyncMiddleware,
   SyncMutation,
   SyncOptions,
@@ -294,93 +292,6 @@ export const sync = <T extends object>({
       }
     };
 
-    type ArrayShift = {
-      arrayPath: PropertyKey[];
-      index: number;
-      delta: number;
-    };
-
-    const isIndexSegment = (segment: PropertyKey) =>
-      /^(0|[1-9]\d*)$/.test(String(segment));
-
-    /** Array entries the remote inserted or removed, with how far they move. */
-    const readArrayShifts = (remotePatches: Patches, base: T): ArrayShift[] => {
-      const shifts: ArrayShift[] = [];
-      for (const patch of remotePatches) {
-        if (patch.op !== 'add' && patch.op !== 'remove') continue;
-        const path = normalizePatchPath(patch.path);
-        const last = path[path.length - 1];
-        if (last === undefined || !isIndexSegment(last)) continue;
-        const arrayPath = path.slice(0, -1);
-        if (!Array.isArray(readAtPath(base, arrayPath))) continue;
-        shifts.push({
-          arrayPath,
-          index: Number(last),
-          delta: patch.op === 'add' ? 1 : -1
-        });
-      }
-      return shifts;
-    };
-
-    /**
-     * Move a pending patch to wherever the record it named ended up: an index
-     * is a position, not an identity. Undefined when the entry the patch named
-     * is the one the remote removed.
-     */
-    const shiftPatch = (
-      patch: Patches[number],
-      shifts: readonly ArrayShift[]
-    ): Patches[number] | undefined => {
-      const path = Array.isArray(patch.path)
-        ? [...(patch.path as PropertyKey[])]
-        : normalizePatchPath(patch.path);
-      let changed = false;
-      for (const shift of shifts) {
-        const depth = shift.arrayPath.length;
-        if (path.length <= depth) continue;
-        let matches = true;
-        for (let index = 0; index < depth; index += 1) {
-          if (String(path[index]) !== String(shift.arrayPath[index])) {
-            matches = false;
-            break;
-          }
-        }
-        if (!matches) continue;
-        const segment = path[depth];
-        if (!isIndexSegment(segment)) continue;
-        const position = Number(segment);
-        if (shift.delta < 0 && position === shift.index) return undefined;
-        if (position < shift.index) continue;
-        path[depth] =
-          typeof segment === 'number'
-            ? position + shift.delta
-            : String(position + shift.delta);
-        changed = true;
-      }
-      return changed ? ({ ...patch, path } as Patches[number]) : patch;
-    };
-
-    const shiftMutation = (
-      mutation: SyncMutation,
-      shifts: readonly ArrayShift[]
-    ): SyncMutation | undefined => {
-      if (!shifts.length) return mutation;
-      const patches: Patches = [];
-      for (const patch of mutation.patches) {
-        const shifted = shiftPatch(patch, shifts);
-        if (!shifted) {
-          onError?.(
-            new Error(
-              `@coaction/sync dropped pending mutation "${mutation.id}": the array entry it edited was removed by the remote`
-            )
-          );
-          return undefined;
-        }
-        patches.push(shifted);
-      }
-      return { ...mutation, patches };
-    };
-
     /** Replay mutations onto a working copy as one net transition. */
     const replaySequence = (base: T, mutations: readonly SyncMutation[]) => {
       let state = base;
@@ -427,42 +338,45 @@ export const sync = <T extends object>({
         const mutation = previousOutbox[index];
         stage(mutation.inversePatches, mutation.patches);
       }
+      const remoteBase = working;
       stage(
         remotePatches,
         createInversePatches(working, remotePatches) as Patches
       );
 
-      // A resolver is called in the middle of the rebase, over the mutations
-      // about to be replayed and the patches about to be applied, so it is
-      // shown copies -- reaching into either would be editing the rebase's own
-      // working set while it runs. Each call gets its own: sharing one copy of
-      // the remote patches across the pass kept the rebase safe but let one
-      // call's edits show up in the next one's context, which is a resolver
-      // reasoning about a conflict from data another conflict left behind.
-      const retained = previousOutbox.filter((mutation) => {
-        const overlappingRemotePatches = getOverlappingRemotePatches(
-          mutation,
-          remotePatches
-        );
-        if (!overlappingRemotePatches.length) return true;
-        const resolution =
-          typeof conflict === 'function'
-            ? conflict({
-                mutation: cloneMutation(mutation),
-                remotePatches: clonePatches(remotePatches),
-                overlappingRemotePatches: clonePatches(overlappingRemotePatches)
-              })
-            : conflict === 'remote-wins'
-              ? 'remote'
-              : 'local';
-        return resolution !== 'remote';
-      });
-
-      const shifts = readArrayShifts(remotePatches, store.getPureState() as T);
-      const shifted = retained
-        .map((mutation) => shiftMutation(mutation, shifts))
-        .filter((mutation): mutation is SyncMutation => Boolean(mutation));
-      const replayed = replaySequence(working, shifted);
+      assertJsonState(working, 'the remote state');
+      const coordinates = previousOutbox.length
+        ? createRebasePaths(remoteBase, remotePatches)
+        : undefined;
+      const retained: SyncMutation[] = [];
+      for (const mutation of previousOutbox) {
+        const candidate = coordinates!(mutation);
+        if (candidate.overlapping.length) {
+          // Each resolver sees owned copies of the original patch language.
+          // Array-slot coordinates are transient implementation details.
+          const resolution =
+            typeof conflict === 'function'
+              ? conflict({
+                  mutation: cloneMutation(mutation),
+                  remotePatches: clonePatches(remotePatches),
+                  overlappingRemotePatches: clonePatches(candidate.overlapping)
+                })
+              : conflict === 'remote-wins'
+                ? 'remote'
+                : 'local';
+          if (resolution === 'remote') continue;
+        }
+        try {
+          retained.push(candidate.replay());
+        } catch (error) {
+          onError?.(
+            new Error(
+              `@coaction/sync dropped pending mutation "${mutation.id}": ${(error as Error).message}`
+            )
+          );
+        }
+      }
+      const replayed = replaySequence(working, retained);
       stage(replayed.patches, replayed.inversePatches);
 
       assertJsonState(working, 'the rebased remote state');

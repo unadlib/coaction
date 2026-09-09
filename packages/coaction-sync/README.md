@@ -70,7 +70,13 @@ sync({
 });
 ```
 
-A custom conflict resolver is invoked only when local and remote patch paths overlap.
+A custom conflict resolver is invoked only when local and remote patch paths
+overlap after accounting for array insertions and removals. Rebase follows the
+original array slots through both patch sequences, including nested arrays and
+earlier pending local edits. Inserting at an edited slot's old index does not
+itself conflict with the edit. Replacing an array remains a conflict with its
+descendants; Sync does not infer record identity from application fields.
+Resolvers receive copies of the original patches, with their original paths.
 
 A pending mutation can also become impossible to replay — the remote deleted the
 object an optimistic edit lives inside, for example. Such a mutation is dropped
