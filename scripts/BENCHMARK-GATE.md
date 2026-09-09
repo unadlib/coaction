@@ -3,6 +3,43 @@
 `pnpm benchmark:check` measures `scripts/check-benchmark-regression.mjs` against
 the floors in `benchmark-regression-thresholds.json`.
 
+## Sampling during final 4.0 qualification
+
+Each workload group now runs in its own Node process. Libraries compared within
+that workload still run together, and the parent aggregates every result before
+checking all existing absolute and relative floors. The three observation modes
+also receive the same 100,000-write warmup on their unchanged 1,000-item arrays;
+the warmup verifies the resulting quantities before timing starts.
+
+The earlier single-process ordering materially affected later samples. On an
+intermediate correctness-fix candidate, the path-effect row measured about 91k writes/s
+with about 9% RME after all preceding groups. The same observation group alone
+measured 104k with 2.9% RME, and 108k with 2.7% RME after uniform warmup. These are
+sampling diagnostics, not an improvement attributed to library code. The gate
+measures sustained throughput; it does not measure cold startup. Historical
+single-process results below therefore have a different measurement boundary.
+
+Native stores with at most eight active dependency kinds can compare the known
+read paths directly when no patch middleware, journal consumer, transport or
+computed snapshot cache needs a patch pair. Key/existence reads compare shape as
+well as values. Larger read sets retain patch-directed invalidation to avoid
+walking every subscriber on each write. The limit bounds the alternative scan;
+it does not change dependency semantics or the public API.
+
+Complete producer-patch certification also does real additional work. Checking
+unchanged siblings catches changes missing from an otherwise nonempty patch
+list; a large copied array cannot be certified from the reported path alone.
+The direct scalar certificate avoids a second producer pass, while general
+transitions retain replay and inverse verification. No performance floor was
+lowered for these corrections. The separately documented final size freeze is
+in `SIZE-BUDGETS.md`.
+
+The getter snapshot regression retains its original 0.2 throughput ratio for
+4,000 versus 10 rows in the isolated derived benchmark. Parallel unit tests now
+count key traversal during the post-write getter read instead of comparing two
+millisecond-scale timings. The benchmark still cycles writes through every row,
+reads the first row after each write, and checks the resulting values.
+
 ## It was dark for a while
 
 The script imported `packages/core/dist/local.mjs`. That entry was removed when
@@ -54,8 +91,9 @@ same, over four thousand items           1,043     34,413
 
 ### The remaining write cost and the 4.0 optimizations
 
-Patches remain necessary for commit observers and path invalidation. A plain
-`subscribe()` listener does not request them. The previous roughly 468k versus
+Commit observers request patches. Larger read sets and computed snapshots use
+patch-directed invalidation; small read sets can use the direct comparison
+described above. A plain `subscribe()` listener does not request patches. The previous roughly 468k versus
 70k writes/sec gap also included avoidable work: replaying an already-produced
 native transition and drafting the getter's frozen array snapshot.
 

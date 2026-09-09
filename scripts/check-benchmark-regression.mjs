@@ -1,6 +1,8 @@
 #!/usr/bin/env node
 
-import { writeFileSync, readFileSync } from 'node:fs';
+import { writeFileSync, readFileSync, mkdtempSync, rmSync } from 'node:fs';
+import { execFileSync } from 'node:child_process';
+import { tmpdir } from 'node:os';
 import { dirname, join } from 'node:path';
 import { fileURLToPath } from 'node:url';
 import benchmark from 'benchmark';
@@ -18,6 +20,7 @@ const thresholds = JSON.parse(
   readFileSync(join(scriptDir, 'benchmark-regression-thresholds.json'), 'utf8')
 );
 const results = {};
+const selectedGroup = process.env.COACTION_BENCHMARK_GROUP;
 
 const formatHz = (hz) => Math.round(hz).toLocaleString('en-US');
 
@@ -35,6 +38,28 @@ const record = (target) => {
 };
 
 const runSuite = (name, suite) => {
+  if (!selectedGroup) {
+    // Large earlier workloads change the heap and JIT feedback of later ones.
+    // Compare each workload's libraries in one fresh process, then aggregate
+    // every row before applying the original absolute and relative floors.
+    const temporary = mkdtempSync(join(tmpdir(), 'coaction-benchmark-'));
+    const output = join(temporary, 'results.json');
+    try {
+      execFileSync(process.execPath, [fileURLToPath(import.meta.url)], {
+        stdio: 'inherit',
+        env: {
+          ...process.env,
+          COACTION_BENCHMARK_GROUP: name,
+          COACTION_BENCHMARK_RESULT: output
+        }
+      });
+      Object.assign(results, JSON.parse(readFileSync(output, 'utf8')));
+    } finally {
+      rmSync(temporary, { recursive: true, force: true });
+    }
+    return;
+  }
+  if (selectedGroup !== name) return;
   console.log(`\n${name}`);
   suite
     .on('cycle', (event) => record(event.target))
@@ -403,6 +428,20 @@ for (const [name, observe] of [
       onStart: () => {
         observedStore = createTrackingStore();
         disposeObservation = observe(observedStore);
+        // Same fixed-size input and warmup for all three observation modes.
+        // This gate measures sustained writes, including real effect execution.
+        for (let index = 0; index < 100000; index++) {
+          observedStore.getState().bump(nextIndex());
+        }
+        if (
+          !observedStore
+            .getPureState()
+            .items.every((item, index) => item.quantity === (index % 5) + 101)
+        ) {
+          throw new Error(
+            'Observed writes did not preserve the expected state.'
+          );
+        }
       },
       onComplete: () => {
         disposeObservation();
@@ -471,6 +510,11 @@ runSuite(
   )
 );
 
+if (selectedGroup) {
+  writeFileSync(process.env.COACTION_BENCHMARK_RESULT, JSON.stringify(results));
+  process.exit(0);
+}
+
 const failures = [];
 
 for (const [name, minHz] of Object.entries(thresholds.minHz)) {
@@ -515,6 +559,8 @@ const reportRows = Object.entries(results).map(([name, result]) => ({
 
 const report = [
   '# Benchmark Regression Report',
+  '',
+  'Each workload group runs in a fresh Node process. The three observation modes use the same 100,000-write warmup on 1,000 items.',
   '',
   '| Benchmark | ops/sec | RME | Samples |',
   '| :-- | --: | --: | --: |',

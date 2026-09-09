@@ -51,13 +51,15 @@ if (process.argv[2] === '--case') {
   if (mode === 'disposed') read.dispose();
   let writes = 0;
   let sink;
-  const index = workload === 'related' ? 0 : size - 1;
+  let index = workload === 'related' ? 0 : size - 1;
+  if (workload === 'cycling') index = 0;
   const once =
     workload === 'cached'
       ? () => {
           sink = read();
         }
       : () => {
+          if (workload === 'cycling') index = (index + 1) % size;
           store.getState().bump(index);
           writes++;
           if (workload !== 'write') sink = read();
@@ -76,9 +78,19 @@ if (process.argv[2] === '--case') {
   const samples = Array.from({ length: 5 }, () => sample(200)).sort(
     (a, b) => a - b
   );
-  if (workload !== 'write')
-    assert.equal(sink, scan ? size + writes : index === 0 ? 1 + writes : 1);
-  assert.equal(store.getPureState().rows[index].n, 1 + writes);
+  if (workload === 'cycling') {
+    assert.equal(sink, 1 + Math.floor(writes / size));
+    store.getPureState().rows.forEach((row, i) => {
+      assert.equal(
+        row.n,
+        1 + Math.floor((writes + (i === 0 ? 0 : size - i)) / size)
+      );
+    });
+  } else {
+    if (workload !== 'write')
+      assert.equal(sink, scan ? size + writes : index === 0 ? 1 + writes : 1);
+    assert.equal(store.getPureState().rows[index].n, 1 + writes);
+  }
   if (mode === 'deep' && workload === 'unrelated') assert.equal(evaluations, 1);
   read?.dispose?.();
   store.destroy();
@@ -110,6 +122,8 @@ if (process.argv[2] === '--case') {
   for (const mode of ['native', 'deep', 'coarse'])
     cases.push({ mode, size: 10000, workload: 'scan' });
   cases.push({ mode: 'deep', size: 1000, workload: 'cached' });
+  for (const size of [10, 4000])
+    cases.push({ mode: 'native', size, workload: 'cycling' });
   const results = [];
   for (const input of cases) {
     const result = JSON.parse(
@@ -160,6 +174,11 @@ if (process.argv[2] === '--case') {
   atLeast('deep sparse writes at 10k', find('deep', 10000, 'unrelated'), 50000);
   atLeast('deep related writes at 10k', find('deep', 10000, 'related'), 25000);
   atLeast('deep stable reads', find('deep', 1000, 'cached'), 1000000);
+  atLeast(
+    'native getter after cycling writes / large to small ratio',
+    find('native', 4000, 'cycling') / find('native', 10, 'cycling'),
+    0.2
+  );
   writeFileSync(
     'derived-benchmark-results.json',
     JSON.stringify(

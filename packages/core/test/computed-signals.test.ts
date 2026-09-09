@@ -1,3 +1,4 @@
+import { vi } from 'vitest';
 import { create } from '../src';
 import { createSelectorWithArray } from '../src/computed';
 import { replayStorePatches } from 'coaction/adapter';
@@ -365,13 +366,11 @@ test('createSelectorWithArray supports calls without an object receiver', () => 
  * stopped running the moment the feature it serves was used, and nothing said
  * so: every value stayed correct and the cost went up by an order of magnitude.
  *
- * There is nothing to assert about the result -- it was never wrong. What is
- * assertable is the shape of the cost: reading a getter after a write must not
- * get slower because the state grew somewhere the getter never looks. The bound
- * is deliberately loose. Without the maintenance the ratio is about a hundred;
- * with it, near one.
+ * Count snapshot key traversal during the read instead of timing a few hundred
+ * writes inside parallel unit tests. The original large/small throughput bound
+ * also runs in the isolated derived benchmark, with warmup and longer samples.
  */
-const readAfterWriteRate = (size: number) => {
+const readAfterWriteTraversal = (size: number) => {
   const store = create<{
     rows: Array<{ value: number }>;
     readonly derived: number;
@@ -389,25 +388,28 @@ const readAfterWriteRate = (size: number) => {
       });
     }
   }));
-  let cursor = 0;
-  const once = () => {
-    cursor = (cursor + 1) % size;
-    store.getState().bump(cursor);
-    void store.getState().derived;
-  };
-  for (let index = 0; index < 200; index += 1) once();
-  const started = performance.now();
-  const runs = 400;
-  for (let index = 0; index < runs; index += 1) once();
-  const rate = runs / ((performance.now() - started) / 1000);
-  store.destroy();
-  return rate;
+  expect(store.getState().derived).toBe(0);
+  store.getState().bump(0);
+  let traversedKeys = 0;
+  const ownKeys = Reflect.ownKeys;
+  const spy = vi.spyOn(Reflect, 'ownKeys').mockImplementation((value) => {
+    const keys = ownKeys(value);
+    traversedKeys += keys.length;
+    return keys;
+  });
+  try {
+    expect(store.getState().derived).toBe(2);
+    expect(store.getState().derived).toBe(2);
+    return traversedKeys;
+  } finally {
+    spy.mockRestore();
+    store.destroy();
+  }
 };
 
-test('reading a getter after a write does not scale with what it does not read', () => {
-  const small = readAfterWriteRate(10);
-  const large = readAfterWriteRate(4000);
-  expect(large).toBeGreaterThan(small / 5);
+test('reading a getter after a write does not traverse its maintained snapshot', () => {
+  expect(readAfterWriteTraversal(10)).toBe(0);
+  expect(readAfterWriteTraversal(4000)).toBe(0);
 });
 
 test('computed replacement snapshots preserve cycles, aliases, sparse arrays and atoms', () => {
