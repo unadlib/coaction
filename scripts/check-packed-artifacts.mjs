@@ -255,6 +255,26 @@ try {
             join(project, `graph.${extension}`),
             `${imports}
             {
+              const store = create({ record: { a: 1, b: 2 }, rows: [0] });
+              const before = store.getPureState();
+              const commits = [];
+              onStoreCommit(store, (commit) => commits.push(commit));
+              store.setState((draft) => {
+                delete draft.record.a; draft.record.a = 1;
+                draft.rows[0] = -0;
+              });
+              assert.deepEqual(Object.keys(store.getPureState().record), ['b', 'a']);
+              assert.equal(store.getPureState().rows[0], -0);
+              assert.equal(commits.length, 1);
+              const replayed = applyPatches(before, commits[0].patches);
+              assert.deepEqual(Object.keys(replayed.record), ['b', 'a']);
+              assert.equal(replayed.rows[0], -0);
+              const restored = applyPatches(replayed, commits[0].inversePatches);
+              assert.deepEqual(Object.keys(restored.record), ['a', 'b']);
+              assert.equal(restored.rows[0], 0);
+              store.destroy();
+            }
+            {
               const store = create({ user: { name: 'Ada', age: 1 } });
               let calls = 0;
               const name = derive(store, s => { calls++; return s.user.name; }, { deep: true });

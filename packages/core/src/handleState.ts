@@ -154,7 +154,13 @@ export const handleState = <T extends CreateState>(
         )
           ? needsRootSnapshot(producedState)
           : false;
-      if (snapshot || nextNeedsSnapshot) {
+      if (
+        snapshot ||
+        nextNeedsSnapshot ||
+        (!patches.length && producedState !== internal.backupState)
+      ) {
+        // Canceled assignments can still copy identities or reorder keys.
+        // An empty value diff must not discard a changed producer result.
         const replacement = createSnapshotPatches(
           internal.backupState,
           producedState
@@ -171,7 +177,8 @@ export const handleState = <T extends CreateState>(
               producedState
             )
           ) {
-            throw new Error('patches do not describe this transition');
+            // This error only selects the coarse fallback in the catch below.
+            throw new Error();
           }
           inversePatches = createInversePatches(
             internal.backupState as T,

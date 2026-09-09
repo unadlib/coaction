@@ -52,6 +52,10 @@ export const updateImmutableStateSnapshot = (
   sources?: WeakMap<object, object>,
   scalarTree = false
 ) => {
+  if (!patches.length) {
+    getImmutableStateSnapshot(state, cache);
+    return;
+  }
   const patch = patches[0];
   if (
     scalarTree &&
