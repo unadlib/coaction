@@ -29,7 +29,13 @@ const rejection = (error: unknown) =>
 const patch = (random: Random) => {
   const op = random.pick(['add', 'replace', 'remove'] as const);
   const path = random.chance(0.15)
-    ? random.list(0, 3, () => random.word()).join('/')
+    ? random
+        .list(
+          0,
+          3,
+          () => '/' + random.word().replace(/~/g, '~0').replace(/\//g, '~1')
+        )
+        .join('')
     : random.list(0, 3, () =>
         random.chance(0.3) ? random.integer(0, 5) : random.word()
       );
@@ -231,6 +237,8 @@ test('breaking one field of a written checkpoint is always noticed', () => {
             { op: 'nope', path: [], value: 1 },
             { op: 'add', path: 3, value: 1 },
             { op: 'add', path: [{ deep: true }], value: 1 },
+            { op: 'add', path: 'rows/0', value: 1 },
+            { op: 'add', path: '/bad~2escape', value: 1 },
             { op: 'add', path: [] },
             { op: 'replace', path: [] },
             // Paths that reach outside the state. mutative refuses these on
@@ -238,7 +246,7 @@ test('breaking one field of a written checkpoint is always noticed', () => {
             // it was accepted here and rejected much later, by something else.
             { op: 'replace', path: ['__proto__', 'polluted'], value: 1 },
             { op: 'replace', path: ['doc', 'constructor', 'x'], value: 1 },
-            { op: 'replace', path: 'prototype/x', value: 1 },
+            { op: 'replace', path: '/prototype/x', value: 1 },
             'patch',
             null,
             3

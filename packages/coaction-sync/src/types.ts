@@ -22,7 +22,7 @@ export type SyncPullResult = {
 };
 
 export type SyncPushResult = SyncPullResult & {
-  /** Mutation ids durably accepted by the remote. Defaults to every submitted id. */
+  /** Unique submitted mutation ids durably accepted by the remote. Defaults to every submitted id. */
   ack?: string[];
 };
 

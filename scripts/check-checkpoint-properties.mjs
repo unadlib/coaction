@@ -74,9 +74,23 @@ const mutations = [
   ],
   [
     'accepts a patch with a bad path',
-    "} else if (typeof path !== 'string') {\n    return false;\n  }",
+    [
+      '} else if (',
+      "    typeof path !== 'string' ||",
+      "    (path !== '' && !path.startsWith('/')) ||",
+      '    /~(?![01])/u.test(path)',
+      '  ) {',
+      '    return false;',
+      '  }'
+    ].join('\n'),
     '}'
   ],
+  [
+    'accepts a pointer without its leading slash',
+    "(path !== '' && !path.startsWith('/')) ||",
+    ''
+  ],
+  ['accepts an invalid pointer escape', '/~(?![01])/u.test(path)', 'false'],
   [
     'loses a field on the way out',
     'return body;',

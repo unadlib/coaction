@@ -1,4 +1,6 @@
-import type { Patches, SyncMutation } from './types';
+import { assertSharedJsonValue } from 'coaction/adapter';
+import { clonePatches } from './mutations';
+import type { Patches, SyncMutation, SyncPushResult } from './types';
 
 /**
  * The checkpoint layout this build writes.
@@ -45,11 +47,19 @@ export const isPatchShape = (value: unknown) => {
   if (op !== 'add' && op !== 'replace' && op !== 'remove') return false;
   if (Array.isArray(path)) {
     if (
-      !path.every((key) => typeof key === 'string' || typeof key === 'number')
+      !path.every(
+        (key) =>
+          typeof key === 'string' ||
+          (typeof key === 'number' && Number.isFinite(key))
+      )
     ) {
       return false;
     }
-  } else if (typeof path !== 'string') {
+  } else if (
+    typeof path !== 'string' ||
+    (path !== '' && !path.startsWith('/')) ||
+    /~(?![01])/u.test(path)
+  ) {
     return false;
   }
   if (hasUnsafePatchPath(path)) return false;
@@ -93,6 +103,57 @@ export const assertRemotePatches = (patches: unknown, what: string): void => {
   if (index !== -1) {
     reject(what, `returned a patch at index ${index} that cannot be applied`);
   }
+  for (const patch of patches as Patches) {
+    if (patch.op !== 'remove') assertJson(patch.value, what);
+  }
+};
+
+const assertJson = (value: unknown, what: string) => {
+  try {
+    assertSharedJsonValue(value);
+  } catch (error) {
+    reject(
+      what,
+      `contains a value JSON cannot preserve: ${(error as Error).message}`
+    );
+  }
+};
+
+/** Capture an entire response before acknowledgements or state can advance. */
+export const readRemoteResult = (
+  value: unknown,
+  what: string,
+  submitted?: readonly SyncMutation[]
+): SyncPushResult => {
+  if (!value || typeof value !== 'object' || Array.isArray(value))
+    reject(what, 'returned a result that is not an object');
+  const { patches, cursor, revision, ack } = value as SyncPushResult;
+  for (const [key, field] of [
+    ['cursor', cursor],
+    ['revision', revision]
+  ]) {
+    if (field !== undefined && typeof field !== 'string')
+      reject(what, `returned a ${key} that is not a string`);
+  }
+  assertRemotePatches(patches, what);
+  if (
+    ack !== undefined &&
+    (!Array.isArray(ack) ||
+      ack.some((id) => typeof id !== 'string' || !id) ||
+      new Set(ack).size !== ack.length ||
+      (submitted &&
+        ack.some((id) => !submitted.some((mutation) => mutation.id === id))))
+  )
+    reject(
+      what,
+      'returned acknowledgements that do not name unique submitted mutations'
+    );
+  return {
+    patches: patches && clonePatches(patches),
+    cursor,
+    revision,
+    ack: ack && [...ack]
+  };
 };
 
 /**
@@ -105,6 +166,7 @@ export const assertRemotePatches = (patches: unknown, what: string): void => {
 export const readOutbox = (value: unknown, what: string): SyncMutation[] => {
   if (value === undefined) return [];
   if (!Array.isArray(value)) reject(what, 'has an outbox that is not an array');
+  assertJson(value, what);
   const index = (value as unknown[]).findIndex(
     (mutation) => !isMutationShape(mutation)
   );
@@ -134,6 +196,7 @@ export const readCheckpointBody = (raw: string, what: string) => {
   if (typeof parsed !== 'object' || parsed === null || Array.isArray(parsed)) {
     reject(what, 'is not an object');
   }
+  assertJson(parsed, what);
   const body = parsed as Record<string, unknown>;
   const version = body.formatVersion;
   if (version !== undefined) {

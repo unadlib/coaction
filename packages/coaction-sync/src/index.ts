@@ -22,7 +22,7 @@ import {
   mergeMutationsById
 } from './mutations';
 import {
-  assertRemotePatches,
+  readRemoteResult,
   CHECKPOINT_FORMAT_VERSION,
   parseJournal,
   readCheckpointBody,
@@ -74,6 +74,7 @@ export const sync = <T extends object>({
     }
     const storage = resolveStorage(storageOption, name);
     const checkpointLabel = `The durable checkpoint for sync({ name: '${name}' })`;
+    const remoteLabel = `The remote for sync({ name: '${name}' })`;
     /**
      * The outbox, the snapshot and the adapter's baseline are all stored as
      * JSON, so state JSON cannot represent is not persisted -- it is quietly
@@ -392,9 +393,11 @@ export const sync = <T extends object>({
      * against a working copy rather than published one by one. A failure
      * part-way through then leaves neither the store nor the outbox touched.
      */
-    const rebase = (remotePatches?: Patches) => {
-      if (!remotePatches?.length) return;
-      const previousOutbox = outbox;
+    const rebase = (
+      remotePatches: Patches | undefined,
+      previousOutbox = outbox
+    ) => {
+      if (!remotePatches?.length) return previousOutbox;
       const forward: Patches = [];
       let backward: Patches = [];
       let working = store.getPureState() as T;
@@ -455,19 +458,20 @@ export const sync = <T extends object>({
       } finally {
         applyingRemote -= 1;
       }
-      outbox = replayed.mutations;
+      return replayed.mutations;
     };
 
-    const applyRemoteResult = async (result: SyncPullResult) => {
+    const applyRemoteResult = async (
+      result: SyncPullResult,
+      ack?: Set<string>
+    ) => {
       if (destroyed) return;
-      // Every remote answer arrives through here -- a pull, a push response, a
-      // subscription update -- so this is where they are checked, before the
-      // rebase reads them.
-      assertRemotePatches(
+      // The response was validated and captured on arrival. Acknowledgements
+      // join the rebase in this lane, so a refused candidate keeps its outbox.
+      outbox = rebase(
         result.patches,
-        `The remote for sync({ name: '${name}' })`
+        ack ? outbox.filter(({ id }) => !ack.has(id)) : outbox
       );
-      rebase(result.patches);
       cursor = result.cursor ?? cursor;
       revision = result.revision ?? revision;
       adapter.accept?.(result);
@@ -496,11 +500,11 @@ export const sync = <T extends object>({
      * if it is still queued behind other work -- counting it only once applied
      * leaves a window where a pull returning inside it looks current.
      */
-    const applyRemote = (result: SyncPullResult) => {
+    const applyRemote = (result: SyncPullResult, ack?: Set<string>) => {
       remoteEpoch += 1;
       return enqueueRemote(async () => {
         if (destroyed) return;
-        await applyRemoteResult(result);
+        await applyRemoteResult(result, ack);
       });
     };
 
@@ -529,8 +533,9 @@ export const sync = <T extends object>({
       try {
         for (let attempt = 0; ; attempt += 1) {
           const epoch = remoteEpoch;
-          const result = await adapter.pull({ cursor, revision });
+          const response = await adapter.pull({ cursor, revision });
           if (destroyed) return;
+          const result = readRemoteResult(response, remoteLabel);
           if (await applyPullResult(result, epoch)) break;
           // Something else advanced the remote state while this was in flight.
           // A pull answers "what changed since the cursor I sent", and that
@@ -594,14 +599,14 @@ export const sync = <T extends object>({
           // Stable mutation ids make retry after an ack-persist crash safe when
           // the remote treats ids idempotently.
           const epoch = remoteEpoch;
-          const result = await adapter.push(submitted.map(cloneMutation), {
+          const response = await adapter.push(submitted.map(cloneMutation), {
             cursor,
             revision
           });
           if (destroyed) return;
+          const result = readRemoteResult(response, remoteLabel, submitted);
           const ack = new Set(result.ack ?? submitted.map(({ id }) => id));
           declined ||= submitted.some(({ id }) => !ack.has(id));
-          outbox = outbox.filter(({ id }) => !ack.has(id));
           // Every answer from the remote goes through the same lane, patches
           // or not. A push that reports nothing but success is still the remote
           // telling this client something it did not know -- and a pull in
@@ -624,7 +629,8 @@ export const sync = <T extends object>({
                   patches: result.patches,
                   cursor: result.cursor,
                   revision: result.revision
-                }
+                },
+            ack
           );
         }
         if (declined) {
@@ -810,7 +816,13 @@ export const sync = <T extends object>({
     });
 
     const unsubscribeRemote = adapter.subscribe?.((update) => {
-      void hydration.then(() => applyRemote(update)).catch(reportError);
+      if (destroyed) return;
+      try {
+        const result = readRemoteResult(update, remoteLabel);
+        void hydration.then(() => applyRemote(result)).catch(reportError);
+      } catch (error) {
+        reportError(error);
+      }
     });
 
     const api: SyncApi = {
