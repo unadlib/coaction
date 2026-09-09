@@ -3,6 +3,7 @@ import { applyMiddlewares } from './applyMiddlewares';
 import { invalidateReactivePaths } from './reactivePath';
 import { applyThroughExternalRuntime } from './externalApply';
 import { updateImmutableStateSnapshot } from './immutableState';
+import { createNotifications } from './notifications';
 import { defaultName } from './constant';
 import { getInitialState } from './getInitialState';
 import { getRawState, type LocalActionWrapper } from './getRawState';
@@ -22,11 +23,10 @@ import {
   applyWithOwnStoreCommit,
   disposeStoreCommitRuntime,
   getStoreCommitSource,
+  getStoreCommitRuntime,
   hasStoreCommitPublishers,
   hasStoreCommitValidators,
   ownsStoreCommit,
-  publishStoreCommit,
-  registerStorePatchReplayer,
   validateStoreCommit
 } from './storeCommit';
 import {
@@ -38,7 +38,6 @@ import {
   createRootReplacementPatches,
   createStateSchema,
   getOwnEnumerableKeys,
-  sanitizeCheckedPatches,
   sanitizePatches,
   sanitizeReplacementState
 } from './utils';
@@ -86,8 +85,12 @@ export const createStore = <T extends CreateState>(
   const { share, validatePatches, validateReplacementSource, validateState } =
     runtime;
   const store = {} as MiddlewareStore<T>;
+  const notifications = createNotifications();
+  const commits = getStoreCommitRuntime(store, true)!;
   const internal = {
     completeProducerPatches,
+    runWithNotifications: notifications.run,
+    notify: notifications.notify,
     sequence: 0,
     isBatching: false,
     listeners: new Set<Listener>(),
@@ -96,9 +99,26 @@ export const createStore = <T extends CreateState>(
     validateReplacementSource,
     validateState
   } as Internal<T>;
-  internal.notifyStateChange = () => {
-    invalidateReactivePaths(internal);
-    internal.listeners.forEach((listener) => listener());
+  internal.notifyStateChange = (patches) =>
+    notifications.run(() => {
+      invalidateReactivePaths(internal, patches);
+      internal.listeners.forEach((listener) => notifications.notify(listener));
+    });
+  internal.publishCommit = (patches, inversePatches, source) => {
+    if (!patches.length && !inversePatches.length) return;
+    if (internal.emitPatches)
+      notifications.notify(() => internal.emitPatches!(patches), true);
+    if (commits.disposed || !commits.listeners.size) return;
+    const commit = {
+      state: internal.mutableInstance
+        ? (sanitizeReplacementState(internal.rootState) as T)
+        : (internal.rootState as T),
+      patches,
+      inversePatches,
+      source
+    };
+    for (const listener of [...commits.listeners])
+      notifications.notify(() => listener(commit), true);
   };
   const name = options.name ?? defaultName;
   const shouldTrackName = share === 'main' && process.env.NODE_ENV !== 'test';
@@ -131,34 +151,18 @@ export const createStore = <T extends CreateState>(
         throw new Error(`${operation} cannot be called after store.destroy().`);
       }
     };
-    const destroy: Store<T>['destroy'] = () => {
-      if (isDestroyed) {
-        return;
-      }
-      isDestroyed = true;
-      let firstError: unknown;
-      const callbacks = [...(internal.destroyCallbacks ?? [])];
-      internal.destroyCallbacks?.clear();
-      for (const callback of callbacks) {
-        try {
-          callback();
-        } catch (error) {
-          firstError ??= error;
-        }
-      }
-      internal.listeners.clear();
-      disposeStoreCommitRuntime(store);
-      try {
-        store.transport?.dispose();
-      } catch (error) {
-        firstError ??= error;
-      } finally {
+    const destroy: Store<T>['destroy'] = () =>
+      notifications.run(() => {
+        if (isDestroyed) return;
+        isDestroyed = true;
+        const callbacks = [...(internal.destroyCallbacks ?? [])];
+        internal.destroyCallbacks?.clear();
+        for (const callback of callbacks) notifications.attempt(callback);
+        internal.listeners.clear();
+        disposeStoreCommitRuntime(store);
+        notifications.attempt(() => store.transport?.dispose());
         releaseStoreName();
-      }
-      if (firstError) {
-        throw firstError;
-      }
-    };
+      });
     const applyState = (
       state: T,
       patches: Patches | undefined,
@@ -267,11 +271,11 @@ export const createStore = <T extends CreateState>(
         );
       }
       internal.rootState = nextState;
-      invalidateReactivePaths(internal, safePatches);
       if (internal.updateImmutable) {
+        invalidateReactivePaths(internal, safePatches);
         internal.updateImmutable(internal.rootState as T);
       } else {
-        internal.listeners.forEach((listener) => listener());
+        internal.notifyStateChange(safePatches);
       }
       return pair;
     };
@@ -297,52 +301,52 @@ export const createStore = <T extends CreateState>(
     const apply: Store<T>['apply'] = (
       state = internal.rootState as T,
       patches
-    ) => {
-      // An adapter says how to write into its own runtime and nothing more.
-      // `apply` stays Coaction's, so middleware that wrapped it still runs and
-      // the commit is published in one place rather than in each adapter.
-      if (internal.externalApply) {
-        resolveApplyBase(state, patches);
-        externalRuntimeApply ??= applyThroughExternalRuntime(
-          store,
-          internal,
-          internal.externalApply
+    ) =>
+      notifications.run(() => {
+        // An adapter says how to write into its own runtime and nothing more.
+        // `apply` stays Coaction's, so middleware that wrapped it still runs and
+        // the commit is published in one place rather than in each adapter.
+        if (internal.externalApply) {
+          resolveApplyBase(state, patches);
+          externalRuntimeApply ??= applyThroughExternalRuntime(
+            store,
+            internal,
+            internal.externalApply
+          );
+          externalRuntimeApply(state, patches);
+          return;
+        }
+        // A transition through `apply` is published, in both of its forms. Only
+        // the replacement form used to be, so `store.apply(state, patches)`
+        // changed the state and told nobody: `@coaction/history` had nothing to
+        // undo, `@coaction/sync` never queued it, and the local state moved away
+        // from what the patch stream said it was.
+        //
+        // The exception is a caller inside Coaction that publishes the commit
+        // itself. It has the source and the real inverse pair, where this only
+        // has a derivation, so it says so rather than let a second and worse
+        // description of the same transition go out.
+        const observe =
+          (Boolean(internal.emitPatches) || hasStoreCommitPublishers(store)) &&
+          !ownsStoreCommit(store);
+        const pair = applyState(
+          state,
+          patches,
+          false,
+          false,
+          undefined,
+          observe
         );
-        externalRuntimeApply(state, patches);
-        return;
-      }
-      // A transition through `apply` is published, in both of its forms. Only
-      // the replacement form used to be, so `store.apply(state, patches)`
-      // changed the state and told nobody: `@coaction/history` had nothing to
-      // undo, `@coaction/sync` never queued it, and the local state moved away
-      // from what the patch stream said it was.
-      //
-      // The exception is a caller inside Coaction that publishes the commit
-      // itself. It has the source and the real inverse pair, where this only
-      // has a derivation, so it says so rather than let a second and worse
-      // description of the same transition go out.
-      const observe =
-        hasStoreCommitPublishers(store) && !ownsStoreCommit(store);
-      const pair = applyState(state, patches, false, false, undefined, observe);
-      if (!observe || !pair) {
-        return;
-      }
-      const safePatches = sanitizeCheckedPatches(pair.patches, 'store.apply()');
-      const safeInversePatches = sanitizeCheckedPatches(
-        pair.inversePatches,
-        'store.apply() inverse patches'
-      );
-      if (!safePatches.length && !safeInversePatches.length) {
-        return;
-      }
-      internal.emitPatches?.(safePatches);
-      publishStoreCommit(store, {
-        state: internal.rootState as T,
-        patches: safePatches,
-        inversePatches: safeInversePatches,
-        source: getStoreCommitSource(store, 'external')
+        if (!observe || !pair) {
+          return;
+        }
+        // applyState already checked this exact pair before committing it.
+        internal.publishCommit(
+          pair.patches,
+          pair.inversePatches,
+          getStoreCommitSource(store, 'external')
+        );
       });
-    };
     internal.applyValidatedPatches = (
       state,
       patches,
@@ -417,7 +421,7 @@ export const createStore = <T extends CreateState>(
     if (middlewareStore !== store) {
       Object.assign(store, middlewareStore);
     }
-    registerStorePatchReplayer(store, replayPatches);
+    commits.replay = replayPatches;
     internal.assertAlive?.('store initialization');
     if (validatePatches && store.patch) {
       const patch = store.patch.bind(store);

@@ -135,7 +135,20 @@ export const sync = <T extends object>({
     let status: SyncStatus = 'hydrating';
     let destroyed = false;
     let hydrated = false;
-    let applyingRemote = 0;
+    let remoteWrite: { committed: boolean } | undefined;
+    const writeRemote = (write: () => void) => {
+      const previous = remoteWrite;
+      const scope = { committed: false };
+      remoteWrite = scope;
+      try {
+        write();
+      } catch (error) {
+        if (!scope.committed) throw error;
+        return { error };
+      } finally {
+        remoteWrite = previous;
+      }
+    };
     let writeQueue = Promise.resolve();
     let pullPromise: Promise<void> | undefined;
     let remoteLane = Promise.resolve();
@@ -397,7 +410,10 @@ export const sync = <T extends object>({
       remotePatches: Patches | undefined,
       previousOutbox = outbox
     ) => {
-      if (!remotePatches?.length) return previousOutbox;
+      if (!remotePatches?.length) {
+        outbox = previousOutbox;
+        return;
+      }
       const forward: Patches = [];
       let backward: Patches = [];
       let working = store.getPureState() as T;
@@ -449,16 +465,20 @@ export const sync = <T extends object>({
       const replayed = replaySequence(working, shifted);
       stage(replayed.patches, replayed.inversePatches);
 
-      applyingRemote += 1;
+      assertJsonState(working, 'the rebased remote state');
+      const previousPending = outbox;
+      outbox = replayed.mutations;
       try {
-        replayStorePatches(store, {
-          patches: forward,
-          inversePatches: backward
+        return writeRemote(() => {
+          replayStorePatches(store, {
+            patches: forward,
+            inversePatches: backward
+          });
         });
-      } finally {
-        applyingRemote -= 1;
+      } catch (error) {
+        outbox = previousPending;
+        throw error;
       }
-      return replayed.mutations;
     };
 
     const applyRemoteResult = async (
@@ -468,7 +488,7 @@ export const sync = <T extends object>({
       if (destroyed) return;
       // The response was validated and captured on arrival. Acknowledgements
       // join the rebase in this lane, so a refused candidate keeps its outbox.
-      outbox = rebase(
+      const failure = rebase(
         result.patches,
         ack ? outbox.filter(({ id }) => !ack.has(id)) : outbox
       );
@@ -476,6 +496,7 @@ export const sync = <T extends object>({
       revision = result.revision ?? revision;
       adapter.accept?.(result);
       await persist();
+      if (failure) throw failure.error;
     };
 
     /**
@@ -693,50 +714,44 @@ export const sync = <T extends object>({
           inMemoryPreHydration
         ).filter(({ id }) => !durableIds.has(id));
 
-        applyingRemote += 1;
-        try {
-          if (persistState && parsed.state) {
-            store.apply(parsed.state as T);
-          } else {
-            // Backwards compatibility for payloads written before optimistic
-            // snapshots were persisted. Only in-memory commits are already
-            // applied to this fresh store, so rollback those before restoring
-            // the durable chronological base. Journal-only mutations are
-            // replayed below with the rest of the hydration-window commits.
-            for (
-              let index = inMemoryPreHydration.length - 1;
-              index >= 0;
-              index -= 1
-            ) {
-              const mutation = inMemoryPreHydration[index];
-              replayStorePatches(store, {
-                patches: mutation.inversePatches,
-                inversePatches: mutation.patches
-              });
-            }
-            for (const mutation of durable) {
-              replayStorePatches(store, {
-                patches: mutation.patches,
-                inversePatches: mutation.inversePatches
-              });
-            }
-          }
-
-          const rebasedPreHydration = replaySequence(
-            store.getPureState() as T,
-            preHydration
+        let working = store.getPureState() as T;
+        const forward: Patches = [];
+        let backward: Patches = [];
+        const stage = (patches: Patches, inverse: Patches) => {
+          working = applyPatches(working, patches);
+          forward.push(...patches);
+          backward = [...inverse, ...backward];
+        };
+        if (persistState && parsed.state) {
+          stage(
+            [{ op: 'replace', path: [], value: parsed.state }],
+            [{ op: 'replace', path: [], value: working }]
           );
-          if (rebasedPreHydration.patches.length) {
-            replayStorePatches(store, {
-              patches: rebasedPreHydration.patches,
-              inversePatches: rebasedPreHydration.inversePatches
-            });
-          }
-          outbox = [...durable, ...rebasedPreHydration.mutations];
-          hydrationSucceeded = true;
-        } finally {
-          applyingRemote -= 1;
+        } else {
+          for (const mutation of [...inMemoryPreHydration].reverse())
+            stage(mutation.inversePatches, mutation.patches);
+          for (const mutation of durable)
+            stage(mutation.patches, mutation.inversePatches);
         }
+        const rebased = replaySequence(working, preHydration);
+        stage(rebased.patches, rebased.inversePatches);
+        assertJsonState(working, 'the hydrated state');
+        outbox = [...durable, ...rebased.mutations];
+        let failure: { error: unknown } | undefined;
+        try {
+          if (forward.length)
+            failure = writeRemote(() => {
+              replayStorePatches(store, {
+                patches: forward,
+                inversePatches: backward
+              });
+            });
+        } catch (error) {
+          outbox = inMemoryPreHydration;
+          throw error;
+        }
+        hydrationSucceeded = true;
+        if (failure) onError?.(failure.error);
       })
       .catch((error) => {
         setStatus('error');
@@ -770,7 +785,7 @@ export const sync = <T extends object>({
       // baseline only this client had. Nothing said so: the state looked fine,
       // sync looked idle, and the two agreed about the past forever after.
       unsubscribeValidate = onStoreCommitValidate<T>(store, (commit) => {
-        if (destroyed || applyingRemote) return;
+        if (destroyed || (remoteWrite && !remoteWrite.committed)) return;
         // Per patch rather than over the whole state: proportional to the
         // change, and it catches a value introduced after the store was built,
         // which the check at startup cannot see.
@@ -780,10 +795,13 @@ export const sync = <T extends object>({
         }
       });
       unsubscribeCommit = onStoreCommit<T>(store, (commit: StoreCommit<T>) => {
-        // `applyingRemote` covers every replay this middleware makes, so the
-        // commit source is not consulted: a replay from anywhere else is a user
-        // action, and `@coaction/history` undo and redo arrive that way.
-        if (destroyed || applyingRemote) return;
+        if (destroyed) return;
+        // Consume only this remote write's own commit. A subscriber may then
+        // make a local write (including history replay) before it returns.
+        if (remoteWrite && !remoteWrite.committed) {
+          remoteWrite.committed = true;
+          return;
+        }
         if (!commit.patches.length) return;
         try {
           // A write that reaches here without having passed the validator got

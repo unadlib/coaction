@@ -145,7 +145,7 @@ test('reuses internals, supports apply branches and cleans up subscriptions', as
     getPureState: () => rootState,
     destroy: baseDestroy
   };
-  const internal = {};
+  const internal = { notify: (callback: () => void) => callback() };
 
   capturedHandleStore(store as any, rawState1, rawState1, internal as any);
   capturedHandleStore(store as any, rawState2, rawState2, internal as any);

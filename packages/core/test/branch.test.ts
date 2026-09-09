@@ -66,6 +66,10 @@ test('external store replacement validates before apply and emit', () => {
   } as any;
   const internal = {
     completeProducerPatches,
+    runWithNotifications: (fn: () => unknown) => fn(),
+    publishCommit(patches: unknown) {
+      this.emitPatches?.(patches);
+    },
     emitPatches: vi.fn(),
     rootState: { count: 0 },
     sequence: 0,
@@ -91,6 +95,10 @@ test('external store replacement publishes through the injected runtime', () => 
   } as any;
   const internal = {
     completeProducerPatches,
+    runWithNotifications: (fn: () => unknown) => fn(),
+    publishCommit(patches: unknown) {
+      this.emitPatches?.(patches);
+    },
     emitPatches: vi.fn(),
     rootState: { count: 0 }
   } as any;
@@ -819,6 +827,8 @@ test('handleDraft uses patch hook before applying patches', () => {
       backupState: {
         count: 0
       },
+      runWithNotifications: (fn: () => unknown) => fn(),
+      publishCommit: vi.fn(),
       finalizeDraft: () => [
         { count: 1 },
         [
@@ -875,6 +885,8 @@ test('handleDraft rejects unsafe patch-hook output before apply and emit', () =>
           count: 0
         },
         sequence: 0,
+        runWithNotifications: (fn: () => unknown) => fn(),
+        publishCommit: vi.fn(),
         finalizeDraft: () => [
           { count: 1 },
           [

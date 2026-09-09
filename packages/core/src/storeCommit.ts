@@ -58,7 +58,8 @@ type StoreCommitRuntime = {
 
 const storeCommitRuntimeSymbol = Symbol.for('coaction.storeCommit.runtime');
 
-const getStoreCommitRuntime = (store: object, create = false) => {
+/** @internal */
+export const getStoreCommitRuntime = (store: object, create = false) => {
   const target = store as Record<PropertyKey, unknown>;
   const existing = target[storeCommitRuntimeSymbol] as
     | StoreCommitRuntime
@@ -90,6 +91,10 @@ const getStoreCommitRuntime = (store: object, create = false) => {
  *
  * This is how middleware should watch transitions: it sees every one of them,
  * whatever produced it, including those that never go through `store.apply`.
+ * Commit listeners run before ordinary subscriptions and effects. A reentrant
+ * write finishes delivery of the preceding commit before changing state again.
+ * Observer errors are rethrown after commit delivery and subscription delivery;
+ * they do not roll back a state transition that already committed.
  */
 export const onStoreCommit = <T extends CreateState>(
   store: Store<T>,
@@ -261,20 +266,6 @@ export const hasStoreCommitListeners = (store: object) => {
 };
 
 /** @internal */
-export const publishStoreCommit = <T extends CreateState>(
-  store: Store<T>,
-  commit: StoreCommit<T>
-) => {
-  const runtime = getStoreCommitRuntime(store);
-  if (!runtime || runtime.disposed || !runtime.listeners.size) {
-    return;
-  }
-  for (const listener of [...runtime.listeners]) {
-    listener(commit);
-  }
-};
-
-/** @internal */
 export const hasStoreCommitValidators = (store: object) =>
   Boolean(getStoreCommitRuntime(store)?.validators.size);
 
@@ -328,15 +319,6 @@ export const runWithStoreCommitSource = <T>(
   } finally {
     runtime.source = previousSource;
   }
-};
-
-/** @internal */
-export const registerStorePatchReplayer = <T extends CreateState>(
-  store: Store<T>,
-  replay: StorePatchReplayer<T>
-) => {
-  const runtime = getStoreCommitRuntime(store, true)!;
-  runtime.replay = replay;
 };
 
 /** @internal */

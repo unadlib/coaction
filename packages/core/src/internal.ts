@@ -50,6 +50,13 @@ export type MutableActionContext = {
 export interface Internal<T extends CreateState = CreateState> {
   /** Core-owned producer verification, shared with optional adapter helpers. */
   completeProducerPatches: typeof import('./utils').completeProducerPatches;
+  runWithNotifications: <R>(callback: () => R) => R;
+  notify: (callback: () => void, commit?: boolean) => void;
+  publishCommit: (
+    patches: Patches,
+    inverse: Patches,
+    source: import('./storeCommit').StoreCommitSource
+  ) => void;
   /**
    * The store module.
    */
@@ -109,7 +116,7 @@ export interface Internal<T extends CreateState = CreateState> {
    * Publish an externally-owned immutable state change to signal slots and
    * store subscribers.
    */
-  notifyStateChange: () => void;
+  notifyStateChange: (patches?: Patches) => void;
   /** Lazily-created deep dependency trie for immutable state reads. */
   reactivePathRoot?: ReactivePathNode;
   /** Number of currently-live reactive path dependency kinds. */

@@ -27,6 +27,7 @@ type MobxInternal = {
   toMutableRaw?: (key: object) => object | undefined;
   actMutable?: typeof runInAction;
   notifyStateChange?: () => void;
+  notify: (callback: () => void) => void;
   assertAlive?: (operation: 'apply' | 'subscribe') => void;
   validateState?: (state: unknown) => void;
 };
@@ -199,7 +200,7 @@ const handleStore = (
         if (change === 'external') {
           internal.notifyStateChange?.();
         }
-        store._subscriptions?.forEach((listener) => listener());
+        store._subscriptions?.forEach((listener) => internal.notify(listener));
       });
     });
   });

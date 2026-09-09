@@ -2,7 +2,7 @@ import { create as createWithMutative, type Patches } from 'mutative';
 import type { CreateState, MiddlewareStore } from './interface';
 import type { Internal } from './internal';
 import { replaceOwnEnumerable, sanitizeCheckedPatches } from './utils';
-import { applyWithOwnStoreCommit, publishStoreCommit } from './storeCommit';
+import { applyWithOwnStoreCommit } from './storeCommit';
 
 type ReplaceExternalStoreStateOptions = {
   syncImmutable?: boolean;
@@ -13,55 +13,50 @@ export const replaceExternalStoreState = <T extends CreateState>(
   internal: Internal<T>,
   source: Record<PropertyKey, unknown>,
   { syncImmutable = true }: ReplaceExternalStoreStateOptions = {}
-) => {
-  internal.validateReplacementSource?.(source);
-  const previousState = internal.rootState as T;
-  const [nextState, producerPatches, mutativeInverse] = createWithMutative(
-    internal.rootState,
-    (draft) => {
-      replaceOwnEnumerable(draft as Record<PropertyKey, unknown>, source);
-    },
-    {
-      enablePatches: true
-    }
-  ) as [T, Patches, Patches];
-  const { patches, inversePatches } = internal.completeProducerPatches(
-    previousState,
-    nextState,
-    producerPatches,
-    mutativeInverse
-  );
-  internal.validateState?.(nextState);
-  const finalPatches = store.patch
-    ? store.patch({ patches, inversePatches })
-    : { patches, inversePatches };
-  const safePatches = sanitizeCheckedPatches(
-    finalPatches.patches,
-    'store.patch()'
-  );
-  const safeInversePatches = sanitizeCheckedPatches(
-    finalPatches.inversePatches,
-    'store.patch() inverse patches'
-  );
-  if (!safePatches.length) {
-    return;
-  }
-  const updateImmutable = internal.updateImmutable;
-  if (!syncImmutable) {
-    internal.updateImmutable = undefined;
-  }
-  try {
-    applyWithOwnStoreCommit(store, () =>
-      store.apply(internal.rootState as T, safePatches)
+) =>
+  internal.runWithNotifications(() => {
+    internal.validateReplacementSource?.(source);
+    const previousState = internal.rootState as T;
+    const [nextState, producerPatches, mutativeInverse] = createWithMutative(
+      internal.rootState,
+      (draft) => {
+        replaceOwnEnumerable(draft as Record<PropertyKey, unknown>, source);
+      },
+      {
+        enablePatches: true
+      }
+    ) as [T, Patches, Patches];
+    const { patches, inversePatches } = internal.completeProducerPatches(
+      previousState,
+      nextState,
+      producerPatches,
+      mutativeInverse
     );
-  } finally {
-    internal.updateImmutable = updateImmutable;
-  }
-  internal.emitPatches?.(safePatches);
-  publishStoreCommit(store, {
-    state: internal.rootState as T,
-    patches: safePatches,
-    inversePatches: safeInversePatches,
-    source: 'external'
+    internal.validateState?.(nextState);
+    const finalPatches = store.patch
+      ? store.patch({ patches, inversePatches })
+      : { patches, inversePatches };
+    const safePatches = sanitizeCheckedPatches(
+      finalPatches.patches,
+      'store.patch()'
+    );
+    const safeInversePatches = sanitizeCheckedPatches(
+      finalPatches.inversePatches,
+      'store.patch() inverse patches'
+    );
+    if (!safePatches.length) {
+      return;
+    }
+    const updateImmutable = internal.updateImmutable;
+    if (!syncImmutable) {
+      internal.updateImmutable = undefined;
+    }
+    try {
+      applyWithOwnStoreCommit(store, () =>
+        store.apply(internal.rootState as T, safePatches)
+      );
+    } finally {
+      internal.updateImmutable = updateImmutable;
+    }
+    internal.publishCommit(safePatches, safeInversePatches, 'external');
   });
-};

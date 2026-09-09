@@ -131,7 +131,7 @@ export const bindJotai = <
           isJotaiUpdating = true;
           try {
             coactionStore.setState(getAtomState(context));
-            internal.listeners.forEach((listener) => listener());
+            internal.listeners.forEach((listener) => internal.notify(listener));
           } finally {
             isJotaiUpdating = false;
           }
@@ -157,7 +157,7 @@ export const bindJotai = <
         } finally {
           isCoactionUpdating = false;
         }
-        internal.listeners.forEach((listener) => listener());
+        internal.listeners.forEach((listener) => internal.notify(listener));
       };
     },
     handleState: (() => {

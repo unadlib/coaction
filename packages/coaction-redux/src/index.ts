@@ -170,7 +170,7 @@ export const bindRedux = <S extends object, A extends AnyAction = AnyAction>(
         } finally {
           isCoactionUpdating = false;
         }
-        internal.listeners.forEach((listener) => listener());
+        internal.listeners.forEach((listener) => internal.notify(listener));
       };
     },
     handleState: ((state: S) => {

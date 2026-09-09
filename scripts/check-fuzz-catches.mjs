@@ -42,7 +42,8 @@ const defects = [
     files: [
       'packages/core/src/immutableState.ts',
       'packages/core/src/handleState.ts',
-      'packages/core/src/storeFactory.ts'
+      'packages/core/src/storeFactory.ts',
+      'packages/core/src/storeCommit.ts'
     ],
     suites: [
       'packages/core/test/computed-signals.test.ts',
@@ -76,6 +77,7 @@ const defects = [
     fixedBy: 'bbbe91e',
     files: [
       'packages/core/src/utils.ts',
+      'packages/core/src/storeCommit.ts',
       'packages/core/src/handleState.ts',
       'packages/core/src/storeFactory.ts',
       'packages/core/src/immutableState.ts',

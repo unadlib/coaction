@@ -1,4 +1,4 @@
-import { endBatch, getActiveSub, signal, startBatch } from 'alien-signals';
+import { getActiveSub, signal } from 'alien-signals';
 import type { Patches } from 'mutative';
 import type { CreateState } from './interface';
 import type { Internal } from './internal';
@@ -404,96 +404,84 @@ export const invalidateReactivePaths = <T extends CreateState>(
   if (!root) {
     return;
   }
-  // `endBatch()` flushes subscribers synchronously, and they read the store
-  // while they run. Every caller has already committed the new root state, so
-  // the batch is over as far as readers are concerned: left set, `isBatching`
-  // makes the public state hand out raw objects instead of tracked readonly
-  // proxies, so a subscriber re-reading its selector would get an untracked
-  // value that no longer compares equal to the one it rendered.
-  const wasBatching = internal.isBatching;
-  internal.isBatching = false;
-  startBatch();
-  try {
-    if (!patches) {
+  // The notification runtime owns the batch. Invalidate before publishing
+  // commits so getters are current, then flush effects after the write closes.
+  if (!patches) {
+    invalidateNode(root, true);
+    return;
+  }
+  for (const patch of patches) {
+    const path = normalizeReactivePath(patch.path);
+    if (!path.length) {
       invalidateNode(root, true);
-      return;
+      continue;
     }
-    for (const patch of patches) {
-      const path = normalizeReactivePath(patch.path);
-      if (!path.length) {
-        invalidateNode(root, true);
-        continue;
-      }
-      // A selector that returns the complete public state facade tracks the
-      // root value. Any non-root patch changes that aggregate value.
-      invalidateValue(root);
-      // Coarse object-valued reads (used by computed getters returning or
-      // traversing frozen snapshots) subscribe to an ancestor value node.
-      // Notify those ancestors without invalidating sibling descendants.
-      for (let depth = 1; depth < path.length; depth += 1) {
-        invalidateValue(getNode(internal, path.slice(0, depth), false));
-      }
-      const node = getNode(internal, path, false);
-      if (node) {
-        invalidateNode(node, true);
-      }
+    // A selector that returns the complete public state facade tracks the
+    // root value. Any non-root patch changes that aggregate value.
+    invalidateValue(root);
+    // Coarse object-valued reads (used by computed getters returning or
+    // traversing frozen snapshots) subscribe to an ancestor value node.
+    // Notify those ancestors without invalidating sibling descendants.
+    for (let depth = 1; depth < path.length; depth += 1) {
+      invalidateValue(getNode(internal, path.slice(0, depth), false));
+    }
+    const node = getNode(internal, path, false);
+    if (node) {
+      invalidateNode(node, true);
+    }
 
-      const parentPath = path.slice(0, -1);
-      const parentNode = getNode(internal, parentPath, false);
-      if (patch.op === 'add' || patch.op === 'remove') {
-        invalidateStructure(parentNode);
-      }
+    const parentPath = path.slice(0, -1);
+    const parentNode = getNode(internal, parentPath, false);
+    if (patch.op === 'add' || patch.op === 'remove') {
+      invalidateStructure(parentNode);
+    }
 
-      // Array insertions/removals shift only indexes at or after the changed
-      // position. Preserve dependencies on stable earlier indexes.
-      const parentValue = getValueAtPath(internal.rootState, parentPath);
-      const lastSegment = path[path.length - 1];
-      const arrayIndex =
-        typeof lastSegment === 'string' && /^(0|[1-9]\d*)$/.test(lastSegment)
-          ? Number(lastSegment)
-          : undefined;
-      // Shortening an array through `length` drops elements without a patch
-      // per index, so the indexes it removed are invalidated here. `rootState`
-      // already holds the new value, so its length is the surviving count.
-      if (
-        lastSegment === 'length' &&
-        patch.op === 'replace' &&
-        Array.isArray(parentValue) &&
-        parentNode
-      ) {
-        const survivors = parentValue.length;
-        invalidateStructure(parentNode);
-        for (const [key, child] of parentNode.children ?? []) {
-          if (
-            typeof key === 'string' &&
-            /^(0|[1-9]\d*)$/.test(key) &&
-            Number(key) >= survivors
-          ) {
-            invalidateNode(child, true);
-          }
-        }
-      }
-
-      if (
-        Array.isArray(parentValue) &&
-        parentNode &&
-        (patch.op === 'add' || patch.op === 'remove') &&
-        typeof arrayIndex === 'number'
-      ) {
-        invalidateValue(parentNode.children?.get('length'));
-        for (const [key, child] of parentNode.children ?? []) {
-          if (
-            typeof key === 'string' &&
-            /^(0|[1-9]\d*)$/.test(key) &&
-            Number(key) > arrayIndex
-          ) {
-            invalidateNode(child, true);
-          }
+    // Array insertions/removals shift only indexes at or after the changed
+    // position. Preserve dependencies on stable earlier indexes.
+    const parentValue = getValueAtPath(internal.rootState, parentPath);
+    const lastSegment = path[path.length - 1];
+    const arrayIndex =
+      typeof lastSegment === 'string' && /^(0|[1-9]\d*)$/.test(lastSegment)
+        ? Number(lastSegment)
+        : undefined;
+    // Shortening an array through `length` drops elements without a patch
+    // per index, so the indexes it removed are invalidated here. `rootState`
+    // already holds the new value, so its length is the surviving count.
+    if (
+      lastSegment === 'length' &&
+      patch.op === 'replace' &&
+      Array.isArray(parentValue) &&
+      parentNode
+    ) {
+      const survivors = parentValue.length;
+      invalidateStructure(parentNode);
+      for (const [key, child] of parentNode.children ?? []) {
+        if (
+          typeof key === 'string' &&
+          /^(0|[1-9]\d*)$/.test(key) &&
+          Number(key) >= survivors
+        ) {
+          invalidateNode(child, true);
         }
       }
     }
-  } finally {
-    endBatch();
-    internal.isBatching = wasBatching;
+
+    if (
+      Array.isArray(parentValue) &&
+      parentNode &&
+      (patch.op === 'add' || patch.op === 'remove') &&
+      typeof arrayIndex === 'number'
+    ) {
+      invalidateValue(parentNode.children?.get('length'));
+      for (const [key, child] of parentNode.children ?? []) {
+        if (
+          typeof key === 'string' &&
+          /^(0|[1-9]\d*)$/.test(key) &&
+          Number(key) > arrayIndex
+        ) {
+          invalidateNode(child, true);
+        }
+      }
+    }
   }
 };

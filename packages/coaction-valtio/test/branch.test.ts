@@ -46,7 +46,7 @@ test('falls back to rawState when no mutable mapping exists', async () => {
       count: rawState.count
     })
   };
-  const internal = {};
+  const internal = { notify: (callback: () => void) => callback() };
   capturedHandleStore(store as any, rawState as any, rawState as any, internal);
   const listener = vi.fn();
   const unsubscribe = (store as any).subscribe(listener);
@@ -70,7 +70,7 @@ test('skips re-initialization when internal mutable mapper already exists', asyn
       count: firstRawState.count
     })
   };
-  const internal = {};
+  const internal = { notify: (callback: () => void) => callback() };
   capturedHandleStore(
     store as any,
     firstRawState as any,

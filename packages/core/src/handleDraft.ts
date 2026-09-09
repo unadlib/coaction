@@ -8,67 +8,61 @@ import {
 import {
   applyWithOwnStoreCommit,
   hasStoreCommitValidators,
-  publishStoreCommit,
   validateStoreCommit
 } from './storeCommit';
 
 export const handleDraft = <T extends CreateState>(
   store: MiddlewareStore<T>,
   internal: Internal<T>
-) => {
-  internal.rootState = internal.backupState;
-  const [nextState, producerPatches, mutativeInverse] =
-    internal.finalizeDraft();
-  const { patches, inversePatches } = completeProducerPatches(
-    internal.rootState as T,
-    nextState,
-    producerPatches,
-    mutativeInverse
-  );
-  const finalPatches = store.patch
-    ? store.patch({ patches, inversePatches })
-    : { patches, inversePatches };
-  const safePatches = sanitizeCheckedPatches(
-    finalPatches.patches,
-    'store.patch()'
-  );
-  const safeInversePatches = sanitizeCheckedPatches(
-    finalPatches.inversePatches,
-    'store.patch() inverse patches'
-  );
-  if (safePatches.length) {
-    // An action on a mutable instance writes into the draft, not the instance;
-    // `store.apply` below is what puts the change onto the object. So this
-    // transition does have a point before it is committed, and a validator
-    // that throws here leaves the instance holding what it held before the
-    // action ran. Without this the validator was skipped outright, because an
-    // adapter replaces `store.apply` and the check at the core commit point is
-    // never reached.
-    //
-    // Mutation made on the instance directly, outside an action, is the case
-    // that genuinely has no such point.
-    validateStoreCommit(store, {
-      // Built from the patches that will actually be applied, not from what
-      // the draft finalized to. A `store.patch` middleware sits between the
-      // two, so using the draft's result showed a validator a state its own
-      // patches disagreed with -- and a state the listener for that commit
-      // would not see.
-      state: hasStoreCommitValidators(store)
-        ? (applyPatches(internal.rootState as T, safePatches) as T)
-        : nextState,
-      patches: safePatches,
-      inversePatches: safeInversePatches,
-      source: 'mutableAction'
-    });
-    applyWithOwnStoreCommit(store, () =>
-      store.apply(internal.rootState as T, safePatches)
+) =>
+  internal.runWithNotifications(() => {
+    internal.rootState = internal.backupState;
+    const [nextState, producerPatches, mutativeInverse] =
+      internal.finalizeDraft();
+    const { patches, inversePatches } = completeProducerPatches(
+      internal.rootState as T,
+      nextState,
+      producerPatches,
+      mutativeInverse
     );
-    internal.emitPatches?.(safePatches);
-    publishStoreCommit(store, {
-      state: internal.rootState as T,
-      patches: safePatches,
-      inversePatches: safeInversePatches,
-      source: 'mutableAction'
-    });
-  }
-};
+    const finalPatches = store.patch
+      ? store.patch({ patches, inversePatches })
+      : { patches, inversePatches };
+    const safePatches = sanitizeCheckedPatches(
+      finalPatches.patches,
+      'store.patch()'
+    );
+    const safeInversePatches = sanitizeCheckedPatches(
+      finalPatches.inversePatches,
+      'store.patch() inverse patches'
+    );
+    if (safePatches.length) {
+      // An action on a mutable instance writes into the draft, not the instance;
+      // `store.apply` below is what puts the change onto the object. So this
+      // transition does have a point before it is committed, and a validator
+      // that throws here leaves the instance holding what it held before the
+      // action ran. Without this the validator was skipped outright, because an
+      // adapter replaces `store.apply` and the check at the core commit point is
+      // never reached.
+      //
+      // Mutation made on the instance directly, outside an action, is the case
+      // that genuinely has no such point.
+      validateStoreCommit(store, {
+        // Built from the patches that will actually be applied, not from what
+        // the draft finalized to. A `store.patch` middleware sits between the
+        // two, so using the draft's result showed a validator a state its own
+        // patches disagreed with -- and a state the listener for that commit
+        // would not see.
+        state: hasStoreCommitValidators(store)
+          ? (applyPatches(internal.rootState as T, safePatches) as T)
+          : nextState,
+        patches: safePatches,
+        inversePatches: safeInversePatches,
+        source: 'mutableAction'
+      });
+      applyWithOwnStoreCommit(store, () =>
+        store.apply(internal.rootState as T, safePatches)
+      );
+      internal.publishCommit(safePatches, safeInversePatches, 'mutableAction');
+    }
+  });

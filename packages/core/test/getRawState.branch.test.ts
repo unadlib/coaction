@@ -281,6 +281,8 @@ const createMutableSliceContext = ({
     count: 0
   };
   const internal = {
+    runWithNotifications: (fn: () => unknown) => fn(),
+    publishCommit: vi.fn(),
     toMutableRaw: (state: object) =>
       state === sourceCounter ? mutableCounter : undefined,
     actMutable,
@@ -333,6 +335,8 @@ test('mutable slice action uses sliceKey branch in actMutable flow', () => {
 
 test('throws when computed is used with mutable instance', () => {
   const internal = {
+    runWithNotifications: (fn: () => unknown) => fn(),
+    publishCommit: vi.fn(),
     toMutableRaw: () => ({})
   } as any;
   const store = {

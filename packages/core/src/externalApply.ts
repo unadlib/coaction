@@ -13,7 +13,6 @@ import {
   hasStoreCommitPublishers,
   hasStoreCommitValidators,
   ownsStoreCommit,
-  publishStoreCommit,
   validateStoreCommit
 } from './storeCommit';
 
@@ -41,7 +40,9 @@ export const applyThroughExternalRuntime = <T extends CreateState>(
 ) => {
   return ((state?: T, patches?: Patches) => {
     const observing =
-      hasStoreCommitPublishers(store) || hasStoreCommitValidators(store);
+      internal.emitPatches ||
+      hasStoreCommitPublishers(store) ||
+      hasStoreCommitValidators(store);
     if (!observing || ownsStoreCommit(store)) {
       externalApply(state, patches);
       return;
@@ -67,14 +68,8 @@ export const applyThroughExternalRuntime = <T extends CreateState>(
             unknown
           >
         );
-    const safePatches = sanitizeCheckedPatches(
-      pair.patches as Patches,
-      'store.apply()'
-    );
-    const safeInversePatches = sanitizeCheckedPatches(
-      pair.inversePatches as Patches,
-      'store.apply() inverse patches'
-    );
+    const safePatches = pair.patches as Patches;
+    const safeInversePatches = pair.inversePatches as Patches;
     if (!safePatches.length && !safeInversePatches.length) {
       externalApply(state, patches);
       return;
@@ -86,12 +81,10 @@ export const applyThroughExternalRuntime = <T extends CreateState>(
       source: getStoreCommitSource(store, 'external')
     });
     externalApply(state, patches);
-    internal.emitPatches?.(safePatches);
-    publishStoreCommit(store, {
-      state: store.getPureState(),
-      patches: safePatches,
-      inversePatches: safeInversePatches,
-      source: getStoreCommitSource(store, 'external')
-    });
+    internal.publishCommit(
+      safePatches,
+      safeInversePatches,
+      getStoreCommitSource(store, 'external')
+    );
   }) as Store<T>['apply'];
 };

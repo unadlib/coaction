@@ -25,12 +25,11 @@ import {
 } from './utils';
 import { handleDraft } from './handleDraft';
 import { Computed } from './computed';
-import { hasReactivePathNodes, invalidateReactivePaths } from './reactivePath';
+import { hasReactivePathNodes } from './reactivePath';
 import {
   hasStoreCommitListeners,
   applyWithOwnStoreCommit,
   prepareStoreCommit,
-  publishStoreCommit,
   runWithStoreCommitSource,
   type StoreCommitSource,
   type StorePatchTransition
@@ -218,208 +217,201 @@ export const handleState = <T extends CreateState>(
     patchBaseNeedsSnapshot = nextNeedsSnapshot;
     return [internal.rootState as any, safePatches, safeInversePatches];
   };
-  const setState: Store['setState'] = (next, updater = defaultUpdater) => {
-    const commitSource = pendingCommitSource ?? 'setState';
-    pendingCommitSource = undefined;
-    internal.assertAlive?.('setState');
-    internal.assertMutationAllowed?.('setState');
-    if (store.share === 'client') {
-      throw new Error(
-        `setState() cannot be called in the client store. To update the state, please trigger a store method with setState() instead.`
-      );
-    }
-    if (internal.isBatching) {
-      throw new Error('setState cannot be called within the updater');
-    }
-    if (next === null) {
-      return [];
-    }
-    if (typeof next === 'object') {
-      internal.validateState?.(next);
-      assertKnownStateShape(
-        next,
-        internal.rootState,
-        internal.stateSchema,
-        store.isSliceStore
-      );
-    }
-    internal.isBatching = true;
-    if (
-      !store.share &&
-      !internal.validateState &&
-      !(options as StoreOptions<T>).enablePatches &&
-      !hasStoreCommitListeners(store) &&
-      !hasReactivePathNodes(internal) &&
-      !internal.mutableInstance &&
-      updater === defaultUpdater
-    ) {
-      try {
-        if (typeof next === 'function') {
-          try {
-            internal.backupState = internal.rootState;
-            const nextState = createWithMutative(
-              internal.rootState,
-              (draft) => {
-                internal.rootState = draft as Draft<T>;
-                const returnValue = next(internal.module);
-                if (returnValue instanceof Promise) {
-                  returnValue.catch(() => undefined);
-                  throw new Error(
-                    'setState with async function is not supported'
-                  );
+  const setState: Store['setState'] = (next, updater = defaultUpdater) =>
+    internal.runWithNotifications(() => {
+      const commitSource = pendingCommitSource ?? 'setState';
+      pendingCommitSource = undefined;
+      internal.assertAlive?.('setState');
+      internal.assertMutationAllowed?.('setState');
+      if (store.share === 'client') {
+        throw new Error(
+          `setState() cannot be called in the client store. To update the state, please trigger a store method with setState() instead.`
+        );
+      }
+      if (internal.isBatching) {
+        throw new Error('setState cannot be called within the updater');
+      }
+      if (next === null) {
+        return [];
+      }
+      if (typeof next === 'object') {
+        internal.validateState?.(next);
+        assertKnownStateShape(
+          next,
+          internal.rootState,
+          internal.stateSchema,
+          store.isSliceStore
+        );
+      }
+      internal.isBatching = true;
+      if (
+        !store.share &&
+        !internal.validateState &&
+        !(options as StoreOptions<T>).enablePatches &&
+        !hasStoreCommitListeners(store) &&
+        !hasReactivePathNodes(internal) &&
+        !internal.mutableInstance &&
+        updater === defaultUpdater
+      ) {
+        try {
+          if (typeof next === 'function') {
+            try {
+              internal.backupState = internal.rootState;
+              const nextState = createWithMutative(
+                internal.rootState,
+                (draft) => {
+                  internal.rootState = draft as Draft<T>;
+                  const returnValue = next(internal.module);
+                  if (returnValue instanceof Promise) {
+                    returnValue.catch(() => undefined);
+                    throw new Error(
+                      'setState with async function is not supported'
+                    );
+                  }
+                  if (typeof returnValue === 'object' && returnValue !== null) {
+                    assertKnownStateShape(
+                      returnValue,
+                      internal.rootState,
+                      internal.stateSchema,
+                      store.isSliceStore
+                    );
+                    mergeObject(
+                      internal.rootState,
+                      returnValue,
+                      store.isSliceStore
+                    );
+                  }
+                },
+                {
+                  enablePatches: false,
+                  mark: markLocalState
                 }
-                if (typeof returnValue === 'object' && returnValue !== null) {
-                  assertKnownStateShape(
-                    returnValue,
-                    internal.rootState,
-                    internal.stateSchema,
-                    store.isSliceStore
-                  );
-                  mergeObject(
-                    internal.rootState,
-                    returnValue,
-                    store.isSliceStore
-                  );
+              ) as T;
+              assertKnownStateShape(
+                nextState,
+                internal.backupState,
+                internal.stateSchema,
+                store.isSliceStore,
+                {
+                  requireSliceRoots: true
                 }
-              },
-              {
-                enablePatches: false,
-                mark: markLocalState
+              );
+              internal.rootState = nextState;
+            } catch (error) {
+              internal.rootState = internal.backupState;
+              throw error;
+            }
+          } else {
+            const copy = shallowCloneOwnEnumerable(internal.rootState as T);
+            if (store.isSliceStore) {
+              const nextRecord = next as Record<PropertyKey, unknown>;
+              const copyRecord = copy as Record<PropertyKey, unknown>;
+              for (const key of getOwnEnumerableKeys(nextRecord)) {
+                if (!Object.prototype.hasOwnProperty.call(copyRecord, key)) {
+                  continue;
+                }
+                const sourceValue = nextRecord[key];
+                if (typeof sourceValue !== 'object' || sourceValue === null) {
+                  continue;
+                }
+                const targetValue = copyRecord[key];
+                if (typeof targetValue !== 'object' || targetValue === null) {
+                  continue;
+                }
+                const sliceCopy = shallowCloneOwnEnumerable(
+                  targetValue as Record<PropertyKey, unknown>
+                );
+                mergeObject(sliceCopy, sourceValue);
+                setOwnEnumerable(copyRecord, key, sliceCopy);
               }
-            ) as T;
+            } else {
+              mergeObject(copy, next);
+            }
             assertKnownStateShape(
-              nextState,
-              internal.backupState,
+              copy,
+              internal.rootState,
               internal.stateSchema,
               store.isSliceStore,
               {
                 requireSliceRoots: true
               }
             );
-            internal.rootState = nextState;
-          } catch (error) {
-            internal.rootState = internal.backupState;
-            throw error;
+            internal.rootState = copy;
           }
-        } else {
-          const copy = shallowCloneOwnEnumerable(internal.rootState as T);
-          if (store.isSliceStore) {
-            const nextRecord = next as Record<PropertyKey, unknown>;
-            const copyRecord = copy as Record<PropertyKey, unknown>;
-            for (const key of getOwnEnumerableKeys(nextRecord)) {
-              if (!Object.prototype.hasOwnProperty.call(copyRecord, key)) {
-                continue;
-              }
-              const sourceValue = nextRecord[key];
-              if (typeof sourceValue !== 'object' || sourceValue === null) {
-                continue;
-              }
-              const targetValue = copyRecord[key];
-              if (typeof targetValue !== 'object' || targetValue === null) {
-                continue;
-              }
-              const sliceCopy = shallowCloneOwnEnumerable(
-                targetValue as Record<PropertyKey, unknown>
-              );
-              mergeObject(sliceCopy, sourceValue);
-              setOwnEnumerable(copyRecord, key, sliceCopy);
-            }
+          if (internal.updateImmutable) {
+            internal.updateImmutable(internal.rootState as T);
           } else {
-            mergeObject(copy, next);
+            internal.notifyStateChange();
           }
+          return [];
+        } finally {
+          internal.isBatching = false;
+        }
+      }
+      let result: void | [] | [any, Patches, Patches];
+      try {
+        const isDrafted =
+          internal.mutableInstance && isDraft(internal.rootState);
+        if (isDrafted) {
+          handleDraft(store, internal);
+        }
+        // What this transition is has been decided here, and the commit point is
+        // several frames down. Announcing it on the store is how the rest of the
+        // pipeline already learns it -- without this a commit validator was told
+        // every transition was `external` while the listener for the same commit
+        // was told `setState` or `replay`.
+        result = runWithStoreCommitSource(store, commitSource, () =>
+          updater(next)
+        );
+        if (internal.mutableInstance) {
           assertKnownStateShape(
-            copy,
             internal.rootState,
+            internal.backupState ?? internal.rootState,
             internal.stateSchema,
             store.isSliceStore,
             {
               requireSliceRoots: true
             }
           );
-          internal.rootState = copy;
         }
-        invalidateReactivePaths(internal);
-        if (internal.updateImmutable) {
-          internal.updateImmutable(internal.rootState as T);
-        } else {
-          internal.listeners.forEach((listener) => listener());
+        const trustedDefaultResult =
+          updater === defaultUpdater && defaultResultValidated;
+        if (!trustedDefaultResult) {
+          internal.validateState?.(
+            internal.getTransportState?.() ?? internal.rootState
+          );
         }
-        return [];
+        if (isDrafted) {
+          internal.backupState = internal.rootState;
+          const [draft, finalize] = createWithMutative(
+            internal.rootState as any,
+            {
+              enablePatches: true,
+              mark: markLocalState
+            }
+          );
+          internal.finalizeDraft = finalize;
+          internal.rootState = draft;
+        }
       } finally {
         internal.isBatching = false;
       }
-    }
-    let result: void | [] | [any, Patches, Patches];
-    try {
-      const isDrafted = internal.mutableInstance && isDraft(internal.rootState);
-      if (isDrafted) {
-        handleDraft(store, internal);
-      }
-      // What this transition is has been decided here, and the commit point is
-      // several frames down. Announcing it on the store is how the rest of the
-      // pipeline already learns it -- without this a commit validator was told
-      // every transition was `external` while the listener for the same commit
-      // was told `setState` or `replay`.
-      result = runWithStoreCommitSource(store, commitSource, () =>
-        updater(next)
-      );
-      if (internal.mutableInstance) {
-        assertKnownStateShape(
-          internal.rootState,
-          internal.backupState ?? internal.rootState,
-          internal.stateSchema,
-          store.isSliceStore,
-          {
-            requireSliceRoots: true
-          }
-        );
-      }
       const trustedDefaultResult =
         updater === defaultUpdater && defaultResultValidated;
-      if (!trustedDefaultResult) {
-        internal.validateState?.(
-          internal.getTransportState?.() ?? internal.rootState
-        );
+      if (result?.length && !trustedDefaultResult) {
+        internal.validatePatches?.(result[1]);
+        result = [
+          result[0],
+          sanitizeCheckedPatches(result[1], 'setState updater result'),
+          sanitizeCheckedPatches(result[2], 'setState updater inverse result')
+        ];
       }
-      if (isDrafted) {
-        internal.backupState = internal.rootState;
-        const [draft, finalize] = createWithMutative(
-          internal.rootState as any,
-          {
-            enablePatches: true,
-            mark: markLocalState
-          }
-        );
-        internal.finalizeDraft = finalize;
-        internal.rootState = draft;
+      if (result?.length === 3) {
+        const [, patches, inversePatches] = result;
+        internal.publishCommit(patches, inversePatches, commitSource);
       }
-    } finally {
-      internal.isBatching = false;
-    }
-    const trustedDefaultResult =
-      updater === defaultUpdater && defaultResultValidated;
-    if (result?.length && !trustedDefaultResult) {
-      internal.validatePatches?.(result[1]);
-      result = [
-        result[0],
-        sanitizeCheckedPatches(result[1], 'setState updater result'),
-        sanitizeCheckedPatches(result[2], 'setState updater inverse result')
-      ];
-    }
-    if (result?.length === 3) {
-      const [, patches, inversePatches] = result;
-      internal.emitPatches?.(patches);
-      if (patches.length || inversePatches.length) {
-        publishStoreCommit(store, {
-          state: internal.rootState as T,
-          patches,
-          inversePatches,
-          source: commitSource
-        });
-      }
-    }
-    return result;
-  };
+      return result;
+    });
   const replayPatches = (
     { patches, inversePatches }: StorePatchTransition,
     replaySetState: Store<T>['setState'] = setState

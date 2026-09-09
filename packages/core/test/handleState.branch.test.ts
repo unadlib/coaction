@@ -9,6 +9,13 @@ const createContext = (options?: {
   patch?: (payload: any) => any;
 }) => {
   const internal = {
+    runWithNotifications: (fn: () => unknown) => fn(),
+    notifyStateChange() {
+      this.listeners.forEach((listener: () => void) => listener());
+    },
+    publishCommit(patches: any) {
+      this.emitPatches(patches);
+    },
     module: {
       count: 0
     },

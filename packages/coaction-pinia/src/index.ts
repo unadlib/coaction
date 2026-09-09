@@ -36,6 +36,7 @@ type PiniaInternal = {
   rootState?: object;
   toMutableRaw?: (key: object) => PiniaStoreInstance | undefined;
   notifyStateChange?: () => void;
+  notify: (callback: () => void) => void;
   assertAlive?: (operation: 'apply' | 'subscribe') => void;
   validateState?: (state: unknown) => void;
 };
@@ -264,7 +265,9 @@ const handleStore = (
       if (change === 'external') {
         internal.notifyStateChange?.();
       }
-      store._subscriptions!.forEach((callback) => callback(...args));
+      store._subscriptions!.forEach((callback) =>
+        internal.notify(() => callback(...args))
+      );
     });
   });
   const destroy = () => {

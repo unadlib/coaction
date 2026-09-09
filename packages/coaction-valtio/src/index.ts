@@ -23,6 +23,7 @@ type ValtioInternal = {
   rootState?: object;
   toMutableRaw?: (key: object) => object | undefined;
   notifyStateChange?: () => void;
+  notify: (callback: () => void) => void;
   assertAlive?: (operation: 'apply' | 'subscribe') => void;
   validateState?: (state: unknown) => void;
 };
@@ -137,7 +138,7 @@ const handleStore = (
         if (change === 'external') {
           internal.notifyStateChange?.();
         }
-        store._listeners?.forEach((listener) => listener());
+        store._listeners?.forEach((listener) => internal.notify(listener));
       });
     });
     Object.assign(store, {

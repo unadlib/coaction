@@ -92,6 +92,47 @@ export const runBinderCommitConformance = ({
       cleanup?.();
     };
 
+    test('a failing commit listener cannot hide a transition from later listeners', () => {
+      const { store, cleanup } = createStore();
+      const commits: StoreCommit[] = [];
+      onStoreCommit(store, () => {
+        throw new Error('observer');
+      });
+      onStoreCommit(store, (commit) => {
+        commits.push(commit);
+      });
+      expect(() => store.apply({ ...store.getPureState(), count: 1 })).toThrow(
+        'observer'
+      );
+      expect(store.getState().count).toBe(1);
+      expect(commits).toHaveLength(1);
+      store.destroy();
+      cleanup?.();
+    });
+
+    test('reentrant commit listeners preserve order and immutable commit snapshots', () => {
+      const { store, cleanup } = createStore();
+      const initial = JSON.parse(JSON.stringify(store.getPureState()));
+      const commits: StoreCommit[] = [];
+      onStoreCommit(store, (commit) => {
+        if (commit.state.count === 1)
+          store.apply({ ...store.getPureState(), count: 2 });
+      });
+      onStoreCommit(store, (commit) => {
+        commits.push(commit);
+      });
+      store.apply({ ...store.getPureState(), count: 1 });
+      expect(commits.map((commit) => commit.state.count)).toEqual([1, 2]);
+      expect(
+        commits.reduce(
+          (state, commit) => applyPatches(state, commit.patches),
+          initial
+        )
+      ).toEqual(store.getPureState());
+      store.destroy();
+      cleanup?.();
+    });
+
     test('a patch pair through apply is published once', () => {
       withStore((store, commits) => {
         store.apply(store.getPureState(), [
