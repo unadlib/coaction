@@ -111,10 +111,16 @@ export const sanitizePatches = <T extends { path: unknown; value?: unknown }>(
 const clonePatchValues = <T extends { path: unknown; value?: unknown }>(
   patches: T[] | undefined
 ) => {
-  const seen = new WeakMap<object, unknown>();
+  let seen: WeakMap<object, unknown> | undefined;
   return patches?.map((patch) =>
     Object.prototype.hasOwnProperty.call(patch, 'value')
-      ? { ...patch, value: sanitizeReplacementState(patch.value, seen) }
+      ? {
+          ...patch,
+          value:
+            typeof patch.value === 'object' && patch.value !== null
+              ? sanitizeReplacementState(patch.value, (seen ??= new WeakMap()))
+              : patch.value
+        }
       : patch
   );
 };
@@ -634,64 +640,77 @@ export const isSameStructure = (left: unknown, right: unknown): boolean => {
  * is checked against a virtual replay, avoiding a second producer/copy pass.
  * Graphs and atomic leaves use snapshot patches before reaching this helper.
  */
+const matchesArraySiblings = (
+  before: unknown[],
+  after: unknown[],
+  index: number
+) =>
+  before.length === after.length &&
+  after.every((value, i) => i === index || Object.is(value, before[i]));
+
 const matchesProducerPatches = (
-  before: unknown,
-  after: unknown,
+  before: any,
+  after: any,
   patches: Patches,
   inverse?: Patches[number]
 ) => {
   const patch = patches[0];
-  const path = inverse ? normalizePatchPath(patch.path) : undefined;
-  const compare = (
-    base: any,
-    next: any,
-    replayed: any,
-    depth = -1
-  ): boolean => {
-    if (depth === path?.length)
-      return Object.is(next, patch.value) && Object.is(base, inverse!.value);
+  if (inverse) {
+    // The one edited branch is known. All other children must retain identity,
+    // including copies from a recipe whose visible writes cancelled out.
+    for (const segment of normalizePatchPath(patch.path)) {
+      if (!before || !after || typeof after !== 'object') return false;
+      if (Array.isArray(after)) {
+        if (!matchesArraySiblings(before, after, Number(segment))) return false;
+      } else {
+        const keys = Object.keys(after);
+        const previous = Object.keys(before);
+        if (
+          keys.length !== previous.length ||
+          !keys.every(
+            (key, i) =>
+              key === previous[i] &&
+              (key === String(segment) || Object.is(after[key], before[key]))
+          )
+        )
+          return false;
+      }
+      before = before[segment];
+      after = after[segment];
+    }
+    inverse.value = before;
+    return Object.is(after, patch.value);
+  }
+  const compare = (base: any, next: any, replayed: any): boolean => {
     if (Object.is(next, replayed)) return true;
-    if (depth < 0 && Object.is(base, replayed)) return false;
     if (
+      Object.is(base, replayed) ||
       !next ||
       !replayed ||
       typeof next !== 'object' ||
       typeof replayed !== 'object'
     )
       return false;
-    if (Array.isArray(next)) {
-      if (next.length !== replayed.length) return false;
-      return next.every(
-        (value: unknown, i: number) =>
-          Object.is(value, replayed[i]) ||
-          compare(
-            base?.[i],
-            value,
-            replayed[i],
-            depth >= 0 && String(i) === String(path![depth]) ? depth + 1 : -1
-          )
+    if (Array.isArray(next))
+      return (
+        next.length === replayed.length &&
+        next.every(
+          (value, i) =>
+            Object.is(value, replayed[i]) ||
+            compare(base?.[i], value, replayed[i])
+        )
       );
-    }
     const keys = Object.keys(next);
     const other = Object.keys(replayed);
-    if (keys.length !== other.length) return false;
-    return keys.every(
-      (key, index) =>
-        key === other[index] &&
-        compare(
-          base?.[key],
-          next[key],
-          replayed[key],
-          depth >= 0 && key === String(path![depth]) ? depth + 1 : -1
-        )
+    return (
+      keys.length === other.length &&
+      keys.every(
+        (key, i) =>
+          key === other[i] && compare(base?.[key], next[key], replayed[key])
+      )
     );
   };
-  return compare(
-    before,
-    after,
-    path ? before : applyPatches(before, patches),
-    path ? 0 : -1
-  );
+  return compare(before, after, applyPatches(before, patches));
 };
 
 /** Complete a producer pair before middleware, validation or publication. */
@@ -714,7 +733,7 @@ export const completeProducerPatches = <T extends object>(
         ? {
             op: 'replace',
             path: patch.path,
-            value: readPatchTarget(before, path).value
+            value: undefined
           }
         : undefined;
     if (

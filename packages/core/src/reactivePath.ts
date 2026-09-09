@@ -3,6 +3,7 @@ import type { Patches } from 'mutative';
 import type { CreateState } from './interface';
 import type { Internal } from './internal';
 import { sharedRegistry } from './sharedRegistry';
+import { areShallowEqualWithArray } from './utils';
 
 export type ReactivePath = readonly PropertyKey[];
 
@@ -396,6 +397,43 @@ const getValueAtPath = (root: unknown, path: readonly PropertyKey[]) => {
   return value;
 };
 
+/** A small read set can be checked directly without producing a patch journal.
+ * Walk only its trie, including existence/key-order dependencies. Immutable
+ * identity skips unchanged subtrees; an iterative walk also handles deep paths.
+ */
+export const invalidateReactiveTransition = <T extends CreateState>(
+  internal: Internal<T>,
+  before: unknown,
+  after: unknown
+) => {
+  const root = internal.reactivePathRoot;
+  if (!root) return;
+  const pending: Array<[ReactivePathNode, any, any]> = [[root, before, after]];
+  while (pending.length) {
+    const [node, previous, next] = pending.pop()!;
+    if (Object.is(previous, next)) continue;
+    invalidateValue(node);
+    if (node.structureVersion) {
+      const object = (value: unknown): value is object =>
+        value !== null && typeof value === 'object';
+      if (
+        !object(previous) ||
+        !object(next) ||
+        Object.getPrototypeOf(previous) !== Object.getPrototypeOf(next) ||
+        !areShallowEqualWithArray(
+          Reflect.ownKeys(previous),
+          Reflect.ownKeys(next)
+        )
+      ) {
+        invalidateStructure(node);
+      }
+    }
+    for (const [key, child] of node.children ?? []) {
+      pending.push([child, previous?.[key], next?.[key]]);
+    }
+  }
+};
+
 export const invalidateReactivePaths = <T extends CreateState>(
   internal: Internal<T>,
   patches?: Patches
@@ -422,16 +460,15 @@ export const invalidateReactivePaths = <T extends CreateState>(
     // Coarse object-valued reads (used by computed getters returning or
     // traversing frozen snapshots) subscribe to an ancestor value node.
     // Notify those ancestors without invalidating sibling descendants.
-    for (let depth = 1; depth < path.length; depth += 1) {
-      invalidateValue(getNode(internal, path.slice(0, depth), false));
+    let node: ReactivePathNode | undefined = root;
+    let parentNode: ReactivePathNode | undefined;
+    for (let depth = 0; depth < path.length; depth++) {
+      parentNode = node;
+      node = node?.children?.get(path[depth]);
+      if (depth < path.length - 1) invalidateValue(node);
     }
-    const node = getNode(internal, path, false);
-    if (node) {
-      invalidateNode(node, true);
-    }
-
+    if (node) invalidateNode(node, true);
     const parentPath = path.slice(0, -1);
-    const parentNode = getNode(internal, parentPath, false);
     if (patch.op === 'add' || patch.op === 'remove') {
       invalidateStructure(parentNode);
     }

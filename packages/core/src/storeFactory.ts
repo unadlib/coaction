@@ -1,6 +1,9 @@
 import type { Patches } from 'mutative';
 import { applyMiddlewares } from './applyMiddlewares';
-import { invalidateReactivePaths } from './reactivePath';
+import {
+  invalidateReactivePaths,
+  invalidateReactiveTransition
+} from './reactivePath';
 import { applyThroughExternalRuntime } from './externalApply';
 import { updateImmutableStateSnapshot } from './immutableState';
 import { createNotifications } from './notifications';
@@ -68,12 +71,10 @@ const warnAmbiguousFunctionMap = () => {
   }
   hasWarnedAmbiguousFunctionMap = true;
   console.warn(
-    [
-      `sliceMode: 'auto' inferred slices from an object of functions.`,
-      `This shape is ambiguous with a single store that only contains methods.`,
-      `Use create({ ping() {} }, { sliceMode: 'single' }) for a plain method store,`,
+    `sliceMode: 'auto' inferred slices from an object of functions. ` +
+      `This shape is ambiguous with a single store that only contains methods. ` +
+      `Use create({ ping() {} }, { sliceMode: 'single' }) for a plain method store, ` +
       `or create({ counter: (set) => ({ count: 0 }) }, { sliceMode: 'slices' }) for slices.`
-    ].join(' ')
   );
 };
 
@@ -99,11 +100,13 @@ export const createStore = <T extends CreateState>(
     validateReplacementSource,
     validateState
   } as Internal<T>;
-  internal.notifyStateChange = (patches) =>
-    notifications.run(() => {
-      invalidateReactivePaths(internal, patches);
-      internal.listeners.forEach((listener) => notifications.notify(listener));
-    });
+  internal.notifyStateChange = (patches, previous) => {
+    // Both callers are already inside the authoritative notification batch.
+    if (previous)
+      invalidateReactiveTransition(internal, previous, internal.rootState);
+    else invalidateReactivePaths(internal, patches);
+    internal.listeners.forEach((listener) => notifications.notify(listener));
+  };
   internal.publishCommit = (patches, inversePatches, source) => {
     if (!patches.length && !inversePatches.length) return;
     if (internal.emitPatches)

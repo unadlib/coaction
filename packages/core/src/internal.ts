@@ -116,7 +116,7 @@ export interface Internal<T extends CreateState = CreateState> {
    * Publish an externally-owned immutable state change to signal slots and
    * store subscribers.
    */
-  notifyStateChange: (patches?: Patches) => void;
+  notifyStateChange: (patches?: Patches, previous?: unknown) => void;
   /** Lazily-created deep dependency trie for immutable state reads. */
   reactivePathRoot?: ReactivePathNode;
   /** Number of currently-live reactive path dependency kinds. */

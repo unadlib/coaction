@@ -37,24 +37,26 @@ const publicStatePathMeta = sharedRegistry.publicStatePathMeta as WeakMap<
 /** Reverse of the readonly proxy cache, so a proxy can hand back its source. */
 const readonlyProxySource = sharedRegistry.readonlyProxySource;
 
-const isReactivePathPrefix = (left: ReactivePath, right: ReactivePath) =>
-  left.length <= right.length &&
-  left.every((segment, index) => Object.is(segment, right[index]));
+const isReactivePathPrefix = (left: ReactivePath, right: ReactivePath) => {
+  if (left.length > right.length) return false;
+  for (let index = 0; index < left.length; index++) {
+    if (!Object.is(left[index], right[index])) return false;
+  }
+  return true;
+};
 
 const addReactivePathTo = (
   meta: ReactivePathMeta,
   path: ReactivePath,
   owned: boolean
 ) => {
-  if (meta.paths.some((known) => isReactivePathPrefix(known, path))) {
-    return;
+  // Stored paths form an antichain: none contains another. Remove descendants
+  // in place, preserving the union of aliases without allocating on every read.
+  for (let index = meta.paths.length - 1; index >= 0; index--) {
+    const known = meta.paths[index];
+    if (isReactivePathPrefix(known, path)) return;
+    if (isReactivePathPrefix(path, known)) meta.paths.splice(index, 1);
   }
-  // A canonical proxy reached through its own descendant is a cycle. Fold
-  // that route back to its shortest prefix instead of growing self.self...
-  // paths on every evaluation. Distinct alias branches retain their union.
-  meta.paths = meta.paths.filter((known) => !isReactivePathPrefix(path, known));
-  // `owned` marks a path the caller built for this call and will not reuse,
-  // so it can be stored as-is instead of copied again on every property read.
   meta.paths.push(owned ? path : [...path]);
 };
 
@@ -273,7 +275,10 @@ const toReadonlyStateValue = <T extends CreateState>(
   // The array is read at trap time, not captured, because a proxy can still
   // pick up further paths later when an alias of the same object is traversed.
   const meta: ReactivePathMeta = { internal, paths: [] };
-  const trackedPaths = () => meta.paths;
+  const rejectMutation = () => {
+    assertImmutableStateMutationAllowed(internal);
+    return false;
+  };
   const proxy: object = new Proxy(value as Record<PropertyKey, unknown>, {
     get(target, key, receiver) {
       const nextValue = Reflect.get(target, key, receiver);
@@ -293,7 +298,7 @@ const toReadonlyStateValue = <T extends CreateState>(
         (Array.isArray(target) && key === 'length');
       // Indexed loop, not for-of: this runs on every tracked property read and
       // the path list is almost always a single entry.
-      const basePaths = trackedPaths();
+      const basePaths = meta.paths;
       const nextPaths: ReactivePath[] = new Array(basePaths.length);
       for (let index = 0; index < basePaths.length; index += 1) {
         const nextPath = [...basePaths[index], key];
@@ -308,7 +313,7 @@ const toReadonlyStateValue = <T extends CreateState>(
     },
     has(target, key) {
       if (isReactiveTrackingActive()) {
-        for (const path of trackedPaths()) {
+        for (const path of meta.paths) {
           trackReactiveStructure(internal, path);
         }
       }
@@ -316,28 +321,16 @@ const toReadonlyStateValue = <T extends CreateState>(
     },
     ownKeys(target) {
       if (isReactiveTrackingActive()) {
-        for (const path of trackedPaths()) {
+        for (const path of meta.paths) {
           trackReactiveStructure(internal, path);
         }
       }
       return Reflect.ownKeys(target);
     },
-    set() {
-      assertImmutableStateMutationAllowed(internal);
-      return false;
-    },
-    deleteProperty() {
-      assertImmutableStateMutationAllowed(internal);
-      return false;
-    },
-    defineProperty() {
-      assertImmutableStateMutationAllowed(internal);
-      return false;
-    },
-    setPrototypeOf() {
-      assertImmutableStateMutationAllowed(internal);
-      return false;
-    }
+    set: rejectMutation,
+    deleteProperty: rejectMutation,
+    defineProperty: rejectMutation,
+    setPrototypeOf: rejectMutation
   });
   cache.set(value as object, proxy);
   readonlyProxySource.set(proxy, value as object);
@@ -416,35 +409,26 @@ export const prepareStateDescriptor = <T extends CreateState>({
     descriptor.get = function () {
       return toPublicComputedValue(internal, getComputed.call(this), sliceKey);
     };
-  } else if (typeof sliceKey !== 'undefined') {
-    descriptor.get = () => {
-      const value = readStateValue();
-      const path: ReactivePath = [sliceKey, key];
-      if (isImmutableStateObject(value)) {
-        trackReactiveTraversalPath(internal, path);
-      } else {
-        trackReactivePath(internal, path);
-      }
-      return toReadonlyStateValue(internal, value, sliceKey, [path]);
-    };
-    descriptor.set = (value: unknown) => {
-      assertImmutableStateMutationAllowed(internal);
-      (internal.rootState as any)[sliceKey][key] = value;
-    };
   } else {
+    const path: ReactivePath =
+      typeof sliceKey === 'undefined' ? [key] : [sliceKey, key];
+    const paths = [path];
     descriptor.get = () => {
       const value = readStateValue();
-      const path: ReactivePath = [key];
-      if (isImmutableStateObject(value)) {
-        trackReactiveTraversalPath(internal, path);
-      } else {
-        trackReactivePath(internal, path);
+      if (isReactiveTrackingActive()) {
+        if (isImmutableStateObject(value))
+          trackReactiveTraversalPath(internal, path);
+        else trackReactivePath(internal, path);
       }
-      return toReadonlyStateValue(internal, value, undefined, [path]);
+      return toReadonlyStateValue(internal, value, sliceKey, paths);
     };
     descriptor.set = (value: unknown) => {
       assertImmutableStateMutationAllowed(internal);
-      (internal.rootState as any)[key] = value;
+      const target =
+        typeof sliceKey === 'undefined'
+          ? internal.rootState
+          : (internal.rootState as any)[sliceKey];
+      (target as any)[key] = value;
     };
   }
 

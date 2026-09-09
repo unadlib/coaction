@@ -274,13 +274,9 @@ export const validateStoreCommit = <T extends CreateState>(
   store: Store<T>,
   commit: StoreCommit<T>
 ) => {
-  const runtime = getStoreCommitRuntime(store);
-  if (!runtime || runtime.disposed || !runtime.validators.size) {
-    return;
-  }
-  for (const validator of runtime.validators) {
-    validator(commit);
-  }
+  getStoreCommitRuntime(store)?.validators.forEach((validator) =>
+    validator(commit)
+  );
 };
 
 /** @internal */
@@ -288,14 +284,10 @@ export const prepareStoreCommit = <T extends CreateState>(
   store: Store<T>,
   commit: StoreCommit<T>
 ) => {
-  const runtime = getStoreCommitRuntime(store);
-  if (!runtime || runtime.disposed || !runtime.prepareListeners.size) {
-    return false;
-  }
   let replace = false;
-  for (const listener of runtime.prepareListeners) {
+  getStoreCommitRuntime(store)?.prepareListeners.forEach((listener) => {
     replace = listener(commit) === true || replace;
-  }
+  });
   return replace;
 };
 

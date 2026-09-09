@@ -51,36 +51,58 @@ export const handleState = <T extends CreateState>(
   let pendingCommitSource: StoreCommitSource | undefined;
   let patchBase: unknown;
   let patchBaseNeedsSnapshot = false;
+  const runRecipe = (recipe: Function) => {
+    const result = recipe(internal.module);
+    if (result instanceof Promise) {
+      result.catch(() => undefined);
+      throw new Error('setState with async function is not supported');
+    }
+    if (typeof result === 'object' && result !== null) {
+      internal.validateState?.(result);
+      assertKnownStateShape(
+        result,
+        internal.rootState,
+        internal.stateSchema,
+        store.isSliceStore
+      );
+      mergeObject(internal.rootState, result, store.isSliceStore);
+    }
+  };
+  const applyPair = (
+    patches: Patches,
+    inversePatches: Patches,
+    trusted = false,
+    producedState?: T
+  ) => {
+    if (!patches.length) return true;
+    const validated = internal.applyValidatedPatches?.(
+      internal.rootState as T,
+      patches,
+      trusted,
+      inversePatches,
+      producedState
+    );
+    if (!internal.applyValidatedPatches)
+      applyWithOwnStoreCommit(store, () =>
+        store.apply(internal.rootState as T, patches)
+      );
+    return validated ?? false;
+  };
   const defaultUpdater: NonNullable<Parameters<Store['setState']>[1]> = (
     next
   ) => {
     defaultResultValidated = false;
     let producedState: T | undefined;
-    const merge = (_next = next) => {
-      if (_next !== next) {
-        internal.validateState?.(_next);
-      }
+    const merge = () => {
       assertKnownStateShape(
-        _next,
+        next,
         internal.rootState,
         internal.stateSchema,
         store.isSliceStore
       );
-      mergeObject(internal.rootState, _next, store.isSliceStore);
+      mergeObject(internal.rootState, next, store.isSliceStore);
     };
-    const fn =
-      typeof next === 'function'
-        ? () => {
-            const returnValue = next(internal.module);
-            if (returnValue instanceof Promise) {
-              returnValue.catch(() => undefined);
-              throw new Error('setState with async function is not supported');
-            }
-            if (typeof returnValue === 'object' && returnValue !== null) {
-              merge(returnValue);
-            }
-          }
-        : merge;
+    const fn = typeof next === 'function' ? () => runRecipe(next) : merge;
     const enablePatches =
       Boolean(store.transport ?? (options as StoreOptions<T>).enablePatches) ||
       hasStoreCommitListeners(store) ||
@@ -191,26 +213,13 @@ export const handleState = <T extends CreateState>(
       defaultResultValidated = true;
       return [];
     }
-    if (safePatches.length) {
-      defaultResultValidated =
-        internal.applyValidatedPatches?.(
-          internal.rootState as T,
-          safePatches,
-          !patch,
-          safeInversePatches,
-          // Normalization cannot alter scalar payloads. Keep the verified
-          // producer result instead of drafting the same transition again.
-          // Object payloads and middleware transforms still take the apply path.
-          !patch && !hasObjectValues ? producedState : undefined
-        ) ?? false;
-      if (!internal.applyValidatedPatches) {
-        applyWithOwnStoreCommit(store, () =>
-          store.apply(internal.rootState as T, safePatches)
-        );
-      }
-    } else {
-      defaultResultValidated = true;
-    }
+    // Scalar payload normalization cannot change the certified producer tree.
+    defaultResultValidated = applyPair(
+      safePatches,
+      safeInversePatches,
+      !patch,
+      !patch && !hasObjectValues ? producedState : undefined
+    );
     // Middleware may transform the pair, so its output needs a fresh scan the
     // next time it becomes a draft base.
     patchBase = patch ? undefined : internal.rootState;
@@ -244,15 +253,22 @@ export const handleState = <T extends CreateState>(
         );
       }
       internal.isBatching = true;
+      // A bounded read set needs state comparisons, not a serialized journal.
+      // Patch middleware, cached snapshots and larger tries keep the patch path.
       if (
         !store.share &&
         !internal.validateState &&
         !(options as StoreOptions<T>).enablePatches &&
         !hasStoreCommitListeners(store) &&
-        !hasReactivePathNodes(internal) &&
+        (!hasReactivePathNodes(internal) ||
+          (!store.patch &&
+            !internal.computedSnapshotCache &&
+            !internal.updateImmutable &&
+            (internal.reactivePathActiveCount ?? 0) <= 8)) &&
         !internal.mutableInstance &&
         updater === defaultUpdater
       ) {
+        const previous = internal.rootState;
         try {
           if (typeof next === 'function') {
             try {
@@ -261,26 +277,7 @@ export const handleState = <T extends CreateState>(
                 internal.rootState,
                 (draft) => {
                   internal.rootState = draft as Draft<T>;
-                  const returnValue = next(internal.module);
-                  if (returnValue instanceof Promise) {
-                    returnValue.catch(() => undefined);
-                    throw new Error(
-                      'setState with async function is not supported'
-                    );
-                  }
-                  if (typeof returnValue === 'object' && returnValue !== null) {
-                    assertKnownStateShape(
-                      returnValue,
-                      internal.rootState,
-                      internal.stateSchema,
-                      store.isSliceStore
-                    );
-                    mergeObject(
-                      internal.rootState,
-                      returnValue,
-                      store.isSliceStore
-                    );
-                  }
+                  runRecipe(next);
                 },
                 {
                   enablePatches: false,
@@ -341,7 +338,7 @@ export const handleState = <T extends CreateState>(
           if (internal.updateImmutable) {
             internal.updateImmutable(internal.rootState as T);
           } else {
-            internal.notifyStateChange();
+            internal.notifyStateChange(undefined, previous);
           }
           return [];
         } finally {
@@ -420,14 +417,13 @@ export const handleState = <T extends CreateState>(
     pendingCommitSource = 'replay';
     try {
       replaySetState(internal.rootState as T, () => {
-        const inputPatches = patches.map((patch) => ({
-          ...patch,
-          path: Array.isArray(patch.path) ? [...patch.path] : patch.path
-        })) as Patches;
-        const inputInversePatches = inversePatches.map((patch) => ({
-          ...patch,
-          path: Array.isArray(patch.path) ? [...patch.path] : patch.path
-        })) as Patches;
+        const copyPaths = (patches: Patches) =>
+          patches.map((patch) => ({
+            ...patch,
+            path: Array.isArray(patch.path) ? [...patch.path] : patch.path
+          })) as Patches;
+        const inputPatches = copyPaths(patches);
+        const inputInversePatches = copyPaths(inversePatches);
         const finalPatches = store.patch
           ? store.patch({
               patches: inputPatches,
@@ -445,19 +441,7 @@ export const handleState = <T extends CreateState>(
           finalPatches.inversePatches,
           'store.patch() inverse patches'
         );
-        if (safePatches.length) {
-          internal.applyValidatedPatches?.(
-            internal.rootState as T,
-            safePatches,
-            false,
-            safeInversePatches
-          );
-          if (!internal.applyValidatedPatches) {
-            applyWithOwnStoreCommit(store, () =>
-              store.apply(internal.rootState as T, safePatches)
-            );
-          }
-        }
+        applyPair(safePatches, safeInversePatches);
         return [internal.rootState as T, safePatches, safeInversePatches];
       });
       return internal.rootState as T;
