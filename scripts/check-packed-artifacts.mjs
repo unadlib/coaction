@@ -246,14 +246,46 @@ try {
         );
       }
       if (json.name === 'coaction') {
+        const signalVersion = run(
+          'node',
+          [
+            '-e',
+            `const assert = require('node:assert/strict');
+            const { readFileSync } = require('node:fs');
+            const { dirname, join } = require('node:path');
+            const { createRequire } = require('node:module');
+            const coreRequire = createRequire(require.resolve('coaction/package.json'));
+            const core = coreRequire('./package.json');
+            const signalRoot = dirname(dirname(coreRequire.resolve('alien-signals')));
+            const runtime = JSON.parse(readFileSync(join(signalRoot, 'package.json'), 'utf8'));
+            assert.equal(core.dependencies['alien-signals'], '3.1.2');
+            assert.equal(runtime.version, core.dependencies['alien-signals']);
+            console.log(runtime.version);`
+          ],
+          project
+        )
+          .toString()
+          .trim();
+        console.log(
+          `  ok    installed qualified alien-signals ${signalVersion}`
+        );
         for (const extension of ['mjs', 'cjs']) {
           const imports =
             extension === 'mjs'
-              ? `import assert from 'node:assert/strict'; import { create } from 'coaction'; import { derive, derivePath, identity } from 'coaction/derived'; import { onStoreCommit, onStoreCommitPrepare, applyPatches } from 'coaction/adapter';`
-              : `const assert = require('node:assert/strict'); const { create } = require('coaction'); const { derive, derivePath, identity } = require('coaction/derived'); const { onStoreCommit, onStoreCommitPrepare, applyPatches } = require('coaction/adapter');`;
+              ? `import assert from 'node:assert/strict'; import { create, effect, signal } from 'coaction'; import { derive, derivePath, identity } from 'coaction/derived'; import { onStoreCommit, onStoreCommitPrepare, applyPatches } from 'coaction/adapter';`
+              : `const assert = require('node:assert/strict'); const { create, effect, signal } = require('coaction'); const { derive, derivePath, identity } = require('coaction/derived'); const { onStoreCommit, onStoreCommitPrepare, applyPatches } = require('coaction/adapter');`;
           writeFileSync(
             join(project, `graph.${extension}`),
             `${imports}
+            {
+              const value = signal(0);
+              const seen = [];
+              const stop = effect(() => seen.push(value()));
+              value(1);
+              stop();
+              value(2);
+              assert.deepEqual(seen, [0, 1]);
+            }
             {
               const store = create({ record: { a: 1, b: 2 }, rows: [0] });
               const before = store.getPureState();

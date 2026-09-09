@@ -515,7 +515,7 @@ importers:
   packages/core:
     dependencies:
       alien-signals:
-        specifier: ^3.1.2
+        specifier: 3.1.2
         version: 3.1.2
       data-transport:
         specifier: ^5.0.3

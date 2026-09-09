@@ -8,6 +8,11 @@ An efficient and flexible state management library for building high-performance
 
 Coaction uses `alien-signals` internally for cached getter/computed state, React selector reactivity, and adapter-facing subscriptions. The core package also re-exports the signal primitives for advanced integrations.
 
+Coaction 4.0 pins the qualified `alien-signals` runtime to `3.1.2`. Use the
+primitives exported by `coaction` for integrations so they share the store's
+reactive graph. Upgrading this internal runtime requires compatibility checks
+for both subscriptions and the exported signal APIs.
+
 ## Installation
 
 Install it with pnpm:
