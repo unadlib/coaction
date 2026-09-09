@@ -48,6 +48,8 @@ export type MutableActionContext = {
 };
 
 export interface Internal<T extends CreateState = CreateState> {
+  /** Core-owned producer verification, shared with optional adapter helpers. */
+  completeProducerPatches: typeof import('./utils').completeProducerPatches;
   /**
    * The store module.
    */

@@ -850,11 +850,7 @@ test('a commit validator can refuse an action on a mutable instance', () => {
   const commits: StoreCommit[] = [];
   onStoreCommit(useStore as Store<any>, (commit) => commits.push(commit));
   onStoreCommitValidate(useStore as Store<any>, (commit) => {
-    for (const patch of commit.patches) {
-      if ('value' in patch && patch.value instanceof Date) {
-        throw new TypeError('no Dates');
-      }
-    }
+    if (commit.state.when instanceof Date) throw new TypeError('no Dates');
   });
 
   useStore.getState().ok();
@@ -983,11 +979,7 @@ test('a refusal reaches the action it belongs to, not the one that found it', as
   );
   const { replayed } = track(useStore);
   onStoreCommitValidate(useStore as Store<any>, (commit) => {
-    for (const patch of commit.patches) {
-      if ('value' in patch && patch.value instanceof Date) {
-        throw new TypeError('no Dates');
-      }
-    }
+    if (commit.state.when instanceof Date) throw new TypeError('no Dates');
   });
 
   const pending = useStore.getState().refused();
@@ -1009,4 +1001,26 @@ test('a refusal reaches the action it belongs to, not the one that found it', as
   useStore.getState().other();
   expect(replayed()).toEqual(useStore.getPureState());
   useStore.destroy();
+});
+
+test('mutable actions preserve changes omitted from nonempty producer patches', () => {
+  const store = create(
+    () =>
+      makeAutoObservable(
+        bindMobx({
+          rows: [0],
+          count: 0,
+          update() {
+            this.rows[0] = -0;
+            this.count++;
+          }
+        })
+      ),
+    { enablePatches: true }
+  );
+  const { replayed } = track(store);
+  store.getState().update();
+  expect(store.getState().rows[0]).toBe(-0);
+  expect(replayed()).toEqual({ rows: [-0], count: 1 });
+  store.destroy();
 });

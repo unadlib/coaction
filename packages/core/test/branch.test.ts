@@ -1,3 +1,4 @@
+import { completeProducerPatches } from '../src/utils';
 import { createAsyncClientStore } from '../src/asyncClientStore';
 import { applyMiddlewares } from '../src/applyMiddlewares';
 import { create } from '../src/create';
@@ -64,6 +65,7 @@ test('external store replacement validates before apply and emit', () => {
     apply: vi.fn()
   } as any;
   const internal = {
+    completeProducerPatches,
     emitPatches: vi.fn(),
     rootState: { count: 0 },
     sequence: 0,
@@ -88,6 +90,7 @@ test('external store replacement publishes through the injected runtime', () => 
     apply: vi.fn()
   } as any;
   const internal = {
+    completeProducerPatches,
     emitPatches: vi.fn(),
     rootState: { count: 0 }
   } as any;
@@ -817,7 +820,7 @@ test('handleDraft uses patch hook before applying patches', () => {
         count: 0
       },
       finalizeDraft: () => [
-        undefined,
+        { count: 1 },
         [
           {
             op: 'replace',
@@ -873,7 +876,7 @@ test('handleDraft rejects unsafe patch-hook output before apply and emit', () =>
         },
         sequence: 0,
         finalizeDraft: () => [
-          undefined,
+          { count: 1 },
           [
             {
               op: 'replace',

@@ -12,15 +12,9 @@ import type {
   StoreOptions
 } from './interface';
 import type { Internal } from './internal';
-import { updateImmutableStateSnapshot } from './immutableState';
 import {
-  applyPatches,
   assertKnownStateShape,
-  createInversePatches,
-  createRootReplacementPatches,
-  createSnapshotPatches,
-  inverseNeedsDerivation,
-  isSameStructure,
+  completeProducerPatches,
   markLocalState,
   needsRootSnapshot,
   shallowCloneOwnEnumerable,
@@ -154,45 +148,13 @@ export const handleState = <T extends CreateState>(
         )
           ? needsRootSnapshot(producedState)
           : false;
-      if (
-        snapshot ||
-        nextNeedsSnapshot ||
-        (!patches.length && producedState !== internal.backupState)
-      ) {
-        // Canceled assignments can still copy identities or reorder keys.
-        // An empty value diff must not discard a changed producer result.
-        const replacement = createSnapshotPatches(
-          internal.backupState,
-          producedState
-        );
-        patches = replacement.patches;
-        inversePatches = replacement.inversePatches;
-      } else if (inverseNeedsDerivation(patches)) {
-        // Moving a drafted array value can leave its patch at a stale position.
-        // Replay must match the produced state; otherwise use changed root keys.
-        try {
-          if (
-            !isSameStructure(
-              applyPatches(internal.backupState as T, patches),
-              producedState
-            )
-          ) {
-            // This error only selects the coarse fallback in the catch below.
-            throw new Error();
-          }
-          inversePatches = createInversePatches(
-            internal.backupState as T,
-            patches
-          );
-        } catch {
-          const replacement = createRootReplacementPatches(
-            internal.backupState as Record<PropertyKey, unknown>,
-            producedState as Record<PropertyKey, unknown>
-          );
-          patches = replacement.patches as Patches;
-          inversePatches = replacement.inversePatches as Patches;
-        }
-      }
+      ({ patches, inversePatches } = completeProducerPatches(
+        internal.backupState as T,
+        producedState,
+        patches,
+        inversePatches,
+        snapshot || nextNeedsSnapshot
+      ));
     } finally {
       internal.rootState = internal.backupState;
     }
@@ -295,15 +257,7 @@ export const handleState = <T extends CreateState>(
         if (typeof next === 'function') {
           try {
             internal.backupState = internal.rootState;
-            const snapshotCache = internal.computedSnapshotCache;
-            const snapshotSources = internal.computedIdentityRequired
-              ? internal.computedSnapshotSources
-              : undefined;
-            const snapshot = snapshotCache?.get(
-              internal.rootState as unknown as object
-            );
-            const updateSnapshot = Boolean(snapshot && snapshotCache);
-            const produced = createWithMutative(
+            const nextState = createWithMutative(
               internal.rootState,
               (draft) => {
                 internal.rootState = draft as Draft<T>;
@@ -329,13 +283,10 @@ export const handleState = <T extends CreateState>(
                 }
               },
               {
-                enablePatches: updateSnapshot,
+                enablePatches: false,
                 mark: markLocalState
               }
-            );
-            const nextState = updateSnapshot
-              ? (produced as [T, Patches, Patches])[0]
-              : (produced as T);
+            ) as T;
             assertKnownStateShape(
               nextState,
               internal.backupState,
@@ -345,16 +296,6 @@ export const handleState = <T extends CreateState>(
                 requireSliceRoots: true
               }
             );
-            if (updateSnapshot) {
-              const patches = (produced as [T, Patches, Patches])[1];
-              updateImmutableStateSnapshot(
-                nextState,
-                snapshot,
-                patches,
-                snapshotCache!,
-                snapshotSources
-              );
-            }
             internal.rootState = nextState;
           } catch (error) {
             internal.rootState = internal.backupState;

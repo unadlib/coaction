@@ -34,6 +34,7 @@ import {
   assertKnownStateShape,
   assertSafePatches,
   createInversePatches,
+  completeProducerPatches,
   createRootReplacementPatches,
   createStateSchema,
   getOwnEnumerableKeys,
@@ -86,6 +87,7 @@ export const createStore = <T extends CreateState>(
     runtime;
   const store = {} as MiddlewareStore<T>;
   const internal = {
+    completeProducerPatches,
     sequence: 0,
     isBatching: false,
     listeners: new Set<Listener>(),

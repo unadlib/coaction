@@ -103,17 +103,20 @@ export const sanitizePatches = <T extends { path: unknown; value?: unknown }>(
       options.source ?? 'patches'
     );
   }
+  return clonePatchValues(
+    patches?.filter((patch) => !hasUnsafePatchPath(patch.path))
+  );
+};
+
+const clonePatchValues = <T extends { path: unknown; value?: unknown }>(
+  patches: T[] | undefined
+) => {
   const seen = new WeakMap<object, unknown>();
-  return patches
-    ?.filter((patch) => !hasUnsafePatchPath(patch.path))
-    .map((patch) =>
-      Object.prototype.hasOwnProperty.call(patch, 'value')
-        ? {
-            ...patch,
-            value: sanitizeReplacementState(patch.value, seen)
-          }
-        : patch
-    );
+  return patches?.map((patch) =>
+    Object.prototype.hasOwnProperty.call(patch, 'value')
+      ? { ...patch, value: sanitizeReplacementState(patch.value, seen) }
+      : patch
+  );
 };
 
 export const sanitizeCheckedPatches = (
@@ -121,7 +124,7 @@ export const sanitizeCheckedPatches = (
   source: string
 ): Patches => {
   assertSafePatches(patches, source);
-  return (sanitizePatches(patches) ?? []) as Patches;
+  return (clonePatchValues(patches) ?? []) as Patches;
 };
 
 export type RootReplacementPatch = {
@@ -613,9 +616,10 @@ export const isSameStructure = (left: unknown, right: unknown): boolean => {
     // Even an identical subtree must be indexed: a node inside it may also
     // occur through a different, changed path on just one side.
     const keys = getOwnEnumerableKeys(a);
-    if (keys.length !== getOwnEnumerableKeys(b).length) return false;
-    for (const key of keys) {
-      if (!Object.prototype.propertyIsEnumerable.call(b, key)) return false;
+    const otherKeys = getOwnEnumerableKeys(b);
+    if (keys.length !== otherKeys.length) return false;
+    for (const [index, key] of keys.entries()) {
+      if (key !== otherKeys[index]) return false;
       pending.push([
         (a as Record<PropertyKey, unknown>)[key],
         (b as Record<PropertyKey, unknown>)[key]
@@ -623,6 +627,112 @@ export const isSameStructure = (left: unknown, right: unknown): boolean => {
     }
   }
   return true;
+};
+
+/** Certify a producer's dense plain tree, including copies omitted by its diff.
+ * Unchanged branches are shared and need no traversal. A single scalar replace
+ * is checked against a virtual replay, avoiding a second producer/copy pass.
+ * Graphs and atomic leaves use snapshot patches before reaching this helper.
+ */
+const matchesProducerPatches = (
+  before: unknown,
+  after: unknown,
+  patches: Patches,
+  inverse?: Patches[number]
+) => {
+  const patch = patches[0];
+  const path = inverse ? normalizePatchPath(patch.path) : undefined;
+  const compare = (
+    base: any,
+    next: any,
+    replayed: any,
+    depth = -1
+  ): boolean => {
+    if (depth === path?.length)
+      return Object.is(next, patch.value) && Object.is(base, inverse!.value);
+    if (Object.is(next, replayed)) return true;
+    if (depth < 0 && Object.is(base, replayed)) return false;
+    if (
+      !next ||
+      !replayed ||
+      typeof next !== 'object' ||
+      typeof replayed !== 'object'
+    )
+      return false;
+    if (Array.isArray(next)) {
+      if (next.length !== replayed.length) return false;
+      return next.every(
+        (value: unknown, i: number) =>
+          Object.is(value, replayed[i]) ||
+          compare(
+            base?.[i],
+            value,
+            replayed[i],
+            depth >= 0 && String(i) === String(path![depth]) ? depth + 1 : -1
+          )
+      );
+    }
+    const keys = Object.keys(next);
+    const other = Object.keys(replayed);
+    if (keys.length !== other.length) return false;
+    return keys.every(
+      (key, index) =>
+        key === other[index] &&
+        compare(
+          base?.[key],
+          next[key],
+          replayed[key],
+          depth >= 0 && key === String(path![depth]) ? depth + 1 : -1
+        )
+    );
+  };
+  return compare(
+    before,
+    after,
+    path ? before : applyPatches(before, patches),
+    path ? 0 : -1
+  );
+};
+
+/** Complete a producer pair before middleware, validation or publication. */
+export const completeProducerPatches = <T extends object>(
+  before: T,
+  after: T,
+  patches: Patches,
+  inversePatches: Patches,
+  snapshot = needsRootSnapshot(before) || needsRootSnapshot(after)
+): { patches: Patches; inversePatches: Patches } => {
+  if (snapshot || !patches.length) return createSnapshotPatches(before, after);
+  try {
+    const patch = patches[0];
+    const path = normalizePatchPath(patch.path);
+    const inverse: Patches[number] | undefined =
+      patches.length === 1 &&
+      patch.op === 'replace' &&
+      (typeof patch.value !== 'object' || patch.value === null) &&
+      path[path.length - 1] !== 'length'
+        ? {
+            op: 'replace',
+            path: patch.path,
+            value: readPatchTarget(before, path).value
+          }
+        : undefined;
+    if (
+      matchesProducerPatches(before, after, patches, inverse) &&
+      (inverse || matchesProducerPatches(after, before, inversePatches))
+    )
+      return { patches, inversePatches: inverse ? [inverse] : inversePatches };
+  } catch {
+    // Positional patches can point at a value moved during the recipe.
+  }
+  return (
+    !areShallowEqualWithArray(Object.keys(before), Object.keys(after))
+      ? createSnapshotPatches(before, after)
+      : createRootReplacementPatches(
+          before as Record<PropertyKey, unknown>,
+          after as Record<PropertyKey, unknown>
+        )
+  ) as { patches: Patches; inversePatches: Patches };
 };
 
 /**

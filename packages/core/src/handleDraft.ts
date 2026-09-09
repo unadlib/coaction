@@ -2,8 +2,7 @@ import type { CreateState, MiddlewareStore } from './interface';
 import type { Internal } from './internal';
 import {
   applyPatches,
-  createInversePatches,
-  inverseNeedsDerivation,
+  completeProducerPatches,
   sanitizeCheckedPatches
 } from './utils';
 import {
@@ -18,10 +17,14 @@ export const handleDraft = <T extends CreateState>(
   internal: Internal<T>
 ) => {
   internal.rootState = internal.backupState;
-  const [nextState, patches, mutativeInverse] = internal.finalizeDraft();
-  const inversePatches = inverseNeedsDerivation(patches)
-    ? createInversePatches(internal.rootState as T, patches)
-    : mutativeInverse;
+  const [nextState, producerPatches, mutativeInverse] =
+    internal.finalizeDraft();
+  const { patches, inversePatches } = completeProducerPatches(
+    internal.rootState as T,
+    nextState,
+    producerPatches,
+    mutativeInverse
+  );
   const finalPatches = store.patch
     ? store.patch({ patches, inversePatches })
     : { patches, inversePatches };

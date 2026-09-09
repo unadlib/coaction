@@ -150,11 +150,9 @@ test.each(seeds(250))(
       // A refusal is another way for a transaction to end, and the one that
       // used to leave ownership pointing at a finalised draft.
       onStoreCommitValidate(store as Store<any>, (commit) => {
-        for (const patch of commit.patches) {
-          if ('value' in patch && patch.value instanceof Date) {
-            throw new TypeError('no Dates');
-          }
-        }
+        // Atomic values can require a whole-state snapshot patch. Validate the
+        // candidate state so that coarse and precise journals exercise refusal.
+        if (commit.state.when instanceof Date) throw new TypeError('no Dates');
       });
 
       const schedule: string[] = [];
@@ -195,6 +193,7 @@ test.each(seeds(250))(
         initial as object
       );
       const held = store.getPureState();
+      expect(held.when).toBe('iso');
       if (JSON.stringify(replayed) !== JSON.stringify(held)) {
         failures.push(
           `seed ${seed} [${schedule.join(' ')}]: replay ${JSON.stringify(replayed)} but store holds ${JSON.stringify(held)}`
