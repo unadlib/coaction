@@ -15,13 +15,6 @@ export const markLocalState: Exclude<
     ? types.immutable
     : undefined;
 
-const isEqual = (x: unknown, y: unknown) => {
-  if (x === y) {
-    return x !== 0 || y !== 0 || 1 / x === 1 / y;
-  }
-  return x !== x && y !== y;
-};
-
 export const isUnsafeKey = (key: string) =>
   key === '__proto__' || key === 'prototype' || key === 'constructor';
 
@@ -860,7 +853,7 @@ export const areShallowEqualWithArray = (
     ) {
       return false;
     }
-    if (!isEqual(prev[i], next[i])) {
+    if (!Object.is(prev[i], next[i])) {
       return false;
     }
   }

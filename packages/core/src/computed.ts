@@ -9,16 +9,29 @@ type GetterContext<T extends CreateState> = {
   internal: Internal<T>;
 };
 
-const runComputedRead = <T extends CreateState, R>(
+const createComputedRead = <T extends CreateState>(
   internal: Internal<T>,
-  read: () => R
+  read: () => unknown
 ) => {
-  internal.computedReadDepth = (internal.computedReadDepth ?? 0) + 1;
-  try {
-    return read();
-  } finally {
-    internal.computedReadDepth -= 1;
-  }
+  let failure: { error: unknown } | undefined;
+  const accessor = createComputed(() => {
+    internal.computedReadDepth = (internal.computedReadDepth ?? 0) + 1;
+    failure = undefined;
+    try {
+      return read();
+    } catch (error) {
+      // Complete the signal evaluation so failed reads still link dependents.
+      // Successful values keep their identity and normal signal equality.
+      return (failure = { error });
+    } finally {
+      internal.computedReadDepth -= 1;
+    }
+  });
+  return () => {
+    const value = accessor();
+    if (failure) throw failure.error;
+    return value;
+  };
 };
 
 export class Computed {
@@ -28,36 +41,19 @@ export class Computed {
   ) {}
 
   createGetter<T extends CreateState>({ internal }: GetterContext<T>) {
-    const memoByReceiver = new WeakMap<object, Accessor<unknown>>();
-    const lastArgs = new WeakMap<object, any[]>();
-    const lastResult = new WeakMap<object, unknown>();
-    const fallbackReceiver = {};
-    const evaluate = (receiver: object) => {
-      const args = this.deps(internal.module as Store<T>['getState']);
-      if (
-        !lastArgs.has(receiver) ||
-        !areShallowEqualWithArray(lastArgs.get(receiver)!, args)
-      ) {
-        lastResult.set(receiver, this.fn.apply(receiver, args));
-      }
-      lastArgs.set(receiver, args);
-      return lastResult.get(receiver);
-    };
-    return function (this: object) {
-      const receiver =
-        typeof this === 'object' && this !== null ? this : fallbackReceiver;
-      if (internal.isBatching) {
-        return evaluate(receiver);
-      }
-      let accessor = memoByReceiver.get(receiver);
-      if (!accessor) {
-        accessor = createComputed(() =>
-          runComputedRead(internal, () => evaluate(receiver))
-        );
-        memoByReceiver.set(receiver, accessor);
-      }
-      return accessor();
-    };
+    // Keep the Computed definition separate from the getter's dynamic receiver.
+    // eslint-disable-next-line typescript/no-this-alias
+    const computed = this;
+    const cache = new WeakMap<object, { args: any[]; value: unknown }>();
+    return createCachedGetter(internal, function (this: object) {
+      const args = computed.deps(internal.module as Store<T>['getState']);
+      const previous = cache.get(this);
+      if (previous && areShallowEqualWithArray(previous.args, args))
+        return previous.value;
+      const value = computed.fn.apply(this, args);
+      cache.set(this, { args, value });
+      return value;
+    });
   }
 }
 
@@ -75,9 +71,7 @@ export const createCachedGetter = <T extends CreateState>(
     }
     let accessor = accessors.get(receiver);
     if (!accessor) {
-      accessor = createComputed(() =>
-        runComputedRead(internal, () => getter.call(receiver))
-      );
+      accessor = createComputedRead(internal, () => getter.call(receiver));
       accessors.set(receiver, accessor);
     }
     return accessor();
