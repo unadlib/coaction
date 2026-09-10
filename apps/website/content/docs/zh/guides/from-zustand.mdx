@@ -86,9 +86,11 @@ Coaction 当前没有承诺内置 Redux DevTools 兼容体验。在维护的 Dev
 
 ## 7. 最后再加共享模式
 
-本地测试通过后，在 Worker 权威端创建同一 source 并连接 client：
+本地测试通过后，在 Worker 权威端创建同一 source 并连接 client。此时把 `create` 导入改为 shared 入口；默认 React 入口会拒绝 worker 选项：
 
 ```ts
+import { create } from '@coaction/react/shared';
+
 const worker = new Worker(new URL('./worker.ts', import.meta.url), {
   type: 'module'
 });

@@ -97,9 +97,12 @@ whole-store integration; it cannot live inside native Coaction slices.
 
 ## 7. Add shared mode last
 
-After local tests pass, create the same source on a worker authority and connect a client:
+After local tests pass, create the same source on a worker authority and connect a client.
+Switch the `create` import to the shared entry; the default React entry rejects worker options:
 
 ```ts
+import { create } from '@coaction/react/shared';
+
 const worker = new Worker(new URL('./worker.ts', import.meta.url), {
   type: 'module'
 });

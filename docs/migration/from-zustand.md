@@ -248,7 +248,11 @@ Third-party state adapters are whole-store integrations. They are not supported 
 
 Do not start a migration by moving the store into a worker. First make the local store pass its tests. Then introduce shared mode where the architecture actually needs it.
 
+Switch the `create` import when introducing the worker. The default `@coaction/react` entry accepts local options only.
+
 ```ts
+import { create } from '@coaction/react/shared';
+
 const worker = new Worker(new URL('./worker.ts', import.meta.url), {
   type: 'module'
 });
