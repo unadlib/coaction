@@ -57,13 +57,19 @@ microbenchmark.
 
 ## Render performance
 
-React's main Coaction-specific optimization is `observer()` field tracking. Explicit
-`useStore(selector)` is broadly comparable to Zustand's selector path. Measure render counts in
-the actual component tree before converting every component.
+Both `useStore(selector)` and `observer()` use managed deep path tracking on native immutable
+stores. A reader of `state.user.name` can stay cached after an age-only recipe update. Selectors
+still compare their results with `Object.is`; `observer()` collects reads during render without
+requiring a selector. Measure selector executions and render counts separately.
 
-Tracking a nested object happens through its containing store/slice field. If sibling changes in
-a large nested record invalidate too much UI, use an explicit selector for the nested leaf or
-split the state at a meaningful ownership boundary.
+Native getters and `get(deps, fn)` retain the store/slice field boundary. A getter reading
+`this.user.name` can recompute when `user.age` changes, even if its result stays equal and its
+consumers do no extra work. Use `derive(..., { deep: true })` or `derivePath` when a managed
+derived read needs finer dependencies.
+
+Parent replacement, array structure changes and graph snapshot patches can invalidate more
+broadly. External adapters follow their own update and snapshot contracts. See
+[computed tracking granularity](/en/docs/concepts/computed) for the boundaries.
 
 ## Practical checklist
 

@@ -43,9 +43,11 @@ pnpm benchmark:check
 
 ## 渲染性能
 
-React 中主要的 Coaction 特有优化是 `observer()` 字段追踪。显式 `useStore(selector)` 与 Zustand selector path 大体相当。在真实组件树测量 render count 后，再决定是否转换所有组件。
+原生 immutable store 上的 `useStore(selector)` 与 `observer()` 都使用可回收的深层路径追踪。读取 `state.user.name` 的 reader 可以在仅更新 age 的 recipe 后继续使用缓存。Selector 仍以 `Object.is` 比较结果；`observer()` 直接收集 render 中的读取，不需要额外 selector。请分别测量 selector 执行次数与组件 render 次数。
 
-嵌套对象通过所在的 store/slice 字段被追踪。如果大型嵌套 record 的 sibling change 使过多 UI 失效，请对叶子值使用显式 selector，或在有意义的所有权边界拆分状态。
+原生 getter 与 `get(deps, fn)` 仍以 store/slice 字段为边界。读取 `this.user.name` 的 getter 可能因 `user.age` 变化而重算，即使结果相同、消费者没有额外工作。需要更细依赖的派生读取可使用 `derive(..., { deep: true })` 或 `derivePath`。
+
+父对象 replacement、数组结构变化和 graph snapshot patches 可能扩大失效范围；外部 adapter 遵守各自的更新和快照 contract。具体边界见 [computed 追踪粒度](/zh/docs/concepts/computed)。
 
 ## 实用 checklist
 

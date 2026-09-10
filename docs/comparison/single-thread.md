@@ -6,9 +6,9 @@ The argument is _not_ that any single feature here is unique. Zustand's ecosyste
 
 ## The four single-thread pillars
 
-### 1. `observer()` — automatic store/slice-field tracking
+### 1. `observer()` — automatic nested path tracking
 
-Wrap a component in `observer()` and it subscribes to exactly the fields it reads during render at the store or slice boundary. No selector, no `useShallow`.
+Wrap a component in `observer()` and native immutable state reads during render become path dependencies, including nested reads. No selector or `useShallow` is needed to declare those dependencies.
 
 ```tsx
 import { create, observer } from '@coaction/react';
@@ -36,13 +36,15 @@ const Name = observer(() => {
 });
 ```
 
-This is real signal tracking, not a render-time diff. `observer()` runs the render inside an `alien-signals` reactive scope, and every own enumerable state field on the store or slice is a signal slot, so reads register dependencies at that boundary. Nested object reads are tracked through the containing field, so changing a sibling property on the same nested object can invalidate the same subscription.
+`observer()` collects render reads through the reactive tracker. Reading `state.user.name` can avoid invalidation after an age-only recipe update. Parent replacements, array structure changes and graph snapshot patches can invalidate more broadly; dependency tracking does not promise one exact notification for every possible update shape.
 
-> **Caveat:** cached getters and `get(deps, selector)` computed values are not available on mutable external-adapter instances. `observer()` readers still receive adapter updates, but the same store/slice-field granularity boundary applies.
+> **Caveat:** mutable external-adapter instances do not support native cached getters or `get(deps, selector)` computed values. Their observation granularity follows the adapter's update and snapshot contract; the native deep-tracking guarantee does not imply identical behavior for every external runtime.
 
 ### 2. Cached getters — derived state that memoizes itself
 
 Accessor getters are wrapped in `alien-signals` computed values, so repeated reads are cached until a dependency changes. No `useMemo`, no reselect.
+
+Native getters read frozen snapshots at the store/slice field boundary. A getter reading `this.user.name` invalidates when `user.age` changes too. Its unchanged result can still suppress downstream work. The optional `coaction/derived` entry provides `derive(..., { deep: true })` and `derivePath` for managed reads with finer dependencies; see the [computed guide](https://coactionjs.github.io/coaction/en/docs/concepts/computed).
 
 ```ts
 const useCart = create((set) => ({
@@ -81,7 +83,7 @@ const cart = (set, get) => ({
 });
 ```
 
-> **Be precise about this one.** The explicit `useStore(selector)` path is not a recompute-and-compare loop. The selector runs inside a reactive tracker, so the paths it reads become its dependencies, and a write that touches none of them does not re-run it at all — where Zustand's model runs every selector on every store notification and uses `Object.is` on the result to decide whether to re-render. `Object.is` still decides the re-render here; what differs is that most writes never get as far as the comparison. `observer()` is a further step again: it tracks store or slice fields directly, so a component needs no selector at all.
+> **Selector execution and rendering are separate.** `useStore(selector)` collects nested path dependencies, so unrelated recipe writes can skip selector execution. Zustand's default hook evaluates the selected snapshot on store notifications and uses `Object.is` to determine whether it changed; application memoization can skip work inside the selector. Coaction also compares selected results with `Object.is`. `observer()` collects the component's render reads directly. Replacements and structural changes can broaden invalidation in both Coaction read styles.
 
 ### 4. `this` and getters — natural this-bound ergonomics
 
@@ -174,7 +176,7 @@ Cohesion has a price, and the pitch is more credible if it says so:
 
 - **Bundle size.** Coaction's core depends on `alien-signals`, `data-transport`, and `mutative`, and the React binding also depends on `use-sync-external-store`. Current measurements are owned by two checked budget files: [`package-size-budgets.json`](../../scripts/package-size-budgets.json) gzips published entry files, while [`core-entry-size-budgets.json`](../../scripts/core-entry-size-budgets.json) builds tree-shaken `index`, `shared`, and `adapter` consumer fixtures. Neither is a dependency-inclusive application bundle. Local-only applications get the default `coaction` entry, which cannot reach the transport runtime; a real app will still include whichever external dependencies its bundler retains, while Zustand's core remains much smaller. Verify both boundaries with `pnpm build && pnpm package:size`.
 - **A runtime model to learn.** Proxy/signal-backed state and the `observer()` convention are concepts Zustand's "thin, no-magic" core deliberately avoids. For teams that prize explicitness, that is a feature of Zustand, not a gap.
-- **Explicit selectors are only at parity.** As noted above, `useStore(selector)` recomputes like Zustand; the differentiation is concentrated in `observer()` and cached getters.
+- **Tracking has a cost.** Explicit selectors can skip unrelated recipe updates, but collecting deep dependencies adds work. A full-array scan may benefit from `whole()` or a coarse cached getter more than per-element tracking. Measure the actual access pattern.
 - **Maturity.** Zustand has a far larger ecosystem and battle-tested track record. Coaction's integrated model is younger.
 
 ## When Zustand is still the better choice
