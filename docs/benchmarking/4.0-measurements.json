@@ -1,0 +1,108 @@
+{
+  "date": "2026-09-11",
+  "runtimeRevision": "12ae6167b080280ce053f7d8676b7632ce7b7e28",
+  "harnessRevision": "12ae6167b080280ce053f7d8676b7632ce7b7e28",
+  "cpu": "Apple M1 Max",
+  "node": "24.16.0",
+  "versions": {
+    "coaction": "4.0.0",
+    "mutative": "1.3.0",
+    "alien-signals": "3.1.2",
+    "zustand": "5.0.11",
+    "immer": "11.1.4"
+  },
+  "positioning": [
+    {
+      "name": "Coaction cached accessor getter",
+      "opsPerSecond": 66109753.0,
+      "relativeMarginOfErrorPercent": 1.67,
+      "samples": 90
+    },
+    {
+      "name": "Coaction computed with manual deps",
+      "opsPerSecond": 33809569.0,
+      "relativeMarginOfErrorPercent": 1.27,
+      "samples": 96
+    },
+    {
+      "name": "Zustand selector recompute",
+      "opsPerSecond": 787472.0,
+      "relativeMarginOfErrorPercent": 0.13,
+      "samples": 97
+    },
+    {
+      "name": "Zustand maintained total field",
+      "opsPerSecond": 112062542.0,
+      "relativeMarginOfErrorPercent": 0.25,
+      "samples": 96
+    },
+    {
+      "name": "Coaction mutable update + cached getter",
+      "opsPerSecond": 48480.0,
+      "relativeMarginOfErrorPercent": 0.81,
+      "samples": 93
+    },
+    {
+      "name": "Coaction mutable update + manual deps",
+      "opsPerSecond": 48318.0,
+      "relativeMarginOfErrorPercent": 0.66,
+      "samples": 92
+    },
+    {
+      "name": "Coaction object replacement + cached getter",
+      "opsPerSecond": 169.0,
+      "relativeMarginOfErrorPercent": 4.15,
+      "samples": 70
+    },
+    {
+      "name": "Coaction unrelated field replacement",
+      "opsPerSecond": 1598156.0,
+      "relativeMarginOfErrorPercent": 0.14,
+      "samples": 98
+    },
+    {
+      "name": "Zustand unrelated field replacement",
+      "opsPerSecond": 21868136.0,
+      "relativeMarginOfErrorPercent": 0.68,
+      "samples": 93
+    },
+    {
+      "name": "Zustand immutable update + selector recompute",
+      "opsPerSecond": 88113.0,
+      "relativeMarginOfErrorPercent": 0.48,
+      "samples": 97
+    },
+    {
+      "name": "Zustand immutable update + maintained total",
+      "opsPerSecond": 2897112.0,
+      "relativeMarginOfErrorPercent": 0.53,
+      "samples": 95
+    }
+  ],
+  "bulk": [
+    {
+      "name": "Coaction",
+      "opsPerSecond": 0.72,
+      "relativeMarginOfErrorPercent": 8.93,
+      "samples": 6
+    },
+    {
+      "name": "Coaction with Mutative",
+      "opsPerSecond": 4061.0,
+      "relativeMarginOfErrorPercent": 21.96,
+      "samples": 86
+    },
+    {
+      "name": "Zustand",
+      "opsPerSecond": 5821.0,
+      "relativeMarginOfErrorPercent": 2.7,
+      "samples": 78
+    },
+    {
+      "name": "Zustand with Immer",
+      "opsPerSecond": 277.0,
+      "relativeMarginOfErrorPercent": 0.56,
+      "samples": 89
+    }
+  ]
+}

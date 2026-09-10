@@ -43,8 +43,8 @@ a transport.
 
 ### Your measured update hot path misses its budget
 
-Do not infer a universal write penalty from one microbenchmark. In the maintained scenario that
-updates one item and then reads a derived total across 1,000 items, Coaction has about half the
+Do not infer a universal write penalty from one microbenchmark. In the [measured 4.0 scenario](https://github.com/coactionjs/coaction/blob/main/docs/benchmarking/4.0-measurements.md) that
+updates one item and then reads a derived total across 1,000 items, Coaction reaches about 55% of the
 throughput of the equivalent Zustand selector case and is far behind a hand-maintained field. A
 separate bulk benchmark shows that other update shapes can be comparable or favor Mutative. For
 high-frequency drag, animation frames, and streaming tick handlers, benchmark the representative

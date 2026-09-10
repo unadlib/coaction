@@ -88,10 +88,10 @@ fields they read invalidate together:
 - **Automatic render tracking** — `observer()` re-renders a component only for the fields it
   reads. No selectors, no `useShallow`.
 - **Cached computed by default** — `get value()` getters memoize until a dependency changes.
-  No `useMemo`, no reselect — and **~96x faster** than a Zustand selector that recomputes
-  ([numbers](#reading-derived-state)).
+  Repeated reads reuse the result; shared memoized selectors can also cache derivations
+  ([measured workloads](#reading-derived-state)).
 - **Mutable writes, immutable results** — just `this.count += 1` inside `set()`. Powered by
-  [Mutative](https://github.com/unadlib/mutative) (~18x faster than Zustand + Immer in our benchmark).
+  [Mutative](https://github.com/unadlib/mutative); see the [bulk workload](#bulk-update-throughput) for its costs.
 - **`this` + this-bound actions** — natural getters and this-bound actions; methods destructured from
   `getState()` stay bound.
 - **Escape hatches when you want them** — `useStore(selector)`, `useStore.auto()`, and
@@ -123,7 +123,8 @@ costs. Coaction earns its dependency line when the _shape of your problem_ is on
 - **one state instance shared across tabs** (SharedWorker authority);
 - **heavy compute moved off the main thread** (Web Worker authority).
 
-Know the costs before adopting: roughly 11 KB gzip for `coaction` before its dependencies,
+Know the costs before adopting: about 10.7 KiB gzip for the `coaction` consumer fixture with
+dependencies externalized (see [measurement boundaries](./docs/benchmarking/4.0-measurements.md)),
 and roughly **half the throughput in the maintained 1,000-item update-then-read benchmark** of the
 equivalent Zustand scenario. That benchmark does not isolate pure writes, so measure your actual
 hot path. If your shared state isn't JSON-shaped or your call sites can't `await` actions, that
@@ -400,10 +401,15 @@ increment(); // still works — `this` stays bound to the slice
 `@coaction/react` links the local runtime. Worker and cross-context stores need
 `@coaction/react/shared`, which adds the transport protocol:
 
-| Import                   | Runtime                  |  Minimal app |
-| :----------------------- | :----------------------- | -----------: |
-| `@coaction/react`        | local                    | 19.9 KB gzip |
-| `@coaction/react/shared` | local + worker/transport | 31.9 KB gzip |
+| Import                   | Runtime                  | Consumer fixture |
+| :----------------------- | :----------------------- | ---------------: |
+| `@coaction/react`        | local                    |   13.16 KiB gzip |
+| `@coaction/react/shared` | local + worker/transport |   17.27 KiB gzip |
+
+These fixtures measure retained Coaction code with `alien-signals`, `mutative`,
+`data-transport`, React and `use-sync-external-store` externalized. They are not
+dependency-inclusive application sizes. Reproduce with `pnpm package:size`; see the
+[fixtures and measured revision](./docs/benchmarking/4.0-measurements.md).
 
 Passing `worker`, `transport`, `clientTransport`, `transportPolicy`,
 `workerType` or `executeSyncTimeoutMs` to the default entry is a type error, and
@@ -502,50 +508,54 @@ See the [reusable store example](./examples/vanilla-base/src/store.ts) and the
 
 ## Performance
 
-Two scenarios matter, and Coaction wins one decisively while paying for it in the other. Both are
-reproducible from this repository. Regenerate before quoting them — microbenchmarks move with CPU,
-runtime, and package versions. Numbers below: Apple M1 Max, Node 24.16, `zustand@5.0.11`.
+Stable reads, updates followed by reads, and bulk updates are different workloads.
+The following run used Apple M1 Max, Node 24.16.0, Coaction runtime `12ae616`,
+Mutative 1.3.0, alien-signals 3.1.2, Zustand 5.0.11 and Immer 11.1.4 on 2026-09-11.
+See [all results, errors and reproduction details](./docs/benchmarking/4.0-measurements.md).
+These measurements exclude React rendering, transport and history.
 
 ### Reading derived state
 
 Run `pnpm benchmark:zustand-positioning` — higher is better:
 
-| Pattern                                   |     ops/sec | Relative |
-| :---------------------------------------- | ----------: | -------: |
-| **Coaction** cached getter                |  76,726,880 | **1.0x** |
-| **Coaction** `get(deps, selector)`        |  49,119,723 |    0.64x |
-| Zustand selector that recomputes          |     796,100 |   0.010x |
-| Zustand manually maintained `total` field | 112,175,343 |    1.46x |
+| Pattern                            |     ops/sec | Relative |
+| ---------------------------------- | ----------: | -------: |
+| Coaction cached accessor getter    |  66,109,753 |   1.000x |
+| Coaction computed with manual deps |  33,809,569 |   0.511x |
+| Zustand selector recompute         |     787,472 |   0.012x |
+| Zustand maintained total field     | 112,062,542 |   1.695x |
 
-Against the pattern most codebases actually write — a selector that recomputes derived data —
-a cached getter is **~96x faster**. The only faster option is a derived field the application
-maintains by hand inside every action, and that is precisely the consistency work Coaction
-removes. Deleting that bug surface costs about 32% of read throughput.
+The cached getter is about 84 times as fast as the selector that recomputes the
+1,000-item total on every read in this run. A shared memoized selector can also
+reuse results; this table does not benchmark Zustand + Reselect. The maintained
+field is faster here, but its consistency has to be managed by application actions.
 
 ### Updating, then reading the derived value
 
 Same script, the update-then-read scenario:
 
-| Pattern                                             |   ops/sec | Relative |
-| :-------------------------------------------------- | --------: | -------: |
-| **Coaction** mutable update + cached getter         |    43,918 | **1.0x** |
-| **Coaction** mutable update + `get(deps, selector)` |    43,660 |    0.99x |
-| **Coaction** object replacement + cached getter     |       342 |   0.008x |
-| Zustand immutable update + selector recompute       |    88,935 |    2.03x |
-| Zustand immutable update + maintained field         | 3,302,630 |    75.2x |
+| Pattern                                       |   ops/sec | Relative |
+| --------------------------------------------- | --------: | -------: |
+| Coaction mutable update + cached getter       |    48,480 |   1.000x |
+| Coaction mutable update + manual deps         |    48,318 |   0.997x |
+| Coaction object replacement + cached getter   |       169 |   0.003x |
+| Zustand immutable update + selector recompute |    88,113 |   1.818x |
+| Zustand immutable update + maintained total   | 2,897,112 |  59.759x |
 
-In this 1,000-item update-then-read scenario, Coaction has roughly half the throughput of the
+In this 1,000-item update-then-read scenario, Coaction reaches about 55% of the throughput of the
 Zustand selector case and is far behind a hand-maintained field. This result includes both the
 update and the derived read; it does not establish a universal write-path penalty. Stable repeated
 reads are Coaction's strongest path, while update-heavy and mixed workloads should be measured
 with representative state and access patterns.
 
-The third row is the cost of a guarantee, not a defect. Whatever you hand to `set({ ... })` is
-caller-supplied data, so it is deep-cloned to strip unsafe keys and break aliasing — passing in a
-fresh 1,000-element array costs O(payload). Editing existing fields through a draft preserves
-unchanged subtrees without first passing a replacement payload through that boundary. Patches
-are generated only when the selected runtime path needs them. **Prefer `set((draft) => { ... })` whenever the value you are writing is
-large.**
+The object-replacement row includes reading readonly proxies, detaching incoming
+plain containers and building the committed snapshot. Incoming plain containers
+are sanitized and detached from caller-owned references while retaining supported
+internal graph topology; atomic non-plain values keep their identities. This row
+does not isolate each cost or establish that the whole gap is unavoidable. Editing
+existing fields through a draft retains unchanged subtrees and avoids submitting
+an entire replacement payload. Patches are generated when the selected path needs
+them. Prefer a focused recipe for large collections, then measure the actual workload.
 
 A separate defect on this path was fixed in 3.2.1: copying the store's _current_ root state was
 also deep, which made every `set({ ... })` O(total state) even for untouched fields. Replacing one
@@ -555,18 +565,23 @@ paths are now gated; details are in
 
 ### Bulk update throughput
 
-Run `pnpm benchmark` — updating 50K arrays and 1K objects ([source](./scripts/benchmark.ts)):
+Run `pnpm benchmark`. Each case starts with a 50,000-object array and a
+1,000-key record, then appends to the array and writes a record entry repeatedly.
+The array grows during measurement; this is not a fixed-size leaf-update test.
 
-| Library                    | ops/sec | Relative |
-| :------------------------- | ------: | -------: |
-| **Coaction** with Mutative |   4,648 | **1.0x** |
-| **Zustand**                |   5,886 |    1.27x |
-| **Zustand** with Immer     |     298 |    0.06x |
+| Pattern                | ops/sec | Relative |
+| ---------------------- | ------: | -------: |
+| Coaction               |    0.72 |   0.000x |
+| Coaction with Mutative |   4,061 |   1.000x |
+| Zustand                |   5,821 |   1.433x |
+| Zustand with Immer     |     277 |   0.068x |
 
-Coaction's draft path runs ~21% behind Zustand's plain replacement update here, and **~15.6x
-ahead of Zustand with Immer**. Coaction's own `set({ ... })` row is left out: at this state size
-it is dominated by the payload sanitizer described above, so it measures the guarantee rather
-than the update mechanism.
+The draft path and plain Zustand update operate in the thousands of operations
+per second here, while Coaction's large replacement payload takes a substantially
+more expensive ownership path. The Mutative row has ±21.96% uncertainty in this
+run, so the smaller difference against plain Zustand is not a stable ranking.
+The [complete report](./docs/benchmarking/4.0-measurements.md) retains all cases
+and explains the measurement limits.
 
 For methodology, thresholds, and how these gates are maintained, see
 [Zustand-focused benchmarks](./docs/benchmarking/zustand.md).

@@ -38,8 +38,8 @@ client mirror 的动作在权威端执行并返回 Promise。必须同步读取�
 
 ### 实测的更新热路径达不到性能预算
 
-不要从一个微基准推导出普遍的写入惩罚。在维护中的场景里，每次更新一个元素后都会读取一个遍历 1,000 项的
-派生总值；Coaction 的吞吐量约为对应 Zustand selector 场景的一半，与手工维护派生字段的方案差距更大。
+不要从一个微基准推导出普遍的写入惩罚。在[这次 4.0 测量](https://github.com/coactionjs/coaction/blob/main/docs/benchmarking/4.0-measurements.md)中，每次更新一个元素后都会读取一个遍历 1,000 项的
+派生总值；Coaction 的吞吐量约为对应 Zustand selector 场景的 55%，与手工维护派生字段的方案差距更大。
 另一项批量基准则表明，其他更新形状可能接近持平，也可能让 Mutative 占优。对于高频拖拽、动画帧和实时数据流
 的 tick 处理，请测量有代表性的实际操作；如果达不到所需预算，再跳过 Coaction。
 

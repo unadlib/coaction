@@ -4,7 +4,7 @@ This document records the benchmark scenarios used when positioning Coaction aga
 
 ## Existing Update Benchmark
 
-The root README chart is generated from:
+The legacy bulk suite runs with:
 
 ```sh
 pnpm benchmark
@@ -17,7 +17,7 @@ That benchmark compares update throughput for:
 - Zustand object replacement
 - Zustand with Immer
 
-It is useful for explaining why Coaction can keep mutable update DX without following Zustand's Immer performance profile.
+It compares repeated appends to a growing array, not fixed-size leaf writes. Keep all four paths visible when quoting it; the object-payload and draft paths have different ownership costs.
 
 ## Derived-State Positioning Benchmark
 
@@ -59,13 +59,15 @@ they are not cross-machine performance claims.
 
 ## Reading these numbers
 
+The refreshed README and migration article use the [4.0 documentation measurements](./4.0-measurements.md), pinned to runtime `12ae616` with commands, dependency versions, every timed case and reported uncertainty. The older measurements discussed below explain earlier optimizations; they are not a new measurement of that runtime.
+
 The original derived-positioning figures and README chart came from a **single run** of
 `pnpm benchmark:zustand-positioning` on one machine (Apple M1 Max, Node 24.16,
 `zustand@5.0.11`). Run-to-run spread on that suite is roughly ±1% for the stable read cases and
 as much as ±19% for the object-replacement case, so the trailing digits carry no meaning: quote
 the order of magnitude and the ratio, not the exact value.
 
-The current write-cost tables below instead come from one `pnpm benchmark:check`
+The historical write-cost tables below instead come from one `pnpm benchmark:check`
 run at runtime commit `6774dec` (Apple M1 Max, Node 24.16.0, Mutative 1.3.0).
 Keep these workloads separate when quoting results; refreshing positioning or
 README claims requires rerunning their own scripts.
