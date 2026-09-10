@@ -1,0 +1,72 @@
+---
+title: 迁移到 4.0
+description: 更新 shared 导入，检查集成 contract，并让本地 React 应用使用受支持的版本。
+---
+
+使用 action、selector 和 getter 的原生本地应用通常可以保留现有 API。请使用 React 18 或 19，
+并检查所有跨 JavaScript 上下文共享状态的导入。
+[仓库迁移指南](https://github.com/coactionjs/coaction/blob/main/docs/migration/v4.md)包含更完整的 adapter 和本地图结构 contract。
+
+## 选择对应入口
+
+| 用途                                 | 4.0 导入                 |
+| ------------------------------------ | ------------------------ |
+| Vanilla 本地 store                   | `coaction`               |
+| Vanilla 共享权威端或 client          | `coaction/shared`        |
+| React 本地 store                     | `@coaction/react`        |
+| React 共享权威端或 client            | `@coaction/react/shared` |
+| 集成与 commit hooks                  | `coaction/adapter`       |
+| 可管理生命周期的派生 selector 和路径 | `coaction/derived`       |
+
+旧的 `coaction/local` 和 `@coaction/react/local` 别名已经移除。此前使用默认入口的共享 store 必须切换到 `/shared`：
+
+```diff
+-import { create } from '@coaction/react';
++import { create } from '@coaction/react/shared';
+
+ const store = create(source, { worker });
+```
+
+默认入口会拒绝非 null 的共享选项，例如 `worker`、`transport` 和 `clientTransport`。
+显式传入 undefined 的选项仍被接受，方便 feature detection 和 SSR。本地入口不会把共享 transport 运行时打进 bundle。
+
+## 检查底层写入与 middleware
+
+`store.apply(nextState)` 和 `store.apply(base, patches)` 都会发布 commit。传入 patches 时，base 必须是当前状态：
+使用 `apply(undefined, patches)` 省略 base，或传入 `getPureState()`。错误的 base 会在修改状态和发布 commit 前被拒绝。
+
+```diff
+-store.apply(otherState, patches);
++store.apply(store.getPureState(), patches);
+```
+
+Adapter 作者应保留 Coaction 对 `store.apply` 的所有权，通过 `internal.externalApply` 提供自身 runtime 的写入函数。
+Middleware 应使用 [StoreCommit hooks](/zh/docs/reference/store-commits) 观察所有受支持的 transition，包括不经过 `apply` 的写入。
+
+不要假设 patch pair 总是包含叶子路径。位置相关编辑可能回退到发生变化的 top-level key replacement；
+本地图结构可能需要 `path: []` 的完整 root snapshot。Replay 必须保留已经提交的值和引用拓扑。
+本地循环引用可以作为完整值用于初始化或 replacement；从 draft 引用构造循环、编辑循环 draft 内部仍不属于受支持的 recipe contract。
+这些本地保证不会扩展[共享 JSON contract](/zh/docs/shared/json-contract)。
+
+## 检查 React 和 computed 假设
+
+React 18 和 19 受到支持并经过测试，React 17 已不在 peer range 中。
+服务端 selector 读取当前状态，与 whole-state 和 observer reader 一致。确实需要初始状态时，请显式使用 `getInitialState()`。
+SSR 应使用请求独立的 store，并准备一致的服务端与客户端 hydration 数据。
+
+原生 getter 仍以 store/slice 字段为依赖边界。React selector 和 `observer` 使用深层路径追踪；
+`derive(..., { deep: true })` 为可管理生命周期的 computed selector 显式开启深层追踪。
+Identity、生命周期和失效边界详见 [computed state](/zh/docs/concepts/computed)。
+
+## 检查远程同步
+
+`@coaction/sync` 要求持久化存储和 JSON 状态。不受支持的本地写入会在 commit 前被拒绝。
+Checkpoint 包含 `formatVersion`；不受支持的版本和格式错误的 checkpoint 会被拒绝，并保留原有存储内容。
+没有版本字段的旧 checkpoint 按 format 1 读取。
+
+升级 CRUD、Supabase 或 Firestore 集成时，请检查对应 README：CRUD adapter 保留远程 base，
+Supabase 的 schema 配置同时应用于读写，Firestore 分离读取来源与写入地址。
+配置和错误处理见[远程同步](/zh/docs/integrations/sync)。
+
+响应式追踪、共享权威和远程同步是独立能力。本地 store 不需要 Worker 也能与服务器同步；
+共享 mirror 跟随同一个权威端，并不是可以独立分叉再合并的远程副本。

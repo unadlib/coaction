@@ -133,6 +133,9 @@ matters more — the full boundary list lives in
 
 ## Install
 
+Upgrading an existing application? See the [4.0 migration guide](https://coactionjs.github.io/coaction/en/docs/guides/migrating-to-v4)
+([中文](https://coactionjs.github.io/coaction/zh/docs/guides/migrating-to-v4)).
+
 For the core library without any framework:
 
 ```bash

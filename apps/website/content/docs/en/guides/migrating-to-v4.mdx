@@ -1,0 +1,84 @@
+---
+title: Migrating to 4.0
+description: Update shared imports, check integration contracts, and keep local React applications on supported versions.
+---
+
+Native local applications using actions, selectors and getters generally keep the same APIs.
+Use React 18 or 19, and check imports wherever state crosses a JavaScript context.
+The [repository migration guide](https://github.com/coactionjs/coaction/blob/main/docs/migration/v4.md)
+contains the extended adapter and local graph contracts.
+
+## Select the owning entry
+
+| Usage                               | 4.0 import               |
+| ----------------------------------- | ------------------------ |
+| Vanilla local store                 | `coaction`               |
+| Vanilla shared authority or client  | `coaction/shared`        |
+| React local store                   | `@coaction/react`        |
+| React shared authority or client    | `@coaction/react/shared` |
+| Integration and commit hooks        | `coaction/adapter`       |
+| Managed derived selectors and paths | `coaction/derived`       |
+
+The old `coaction/local` and `@coaction/react/local` aliases are gone. Shared stores that
+previously used a default entry must switch to `/shared`:
+
+```diff
+-import { create } from '@coaction/react';
++import { create } from '@coaction/react/shared';
+
+ const store = create(source, { worker });
+```
+
+The default entries reject non-null shared options such as `worker`, `transport` and
+`clientTransport`. An explicitly undefined option is accepted for feature detection and SSR.
+Local imports exclude the shared transport runtime from the bundle.
+
+## Check low-level writes and middleware
+
+Both `store.apply(nextState)` and `store.apply(base, patches)` publish commits. With patches,
+the base must be current: omit it with `apply(undefined, patches)` or use `getPureState()`.
+A wrong base throws before changing state or publishing a commit.
+
+```diff
+-store.apply(otherState, patches);
++store.apply(store.getPureState(), patches);
+```
+
+Adapter authors must leave `store.apply` owned by Coaction and provide
+`internal.externalApply` for their runtime writer. Middleware should use
+[StoreCommit hooks](/en/docs/reference/store-commits) to observe all supported transitions,
+including writes that do not pass through `apply`.
+
+Do not assume every patch pair contains leaf paths. Positional edits can fall back to
+replacement patches at changed top-level keys; local object graphs can need a root snapshot
+at `path: []`. Replay must preserve the committed values and reference topology.
+Local cycles are supported as complete values during initialization or replacement. Creating
+cycles from draft references and editing within cyclic drafts remain outside the recipe
+contract. These local guarantees do not extend the [shared JSON contract](/en/docs/shared/json-contract).
+
+## Check React and computed assumptions
+
+React 18 and 19 are supported and tested. React 17 is outside the peer range.
+Server-side selectors read current state, consistent with whole-state and observer readers.
+Use `getInitialState()` explicitly if initial state is what the application needs, and create
+request-scoped stores with matching server and client hydration data.
+
+Native getters retain store/slice field dependencies. React selectors and `observer` use deep
+path tracking; `derive(..., { deep: true })` opts a managed computed selector into deep tracking.
+See [computed state](/en/docs/concepts/computed) for identity, lifecycle and invalidation boundaries.
+
+## Check remote synchronization
+
+`@coaction/sync` requires durable storage and JSON state. Unsupported local writes are refused
+before committing. Checkpoints include `formatVersion`; unsupported versions and malformed
+checkpoints are rejected without overwriting them. Legacy checkpoints without a version are
+read as format 1.
+
+Review the CRUD, Supabase and Firestore adapter READMEs when upgrading those integrations:
+the CRUD adapter retains the remote base, Supabase applies the configured schema to reads and
+writes, and Firestore separates its read source from its write address. See
+[remote synchronization](/en/docs/integrations/sync) for configuration and failure handling.
+
+Reactive tracking, shared authority and remote synchronization are separate capabilities.
+A local store can sync to a server without a Worker. Shared mirrors follow one authority;
+they do not independently diverge and merge like remote replicas.
