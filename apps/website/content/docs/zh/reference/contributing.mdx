@@ -31,6 +31,10 @@ pnpm package:size
 pnpm docs:api:check
 ```
 
+该生成内容检查也包含在 `pnpm check` 和 CI 中，但不验证手写说明的语义或 API catalog 的完整性。
+README、仓库指南与网站的两种语言是独立来源；修改 contract 时应同步相关说明和示例。
+对应页面与网站验证命令见[文档维护映射](https://github.com/coactionjs/coaction/blob/main/docs/contributing/documentation.md)。
+
 ## 添加外部 adapter
 
 先判断正确的集成类型：

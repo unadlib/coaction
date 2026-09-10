@@ -37,6 +37,12 @@ off the change. Generated core API docs are checked with:
 pnpm docs:api:check
 ```
 
+This freshness check also runs in `pnpm check` and CI. It does not check hand-written
+semantics or catalog completeness. README, repository guides and the website's two languages
+are separate sources; update matching claims and examples together. The
+[documentation map](https://github.com/coactionjs/coaction/blob/main/docs/contributing/documentation.md)
+lists the related surfaces and website checks.
+
 ## Add an external adapter
 
 First choose the right integration family:

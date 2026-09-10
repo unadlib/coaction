@@ -34,7 +34,14 @@ pnpm test:coverage
 ```
 
 Use `pnpm check` before larger pull requests. It runs quality checks, type
-checking, builds, and tests.
+checking, builds, tests, and generated API freshness checks.
+
+## Documentation Changes
+
+README, repository `docs/`, and website English/Chinese MDX are maintained
+separately. Public behavior changes should update every affected surface in the
+same change. Follow the [documentation map](./docs/contributing/documentation.md)
+to find the related pages and validation commands.
 
 ## Pull Requests
 

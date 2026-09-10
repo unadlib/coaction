@@ -38,7 +38,7 @@
     "package:size": "node ./scripts/check-package-size.mjs && node ./scripts/check-core-entry-isolation.mjs && node ./scripts/check-react-entry-isolation.mjs",
     "package:check": "pnpm build && pnpm package:quality && pnpm package:size",
     "check:release": "turbo run quality && pnpm typecheck && pnpm test:history:travels travels@2.1.0 travels@2.2.0 && pnpm build && pnpm package:quality && pnpm package:size && pnpm test:entries && pnpm test:react-compiler && pnpm test && pnpm test:packed",
-    "check": "pnpm check:release && pnpm test:properties && pnpm test:fuzz-catches",
+    "check": "pnpm check:release && pnpm test:properties && pnpm test:fuzz-catches && pnpm docs:api:check",
     "test": "turbo run test && pnpm run test:e2e",
     "test:e2e": "vitest run examples/e2e/test",
     "test:e2e:browser": "playwright test -c playwright.config.ts",
