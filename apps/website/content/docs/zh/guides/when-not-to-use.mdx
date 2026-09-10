@@ -18,9 +18,10 @@ description: 一份诚实的边界清单——哪些场景 Coaction 是错误的
 
 ### 只有普通的单标签页状态
 
-一个表单、一个计数器、一个设置面板。你会为一个永远不会启用的 transport 地基支付渲染追踪、
-computed 图的全部成本。**用 Zustand、Jotai，或者组件本地状态。** Coaction 的单线程开发体验
-有竞争力，但它存在的理由是状态需要多线程的那一天。
+一个表单、一个计数器、一个设置面板。Coaction 的只读状态和响应式运行时成本可能超过这些需求的收益。
+默认 `coaction` 与 `@coaction/react` 入口排除了共享 transport 运行时；本地 store 不会把未启用的 transport 打进 bundle。
+如果更小的模型已经足够，**考虑 Zustand、Jotai 或组件本地状态**。当共享派生或读取追踪能减少大量应用代码时，
+Coaction 的 local 运行时就可能有价值，即使应用始终不需要 Worker。
 
 ### 共享状态不是 JSON 形状
 

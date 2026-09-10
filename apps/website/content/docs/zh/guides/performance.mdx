@@ -13,7 +13,7 @@ Vanilla 本地 store 应写为：
 import { create } from 'coaction';
 ```
 
-该静态边界排除共享 protocol、epoch、重连与 transport module。兼容入口 `coaction` 刻意更宽。
+该静态边界排除共享 protocol、epoch、重连与 transport module。共享运行时使用 `coaction/shared`，React 中使用 `@coaction/react/shared`；默认 `@coaction/react` 入口也只包含 local 运行时。
 
 仓库的 bundle budget 测量发布入口与 tree-shaken consumer fixture。它们是回归门禁，不代表应用 bundle 必然等于预算数字；最终结果还取决于应用 bundler 保留的外部依赖。
 

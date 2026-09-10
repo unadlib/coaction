@@ -16,7 +16,8 @@ import { create } from 'coaction';
 ```
 
 This static boundary excludes shared protocol, epoch, reconnect, and transport modules from the
-entry. The compatibility `coaction` entry is intentionally broader.
+entry. Use `coaction/shared` for the shared runtime, or `@coaction/react/shared` in React.
+The default React entry, `@coaction/react`, also stays local.
 
 Bundle budgets in the repository measure published entries and tree-shaken consumer fixtures.
 They are regression gates, not a promise that an application bundle equals the budget number;

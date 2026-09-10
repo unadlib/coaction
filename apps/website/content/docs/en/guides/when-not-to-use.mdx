@@ -19,10 +19,12 @@ the Coaction you would need is not the Coaction being offered.
 
 ### Plain single-tab state is all you have
 
-A form here, a counter there, one settings panel. You will pay for render tracking, computed
-graphs, and a transport foundation you never activate. **Use Zustand, Jotai, or a slice of
-component state.** Coaction's single-threaded DX is competitive, but its reason to exist is the
-day state needs more than one thread.
+A form here, a counter there, one settings panel. Coaction's readonly state and reactive runtime
+may cost more than those needs justify. The default `coaction` and `@coaction/react` entries
+exclude the shared transport runtime; using a local store does not bundle an inactive transport.
+**Consider Zustand, Jotai, or component state** when their smaller model covers the problem.
+Coaction's local runtime becomes useful when shared derivation or read tracking removes
+substantial application code, even if the application never needs a Worker.
 
 ### Your shared state is not JSON-shaped
 
