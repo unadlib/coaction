@@ -13,6 +13,18 @@ export { create } from './src/create';
 export { createLocal } from './src/createLocal';
 export { createBinder, defineExternalStoreAdapter } from './src/binder';
 export { createReactiveTracker } from './src/reactiveTracker';
+export {
+  onStoreCommit,
+  onStoreCommitPrepare,
+  onStoreCommitValidate,
+  replayStorePatches
+} from './src/storeCommit';
+export type {
+  StoreCommit,
+  StoreCommitSource,
+  StorePatchReplayOptions,
+  StorePatchTransition
+} from './src/storeCommit';
 export { derive, derivePath, identity } from './src/derived';
 export type {
   Derived,

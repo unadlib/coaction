@@ -1,0 +1,85 @@
+---
+title: Store commits
+description: 通过 Coaction 的集成 contract 观察 transition、验证写入并 replay patch pair。
+---
+
+Commit hooks 面向 history、持久化、同步等集成。应用代码通常通过命名 action 写入，通过框架订阅读取。
+这些 hooks 从 `coaction/adapter` 导入，也适用于由默认 local 入口创建的 store。
+
+```ts
+import { create } from 'coaction';
+import { onStoreCommit, onStoreCommitValidate } from 'coaction/adapter';
+
+const store = create({ count: 0 });
+const stopValidation = onStoreCommitValidate(store, (commit) => {
+  if (commit.state.count < 0) throw new Error('count must be non-negative');
+});
+const stopWatching = onStoreCommit(store, (commit) => {
+  console.log(commit.source, commit.patches, commit.inversePatches);
+});
+
+store.setState((draft) => {
+  draft.count++;
+});
+
+stopWatching();
+stopValidation();
+store.destroy();
+```
+
+## Commit 结构
+
+`StoreCommit<T>` 包含该 transition 产生的状态和描述变化的 patch pair：
+
+| 字段             | 含义                                                |
+| ---------------- | --------------------------------------------------- |
+| `state`          | Transition 产生的状态，请作为只读值使用             |
+| `patches`        | 从前一状态到当前状态的正向变化                      |
+| `inversePatches` | 返回前一状态的逆向变化                              |
+| `source`         | `setState`、`mutableAction`、`external` 或 `replay` |
+
+`store.apply` 的两种形式都会发布 commit。Listener 也能看到不经过 `apply` 的受支持 transition。
+Patches 可能替换发生变化的顶层字段，也可能使用 `path: []` 的完整 root snapshot 来保留本地图结构。
+Commit pair 不保证可以 JSON 序列化；共享 transport 与远程同步另有更严格的值 contract。
+
+## Hook 时机与生命周期
+
+| API                                       | 执行时机                       | 用途                                                 |
+| ----------------------------------------- | ------------------------------ | ---------------------------------------------------- |
+| `onStoreCommit(store, listener)`          | Transition 提交后              | 观察已经接受的 transition                            |
+| `onStoreCommitValidate(store, validator)` | Transition 提交前              | 抛错以拒绝写入                                       |
+| `onStoreCommitPrepare(store, listener)`   | 准备包含对象值的 transition 时 | 返回 `true`，请求通过精确状态 replacement 处理图结构 |
+
+任一注册都会在有效期内请求生成 patch pair，无需提前设置 `enablePatches: true`。
+每个注册函数返回可重复调用的 unsubscribe。Destroy 会释放注册；销毁后再次注册会抛错。
+
+Commit listener 先于普通 subscription 和 effect 执行。重入写入会先完成前一个 commit 的交付，再次修改状态。
+Observer 抛出的错误会在 commit 和 subscription 交付后返回调用者，不会回滚已经接受的 transition。
+
+Validator 不得写入 store。抛错会在 Coaction 管理的 transition 修改状态前将其拒绝。
+直接修改外部 mutable instance 的行为，在 Coaction 观察到时已经发生，因此不能由 validator 撤销。
+Prepare listener 是处理对象图的集成 hook，不是通用的验证 hook。
+
+## 通过 store replay
+
+```ts
+import { replayStorePatches, type StoreCommit } from 'coaction/adapter';
+import type { Store } from 'coaction';
+
+function undoCounter(
+  store: Store<{ count: number }>,
+  commit: StoreCommit<{ count: number }>
+) {
+  return replayStorePatches(store, {
+    patches: commit.inversePatches,
+    inversePatches: commit.patches
+  });
+}
+```
+
+Replay 基于当前状态和完整 patch pair，经过验证、patch middleware、adapter writer 和通知链路，
+不能绕过 client mirror 的写入限制。History 应按正确顺序 replay，并避免把自身 undo 记录为新的用户编辑。
+可选的 `setState` 配置用于传入 middleware 作用域内的写入入口，使集成 wrapper 也能观察到 replay。
+
+`apply` 所有权和图结构边界见 [4.0 迁移](/zh/docs/guides/migrating-to-v4)；
+函数签名见[生成式 API reference](https://github.com/coactionjs/coaction/tree/main/docs/api/core)。

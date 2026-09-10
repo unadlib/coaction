@@ -1,4 +1,10 @@
 {
   "title": "参考",
-  "pages": ["core-api", "support-matrix", "faq", "contributing"]
+  "pages": [
+    "core-api",
+    "store-commits",
+    "support-matrix",
+    "faq",
+    "contributing"
+  ]
 }

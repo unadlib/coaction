@@ -1,0 +1,94 @@
+---
+title: Store commits
+description: Observe transitions, validate writes and replay patch pairs through Coaction's integration contract.
+---
+
+Commit hooks are for history, persistence, synchronization and other integrations. Application
+code normally writes through named actions and reads through framework subscriptions.
+Import these hooks from `coaction/adapter`, including when the store was created from a
+default local entry.
+
+```ts
+import { create } from 'coaction';
+import { onStoreCommit, onStoreCommitValidate } from 'coaction/adapter';
+
+const store = create({ count: 0 });
+const stopValidation = onStoreCommitValidate(store, (commit) => {
+  if (commit.state.count < 0) throw new Error('count must be non-negative');
+});
+const stopWatching = onStoreCommit(store, (commit) => {
+  console.log(commit.source, commit.patches, commit.inversePatches);
+});
+
+store.setState((draft) => {
+  draft.count++;
+});
+
+stopWatching();
+stopValidation();
+store.destroy();
+```
+
+## Commit shape
+
+`StoreCommit<T>` contains the committed state and the patch pair describing the transition:
+
+| Field            | Meaning                                                 |
+| ---------------- | ------------------------------------------------------- |
+| `state`          | State produced by the transition; treat it as read-only |
+| `patches`        | Forward transition from the preceding state             |
+| `inversePatches` | Reverse transition back to the preceding state          |
+| `source`         | `setState`, `mutableAction`, `external` or `replay`     |
+
+Both forms of `store.apply` publish commits. A listener also sees supported transitions that
+never go through `apply`. Patches may replace a changed top-level field, or use a full root
+snapshot at `path: []` for local graphs. A commit pair is not necessarily JSON-serializable;
+shared transport and remote sync impose their own stricter value contracts.
+
+## Hook timing and lifetime
+
+| API                                       | When it runs                                | Purpose                                                             |
+| ----------------------------------------- | ------------------------------------------- | ------------------------------------------------------------------- |
+| `onStoreCommit(store, listener)`          | After a transition commits                  | Observe accepted transitions                                        |
+| `onStoreCommitValidate(store, validator)` | Before a transition commits                 | Throw to refuse a write                                             |
+| `onStoreCommitPrepare(store, listener)`   | While preparing an object-valued transition | Return `true` to request exact state replacement for graph handling |
+
+Any of these registrations requests patch generation while active, even without
+`enablePatches: true`. Each returns an idempotent unsubscribe function. Destroying the store
+releases registrations; registering after destruction throws.
+
+Commit listeners run before ordinary subscriptions and effects. A reentrant write completes
+delivery of the preceding commit before changing state again. Observer errors reach the caller
+after commit and subscription delivery; they do not roll back an accepted transition.
+
+Validators must not write to the store. Throwing rejects a Coaction-mediated transition before
+it changes state. A direct mutation of an external mutable instance has already happened by
+the time Coaction observes it, so validation cannot veto that mutation. Prepare listeners are
+an integration hook for object graph handling, not a general validation hook.
+
+## Replay through the store
+
+```ts
+import { replayStorePatches, type StoreCommit } from 'coaction/adapter';
+import type { Store } from 'coaction';
+
+function undoCounter(
+  store: Store<{ count: number }>,
+  commit: StoreCommit<{ count: number }>
+) {
+  return replayStorePatches(store, {
+    patches: commit.inversePatches,
+    inversePatches: commit.patches
+  });
+}
+```
+
+Replay uses the current state and the full patch pair. It runs through validation, patch
+middleware, adapter writers and notifications; it is not a bypass for client-mirror write
+restrictions. History should replay pairs in the correct order and avoid recording its own
+undo as a fresh user edit. The optional `setState` option supplies a middleware-scoped write
+entry when an integration needs its wrapper to observe the replay.
+
+See [4.0 migration](/en/docs/guides/migrating-to-v4) for `apply` ownership and graph boundaries,
+or the [generated API reference](https://github.com/coactionjs/coaction/tree/main/docs/api/core)
+for signatures.

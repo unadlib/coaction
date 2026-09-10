@@ -95,4 +95,7 @@ const source = (set, get) => ({
 
 `coaction/adapter` 暴露 `defineExternalStoreAdapter()`（兼容别名 `createBinder()`）、mutable-adapter snapshot helper、根替换 helper、schema error 与 patch path safety utility。它面向集成作者，不用于普通状态更新。
 
+该入口也导出 `onStoreCommit`、`onStoreCommitValidate`、`onStoreCommitPrepare` 和 `replayStorePatches`。
+Hook 时机、验证、replay 和生命周期见 [Store commits](/zh/docs/reference/store-commits)。
+
 逐 symbol 生成的 TypeDoc 见[仓库 API 目录](https://github.com/coactionjs/coaction/tree/main/docs/api/core)。

@@ -25,6 +25,16 @@ from `coaction`.
 - {@link api-docs.StoreOptions | StoreOptions} and {@link api-docs.ClientStoreOptions | ClientStoreOptions}: creation options for main/local and client stores.
 - {@link api-docs.Slice | Slice} and {@link api-docs.Slices | Slices}: state-factory signatures.
 - {@link api-docs.Middleware | Middleware}: store enhancement contract.
+- {@link api-docs.onStoreCommit | onStoreCommit},
+  {@link api-docs.onStoreCommitValidate | onStoreCommitValidate}, and
+  {@link api-docs.onStoreCommitPrepare | onStoreCommitPrepare}: exported by
+  `coaction/adapter`; observe committed transitions, validate pending transitions,
+  and request snapshot handling for object-valued transitions.
+- {@link api-docs.StoreCommit | StoreCommit} and
+  {@link api-docs.StoreCommitSource | StoreCommitSource}: committed state and
+  patch-pair metadata. {@link api-docs.replayStorePatches | replayStorePatches}
+  replays a {@link api-docs.StorePatchTransition | StorePatchTransition} through
+  the store's authoritative mutation pipeline.
 - {@link api-docs.defineExternalStoreAdapter | defineExternalStoreAdapter}:
   exported by `coaction/adapter`; third-party whole-store adapter helper.
   `createBinder` remains available there as the compatibility name.

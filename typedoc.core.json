@@ -17,6 +17,9 @@
     "Internal",
     "Listener",
     "SingleLocalStoreOptions",
+    "StoreCommitListener",
+    "StoreCommitPrepareListener",
+    "StoreCommitValidator",
     "StoreReturn",
     "StoreReader"
   ],

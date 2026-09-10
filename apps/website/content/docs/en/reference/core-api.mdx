@@ -104,5 +104,9 @@ Application state normally uses getters or `get(deps, selector)` instead.
 `createBinder()`), mutable-adapter snapshot helpers, root replacement helpers, schema errors, and
 patch path safety utilities. This surface is for integration authors, not ordinary state updates.
 
+It also exports `onStoreCommit`, `onStoreCommitValidate`, `onStoreCommitPrepare` and
+`replayStorePatches`. See [Store commits](/en/docs/reference/store-commits) for hook timing,
+validation, replay and lifetime.
+
 For the generated symbol-by-symbol TypeDoc output, see the
 [repository API directory](https://github.com/coactionjs/coaction/tree/main/docs/api/core).
