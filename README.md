@@ -328,11 +328,14 @@ function CartSummary() {
 }
 ```
 
-> `useStore(selector)`, `observer()` and cached getters all track the state paths they
-> actually read, to any depth: writing `user.profile.age` does not re-run a selector that
-> only read `user.profile.name`. Mix the styles freely. A selector still compares its
-> result with `Object.is`, so returning a fresh object each call re-renders as it would
-> anywhere else.
+> `useStore(selector)` and `observer()` track nested state paths: an age-only recipe can
+> leave a reader of `user.profile.name` cached. Parent replacements, array structure changes
+> and graph snapshot patches can invalidate more broadly. Native cached getters keep the
+> store/slice field boundary: a getter reading `this.user.profile.name` also invalidates
+> when `user.profile.age` changes. Use `derive(..., { deep: true })` for a managed deep
+> computed selector. A React selector still compares its result with `Object.is`; returning
+> a fresh object when it runs can trigger a re-render. See the
+> [tracking guide](https://coactionjs.github.io/coaction/en/docs/concepts/computed).
 
 When a selector scans a whole collection, that per-element precision buys nothing — any
 change to the collection invalidates the scan anyway — and every element read pays for a
