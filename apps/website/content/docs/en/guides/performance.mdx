@@ -51,6 +51,12 @@ Cached accessors make repeated stable reads extremely cheap. After an update, Co
 preserve the readonly public-state boundary and update the snapshot used by computed traversal.
 That makes “update then read a derived value” a different path from a stable cached read.
 
+Leave `enablePatches` unset unless an integration explicitly needs a journal. Commit hooks,
+shared transport and some tracking paths request patches automatically. Eligible small read
+sets can instead compare observed values before and after a write without generating patches;
+cached getter snapshots, patch middleware and larger dependency sets retain the patch path.
+Ordinary `subscribe()` listeners do not request patches themselves.
+
 Do not publish one of those cases as a universal “faster than Zustand” claim. Zustand can make a
 derived read constant-time by storing the derived value, but application actions must then keep it
 consistent. Coaction's proposition is maintained cached derivation, not winning every mutation
@@ -75,7 +81,7 @@ broadly. External adapters follow their own update and snapshot contracts. See
 ## Practical checklist
 
 - Import `coaction` for vanilla local-only state.
-- Keep patches off unless shared mode or an integration needs them.
+- Leave `enablePatches` unset unless needed; account for consumers that request patches automatically.
 - Use cached getters for repeated derived reads, not side-effectful work.
 - Use `observer()` where it removes real selector composition.
 - Profile production builds and representative state, not development mode alone.

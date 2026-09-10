@@ -39,6 +39,8 @@ pnpm benchmark:check
 
 缓存 accessor 让稳定重复读取极快。更新后，Coaction 仍需维护 readonly public-state 边界，并更新 computed traversal 使用的 snapshot。因此“更新后读取派生值”与稳定缓存读取是不同路径。
 
+除非集成明确需要 journal，否则不必设置 `enablePatches`。Commit hooks、共享 transport 和部分追踪路径会自动请求 patches。符合条件的小型依赖集合可以直接比较写入前后的已观察值，避免生成 patches；缓存 getter 快照、patch middleware 和较大的依赖集合仍保留 patch 路径。普通 `subscribe()` listener 自身不会请求 patches。
+
 不要把其中一个 case 发布为普适的“快于 Zustand”结论。Zustand 可以通过存储派生值实现常量读取，但应用 action 必须负责一致性。Coaction 的价值是运行时维护的缓存派生，而非赢下每个 mutation microbenchmark。
 
 ## 渲染性能
@@ -52,7 +54,7 @@ pnpm benchmark:check
 ## 实用 checklist
 
 - Vanilla 本地状态导入 `coaction`；
-- 共享模式或集成不需要时保持 patch 关闭；
+- 非必要时不设置 `enablePatches`，同时考虑会自动请求 patches 的消费者；
 - 缓存 getter 用于重复派生读取，不承载副作用；
 - 在确实减少 selector 组合时使用 `observer()`；
 - profile production build 与代表性状态；

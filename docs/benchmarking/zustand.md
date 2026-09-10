@@ -125,8 +125,15 @@ the same performance under observation.
 
 ### Tracking still costs writes, but redundant work was removable
 
-Commit listeners request patch pairs; reactive path readers need patches for
-invalidation. Ordinary `subscribe()` listeners need neither. The native scalar
+Commit listeners, validators and prepare hooks request patch pairs. Reactive path
+readers can use a patch-free write path when their active dependency set is small
+and no patch middleware, cached getter snapshot, shared transport or other journal
+consumer requires patches. That path compares the observed values in the previous
+and produced states. Other tracked writes retain patch-based invalidation.
+Ordinary `subscribe()` listeners do not request patches themselves. Leaving
+`enablePatches` unset therefore does not mean every write avoids patch generation.
+
+The native scalar
 path now commits the verified Mutative result without replaying it, and a single
 scalar replacement carries the frozen getter snapshot forward without drafting
 that snapshot again. Patch transforms, adapters and complex patch shapes retain

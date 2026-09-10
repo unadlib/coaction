@@ -539,8 +539,9 @@ with representative state and access patterns.
 
 The third row is the cost of a guarantee, not a defect. Whatever you hand to `set({ ... })` is
 caller-supplied data, so it is deep-cloned to strip unsafe keys and break aliasing — passing in a
-fresh 1,000-element array costs O(payload). The draft path avoids it because Mutative reports
-precise patches instead. **Prefer `set((draft) => { ... })` whenever the value you are writing is
+fresh 1,000-element array costs O(payload). Editing existing fields through a draft preserves
+unchanged subtrees without first passing a replacement payload through that boundary. Patches
+are generated only when the selected runtime path needs them. **Prefer `set((draft) => { ... })` whenever the value you are writing is
 large.**
 
 A separate defect on this path was fixed in 3.2.1: copying the store's _current_ root state was
