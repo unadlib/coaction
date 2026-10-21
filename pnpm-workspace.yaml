@@ -6,9 +6,6 @@ allowBuilds:
   esbuild: true
   sharp: true
 
-minimumReleaseAgeExclude:
-  - travels@2.1.0
-
 overrides:
   postcss@8.4.31: 8.5.16
   tslib: ^2.3.1

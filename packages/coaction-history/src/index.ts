@@ -25,7 +25,12 @@ type Snapshot = Record<PropertyKey, unknown>;
 // Coaction patch middleware may emit either supported Mutative path format.
 // The controlled journal retains and returns those external patches unchanged.
 type CoactionPatchOptions = any;
-type CoactionTravelJournal = TravelJournal<object, false, CoactionPatchOptions>;
+type CoactionTravelJournal = TravelJournal<
+  object,
+  false,
+  true,
+  CoactionPatchOptions
+>;
 
 const historySuppressionSymbol = Symbol.for('coaction.history.suppress');
 
@@ -574,18 +579,21 @@ const createPatchHistory = <T extends object>(
     return toHistoryState(store.getPureState());
   };
   const createJournal = (initialState: object): CoactionTravelJournal =>
-    createTravelJournal<object, false, CoactionPatchOptions>(initialState, {
-      apply: partialize
-        ? applyPartialTransition
-        : ({ patches, inversePatches }) =>
-            replayStorePatches(
-              store,
-              { patches, inversePatches },
-              { setState: baseSetState }
-            ),
-      maxHistory: limit,
-      warnOnUnsupportedState: false
-    });
+    createTravelJournal<object, false, true, CoactionPatchOptions>(
+      initialState,
+      {
+        apply: partialize
+          ? applyPartialTransition
+          : ({ patches, inversePatches }) =>
+              replayStorePatches(
+                store,
+                { patches, inversePatches },
+                { setState: baseSetState }
+              ),
+        maxHistory: limit,
+        warnOnUnsupportedState: false
+      }
+    );
   let journal = createJournal(toHistoryState(store.getPureState()));
 
   const recordDerivedState = (

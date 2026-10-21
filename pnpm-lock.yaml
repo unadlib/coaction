@@ -231,8 +231,8 @@ importers:
         specifier: ^2.0.0
         version: 2.0.0
       travels:
-        specifier: ^2.1.0
-        version: 2.1.0(mutative@2.0.0)
+        specifier: ^3.0.1
+        version: 3.0.1(mutative@2.0.0)
     devDependencies:
       coaction:
         specifier: workspace:*
@@ -6601,10 +6601,11 @@ packages:
     resolution: {integrity: sha512-bLVMLPtstlZ4iMQHpFHTR7GAGj2jxi8Dg0s2h2MafAE4uSWF98FC/3MomU51iQAMf8/qDUbKWf5GxuvvVcXEhw==}
     engines: {node: '>=20'}
 
-  travels@2.1.0:
-    resolution: {integrity: sha512-94K1VmM00I2FiI3yZ6ITb7v9Tdn1fIRmMiVqZacz+zdWTm2EcG65OFfR54tIRptQknMQyb0YQ215lr/7n/Dc8Q==}
+  travels@3.0.1:
+    resolution: {integrity: sha512-8UI75I/CR+6P50kMpK9eMxaJS5GC1gfmDDBnkScLMrSeWkBWUx3hEHc4SDd/3nNwx6DuufZ2J+fQkkCwWmhmiQ==}
+    engines: {node: '>=22'}
     peerDependencies:
-      mutative: ^1.3.0
+      mutative: ^2.0.0
 
   tree-dump@1.1.0:
     resolution: {integrity: sha512-rMuvhU4MCDbcbnleZTFezWsaZXRFemSqAM+7jPnzUl1fo9w3YEKOxAeui0fz3OI4EU4hf23iyA7uQRVko+UaBA==}
@@ -13649,7 +13650,7 @@ snapshots:
     dependencies:
       punycode: 2.3.1
 
-  travels@2.1.0(mutative@2.0.0):
+  travels@3.0.1(mutative@2.0.0):
     dependencies:
       mutative: 2.0.0
 

@@ -54,7 +54,7 @@
   },
   "dependencies": {
     "mutative": "^2.0.0",
-    "travels": "^2.1.0"
+    "travels": "^3.0.1"
   },
   "devDependencies": {
     "coaction": "workspace:*"

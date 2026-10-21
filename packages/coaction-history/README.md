@@ -8,7 +8,7 @@ Patch-based undo/redo middleware for Coaction, powered by
 [Travels](https://github.com/mutativejs/travels).
 
 Whole-store commits hand the core-generated patch pair directly to the
-controlled journal in Travels 2.1 and 2.2; partialized histories derive one
+controlled journal in Travels 3; partialized histories derive one
 patch pair over the tracked projection. Retained history scales with recorded
 changes instead of whole-store snapshots. Legacy snapshots are reserved for
 values such as cyclic graphs, `Date`, sparse arrays, symbol keys, and custom
@@ -116,10 +116,10 @@ tracked projection into snapshot mode.
 ## Compatibility behavior
 
 - JSON-compatible whole-store and partialized histories use Travels patches.
-- `travels@^2.1.0` is required. Compatibility is tested against the minimum
-  supported 2.1.0 release and the current 2.2.0 release. Every patch timeline
-  uses its controlled journal and direct `recordPatches()` handoff; no Travels
-  2.0 replay fallback is bundled.
+- `travels@^3.0.1` is required. Travels 3 requires Mutative 2, which Coaction
+  also uses. Compatibility is tested against the minimum supported 3.0.1
+  release. Every patch timeline uses its controlled journal and direct
+  `recordPatches()` handoff; no Travels 2.0 replay fallback is bundled.
 - If tracked state becomes non-JSON-compatible, the existing timeline is
   materialized once and recording continues with legacy snapshots.
 - In snapshot compatibility mode, `getPatches()` returns `undefined` while the
