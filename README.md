@@ -797,7 +797,7 @@ Run the standard local gate with `pnpm check`. The full process additionally run
 
 - [Documentation website](https://coactionjs.github.io/coaction/en/docs/) · [中文文档](https://coactionjs.github.io/coaction/zh/docs/)
 - [Computed state](https://coactionjs.github.io/coaction/en/docs/concepts/computed/)
-- [Migrating to Coaction 4.0](./docs/migration/v4.md) · [`store.apply` belongs to Coaction (4.0)](./docs/migration/adapter-write-boundary.md)
+- [Migrating to Coaction 4.0](./docs/migration/v4.md) · [`store.apply` belongs to Coaction (4.0)](./docs/migration/adapter-write-boundary.md) · [Upgrading to Mutative 2 (4.1)](./docs/migration/mutative-2.md)
 - [Migrating from Zustand](./docs/migration/from-zustand.md)
 - [Why Coaction Without Multithreading](./docs/comparison/single-thread.md) · [Coaction vs Zustand](./docs/comparison/zustand.md)
 - [Architecture Overview](./docs/architecture/overview.md) · [Core Runtime](./docs/architecture/core-runtime.md) · [Threading Model](./docs/architecture/threading-model.md)

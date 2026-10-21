@@ -1,6 +1,6 @@
 ---
 title: Migrating to 4.0
-description: Update shared imports, check integration contracts, and keep local React applications on supported versions.
+description: Update shared imports, check integration contracts, keep local React applications on supported versions, and check the Mutative 2 changes of 4.1.
 ---
 
 Native local applications using actions, selectors and getters generally keep the same APIs.
@@ -82,3 +82,18 @@ writes, and Firestore separates its read source from its write address. See
 Reactive tracking, shared authority and remote synchronization are separate capabilities.
 A local store can sync to a server without a Worker. Shared mirrors follow one authority;
 they do not independently diverge and merge like remote replicas.
+
+## Check Mutative 2 in 4.1
+
+Coaction 4.1 depends on [Mutative 2](https://mutative.js.org/blog/releases/2.0/), and
+`@coaction/history` on Travels 3, which declares Mutative 2 as its peer. No Coaction API changed.
+Upgrade `mutative` too if the application imports it, and replace libraries that declare
+Mutative 1 as their peer, such as `zustand-mutative` 1, because npm stops with `ERESOLVE` next
+to `@coaction/history`.
+
+Commit patches follow Mutative 2: nested patches come before their parents, and a moved draft
+is carried by the patches of its parent. They replay to the same state, so only tests that
+compare patch arrays need new expectations. In production, errors from Mutative read
+`Minified Mutative error #<code>`; match the code, and define `process.env.NODE_ENV` in every
+bundle. The [repository guide](https://github.com/coactionjs/coaction/blob/main/docs/migration/mutative-2.md)
+covers loading without a bundler and the draft checks of development builds.

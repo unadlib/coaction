@@ -1,6 +1,6 @@
 ---
 title: 迁移到 4.0
-description: 更新 shared 导入，检查集成 contract，并让本地 React 应用使用受支持的版本。
+description: 更新 shared 导入，检查集成 contract，让本地 React 应用使用受支持的版本，并检查 4.1 中 Mutative 2 带来的变化。
 ---
 
 使用 action、selector 和 getter 的原生本地应用通常可以保留现有 API。请使用 React 18 或 19，
@@ -70,3 +70,15 @@ Supabase 的 schema 配置同时应用于读写，Firestore 分离读取来源�
 
 响应式追踪、共享权威和远程同步是独立能力。本地 store 不需要 Worker 也能与服务器同步；
 共享 mirror 跟随同一个权威端，并不是可以独立分叉再合并的远程副本。
+
+## 检查 4.1 中的 Mutative 2
+
+Coaction 4.1 依赖 [Mutative 2](https://mutative.js.org/blog/releases/2.0/)，`@coaction/history`
+依赖以 Mutative 2 为 peer 的 Travels 3。Coaction 的 API 没有变化。
+如果应用直接导入 `mutative`，请一并升级到 2.0；以 Mutative 1 为 peer 的库（例如 `zustand-mutative` 1）
+需要替换为支持 Mutative 2 的版本，否则 npm 会在安装 `@coaction/history` 时以 `ERESOLVE` 停止。
+
+Commit 中的 patch 遵循 Mutative 2：嵌套值的 patch 排在父级之前，被移动的 draft 由父级的 patch 携带。
+它们 replay 后得到相同的状态，因此只有比较 patch 数组的测试需要更新预期。生产构建中 Mutative 抛出的错误为
+`Minified Mutative error #<code>`，请匹配错误码，并在每个 bundle 中定义 `process.env.NODE_ENV`。
+无 bundler 加载方式和开发构建新增的 draft 检查，见[仓库指南](https://github.com/coactionjs/coaction/blob/main/docs/migration/mutative-2.md)。
