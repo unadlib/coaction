@@ -27,7 +27,7 @@ three milliseconds after the epoch and perfectly valid.
 
 **`pnpm test:fuzz-catches`** rewinds the files that fixed five real defects and
 requires the named fuzz suite to go red for each. It has caught a generator
-whose `shuffle` unshifted an array where the runtime emits whole-element
+whose `shuffle` unshifted an array where Mutative 1 emitted whole-element
 replaces, putting an entire class of bug out of reach for want of one token.
 
 ### The history dependency
@@ -36,7 +36,9 @@ replaces, putting an entire class of bug out of reach for want of one token.
 reachable. Rewriting the history that contains them breaks the check for
 everybody; the failure names the hash it could not find. Recovering means
 finding the new hash for the same change and updating the entry, or dropping the
-entry if the change no longer exists as one commit.
+entry if the change no longer exists as one commit. An entry whose defect no
+runtime input can produce any more, such as the order-sensitive inverse that
+only Mutative 1 emitted, is retired with the reason recorded in the script.
 
 Do not delete the check to make it pass. What it establishes — that a green fuzz
 run means something — is the reason the fuzz suites are worth running at all.

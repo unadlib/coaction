@@ -45,11 +45,11 @@ const buildStore = () =>
       set(() => {
         const first = this.rows[0];
         if (Array.isArray(first) && first.length >= 3) first.reverse();
-        // A scalar, deliberately. Unshifting a draftable value makes mutative
-        // emit whole-element replaces instead of a patch per index, and the
-        // per-index form is the whole point of this action -- one token's
-        // difference in the generator decided whether an entire class of
-        // inverse-ordering bug was reachable at all.
+        // A scalar, deliberately. Mutative 1 emitted a patch per index of the
+        // reversed row for a scalar and whole-element replaces for a draftable
+        // value, and the per-index form was the one whose inverse could not be
+        // applied in order. Mutative 2 emits whole-element replaces for both,
+        // and this action keeps writing inside a row it then moves.
         this.rows.unshift(this.n);
       });
     },

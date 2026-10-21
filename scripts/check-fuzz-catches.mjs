@@ -7,12 +7,21 @@
  * generator never reaches the shape, and the result is indistinguishable from
  * the code being correct. That happened twice while writing these. The
  * interleaving fuzz missed the order-sensitive inverse entirely because its
- * `shuffle` unshifted an array, and mutative emits whole-element replaces for a
- * draftable value where it emits a patch per index for a scalar -- one token in
- * the generator, and a whole class of bug out of reach.
+ * `shuffle` unshifted an array, and Mutative 1 emitted whole-element replaces
+ * for a draftable value where it emitted a patch per index for a scalar -- one
+ * token in the generator, and a whole class of bug out of reach.
  *
  * Each defect below is a real one this repository shipped. Reverting the files
  * that fixed it has to turn the named suite red.
+ *
+ * An entry is retired only when no runtime input can produce its defect any
+ * more, and the reason is recorded here. `an inverse pair that cannot be
+ * applied in the order it comes` (fixed by `bbbe91e`) was retired with the
+ * upgrade to Mutative 2: Mutative 1 recorded writes to a moved draft at the
+ * position the draft had left, so undoing those patches in order wrote into
+ * something already replaced. Mutative 2 carries a moved draft in the patches
+ * of its parent, and its inverse patches undo every generated transition in
+ * order, with or without the files that fixed the defect.
  *
  * The commits are addressed by hash, so they have to stay reachable. Rewriting
  * the history that contains them -- a rebase of `main`, a squash that replaces
@@ -71,23 +80,6 @@ const defects = [
       'packages/core/src/replaceExternalStoreState.ts'
     ],
     suites: ['packages/core/test/writePaths.fuzz.test.ts']
-  },
-  {
-    name: 'an inverse pair that cannot be applied in the order it comes',
-    fixedBy: 'bbbe91e',
-    files: [
-      'packages/core/src/utils.ts',
-      'packages/core/src/storeCommit.ts',
-      'packages/core/src/handleState.ts',
-      'packages/core/src/storeFactory.ts',
-      'packages/core/src/immutableState.ts',
-      'packages/core/src/handleDraft.ts',
-      'packages/core/src/replaceExternalStoreState.ts'
-    ],
-    suites: [
-      'packages/core/test/writePaths.fuzz.test.ts',
-      'packages/coaction-mobx/test/interleaving.fuzz.test.ts'
-    ]
   },
   {
     name: 'a refusal skipping the hand-back to an action still waiting',

@@ -70,9 +70,10 @@ const buildStore = (random: Random) => {
           shuffle() {
             const first = this.rows[0];
             if (Array.isArray(first) && first.length >= 3) first.reverse();
-            // A scalar: unshifting a draftable value makes mutative emit
-            // whole-element replaces rather than a patch per index, and the
-            // per-index form is what makes the inverse order-sensitive.
+            // A scalar: Mutative 1 emitted a patch per index for it, where it
+            // emitted whole-element replaces for a draftable value, and the
+            // per-index form made the inverse order-sensitive. Mutative 2
+            // emits whole-element replaces for both.
             this.rows.unshift(this.n);
           },
           drop() {
