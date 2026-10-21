@@ -139,11 +139,10 @@ const mutate = (random: Random, draft: any) => {
 
 /**
  * `describable` is false when the pair the runtime emitted does not describe
- * the transition: mutative records paths positionally, so a recipe that drafts
- * a nested value, moves it within its parent array, and then writes into it
- * records the position the value used to have. Applying that pair throws, or --
- * when the old position still exists -- succeeds and produces a different
- * state.
+ * the transition. Since Mutative 2 records a moved draft through its parent
+ * rather than at the position it left, what remains is key order: a key the
+ * recipe deletes and assigns again is recorded as a `replace`, which writes it
+ * back in place, while the state the recipe produced holds it last.
  *
  * Those never reach a commit. Coaction detects them and describes the
  * transition as the difference between the states instead, which
@@ -223,8 +222,10 @@ test('the inverse a commit carries always undoes it', () => {
   });
   // The derivation is the exception, not the rule: taking it always would cost
   // every commit its shared references. As a share of what was checked, so the
-  // claim holds at whatever scale a soak runs at.
-  expect(derived).toBeGreaterThan(0);
+  // claim holds at whatever scale a soak runs at. Mutative 2 emits a nested
+  // patch before the one that replaces its container in only a few of every
+  // ten thousand transitions, so the everyday run may not reach the derivation
+  // at all; `the fast check agrees on paths built to collide` covers it.
   expect(derived).toBeLessThan(checked * 0.2);
 });
 
@@ -308,17 +309,16 @@ const referenceNeedsDerivation = (patches: Patches) => {
 };
 
 test('the fast check agrees with the definition it stands in for', () => {
-  let flagged = 0;
   forEachSeed(2000, (random) => {
     const { patches } = transition(random);
-    const expected = referenceNeedsDerivation(patches);
-    if (expected) flagged += 1;
-    expect(inverseNeedsDerivation(patches)).toBe(expected);
+    expect(inverseNeedsDerivation(patches)).toBe(
+      referenceNeedsDerivation(patches)
+    );
   });
-  expect(flagged).toBeGreaterThan(0);
 });
 
 test('the fast check agrees on paths built to collide', () => {
+  let flagged = 0;
   forEachSeed(2000, (random) => {
     // Paths drawn from a tiny alphabet, so prefixes and repeats are common --
     // random state mutation produces them rarely, and the trie is exactly the
@@ -328,30 +328,86 @@ test('the fast check agrees on paths built to collide', () => {
       path: random.list(0, 4, () => random.pick(['a', 'b', '0', '1'])),
       value: 1
     })) as unknown as Patches;
-    expect(inverseNeedsDerivation(patches)).toBe(
-      referenceNeedsDerivation(patches)
-    );
+    const expected = referenceNeedsDerivation(patches);
+    if (expected) flagged += 1;
+    expect(inverseNeedsDerivation(patches)).toBe(expected);
   });
+  // Generated transitions rarely collide, so the true branch is checked here.
+  expect(flagged).toBeGreaterThan(0);
 });
 
 /**
  * A transition the runtime cannot express as a patch pair.
  *
- * mutative records paths positionally. Draft a nested value, move it within its
- * parent array, then write into it, and the write is recorded at the position
- * the value used to have -- so the pair describes a change to something that is
- * no longer there, and applying it throws.
+ * Mutative records a key that a recipe deletes and assigns again as a
+ * `replace`. Applying it writes the key back where it was, while the state the
+ * recipe produced holds it last, so the pair reaches a state with the keys in
+ * another order.
  *
- * Coaction makes a transition by applying that pair, so this used to fail at
- * the `set()`. Only when something was watching: on a store with no listener,
- * no validator and no observer, no pair is produced and the same recipe worked.
- * Attaching a devtool changed what the application was allowed to do.
+ * Coaction makes a transition by applying that pair, so it would publish a
+ * state that differs from the one the recipe produced -- and only when
+ * something was watching: on a store with no listener, no validator and no
+ * observer, no pair is produced. Attaching a devtool would change what the
+ * application holds.
  *
- * It is now described the other way instead -- the difference between the state
- * before and the state the recipe produced -- so the recipe succeeds either
- * way, and the commit still replays.
+ * It is described the other way instead -- the difference between the state
+ * before and the state the recipe produced -- so the recipe reaches the same
+ * state either way, and the commit still replays.
  */
-const unrepresentableStore = () => {
+const unrepresentableStore = () =>
+  create<{
+    items: Record<string, unknown>;
+    rows: unknown[];
+    move: () => void;
+  }>((set) => ({
+    items: { a: [1.5, 1, null, ''], b: [] },
+    rows: [false, [-1, 0, '', true]],
+    move() {
+      set(() => {
+        delete this.items.a;
+        this.items.a = 'moved';
+      });
+    }
+  }));
+
+test('a transition the runtime cannot describe is described more coarsely', () => {
+  const unwatched = unrepresentableStore();
+  unwatched.getState().move();
+  const expected = unwatched.getPureState();
+  unwatched.destroy();
+
+  const watched = unrepresentableStore();
+  const before = JSON.parse(JSON.stringify(watched.getPureState()));
+  const commits: StoreCommit[] = [];
+  onStoreCommit(watched, (commit) => commits.push(commit));
+
+  // The same recipe, and the same result, on a store that is being watched.
+  expect(() => watched.getState().move()).not.toThrow();
+  expect(watched.getPureState()).toEqual(expected);
+  expect(Object.keys(watched.getPureState().items)).toEqual(
+    Object.keys(expected.items)
+  );
+
+  // One patch, for the one top-level key that changed -- not the whole root.
+  expect(commits).toHaveLength(1);
+  expect(commits[0].patches.map(({ path }) => path)).toEqual([['items']]);
+  expect(applyPatches(before as object, commits[0].patches)).toEqual(
+    watched.getPureState()
+  );
+  expect(
+    applyPatches(watched.getPureState() as object, commits[0].inversePatches)
+  ).toEqual(before);
+  watched.destroy();
+});
+
+/**
+ * Draft a nested value, move it within its parent array, then write into it.
+ * Mutative 1 recorded the write at the position the value used to have, so the
+ * pair described a change to something that was no longer there. Mutative 2
+ * carries the moved value in the patches of its parent, and the commit keeps
+ * the pair the producer emitted.
+ */
+const movedDraftStore = () => {
   const collectArrays = (
     node: unknown,
     found: unknown[][] = []
@@ -384,24 +440,28 @@ const unrepresentableStore = () => {
   }));
 };
 
-test('a transition the runtime cannot describe is described more coarsely', () => {
-  const unwatched = unrepresentableStore();
-  unwatched.getState().move();
-  const expected = JSON.parse(JSON.stringify(unwatched.getPureState()));
-  unwatched.destroy();
-
-  const watched = unrepresentableStore();
+test('a draft moved before it is written is committed as the producer described it', () => {
+  const watched = movedDraftStore();
   const before = JSON.parse(JSON.stringify(watched.getPureState()));
   const commits: StoreCommit[] = [];
   onStoreCommit(watched, (commit) => commits.push(commit));
 
-  // The same recipe, and the same result, on a store that is being watched.
   expect(() => watched.getState().move()).not.toThrow();
-  expect(watched.getPureState()).toEqual(expected);
+  expect(watched.getPureState().rows).toEqual([
+    'moved',
+    false,
+    [-1, 0, ''],
+    { a: -1 },
+    [0, '', 1.5, '']
+  ]);
 
-  // One patch, for the one top-level key that changed -- not the whole root.
+  // Element patches under `rows`, not one replacing the whole key.
   expect(commits).toHaveLength(1);
-  expect(commits[0].patches.map(({ path }) => path)).toEqual([['rows']]);
+  expect(
+    commits[0].patches.every(
+      ({ path }) => path.length > 1 && path[0] === 'rows'
+    )
+  ).toBe(true);
   expect(applyPatches(before as object, commits[0].patches)).toEqual(
     watched.getPureState()
   );

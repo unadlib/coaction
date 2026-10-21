@@ -152,7 +152,10 @@ test.each([
   answer(response);
   await expect(flush).rejects.toThrow(
     kind === 'invalid patch target'
-      ? "Cannot apply patch at 'missing/value'."
+      ? // Production builds of Mutative 2 throw the error code instead.
+        process.env.NODE_ENV === 'production'
+        ? 'Minified Mutative error #14;'
+        : "Cannot apply patch at 'missing/value'."
       : TypeError
   );
   expect(api.getPending()).toEqual(pending);
