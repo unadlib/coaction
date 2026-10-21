@@ -50,9 +50,6 @@
     "build": "node ../../scripts/build-package.mjs",
     "dev": "node ../../scripts/build-package.mjs --watch"
   },
-  "dependencies": {
-    "mutability": "^1.2.1"
-  },
   "devDependencies": {
     "coaction": "workspace:*",
     "data-transport": "^5.0.3",

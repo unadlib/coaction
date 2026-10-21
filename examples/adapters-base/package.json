@@ -11,7 +11,6 @@
   "dependencies": {
     "@reduxjs/toolkit": "^2.10.1",
     "jotai": "^2.18.1",
-    "mutability": "^1.2.1",
     "valtio": "^2.3.1",
     "xstate": "^5.23.0"
   },

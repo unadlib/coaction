@@ -257,10 +257,6 @@ importers:
         version: 1.3.0
 
   packages/coaction-mobx:
-    dependencies:
-      mutability:
-        specifier: ^1.2.1
-        version: 1.2.1(mutative@1.3.0)
     devDependencies:
       '@testing-library/react':
         specifier: ^16.3.2
@@ -318,10 +314,6 @@ importers:
         version: link:../core
 
   packages/coaction-pinia:
-    dependencies:
-      mutability:
-        specifier: ^1.2.1
-        version: 1.2.1(mutative@1.3.0)
     devDependencies:
       coaction:
         specifier: workspace:*
@@ -422,10 +414,6 @@ importers:
         version: 6.2.5
 
   packages/coaction-valtio:
-    dependencies:
-      mutability:
-        specifier: ^1.2.1
-        version: 1.2.1(mutative@1.3.0)
     devDependencies:
       coaction:
         specifier: workspace:*
@@ -5587,11 +5575,6 @@ packages:
 
   ms@2.1.3:
     resolution: {integrity: sha512-6FlzubTLZG3J2a/NVCAleEhjzq5oxgHyaCU9yYXvcLsvoVaHJq/s5xXI6/XXP6tz7R9xAOtHnSO/tXtF3WRTlA==}
-
-  mutability@1.2.1:
-    resolution: {integrity: sha512-ER7al5pKulsGeVJNCab2mFFdkE5z/REgIdVRROe/4lNmJFJYAb2yvm+8DZFo3uFlJLyUPzpCCStB4pnMeWKWyw==}
-    peerDependencies:
-      mutative: ^1.3.0
 
   mutative@1.3.0:
     resolution: {integrity: sha512-8MJj6URmOZAV70dpFe1YnSppRTKC4DsMkXQiBDFayLcDI4ljGokHxmpqaBQuDWa4iAxWaJJ1PS8vAmbntjjKmQ==}
@@ -12546,10 +12529,6 @@ snapshots:
   ms@2.0.0: {}
 
   ms@2.1.3: {}
-
-  mutability@1.2.1(mutative@1.3.0):
-    dependencies:
-      mutative: 1.3.0
 
   mutative@1.3.0: {}
 
