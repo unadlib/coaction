@@ -252,3 +252,37 @@ test('middleware should return a store-like object in development', () => {
     process.env.NODE_ENV = NODE_ENV;
   }
 });
+
+test('a patch hook that edits values in place cannot rewrite committed state', () => {
+  const store = create<{ list: { n: number }[] }>(
+    { list: [{ n: 0 }, { n: 1 }] },
+    {
+      enablePatches: true,
+      middlewares: [
+        (store) => {
+          store.patch = (transition) => {
+            for (const patch of [
+              ...transition.patches,
+              ...transition.inversePatches
+            ]) {
+              (patch.value as { n: number }).n *= 10;
+            }
+            return transition;
+          };
+          return store;
+        }
+      ]
+    }
+  );
+  const previous = store.getPureState();
+  const listener = jest.fn();
+  store.subscribe(listener);
+  // Reversing moves the elements, so the inverse values are the elements the
+  // next state holds.
+  store.setState((draft) => {
+    draft.list.reverse();
+  });
+  expect(previous).toEqual({ list: [{ n: 0 }, { n: 1 }] });
+  expect(store.getPureState()).toEqual({ list: [{ n: 10 }, { n: 0 }] });
+  expect(listener).toHaveBeenCalledTimes(1);
+});

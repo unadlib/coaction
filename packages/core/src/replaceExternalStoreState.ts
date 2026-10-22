@@ -1,7 +1,11 @@
 import { create as createWithMutative, type Patches } from 'mutative';
 import type { CreateState, MiddlewareStore } from './interface';
 import type { Internal } from './internal';
-import { replaceOwnEnumerable, sanitizeCheckedPatches } from './utils';
+import {
+  replaceOwnEnumerable,
+  sanitizeCheckedPatches,
+  transformPatches
+} from './utils';
 import { applyWithOwnStoreCommit } from './storeCommit';
 
 type ReplaceExternalStoreStateOptions = {
@@ -33,9 +37,7 @@ export const replaceExternalStoreState = <T extends CreateState>(
       mutativeInverse
     );
     internal.validateState?.(nextState);
-    const finalPatches = store.patch
-      ? store.patch({ patches, inversePatches })
-      : { patches, inversePatches };
+    const finalPatches = transformPatches(store, { patches, inversePatches });
     const safePatches = sanitizeCheckedPatches(
       finalPatches.patches,
       'store.patch()'

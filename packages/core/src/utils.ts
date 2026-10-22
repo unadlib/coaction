@@ -4,7 +4,7 @@ import {
   type Options,
   type Patches
 } from 'mutative';
-import type { MiddlewareStore } from './interface';
+import type { MiddlewareStore, PatchTransform } from './interface';
 
 /** Null-prototype records are local data, not mutable atomic instances. */
 export const markLocalState: Exclude<
@@ -133,6 +133,41 @@ export const sanitizeCheckedPatches = (
   return (clonePatchValues(patches) ?? []) as Patches;
 };
 
+const copyPatches = (patches: Patches) => {
+  let seen: WeakMap<object, unknown> | undefined;
+  return patches.map((patch) => {
+    const copy = {
+      ...patch,
+      path: Array.isArray(patch.path) ? [...patch.path] : patch.path
+    };
+    if (typeof patch.value === 'object' && patch.value !== null) {
+      copy.value = sanitizeReplacementState(
+        patch.value,
+        (seen ??= new WeakMap())
+      );
+    }
+    return copy;
+  }) as Patches;
+};
+
+/**
+ * Run the `store.patch` hook on copies of the pair. Patch values are objects of
+ * the states on either side of the transition -- after a recipe moves an
+ * element, an inverse value is an element the next state still holds -- so a
+ * hook that edited a value in place rewrote committed state without a
+ * notification.
+ */
+export const transformPatches = (
+  store: Pick<MiddlewareStore<any>, 'patch'>,
+  transition: PatchTransform
+): PatchTransform =>
+  store.patch
+    ? store.patch({
+        patches: copyPatches(transition.patches),
+        inversePatches: copyPatches(transition.inversePatches)
+      })
+    : transition;
+
 export type RootReplacementPatch = {
   op: 'add' | 'remove' | 'replace';
   path: PropertyKey[];
@@ -243,15 +278,10 @@ export const applyRootReplacementWithPatches = <T extends object>(
     store.getPureState() as Record<PropertyKey, unknown>,
     nextState
   );
-  const finalPatches = store.patch
-    ? store.patch({
-        patches: patches as any,
-        inversePatches: inversePatches as any
-      })
-    : {
-        patches: patches as any,
-        inversePatches: inversePatches as any
-      };
+  const finalPatches = transformPatches(store, {
+    patches: patches as any,
+    inversePatches: inversePatches as any
+  });
   const safePatches = sanitizeCheckedPatches(
     finalPatches.patches,
     'store.patch()'

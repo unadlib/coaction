@@ -21,7 +21,8 @@ import {
   getOwnEnumerableKeys,
   mergeObject,
   sanitizeCheckedPatches,
-  setOwnEnumerable
+  setOwnEnumerable,
+  transformPatches
 } from './utils';
 import { handleDraft } from './handleDraft';
 import { Computed } from './computed';
@@ -180,9 +181,7 @@ export const handleState = <T extends CreateState>(
       internal.rootState = internal.backupState;
     }
     const patch = store.patch;
-    const finalPatches = patch
-      ? patch({ patches, inversePatches })
-      : { patches, inversePatches };
+    const finalPatches = transformPatches(store, { patches, inversePatches });
     if (!patch) {
       internal.validatePatches?.(finalPatches.patches);
     }
@@ -424,15 +423,10 @@ export const handleState = <T extends CreateState>(
           })) as Patches;
         const inputPatches = copyPaths(patches);
         const inputInversePatches = copyPaths(inversePatches);
-        const finalPatches = store.patch
-          ? store.patch({
-              patches: inputPatches,
-              inversePatches: inputInversePatches
-            })
-          : {
-              patches: inputPatches,
-              inversePatches: inputInversePatches
-            };
+        const finalPatches = transformPatches(store, {
+          patches: inputPatches,
+          inversePatches: inputInversePatches
+        });
         const safePatches = sanitizeCheckedPatches(
           finalPatches.patches,
           'store.patch()'

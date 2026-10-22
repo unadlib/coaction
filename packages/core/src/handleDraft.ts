@@ -3,7 +3,8 @@ import type { Internal } from './internal';
 import {
   applyPatches,
   completeProducerPatches,
-  sanitizeCheckedPatches
+  sanitizeCheckedPatches,
+  transformPatches
 } from './utils';
 import {
   applyWithOwnStoreCommit,
@@ -25,9 +26,7 @@ export const handleDraft = <T extends CreateState>(
       producerPatches,
       mutativeInverse
     );
-    const finalPatches = store.patch
-      ? store.patch({ patches, inversePatches })
-      : { patches, inversePatches };
+    const finalPatches = transformPatches(store, { patches, inversePatches });
     const safePatches = sanitizeCheckedPatches(
       finalPatches.patches,
       'store.patch()'
