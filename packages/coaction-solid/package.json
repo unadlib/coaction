@@ -1,6 +1,6 @@
 {
   "name": "@coaction/solid",
-  "version": "4.0.0",
+  "version": "4.1.0",
   "description": "A Coaction integration tool for Solid",
   "keywords": [
     "coaction",
@@ -55,7 +55,7 @@
     "solid-js": "^1.9.10"
   },
   "peerDependencies": {
-    "coaction": "^4.0.0",
+    "coaction": "^4.1.0",
     "solid-js": "^1.8.0"
   },
   "authors": [

@@ -1,5 +1,15 @@
 # @coaction/sync
 
+## 4.1.0
+
+### Minor Changes
+
+- `@coaction/sync` moves to 4.1 with the rest of the suite, and now declares
+  `coaction@^4.1.0` as its peer. Coaction 4.1 depends on Mutative 2 and
+  `@coaction/history` on Travels 3, so the commits a sync store queues carry
+  Mutative 2 patches and its adapters replay them. Nothing in the `@coaction/sync`
+  API changed.
+
 ## 4.0.0
 
 ### Major Changes

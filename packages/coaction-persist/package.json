@@ -1,6 +1,6 @@
 {
   "name": "@coaction/persist",
-  "version": "4.0.0",
+  "version": "4.1.0",
   "description": "A persist middleware for Coaction",
   "keywords": [
     "coaction",
@@ -54,7 +54,7 @@
     "coaction": "workspace:*"
   },
   "peerDependencies": {
-    "coaction": "^4.0.0"
+    "coaction": "^4.1.0"
   },
   "authors": [
     "Michael Lin <unadlib@gmail.com> (https://github.com/unadlib)"
